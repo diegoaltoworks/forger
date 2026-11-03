@@ -116,7 +116,8 @@ export function gatherLoopFacts(
     origin_base_head: head === '' ? null : head,
   };
   if (opts.issue === undefined && opts.pr === undefined) return facts;
-  const ciConfigured = run(`git ls-tree -r --name-only origin/${opts.baseBranch} -- .github/workflows`).trim() !== '';
+  // HEAD too: the PR that adds a repo's first workflow has CI before its base does.
+  const ciConfigured = [`origin/${opts.baseBranch}`, 'HEAD'].some(ref => run(`git ls-tree -r --name-only ${ref} -- .github/workflows`).trim() !== '');
   const viewPr = (n: number) => parsePr(run(`gh pr view ${n} --json ${PR_FIELDS}`), ciConfigured);
   if (opts.issue !== undefined) {
     const issueJson = run(`gh issue view ${opts.issue} --json state,closedByPullRequestsReferences`);

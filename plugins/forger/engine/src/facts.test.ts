@@ -99,6 +99,13 @@ describe('gatherLoopFacts --pr', () => {
     expect(f.issue).toBeUndefined();
     expect(formatFacts(f)).toContain('PR #8 open, checks none');
   });
+  test('a workflow only on HEAD still counts as CI configured', () => {
+    const f = gatherLoopFacts(stub({
+      'git ls-tree -r --name-only HEAD -- .github/workflows': '.github/workflows/ci.yml',
+      'gh pr view 8 --json number,state,mergedAt,statusCheckRollup': '{"number":8,"state":"OPEN","statusCheckRollup":[]}',
+    }), {baseBranch: 'main', ignore: [], pr: 8});
+    expect(f.pr).toMatchObject({checks: 'pending', checks_ok: false});
+  });
   test('no PR lookup without --issue or --pr', () => {
     const seen: string[] = [];
     gatherLoopFacts(stub({}, seen), {baseBranch: 'main', ignore: []});
