@@ -237,7 +237,7 @@
     },
     "import_catalogue_and_roadmap": {
       "priority": "P1",
-      "status": "not_started",
+      "status": "completed",
       "type": "feature",
       "depends_on": [
         "docs_check"
