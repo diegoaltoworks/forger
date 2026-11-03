@@ -8,7 +8,8 @@ implements them and `cli/` hands the implementations in.
 
 - `command.ts` - `CommandRunner`, `CapturingRunner`, `CommandResult`, and
   `capturing` to see one as the other. Pure.
-- `agent.ts` - what a worker run is given and what it returns. Types only.
+- `agent.ts` - `AgentRunner`, what a worker run is given and what it returns.
+  Types only.
 
 ## Entry point
 
@@ -16,4 +17,4 @@ implements them and `cli/` hands the implementations in.
 
 ## May import
 
-The core: `config` (the model tier).
+The core: `config` (the model role).

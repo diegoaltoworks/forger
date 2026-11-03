@@ -1,29 +1,31 @@
 /**
- * Spawns the headless `claude` process for one iteration under the
- * per-iteration deadline. The process supervision lives in `supervise.ts`;
- * this module only knows how to invoke `claude`.
+ * The shipped agent adapter: the headless Claude Code CLI. The process
+ * supervision lives in `supervise.ts`; this module only knows how to invoke
+ * `claude`.
  */
 
-import type {ClaudeResult, RunClaudeOptions} from '../ports';
+import type {AgentResult, AgentRunner, AgentRunOptions} from '../ports';
 import {runSupervised} from './supervise';
 
-export function runClaude(opts: RunClaudeOptions): Promise<ClaudeResult> {
-  const {prompt, sessionId, tier, cwd, timeoutMinutes, killGraceSeconds} = opts;
-  return runSupervised({
-    command: 'claude',
-    args: [
-      '--print',
-      '--model',
-      tier.model,
-      '--max-budget-usd',
-      tier.budget.toString(),
-      '--session-id',
-      sessionId,
-      '--dangerously-skip-permissions',
-    ],
-    cwd,
-    input: prompt,
-    timeoutMs: timeoutMinutes * 60 * 1000,
-    graceMs: killGraceSeconds * 1000,
-  });
-}
+export const claudeAgent: AgentRunner = {
+  run(opts: AgentRunOptions): Promise<AgentResult> {
+    const {prompt, sessionId, tier, model, cwd, timeoutMinutes, killGraceSeconds} = opts;
+    return runSupervised({
+      command: 'claude',
+      args: [
+        '--print',
+        '--model',
+        model,
+        '--max-budget-usd',
+        tier.budget.toString(),
+        '--session-id',
+        sessionId,
+        '--dangerously-skip-permissions',
+      ],
+      cwd,
+      input: prompt,
+      timeoutMs: timeoutMinutes * 60 * 1000,
+      graceMs: killGraceSeconds * 1000,
+    });
+  },
+};

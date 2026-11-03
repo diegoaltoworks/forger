@@ -1,6 +1,6 @@
 # Forger
 
-An unattended development loop for Claude Code: tickets are built one at a time
+An unattended development loop for any model and harness: tickets are built one at a time
 by headless workers, watched by a supervisor working with the owner, and the
 process is refined from every correction and failure.
 

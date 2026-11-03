@@ -1,6 +1,6 @@
 # `forger` - unattended development loop
 
-A Claude Code plugin that implements backlog tickets one at a time, unattended,
+A plugin that implements backlog tickets one at a time, unattended,
 with a human-facing supervisor and an interactive planner. The engine is generic;
 everything project-specific lives in the consumer repo's `.claude/`.
 
@@ -17,7 +17,7 @@ The commands split on one axis - **who invokes them** - and the naming encodes
 it. Commands without the infix are human entry points and carry
 `disable-model-invocation`, so only a person can fire them . The `-auto-` infix marks self-regulating commands the
 loop drives with no human in the turn. All share the `forger:` prefix, so
-typing `/fyne` in Claude Code surfaces the set.
+typing `/forger` in the harness surfaces the set.
 
 ### Human entry points
 
@@ -135,6 +135,19 @@ slots it covers. `/forger:setup` offers it when the collection is installed, or
 apply it directly with `setup --preset mattpocock-skills`. A preset is a plain
 file: copy it to map another collection.
 
+## Adapters
+
+Forger's decisions live in tools, so the model and the harness are adapters (see
+principle 0a in [`docs/01-principles.md`](../../docs/01-principles.md)). Today
+there is one of each, named here and nowhere else in the prose:
+
+- **Agent adapter.** The engine spawns workers through the `AgentRunner`
+  interface. The shipped adapter runs Claude Code's headless `claude` CLI, mapping
+  the role a ticket is given (`fast`, `standard`, `deep`) to the model id set
+  under `models` in the config.
+- **Command format.** The commands and the plugin manifest use Claude Code's
+  plugin format. Another harness needs its own packaging of the same steps.
+
 ## Install and update
 
 Add this repository as a marketplace once, then install. A local checkout works
@@ -191,11 +204,13 @@ and gitignores the per-run state. Create the label with
 | `worker_command` | Slash command the engine invokes per iteration. Default `forger:auto-ticket`. |
 | `gates` | The quality-gate command; surfaced to the worker. |
 | `base_branch` | Branch an iteration must land on. Merge verification checks HEAD against it. |
-| `model_by_priority` | Model + USD budget per priority (`P0`, `default`, and any others). |
+| `models` | Role -> model id the agent adapter is given. Default `fast`, `standard` and `deep`. A project remaps a role here, and tickets, logs and docs keep naming the role. |
+| `model_by_priority` | Role + USD budget per priority (`P0`, `default`, and any others). A tier naming something that is not a role is taken as a literal model id, so an older config keeps working. |
 | `effort_multiplier` | Budget multiplier by ticket `effort` (`small`/`medium`/`large`/...). |
 | `limits` | `timeoutMinutes`, `killGraceSeconds` (SIGTERM to SIGKILL on timeout), `maxConsecutiveFailures`, `pauseBetweenIterations`, `pauseAfterFailure`, `maxStallIterations`. |
 | `paths` | Where the backlog, state, log, output dir, HALT file, engine lock and terminal-event file live. |
 | `local_only` | Paths that stay modified in a checkout without being the worker's doing (local settings, a work order). The dirty-tree check skips them and the engine's own files (`paths`); a directory covers what is under it. Default none. |
+| `model_names` | Model and vendor names `check docs` flags in prose, as whole words, case-insensitively. Default a list of common ones. |
 | `skills` | Skill slot -> installed skill name (see Bring your own skills). Default none: every slot uses its built-in step. |
 | `tracker` | `{ kind, label, ignore }`. `kind` is `github` (default: issues are the backlog), `local`, or `none` (both read `backlog.json`). `label` is the intake label, default `ready-for-agent`. `ignore` lists labels whose issues are not work, a trailing `*` matching a prefix (`["wayfinder:*"]`); default none. |
 

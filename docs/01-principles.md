@@ -30,6 +30,18 @@ flowchart LR
 Hexagons are tools: tested commands with machine-readable output that the model
 calls and cannot talk its way around. Rectangles are judgement.
 
+## 0a. Any model, any harness
+
+The tools are the contract; the model and the harness that runs it are
+adapters. Any model that can run a command and read its JSON can work between
+the boundaries, because the decisions are not in the model. A model is chosen
+per role for cost and quality - a `fast`, `standard` or `deep` tier, mapped to a
+model id in the config - and never because a decision depends on it. Prose
+names the role: the worker, the supervisor, the agent adapter. The harness
+sits behind the `AgentRunner` interface, so a second one is an adapter, not a
+rewrite. `check docs` flags a model or vendor name in prose outside the adapter
+docs. See [ADR 0005](adr/0005-any-model-any-harness.md).
+
 ## 1. One ticket, one worker, one PR
 
 A worker starts cold, builds one vertical slice, proves it with the gates, opens

@@ -19,6 +19,7 @@
     {"id": "base.ascii-punctuation", "rung": "check", "summary": "Prose, code and commits use ASCII punctuation only.", "check": "docs"},
     {"id": "base.nothing-personal", "rung": "check", "summary": "Docs and code carry no emails, home paths or terms on the project's denylist.", "check": "docs"},
     {"id": "base.no-hard-coded-skills", "rung": "check", "summary": "Shipped instructions reach a skill only through a skill slot, never by name.", "check": "docs"},
+    {"id": "base.model-agnostic", "rung": "check", "summary": "Prose names roles, not models or vendors; the adapter docs and the config name them.", "check": "docs"},
     {"id": "base.no-transient-specifics", "rung": "rule", "summary": "Durable docs carry no counts, timings or dates; they point at the command that computes them.", "check": null},
     {"id": "base.one-ticket-one-pr", "rung": "template", "summary": "One ticket per iteration, one feat PR carrying code, tests and docs.", "check": null},
     {"id": "base.gates-never-bypassed", "rung": "rule", "summary": "Gates are green before every commit and merge, and hooks are never bypassed.", "check": null}

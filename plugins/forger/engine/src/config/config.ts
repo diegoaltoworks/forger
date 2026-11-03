@@ -9,6 +9,7 @@ import {existsSync, readFileSync} from 'fs';
 import {join} from 'path';
 
 export interface Tier {
+  /** A role (`fast`, `standard`, `deep`, or one the project defines in `models`) or a literal model id. */
   model: string;
   budget: number;
 }
@@ -22,6 +23,8 @@ export interface WorkloopConfig {
   gates: string;
   /** Branch an iteration must land on; verifyMerged() checks HEAD against it. */
   base_branch: string;
+  /** Role -> the model id the agent adapter is given. A tier naming anything else is taken as a model id. */
+  models: Record<string, string>;
   model_by_priority: {P0: Tier; default: Tier; [k: string]: Tier};
   effort_multiplier: Record<string, number>;
   limits: {
@@ -63,6 +66,11 @@ export interface WorkloopConfig {
    * installed, uses forger's built-in step. `skills --json` resolves it.
    */
   skills: Record<string, string>;
+  /**
+   * Model and vendor names the `docs` check flags in prose, matched as whole
+   * words, case-insensitively. Prose names roles; adapters and config name models.
+   */
+  model_names: string[];
 }
 
 /**
@@ -75,6 +83,7 @@ export interface WorkloopConfigInput {
   worker_command?: string;
   gates?: string;
   base_branch?: string;
+  models?: Record<string, string>;
   model_by_priority?: Record<string, Tier>;
   effort_multiplier?: Record<string, number>;
   limits?: Partial<WorkloopConfig['limits']>;
@@ -82,6 +91,12 @@ export interface WorkloopConfigInput {
   tracker?: Partial<WorkloopConfig['tracker']>;
   local_only?: string[];
   skills?: Record<string, string>;
+  model_names?: string[];
+}
+
+/** The model a role stands for; a name that is not a role is already a model id. Pure. */
+export function resolveModel(role: string, models: Record<string, string>): string {
+  return Object.prototype.hasOwnProperty.call(models, role) ? models[role] : role;
 }
 
 export const DEFAULT_CONFIG: WorkloopConfig = {
@@ -96,9 +111,10 @@ export const DEFAULT_CONFIG: WorkloopConfig = {
    * commits, then dies before pushing/merging, leaving the backlog claiming
    * work that only exists on a local branch.
    */
+  models: {fast: 'haiku', standard: 'sonnet', deep: 'opus'},
   model_by_priority: {
-    P0: {model: 'opus', budget: 22.5},
-    default: {model: 'sonnet', budget: 18.0},
+    P0: {model: 'deep', budget: 22.5},
+    default: {model: 'standard', budget: 18.0},
   },
   /** Budget multiplier by declared effort; a truncated large ticket is worst. */
   effort_multiplier: {
@@ -126,6 +142,7 @@ export const DEFAULT_CONFIG: WorkloopConfig = {
   tracker: {kind: 'github', label: 'ready-for-agent', ignore: []},
   local_only: [],
   skills: {},
+  model_names: ['claude', 'anthropic', 'opus', 'sonnet', 'haiku', 'gpt', 'openai', 'gemini', 'llama', 'mistral'],
 };
 
 /**
@@ -140,6 +157,7 @@ export function mergeConfig(
   return {
     ...base,
     ...user,
+    models: {...base.models, ...(user.models ?? {})},
     model_by_priority: {
       ...base.model_by_priority,
       ...(user.model_by_priority ?? {}),
@@ -152,6 +170,7 @@ export function mergeConfig(
     paths: {...base.paths, ...(user.paths ?? {})},
     tracker: {...base.tracker, ...(user.tracker ?? {})},
     skills: {...base.skills, ...(user.skills ?? {})},
+    model_names: user.model_names ?? base.model_names,
   };
 }
 

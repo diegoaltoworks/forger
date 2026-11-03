@@ -1,7 +1,7 @@
 # config
 
 `.claude/workloop.config.json`: its defaults, the merge of a project's values
-over them, and the model tiers.
+over them, and the model roles.
 
 ## Files
 

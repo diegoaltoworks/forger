@@ -5,9 +5,9 @@
 | Role | Is | Does | Never does |
 |---|---|---|---|
 | **Owner** | the person the work is for | asks, decides, reviews designs, approves anything hard to undo | needs to babysit a run |
-| **Supervisor** | an interactive Claude session with the owner | intake, ordering, dispatch, watching, verifying, reporting, refining the process | implement a ticket, edit product code |
+| **Supervisor** | an interactive agent session with the owner | intake, ordering, dispatch, watching, verifying, reporting, refining the process | implement a ticket, edit product code |
 | **Engine** | a detached long-running process | picks the next ticket, starts one worker, enforces the budget, counts outcomes, halts | decide what a ticket means |
-| **Worker** | a headless Claude session, one per ticket | reads the ticket and the code, builds, runs the gates, opens and merges the PR | pick a different ticket than the order says, bypass a gate |
+| **Worker** | a headless agent session, one per ticket | reads the ticket and the code, builds, runs the gates, opens and merges the PR | pick a different ticket than the order says, bypass a gate |
 
 The supervisor is a peer of the owner, not a worker. When it feels the urge to
 fix code itself, the fix belongs in a ticket.
@@ -21,7 +21,7 @@ consumer repository.
 |---|---|---|---|
 | `process.md` | yes | supervisor (by PR), workers (gotchas, by PR) | the per-repo brain: what the repo is, the gates, the rules, what the gates miss, the ticket shape |
 | `backlog.json` | yes | supervisor (queueing, by PR), workers (status, in their PR) | the backlog when the tracker is not GitHub; on GitHub the issues are the backlog and a merged PR closing one is its completion |
-| `workloop.config.json` | yes | owner | gates command, models and budgets, limits, paths, tracker |
+| `workloop.config.json` | yes | owner | gates command, model roles and budgets, limits, paths, tracker |
 | work order (`inbox/owner-work-order.md`) | no | supervisor | the owner's current priority, read by every worker first |
 | `state.json`, `work.log`, `output/` | no | engine | counters, logs, per-iteration output |
 | `HALT` | no | engine or worker | stops the loop until a person clears it |

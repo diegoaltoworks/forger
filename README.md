@@ -2,15 +2,16 @@
 
 [![CI](https://github.com/diegoaltoworks/forger/actions/workflows/ci.yml/badge.svg)](https://github.com/diegoaltoworks/forger/actions/workflows/ci.yml)
 
-Deterministic tools and skills that let Claude Code models forge ahead reliably:
+Deterministic tools and skills that let any model forge ahead reliably:
 an unattended development loop in which a worker builds one ticket at a time, a
 supervisor turns the owner's requests into tickets and watches the work land, and
 a refinement loop turns every correction and every failure into a better process.
 
 At its core, forger reaches for determinism. Anything that must come out the
 same every time is a tested command; models reason only where judgement is
-needed, between hard boundaries the tools enforce. See
-[`docs/01-principles.md`](docs/01-principles.md), principle 0.
+needed, between hard boundaries the tools enforce. Because the decisions live in
+the tools, the model and the harness that runs it are interchangeable. See
+[`docs/01-principles.md`](docs/01-principles.md), principles 0 and 0a.
 
 ```mermaid
 flowchart LR

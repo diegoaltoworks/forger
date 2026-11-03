@@ -25,6 +25,19 @@ function repo(files: Record<string, string>): string {
 const lister = (names: string[]) => () => names.join('\n');
 
 describe('runDocsCheck', () => {
+  test('flags a model name in a doc, using the configured list', () => {
+    const root = repo({'a.md': 'ask the Sonnet model\n', 'b.md': 'ask the Mixtral model\n'});
+    expect(runDocsCheck(root, lister(['a.md', 'b.md'])).map(v => `${v.file}:${v.rule}`)).toEqual(['a.md:model-agnostic']);
+  });
+
+  test('the configured list replaces the default', () => {
+    const root = repo({
+      'a.md': 'ask the Sonnet model\nask the Mixtral model\n',
+      '.claude/workloop.config.json': JSON.stringify({model_names: ['mixtral']}),
+    });
+    expect(runDocsCheck(root, lister(['a.md'])).map(v => v.line)).toEqual([2]);
+  });
+
   test('clean tree has no violations', () => {
     const root = repo({'a.md': 'plain text\n'});
     expect(runDocsCheck(root, lister(['a.md']))).toEqual([]);

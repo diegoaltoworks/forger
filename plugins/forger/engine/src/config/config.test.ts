@@ -1,6 +1,6 @@
 import {describe, expect, test} from 'bun:test';
 
-import {DEFAULT_CONFIG, mergeConfig} from './config';
+import {DEFAULT_CONFIG, mergeConfig, resolveModel} from './config';
 
 describe('mergeConfig', () => {
   test('empty user config yields the defaults', () => {
@@ -67,5 +67,37 @@ describe('mergeConfig', () => {
     expect(mergeConfig({}).skills).toEqual({});
     const c = mergeConfig({skills: {review: 'a:b'}}, {...DEFAULT_CONFIG, skills: {diagnose: 'c:d'}});
     expect(c.skills).toEqual({diagnose: 'c:d', review: 'a:b'});
+  });
+});
+
+describe('resolveModel', () => {
+  const models = {fast: 'small-1', standard: 'mid-1', deep: 'big-1'};
+  test.each([
+    ['fast', 'small-1'],
+    ['standard', 'mid-1'],
+    ['deep', 'big-1'],
+    ['opus', 'opus'],
+    ['toString', 'toString'],
+    ['', ''],
+  ])('%s -> %s', (role, model) => {
+    expect(resolveModel(role, models)).toBe(model);
+  });
+
+  test('the default tiers are roles that the default map resolves', () => {
+    const c = mergeConfig({});
+    expect(c.model_by_priority.P0.model).toBe('deep');
+    expect(resolveModel(c.model_by_priority.default.model, c.models)).toBe('sonnet');
+  });
+
+  test('a project maps a role to its own model id, keeping the other roles', () => {
+    const c = mergeConfig({models: {deep: 'big-2'}});
+    expect(resolveModel('deep', c.models)).toBe('big-2');
+    expect(resolveModel('fast', c.models)).toBe(DEFAULT_CONFIG.models.fast);
+  });
+
+  test('an old config naming models in its tiers still resolves to them', () => {
+    const c = mergeConfig({model_by_priority: {P0: {model: 'opus', budget: 30}, default: {model: 'sonnet', budget: 9}}});
+    expect(resolveModel(c.model_by_priority.P0.model, c.models)).toBe('opus');
+    expect(resolveModel(c.model_by_priority.default.model, c.models)).toBe('sonnet');
   });
 });

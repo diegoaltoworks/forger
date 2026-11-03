@@ -10,8 +10,8 @@ import {join} from 'path';
 import {writeFileSync} from 'fs';
 
 import type {Backlog} from '../backlog';
-import type {WorkloopConfig} from '../config';
-import type {ClaudeResult, CommandRunner, RunClaudeOptions} from '../ports';
+import {resolveModel, type WorkloopConfig} from '../config';
+import type {AgentRunner, CommandRunner} from '../ports';
 import {parseClaim} from './claim';
 import type {TerminalEventKind} from './events';
 import {classifyExit} from './infra';
@@ -32,7 +32,7 @@ export interface IterationContext {
   logger: Logger;
   outputDir: string;
   gitRunner: CommandRunner;
-  spawnClaude: (opts: RunClaudeOptions) => Promise<ClaudeResult>;
+  agent: AgentRunner;
   uuid: () => string;
   refreshBacklog(): Promise<void>;
   emit(kind: TerminalEventKind, iteration: number, ticket: string | null, reason: string | null): void;
@@ -58,7 +58,7 @@ export async function runIteration(ctx: IterationContext, iteration: number, cou
   state.session_id = sessionId;
   ctx.store.save(state);
 
-  // Capture the ticket we are ABOUT to work before Claude runs. Reading it
+  // Capture the ticket we are ABOUT to work before the agent runs. Reading it
   // afterwards records the *next* not-started ticket instead of the one just
   // implemented, so completed_tasks would lag a ticket behind.
   const attemptedTask = ctx.backlog.next();
@@ -67,7 +67,7 @@ export async function runIteration(ctx: IterationContext, iteration: number, cou
 
   const prompt = buildPrompt(ctx.config, iteration, state.completed_tasks);
   const tier = ctx.backlog.tier(attemptedTask);
-  ctx.logger.log('INFO', `Running Claude (session: ${sessionId.slice(0, 8)}...)`);
+  ctx.logger.log('INFO', `Running the agent (session: ${sessionId.slice(0, 8)}...)`);
   if (attemptedTask) {
     ctx.logger.log('INFO', `Ticket: ${attemptedTask} [${tier.model}, $${tier.budget}]`);
   }
@@ -78,10 +78,11 @@ export async function runIteration(ctx: IterationContext, iteration: number, cou
   state.snapshot = snapshot;
   ctx.store.save(state);
   const startTime = Date.now();
-  const result = await ctx.spawnClaude({
+  const result = await ctx.agent.run({
     prompt,
     sessionId,
     tier,
+    model: resolveModel(tier.model, ctx.config.models),
     cwd: ctx.projectRoot,
     timeoutMinutes,
     killGraceSeconds,

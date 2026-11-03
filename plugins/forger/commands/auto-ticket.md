@@ -38,7 +38,7 @@ and `merge_conflicts` (step 8).
 
 ## Read first (in order)
 1. `.claude/process.md` - the workflow rules and the **project gotchas** (REQUIRED)
-2. `.claude/workloop.config.json` - gates, base branch, model tiers, tracker
+2. `.claude/workloop.config.json` - gates, base branch, model roles, tracker
 3. This repo's docs (whatever `process.md` points at: architecture, domain,
    decisions; `GLOSSARY.md` and ADRs if present - use their vocabulary)
 4. `.claude/inbox/*.md` - human instructions

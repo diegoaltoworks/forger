@@ -1,6 +1,6 @@
 import {describe, expect, test} from 'bun:test';
 
-import {checkText, denylist, email, formatViolations, homePath, isShipped, nonAscii, parseDenylist, thirdPartySkills} from './docs-rules';
+import {checkText, denylist, email, formatViolations, homePath, isShipped, modelNames, nonAscii, parseDenylist, thirdPartySkills} from './docs-rules';
 
 const EM_DASH = '\u2014';
 const CURLY = '\u201C';
@@ -95,5 +95,32 @@ describe('thirdPartySkills', () => {
     expect(checkText('README.md', 'install mattpocock-skills, then call the Skill tool with "x:y"')).toEqual([]);
     expect(checkText('plugins/forger/presets/a.json', '"mattpocock-skills:grilling"')).toEqual([]);
     expect(checkText('plugins/forger/commands/a.md', 'mattpocock-skills').map(v => v.rule)).toEqual(['third-party-skills']);
+  });
+});
+
+describe('model-agnostic', () => {
+  const names = ['claude', 'opus', 'openai'];
+  test.each([
+    ['A Claude Code session', ['Claude']],
+    ['run the `claude` CLI', ['claude']],
+    ['the Opus tier and OpenAI', ['Opus', 'OpenAI']],
+  ])('flags %s', (line, found) => {
+    expect(modelNames(names)(line)).toEqual(found);
+  });
+  test.each(['see .claude/process.md', 'a worker on the deep tier', 'the opus-like path', 'src/claude/x.ts', 'opuscule'])(
+    'does not flag %s',
+    line => {
+      expect(modelNames(names)(line)).toEqual([]);
+    }
+  );
+  test('an empty list flags nothing', () => {
+    expect(modelNames([])('Claude')).toEqual([]);
+  });
+  test('applies to Markdown outside the adapter docs, and is waivable by opinion', () => {
+    const v = checkText('docs/a.md', 'a Claude session', [], names);
+    expect(v.map(x => [x.rule, x.opinion])).toEqual([['model-agnostic', 'base.model-agnostic']]);
+    expect(checkText('plugins/forger/README.md', 'a Claude session', [], names)).toEqual([]);
+    expect(checkText('plugins/forger/engine/src/adapters/README.md', 'claude', [], names)).toEqual([]);
+    expect(checkText('src/a.ts', '// claude', [], names)).toEqual([]);
   });
 });

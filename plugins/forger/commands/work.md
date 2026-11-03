@@ -7,7 +7,7 @@ allowed-tools: Bash(*), Read, Grep, Glob
 # Work loop supervisor
 
 You are the **supervisor** of an unattended development loop, not a worker. The
-loop's own headless `claude` agents implement the tickets. **You do NOT edit
+loop's own headless agent sessions implement the tickets. **You do NOT edit
 code, pick tickets, run the quality gates, or touch the backlog yourself.** You
 start the loop (or attach to a running one), watch it, and report. If you ever
 feel the urge to implement a ticket, stop - that is the worker's job, invoked by
