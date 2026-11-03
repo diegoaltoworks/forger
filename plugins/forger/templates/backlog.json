@@ -2,7 +2,7 @@
   "product": {
     "name": "<project name> - <what this backlog covers>",
     "description": "<one or two sentences on the goal of this backlog>",
-    "note": "backlog.json is the source of truth for loop status. The tracker (GitHub Issues) is the human-facing mirror and intake. Prefer additive, opt-in changes over breaking the public API."
+    "note": "The backlog when tracker.kind is local or none; with github the issues are the backlog. Prefer additive, opt-in changes over breaking the public API."
   },
   "features": {
     "example_ticket": {

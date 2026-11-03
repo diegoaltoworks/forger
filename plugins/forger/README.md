@@ -100,15 +100,33 @@ wrapped in repo grounding before and tickets, issues and a plan doc after.
 
 ## Tracker: GitHub Issues
 
-`backlog.json` remains the loop's source of truth for status: the engine selects
-tickets from it offline and deterministically. The tracker is the human-facing
-mirror and the intake channel.
+With `tracker.kind` `github`, the issues are the backlog (see
+`docs/adr/0001-github-issues-are-the-backlog.md`). The engine reads them with
+one `gh api graphql` query and maps them to tickets:
 
-- **Planners** create one issue per ticket (label `ready-for-agent`, blocking
-  edges as GitHub's native blocked-by dependencies) and record the number as
-  `issue`.
-- **The worker** claims the issue by assigning itself, and puts `Closes #n` in
-  the PR body so the squash merge closes it. No extra calls, no drift.
+| On the issue | On the ticket |
+|---|---|
+| open, with the intake label | `not_started`, id `issue-<n>` |
+| closed by a merged PR | `completed` |
+| closed any other way | `closed` - not done, and not work to start |
+| `needs-human` / `deferred` label | `needs_human` / `deferred` |
+| `P0`-`P3` label | `priority` (none reads as P3; ties go to the older issue) |
+| `effort:small` / `effort:medium` / `effort:large` | `effort` |
+| native blocked-by | `depends_on` |
+| a label matching `tracker.ignore` | not a ticket |
+
+A blocker that is not itself a ticket (no intake label, or ignored, such as a
+decision) is satisfied once it is closed. A `gh` failure stops the engine
+rather than reading as an empty backlog.
+
+- **Planners** create one issue per ticket (intake label, blocking edges as
+  GitHub's native blocked-by dependencies).
+- **The worker** branches as `feat/issue-<n>`, claims the issue by assigning
+  itself, and puts `Closes #n` in the PR body so the squash merge closes it.
+  The merge is the status update.
+
+With `local` or `none`, `backlog.json` is the backlog and the worker sets a
+ticket's `status` there in its PR.
 
 ## Install and update
 
@@ -175,7 +193,7 @@ and gitignore `.claude/state.json`, `.claude/work.log`, `.claude/output/`,
 | `effort_multiplier` | Budget multiplier by ticket `effort` (`small`/`medium`/`large`/...). |
 | `limits` | `timeoutMinutes`, `killGraceSeconds` (SIGTERM to SIGKILL on timeout), `maxConsecutiveFailures`, `pauseBetweenIterations`, `pauseAfterFailure`, `maxStallIterations`. |
 | `paths` | Where the backlog, state, log, output dir, and HALT file live. |
-| `tracker` | `{ kind, label }`. `kind` is `github` (default), `local`, or `none`. `label` is the intake label, default `ready-for-agent`. When `docs/agents/issue-tracker.md` exists it is the authority on how to talk to the tracker. |
+| `tracker` | `{ kind, label, ignore }`. `kind` is `github` (default: issues are the backlog), `local`, or `none` (both read `backlog.json`). `label` is the intake label, default `ready-for-agent`. `ignore` lists labels whose issues are not work, a trailing `*` matching a prefix (`["wayfinder:*"]`); default none. When `docs/agents/issue-tracker.md` exists it is the authority on how to talk to the tracker. |
 
 ## How the engine runs
 
@@ -226,6 +244,9 @@ engine/src/
   backlog.ts   the Backlog interface; ticket selection, remaining/workable
                counts, tiering, the backlog report (pure)
   file-backlog.ts the Backlog read from backlog.json
+  github-backlog.ts the Backlog read from GitHub Issues: the query, and the
+               issue-to-ticket mapping (pure) behind an injectable runner
+  open-backlog.ts which Backlog the tracker kind selects
   prompt.ts    per-iteration prompt (pure): worker command, gates, tracker
   git.ts       merge verification against an injectable command runner (pure)
   run-facts.ts the git facts a run is judged by: merged, pushed, branch taken

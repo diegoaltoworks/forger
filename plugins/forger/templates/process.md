@@ -1,8 +1,9 @@
 # Development process - <project name>
 
 One ticket per iteration, quality gates green, small clean commits.
-**backlog.json is the source of truth for loop status.** The tracker is the
-human-facing mirror and the intake channel.
+**On GitHub, the issues are the backlog**: an open issue with the intake label is
+a ticket, and an issue closed by a merged PR is completed. Elsewhere,
+`backlog.json` is the backlog.
 
 This file is the per-repo brain of the work loop. The plugin's engine and
 commands are generic; everything specific to THIS project lives here and in
@@ -21,15 +22,15 @@ on red. Describe here anything a gate does not catch that a reviewer should.
 
 `workloop.config.json` `tracker.kind` says where live tickets are published:
 
-- `github` (default): every backlog ticket is mirrored as a GitHub issue. Planners
-  create the issue and record its number on the ticket as `issue`. The worker
-  claims it by assigning itself and closes it through the PR (`Closes #<n>`).
-  Open issues carrying the intake label (`tracker.label`, default
-  `ready-for-agent`) that are not yet in `backlog.json` are adopted by the
-  planners and by the worker's inbox step. Issues labelled `wayfinder:*` are
-  decision tickets, never work; the loop must ignore them.
+- `github` (default): open issues carrying the intake label (`tracker.label`,
+  default `ready-for-agent`) are the tickets. Priority and effort are labels
+  (`P0`-`P3`, `effort:small|medium|large`), `depends_on` is the native
+  blocked-by, and `needs-human` / `deferred` labels carry those statuses. The
+  worker claims an issue by assigning itself and closes it through the PR
+  (`Closes #<n>`); that merge is what completed means. Labels in
+  `tracker.ignore` (such as `wayfinder:*` decision tickets) are never work.
 - `local`: `backlog.json` is the only record.
-- `none`: never touch an issue tracker.
+- `none`: `backlog.json`, and never touch an issue tracker.
 
 If `docs/agents/issue-tracker.md` exists (written by `/setup-matt-pocock-skills`),
 it is the authority on how this repo talks to its tracker; follow it.

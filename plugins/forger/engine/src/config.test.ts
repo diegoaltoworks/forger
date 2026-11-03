@@ -40,8 +40,8 @@ describe('mergeConfig', () => {
     expect(c.paths.backlog).toBe(DEFAULT_CONFIG.paths.backlog);
   });
 
-  test('defaults the tracker to GitHub with the ready-for-agent intake label', () => {
-    expect(DEFAULT_CONFIG.tracker).toEqual({kind: 'github', label: 'ready-for-agent'});
+  test('defaults the tracker to GitHub with the ready-for-agent intake label and nothing ignored', () => {
+    expect(DEFAULT_CONFIG.tracker).toEqual({kind: 'github', label: 'ready-for-agent', ignore: []});
   });
 
   test('merges tracker partially, keeping the default label', () => {

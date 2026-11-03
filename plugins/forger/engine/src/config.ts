@@ -41,13 +41,13 @@ export interface WorkloopConfig {
     halt: string;
   };
   /**
-   * Where the live tickets are published. `github` mirrors every backlog
-   * ticket as an issue (the worker closes it via the PR); `local` keeps
-   * backlog.json as the only record; `none` disables publishing entirely.
-   * `label` is the intake label: issues carrying it are adopted into the
-   * backlog by the planners and the worker's inbox step.
+   * Where the backlog lives. `github`: issues carrying the intake `label`
+   * are the tickets, and an issue closed by a merged PR is completed (ADR
+   * 0001). `local` and `none` read backlog.json; `none` also keeps the worker
+   * off any tracker. `ignore` lists labels whose issues are not work - a
+   * trailing `*` matches a prefix, as in `wayfinder:*`.
    */
-  tracker: {kind: 'github' | 'local' | 'none'; label: string};
+  tracker: {kind: 'github' | 'local' | 'none'; label: string; ignore: string[]};
 }
 
 /**
@@ -104,7 +104,7 @@ export const DEFAULT_CONFIG: WorkloopConfig = {
     output: '.claude/output',
     halt: '.claude/HALT',
   },
-  tracker: {kind: 'github', label: 'ready-for-agent'},
+  tracker: {kind: 'github', label: 'ready-for-agent', ignore: []},
 };
 
 /**
