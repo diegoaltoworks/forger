@@ -248,7 +248,7 @@ and gitignores the per-run state. Create the label with
 | `model_by_priority` | Role + USD budget per priority (`P0`, `default`, and any others). A tier naming something that is not a role is taken as a literal model id, so an older config keeps working. |
 | `effort_multiplier` | Budget multiplier by ticket `effort` (`small`/`medium`/`large`/...). |
 | `limits` | `timeoutMinutes`, `killGraceSeconds` (SIGTERM to SIGKILL on timeout), `maxConsecutiveFailures`, `pauseBetweenIterations`, `pauseAfterFailure`, `maxStallIterations`. |
-| `paths` | Where the backlog, state, log, output dir, HALT file, engine lock, terminal-event file and `process.md` live. Default under `.forger/`. |
+| `paths` | Where the backlog, state, log, output dir, HALT file, engine lock, terminal-event file, verdicts directory and `process.md` live. The verdicts stay local, not committed; the dirty-tree check skips them. Default under `.forger/`. |
 | `local_only` | Paths that stay modified in a checkout without being the worker's doing (local settings, a work order). The dirty-tree check skips them and the engine's own files (`paths`); a directory covers what is under it. Default none. |
 | `model_names` | Model and vendor names `check docs` flags in prose, as whole words, case-insensitively. Default a list of common ones. |
 | `skills` | Skill slot -> installed skill name, or `{ "file": "<path to SKILL.md>" }` (see Bring your own skills). Default none: every slot uses its built-in step. |

@@ -63,8 +63,8 @@ export interface Placement {
 }
 
 function verify(ctx: IterationContext): string | null {
-  const {state, log, output, halt, lock, events} = ctx.config.paths;
-  const ignore = [state, log, output, halt, lock, events, ctx.config.paths.declined, ...ctx.config.local_only];
+  const {state, log, output, halt, lock, events, declined, verdicts} = ctx.config.paths;
+  const ignore = [state, log, output, halt, lock, events, declined, verdicts, ...ctx.config.local_only];
   return verifyMerged(ctx.gitRunner, ctx.config.base_branch, ignore);
 }
 

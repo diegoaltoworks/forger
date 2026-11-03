@@ -24,7 +24,8 @@
     "halt": ".forger/HALT",
     "lock": ".forger/runner.lock",
     "events": ".forger/events.jsonl",
-    "declined": ".forger/declined.json"
+    "declined": ".forger/declined.json",
+    "verdicts": ".forger/verdicts"
   },
   "skills": {},
   "tracker": { "kind": "github", "label": "ready-for-agent", "ignore": ["wayfinder:*"] }
