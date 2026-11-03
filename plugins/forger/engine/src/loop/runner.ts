@@ -12,11 +12,11 @@ import {join} from 'path';
 import type {WorkloopConfig} from '../config';
 import type {Backlog} from '../backlog';
 import type {AgentRunner, CommandRunner} from '../ports';
-import {type AutomationState, StateStore} from './state';
+import {type AutomationState, currentTicket, StateStore} from './state';
 import {Logger, colors} from './logger';
 import {RateLimitError, rateLimitWaitMs} from './infra';
 import {type IterationContext, closeOrphan, runIteration} from './iteration';
-import {RunnerLock} from './lock';
+import {pidAlive, RunnerLock} from './lock';
 import {appendEvent, terminalEvent, type TerminalEventKind} from './events';
 import {buildStatus, type StatusReport} from './status-report';
 
@@ -44,6 +44,7 @@ export class AutomationRunner {
   private agent: AgentRunner;
   private uuid: () => string;
   private lock: RunnerLock;
+  private isAliveFn: (pid: number) => boolean;
   private eventsFile: string;
   private now: () => number;
   private sleep: (ms: number) => Promise<void>;
@@ -60,7 +61,8 @@ export class AutomationRunner {
     this.store = new StateStore(p(config.paths.state), p(config.paths.halt));
     this.outputDir = p(config.paths.output);
     this.eventsFile = p(config.paths.events);
-    this.lock = new RunnerLock(p(config.paths.lock), deps.pid, deps.isAlive);
+    this.isAliveFn = deps.isAlive ?? pidAlive;
+    this.lock = new RunnerLock(p(config.paths.lock), deps.pid, this.isAliveFn);
 
     this.gitRunner = deps.gitRunner;
     this.agent = deps.agent ?? {run: () => Promise.reject(new Error('no agent runner was given to this runner'))};
@@ -127,7 +129,7 @@ export class AutomationRunner {
     state.status = 'halted';
     state.last_error = reason;
     this.store.save(state);
-    this.emit(kind, state.iteration, state.current_task, reason);
+    this.emit(kind, state.iteration, currentTicket(state), reason);
   }
 
   clearHalt(): void {
@@ -321,6 +323,7 @@ export class AutomationRunner {
     const pid = this.lock.holder();
     return buildStatus({
       state: this.store.load(),
+      isAlive: this.isAliveFn,
       runnerPid: pid,
       runnerAlive: this.lock.liveHolder() !== null,
       halted: this.store.isHalted(),
@@ -351,6 +354,9 @@ export class AutomationRunner {
     console.log(`Stall count: ${state.stall_count || 0}/${maxStall}`);
     console.log(`Remaining tasks: ${remaining} (${this.getWorkableCount()} workable now)`);
     console.log(`Next task: ${this.getNextTaskName() || 'none'}`);
+    for (const run of state.in_flight) {
+      console.log(`In flight: ${run.ticket ?? 'no ticket'} (pid ${run.pid ?? 'unknown'})`);
+    }
     if (state.last_error) {
       console.log(`${colors.yellow}Last error: ${state.last_error}${colors.reset}`);
     }

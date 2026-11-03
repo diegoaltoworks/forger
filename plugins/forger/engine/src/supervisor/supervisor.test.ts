@@ -5,9 +5,10 @@ import {buildStatus} from '../loop';
 import {defaultState} from '../loop';
 
 function status(over: {alive?: boolean; pid?: number | null; halted?: boolean; remaining?: number; ticket?: string | null; done?: string[]} = {}) {
-  const state = {...defaultState(), current_task: over.ticket ?? null, completed_tasks: over.done ?? []};
+  const state = {...defaultState(), in_flight: over.ticket ? [{ticket: over.ticket, pid: null, session_id: 's', snapshot: null, started_at: ''}] : [], completed_tasks: over.done ?? []};
   return buildStatus({
     state,
+    isAlive: () => false,
     runnerPid: over.pid === undefined ? (over.alive ? 42 : null) : over.pid,
     runnerAlive: over.alive ?? false,
     halted: over.halted ?? false,

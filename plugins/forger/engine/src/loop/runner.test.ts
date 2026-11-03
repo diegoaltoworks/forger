@@ -410,8 +410,9 @@ describe('AutomationRunner single runner', () => {
         ...defaultState(),
         iteration: 4,
         status: 'running',
-        current_task: 'the_ticket',
-        snapshot: {baseSha: 'aaa', reflogLength: 1},
+        in_flight: [
+          {ticket: 'the_ticket', pid: null, session_id: 's1', snapshot: {baseSha: 'aaa', reflogLength: 1}, started_at: ''},
+        ],
       })
     );
     let spawned = 0;
@@ -435,7 +436,7 @@ describe('AutomationRunner single runner', () => {
     expect(state.status).toBe('completed');
     expect(state.completed_iterations).toBe(1);
     expect(state.completed_tasks).toEqual(['the_ticket']);
-    expect(state.snapshot).toBeNull();
+    expect(state.in_flight).toEqual([]);
     expect(spawned).toBe(0);
     expect(eventsOf(root).map(e => e.event)).toEqual(['runner_gone']);
   });
@@ -444,7 +445,7 @@ describe('AutomationRunner single runner', () => {
     const {root} = runnerWith(fail);
     writeFileSync(
       join(root, '.forger', 'state.json'),
-      JSON.stringify({...defaultState(), iteration: 4, status: 'running', current_task: 'the_ticket'})
+      JSON.stringify({...defaultState(), iteration: 4, status: 'running', in_flight: [{ticket: 'the_ticket', pid: null, session_id: 's1', snapshot: null, started_at: ''}]})
     );
     const runner = runnerIn(root, {});
     runner.closeOrphan();
@@ -462,10 +463,10 @@ describe('AutomationRunner single runner', () => {
     expect(eventsOf(root)).toEqual([]);
   });
 
-  test('records the snapshot while an iteration is open and clears it after', async () => {
+  test('clears the in-flight run once the iteration settles', async () => {
     const {runner, root} = runnerWith(fail);
     await runner.runIteration(1);
-    expect(readState(root).snapshot).toBeNull();
+    expect(readState(root).in_flight).toEqual([]);
   });
 
   test('appends a terminal event for stall, timeout, halt, failures and completion', async () => {
