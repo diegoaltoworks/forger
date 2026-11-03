@@ -39,6 +39,11 @@ export interface RunFacts {
   unclean: string | null;
   /** The platform failed the run (login, billing, network); null if it did not. */
   infraError: string | null;
+  /**
+   * Files still in conflict with the base branch after the worker's one
+   * attempt to rebase (ADR 0011); null when it rebased clean or ran alone.
+   */
+  conflict: string[] | null;
   /** The worker's PR and its CI result; null when there is none to read. */
   pr: PrFact | null;
   /** The decision recorded for the PR's head commit; null when there is no record for it. */
@@ -178,6 +183,14 @@ export function decideOutcome(f: RunFacts): Outcome {
     return failure(
       'failed',
       `Declined "${f.declined}" but the engine picked "${f.enginePick ?? 'none'}"; the record is not for this run's pick`
+    );
+  }
+
+  if (f.conflict) {
+    const files = f.conflict.length > 0 ? `: ${f.conflict.join(', ')}` : '';
+    return failure(
+      'conflict',
+      `"${f.ticket}" still conflicts with ${f.baseBranch} after one attempt to rebase${files}; the branch is dropped and the ticket stays open for a serial run`
     );
   }
 

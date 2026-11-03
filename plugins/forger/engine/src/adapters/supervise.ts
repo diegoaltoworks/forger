@@ -23,6 +23,8 @@ export interface SupervisedOptions {
   graceMs: number;
   /** How long to wait for the output pipes to close after the worker exits. */
   drainMs?: number;
+  /** Ends the group like a deadline does, without marking the run timed out. */
+  abort?: AbortSignal;
 }
 
 const DEFAULT_DRAIN_MS = 2000;
@@ -54,6 +56,7 @@ export function runSupervised(opts: SupervisedOptions): Promise<SupervisedResult
       settled = true;
       clearTimeout(deadline);
       clearTimeout(killTimer);
+      opts.abort?.removeEventListener('abort', onAbort);
       child.stdout?.destroy();
       child.stderr?.destroy();
       resolve(result);
@@ -64,6 +67,13 @@ export function runSupervised(opts: SupervisedOptions): Promise<SupervisedResult
       signalGroup(pid, 'SIGTERM');
       killTimer = setTimeout(() => signalGroup(pid, 'SIGKILL'), graceMs);
     }, timeoutMs);
+
+    const onAbort = (): void => {
+      signalGroup(pid, 'SIGTERM');
+      killTimer ??= setTimeout(() => signalGroup(pid, 'SIGKILL'), graceMs);
+    };
+    if (opts.abort?.aborted) onAbort();
+    else opts.abort?.addEventListener('abort', onAbort, {once: true});
 
     child.stdout?.on('data', (data: Buffer) => {
       output += data.toString();

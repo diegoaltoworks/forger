@@ -27,7 +27,7 @@ chosen by the `harness` config key (ADR 0009).
 |---|---|---|---|
 | `process.md` | yes | supervisor (by PR), workers (gotchas, by PR) | the per-repo brain: what the repo is, the gates, the rules, what the gates miss, the ticket shape |
 | `backlog.json` | yes | supervisor (queueing, by PR), workers (status, in their PR) | the backlog when the tracker is not GitHub; on GitHub the issues are the backlog and a merged PR closing one is its completion |
-| `workloop.config.json` | yes | owner | gates command, model roles and budgets, limits, paths, tracker |
+| `workloop.config.json` | yes | owner | gates command, model roles and budgets, limits, parallelism, paths, tracker |
 | work order (`inbox/owner-work-order.md`) | no | supervisor | the owner's current priority, read by every worker first |
 | `state.json`, `work.log`, `output/` | no | engine | counters, logs, per-iteration output |
 | `HALT` | no | engine or worker | stops the loop until a person clears it |
@@ -186,6 +186,30 @@ branch inside its worktree, and reports `clean`, `conflict` (with the files; the
 rebase is left in progress there for the worker to resolve and continue) or
 `error`. Both exit 1 unless they succeeded. The git calls sit behind the
 injected command port, so the decisions are tested with a fake one.
+
+## Running workers side by side
+
+`parallelism` in the workloop config is the number of workers the loop runs at
+once. It defaults to 1, which is the single-worker loop in the main checkout,
+unchanged. It must be a positive integer; zero, a fraction or a string is
+refused when the config is read.
+
+Above 1 the supervisor keeps one lock, one HALT and one state, and starts
+workers with the scheduling rule: the candidates in the engine's order, each
+taken only if it may run together with every running ticket (a ticket declared
+`serial`, an unknown footprint, a shared path or folder, or a dependency keep
+it waiting). Each worker builds in its own worktree and branch, is told to stay
+current with `rebase --ticket`, and keeps its own timeout.
+
+Facts are read per worker, from its worktree. With others merging, base moving
+is no evidence of this run's merge, so only the worker's own PR can say it
+merged. If the branch is pushed and unmerged when the worker ends, the engine
+rebases it once more: a branch that still conflicts ends the run as `conflict`.
+That is a failure that counts once, never a halt; the branch is dropped locally
+and on the remote, the ticket stays open, and a later run takes it again.
+
+A HALT stops new starts. Workers still running get `limits.killGraceSeconds`,
+then their process groups are ended. Infrastructure errors trip HALT as before.
 
 ## Invariants
 

@@ -26,6 +26,8 @@ export interface IssueNode {
 }
 
 export interface TrackedIssue extends IssueNode {
+  /** The issue text; its Knock-on section declares the footprint the scheduler reads. */
+  body?: string;
   blockedBy?: Page<IssueNode>;
 }
 
@@ -52,7 +54,7 @@ export const ISSUES_QUERY = `query($owner: String!, $repo: String!, $label: Stri
     issues(first: ${PAGE.issues}, after: $endCursor, labels: [$label], states: [OPEN]) {
       pageInfo { hasNextPage endCursor }
       nodes {
-        number state
+        number state body
         ${LABELS}
         blockedBy(first: ${PAGE.blockers}) { totalCount nodes { number state ${LABELS} ${CLOSER} } }
       }
@@ -114,6 +116,8 @@ export function ticketFromIssue(issue: TrackedIssue, tracker: TrackerSettings): 
   const effort = labels.find(l => l.startsWith('effort:'));
   if (effort) ticket.effort = effort.slice('effort:'.length);
   const blockers = issue.blockedBy?.nodes ?? [];
+  if (issue.body) ticket.body = issue.body;
+  if (labels.includes('serial')) ticket.serial = true;
   if (blockers.length > 0) ticket.depends_on = blockers.map(b => ticketId(b.number));
   return ticket;
 }

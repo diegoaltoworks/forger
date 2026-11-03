@@ -101,3 +101,17 @@ describe('resolveModel', () => {
     expect(resolveModel(c.model_by_priority.default.model, c.models)).toBe('sonnet');
   });
 });
+
+describe('parallelism', () => {
+  test('defaults to one worker', () => {
+    expect(mergeConfig({}).parallelism).toBe(1);
+  });
+  test('takes a positive integer', () => {
+    expect(mergeConfig({parallelism: 2}).parallelism).toBe(2);
+  });
+  test('rejects zero, negatives, fractions and non-numbers', () => {
+    for (const bad of [0, -1, 1.5, NaN, Infinity, '2', null]) {
+      expect(() => mergeConfig({parallelism: bad as unknown as number})).toThrow(/parallelism must be a positive integer/);
+    }
+  });
+});

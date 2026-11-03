@@ -8,6 +8,7 @@
  */
 
 import type {Tier, WorkloopConfig} from '../config';
+import {parseFootprint, type Schedulable} from './schedule';
 
 export interface Ticket {
   status: string;
@@ -20,6 +21,10 @@ export interface Ticket {
   repo?: string;
   /** Declared size; scales the budget via config.effort_multiplier. */
   effort?: string;
+  /** The ticket text; its Knock-on section declares the footprint. */
+  body?: string;
+  /** Carries the `serial` label: runs alone (ADR 0011). */
+  serial?: boolean;
   [key: string]: unknown;
 }
 
@@ -94,6 +99,24 @@ export function workableCount(data: BacklogData | null, config: WorkloopConfig):
   return workableTasks(data, config).length;
 }
 
+/** The workable tickets in the engine's order, each with the footprint its text declares. */
+export function candidateTickets(data: BacklogData | null, config: WorkloopConfig): Schedulable[] {
+  const all = tickets(data);
+  return workableTasks(data, config).map(t => {
+    const ticket = all[t.name];
+    return {id: t.name, footprint: ticket?.body ? parseFootprint(ticket.body) : null, serial: ticket?.serial === true};
+  });
+}
+
+/** Direct dependencies of every ticket, for following them transitively. */
+export function dependencyGraph(data: BacklogData | null): Record<string, string[]> {
+  const graph: Record<string, string[]> = {};
+  for (const [id, ticket] of Object.entries(tickets(data))) {
+    if (isTicket(ticket) && Array.isArray(ticket.depends_on)) graph[id] = ticket.depends_on;
+  }
+  return graph;
+}
+
 export function nextTaskName(data: BacklogData | null, config: WorkloopConfig): string | null {
   return workableTasks(data, config)[0]?.name ?? null;
 }
@@ -154,6 +177,10 @@ export interface Backlog {
   remaining(): number;
   workableCount(): number;
   next(): string | null;
+  /** The workable tickets in order with their declared footprints, for the parallel scheduler. */
+  candidates(): Schedulable[];
+  /** Direct dependencies by ticket. */
+  graph(): Record<string, string[]>;
   tier(ticket: string | null): Tier;
   isCompleted(ticket: string): boolean;
   has(ticket: string): boolean;
@@ -170,6 +197,8 @@ export function backlogFrom(load: () => BacklogData | null, config: WorkloopConf
     remaining: () => remainingTasks(data(), config),
     workableCount: () => workableCount(data(), config),
     next: () => nextTaskName(data(), config),
+    candidates: () => candidateTickets(data(), config),
+    graph: () => dependencyGraph(data()),
     tier: ticket => tierFor(data(), config, ticket),
     isCompleted: ticket => isTicketCompleted(data(), ticket),
     has: ticket => hasTicket(data(), ticket),

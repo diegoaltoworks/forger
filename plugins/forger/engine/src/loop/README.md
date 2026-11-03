@@ -26,6 +26,10 @@ Pure:
   verdict record: invalid output is recorded `cannot_tell` for every criterion.
 - `worktree.ts` - a worktree per ticket and the rebase of its branch on the base
   (ADR 0011): names are pure, the git calls go through an injected capturing `CommandRunner`.
+- `parallel.ts` - the parts of the parallel loop that decide or compose (ADR 0011):
+  git calls aimed at a worktree, the folder map the scheduling rule reads, the
+  conflict check after a worker's one attempt, and the clean-up that drops a
+  conflicted branch.
 - `merged.ts`, `run-facts.ts` - git facts, through an injected `CommandRunner`.
 - `merge.ts` - merge a PR only once every check passed; the decision is pure,
   the waiting reads the PR through an injected `CommandRunner`.

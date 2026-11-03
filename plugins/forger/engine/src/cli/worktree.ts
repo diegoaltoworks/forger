@@ -1,15 +1,13 @@
-import {dirname, join} from 'path';
-
 import {execCapture} from '../adapters';
 import {capturing} from '../ports';
-import {createWorktree, rebaseOnBase, removeWorktree} from '../loop';
+import {createWorktree, rebaseOnBase, removeWorktree, stateDirFor} from '../loop';
 import type {Command} from './command';
 
 function options(ticket: string | undefined, ctx: Parameters<Command['run']>[0]) {
   return {
     ticket: ticket ?? '',
     baseBranch: ctx.config.base_branch,
-    stateDir: dirname(join(ctx.projectRoot, ctx.config.paths.state)),
+    stateDir: stateDirFor(ctx.projectRoot, ctx.config.paths.state, ticket ?? ''),
   };
 }
 

@@ -26,7 +26,7 @@ import type {Decision} from './verdict';
 import {decisionForHead, readVerdicts} from './verdict-store';
 import {buildPrompt} from './prompt';
 import {gatherFacts, takeSnapshot, ticketFromBranch} from './run-facts';
-import {type AutomationState, endRun, type StateStore, stallUpdate, startRun, updateRun} from './state';
+import {type InFlightRun, endRun, type StateStore, stallUpdate, startRun, updateRun} from './state';
 
 /** What an iteration reads and writes, handed in by the runner that owns it. */
 export interface IterationContext {
@@ -44,14 +44,39 @@ export interface IterationContext {
   halt(reason: string, kind?: TerminalEventKind): void;
 }
 
+/**
+ * Where one run happens when workers share the loop (ADR 0011): its own
+ * worktree, so its git facts, its decline record and its verdicts are read
+ * there, and the main checkout is never the worker's tree.
+ */
+export interface Placement {
+  ticket: string;
+  cwd: string;
+  /** Git calls that act on the worktree. */
+  gitRunner: CommandRunner;
+  /** Ends the worker's process group when aborted. */
+  abort?: AbortSignal;
+  /** The files still in conflict with base after the worker's attempt; null when none. */
+  conflicts(): string[] | null;
+  /** Takes the worktree down; a conflicted branch is dropped with it. */
+  finish(conflicted: boolean): void;
+}
+
 function verify(ctx: IterationContext): string | null {
   const {state, log, output, halt, lock, events} = ctx.config.paths;
   const ignore = [state, log, output, halt, lock, events, ctx.config.paths.declined, ...ctx.config.local_only];
   return verifyMerged(ctx.gitRunner, ctx.config.base_branch, ignore);
 }
 
-export async function runIteration(ctx: IterationContext, iteration: number, countStall = true): Promise<boolean> {
+export async function runIteration(
+  ctx: IterationContext,
+  iteration: number,
+  countStall = true,
+  placement?: Placement
+): Promise<boolean> {
   const state = ctx.store.load();
+  const git = placement?.gitRunner ?? ctx.gitRunner;
+  const root = placement?.cwd ?? ctx.projectRoot;
   const outputFile = join(ctx.outputDir, `iteration-${iteration}.log`);
   const sessionId = ctx.uuid();
 
@@ -65,11 +90,11 @@ export async function runIteration(ctx: IterationContext, iteration: number, cou
   // Capture the ticket we are ABOUT to work before the agent runs. Reading it
   // afterwards records the *next* not-started ticket instead of the one just
   // implemented, so completed_tasks would lag a ticket behind.
-  const attemptedTask = ctx.backlog.next();
+  const attemptedTask = placement ? placement.ticket : ctx.backlog.next();
   updateRun(state, sessionId, {ticket: attemptedTask});
   ctx.store.save(state);
 
-  const prompt = buildPrompt(ctx.config, iteration, state.completed_tasks, attemptedTask);
+  const prompt = buildPrompt(ctx.config, iteration, state.completed_tasks, attemptedTask, placement !== undefined);
   const tier = ctx.backlog.tier(attemptedTask);
   ctx.logger.log('INFO', `Running the agent (session: ${sessionId.slice(0, 8)}...)`);
   if (attemptedTask) {
@@ -78,11 +103,13 @@ export async function runIteration(ctx: IterationContext, iteration: number, cou
 
   const {timeoutMinutes, killGraceSeconds} = ctx.config.limits;
   const base = ctx.config.base_branch;
-  const snapshot = takeSnapshot(ctx.gitRunner, base);
+  // With workers side by side another worker's merge moves base too, so only
+  // the PR's own state can say this run merged.
+  const snapshot = placement ? {...takeSnapshot(git, base), baseSha: ''} : takeSnapshot(git, base);
   updateRun(state, sessionId, {snapshot});
   ctx.store.save(state);
   // A record left by an earlier run must not speak for this one.
-  const declinedFile = join(ctx.projectRoot, ctx.config.paths.declined);
+  const declinedFile = join(root, ctx.config.paths.declined);
   clearDeclineRecord(declinedFile);
   const startTime = Date.now();
   const result = await ctx.agent.run({
@@ -91,16 +118,17 @@ export async function runIteration(ctx: IterationContext, iteration: number, cou
     tier,
     model: resolveModel(tier.model, ctx.config.models),
     workerCommand: ctx.config.worker_command,
-    cwd: ctx.projectRoot,
+    cwd: root,
     timeoutMinutes,
     killGraceSeconds,
+    abort: placement?.abort,
   });
   const duration = Math.round((Date.now() - startTime) / 1000);
   // The worker changes ticket statuses while it runs; this read also serves
   // the loop's next remaining-work check.
   await ctx.refreshBacklog();
 
-  const gitFacts = gatherFacts(ctx.gitRunner, base, snapshot);
+  const gitFacts = gatherFacts(git, base, snapshot);
   // A branch that names no backlog ticket (a typo fix, a recovery branch)
   // leaves the run held to the engine's pick.
   const branchTicket = ticketFromBranch(gitFacts.branch);
@@ -128,10 +156,12 @@ export async function runIteration(ctx: IterationContext, iteration: number, cou
   const backlogCompleted = ticket !== null && ctx.backlog.isCompleted(ticket);
   const record = readDeclineRecord(declinedFile);
   clearDeclineRecord(declinedFile);
+  const conflict = placement && !gitFacts.merged && gitFacts.pushed ? placement.conflicts() : null;
   const exit = classifyExit(result.exitCode, result.output, result.timedOut);
   const outcome = decideOutcome({
     ...gitFacts,
     infraError: exit.kind === 'infrastructure' ? exit.reason : null,
+    conflict,
     ticket,
     enginePick: attemptedTask,
     declined: record?.ticket ?? null,
@@ -143,8 +173,8 @@ export async function runIteration(ctx: IterationContext, iteration: number, cou
     timeoutMinutes,
     baseBranch: base,
     backlogCompleted,
-    unclean: gitFacts.merged ? verify(ctx) : null,
-    verdict: verdictOf(ctx, gitFacts.pr),
+    unclean: gitFacts.merged && !placement ? verify(ctx) : null,
+    verdict: verdictOf(ctx, gitFacts.pr, root),
   });
 
   // Rewritten with the decided status so measures can read it back from the file.
@@ -152,7 +182,9 @@ export async function runIteration(ctx: IterationContext, iteration: number, cou
 
   const declined: DeclineEntry | null =
     outcome.status === 'declined' && record ? {ticket: record.ticket, reason: record.reason, iteration} : null;
-  return settle(ctx, state, sessionId, iteration, ticket, backlogCompleted, outcome, countStall, declined);
+  const settled = settle(ctx, sessionId, iteration, ticket, backlogCompleted, outcome, countStall, declined);
+  placement?.finish(outcome.status === 'conflict');
+  return settled;
 }
 
 /**
@@ -162,7 +194,6 @@ export async function runIteration(ctx: IterationContext, iteration: number, cou
  */
 function settle(
   ctx: IterationContext,
-  state: AutomationState,
   sessionId: string,
   iteration: number,
   ticket: string | null,
@@ -172,8 +203,10 @@ function settle(
   declined: DeclineEntry | null = null
 ): boolean {
   const {maxStallIterations, maxConsecutiveDeclines} = ctx.config.limits;
+  // Read afresh: other runs wrote the state while this one was away.
+  const state = ctx.store.load();
   endRun(state, sessionId);
-  state.status = outcome.status;
+  state.status = ctx.store.isHalted() ? 'halted' : state.in_flight.length > 0 ? 'running' : outcome.status;
   if (outcome.result === 'success') {
     ctx.logger.log('SUCCESS', `Iteration ${iteration} merged ${ticket ?? 'a change'}`);
     state.last_completed_at = new Date().toISOString();
@@ -235,7 +268,12 @@ export function closeOrphan(ctx: IterationContext): void {
   const state = ctx.store.load();
   if (state.status !== 'running') return;
   const iteration = state.iteration;
-  const run = state.in_flight[0];
+  // Every run the dead runner had in flight is closed out, not just the first.
+  const runs: Array<InFlightRun | undefined> = state.in_flight.length > 0 ? [...state.in_flight] : [undefined];
+  for (const run of runs) closeRun(ctx, iteration, run);
+}
+
+function closeRun(ctx: IterationContext, iteration: number, run: InFlightRun | undefined): void {
   const ticket = run?.ticket ?? null;
   const base = ctx.config.base_branch;
   ctx.logger.log('WARN', `Iteration ${iteration} was left open by a dead runner; closing it out`);
@@ -250,6 +288,7 @@ export function closeOrphan(ctx: IterationContext): void {
   const outcome = decideOutcome({
     ...gitFacts,
     infraError: null,
+    conflict: null,
     ticket: held,
     enginePick: ticket,
     declined: null,
@@ -265,11 +304,11 @@ export function closeOrphan(ctx: IterationContext): void {
     verdict: verdictOf(ctx, gitFacts.pr),
   });
   ctx.emit('runner_gone', iteration, held, outcome.error ?? outcome.warning);
-  settle(ctx, state, run?.session_id ?? '', iteration, held, backlogCompleted, outcome, false);
+  settle(ctx, run?.session_id ?? '', iteration, held, backlogCompleted, outcome, false);
 }
 
 /** The decision recorded for the head of the run's PR; null when there is no PR or no record for its head. */
-function verdictOf(ctx: IterationContext, pr: PrFact | null): Decision | null {
+function verdictOf(ctx: IterationContext, pr: PrFact | null, root = ctx.projectRoot): Decision | null {
   if (!pr) return null;
-  return decisionForHead(readVerdicts(join(ctx.projectRoot, ctx.config.paths.verdicts), pr.number), pr.head);
+  return decisionForHead(readVerdicts(join(root, ctx.config.paths.verdicts), pr.number), pr.head);
 }

@@ -20,6 +20,7 @@ const nothing: RunFacts = {
   backlogCompleted: false,
   unclean: null,
   infraError: null,
+  conflict: null,
   pr: null,
   verdict: 'pass',
 };
@@ -287,5 +288,23 @@ describe('decideOutcome on the verdict of a merged PR (ADR 0010)', () => {
 
   test('a red merge stays merged-red whatever the verdict', () => {
     expect(decideOutcome({...nothing, merged: true, pr: pr('failure', ['gates']), verdict: null}).status).toBe('merged-red');
+  });
+});
+
+describe('decideOutcome on a conflict', () => {
+  test('a branch still conflicting after the attempt is a recorded failure that merged nothing', () => {
+    const o = decideOutcome({...nothing, pushed: true, branch: 'feat/the_ticket', conflict: ['a.ts', 'b.ts']});
+    expect(o.status).toBe('conflict');
+    expect(o.result).toBe('failure');
+    expect(o.merged).toBe(false);
+    expect(o.halt).toBeNull();
+    expect(o.error).toContain('a.ts, b.ts');
+  });
+  test('a merge wins over a stale conflict reading', () => {
+    const o = decideOutcome({...nothing, merged: true, pr: pr('success'), conflict: ['a.ts']});
+    expect(o.status).toBe('completed');
+  });
+  test('a conflict is not hidden by the worker claiming completion', () => {
+    expect(decideOutcome({...nothing, claim: 'complete', conflict: []}).status).toBe('conflict');
   });
 });

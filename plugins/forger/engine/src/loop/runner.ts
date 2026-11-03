@@ -6,16 +6,18 @@
  * real agent or repo.
  */
 
-import {existsSync, mkdirSync} from 'fs';
+import {existsSync, mkdirSync, readdirSync, readFileSync} from 'fs';
 import {join} from 'path';
 
-import type {WorkloopConfig} from '../config';
-import type {Backlog} from '../backlog';
-import type {AgentRunner, CommandRunner} from '../ports';
+import {forgerPath, type WorkloopConfig} from '../config';
+import {pick, type Backlog, type FolderMap, type Schedulable} from '../backlog';
+import {capturing, type AgentRunner, type CapturingRunner, type CommandRunner} from '../ports';
 import {type AutomationState, currentTicket, StateStore} from './state';
 import {Logger, colors} from './logger';
 import {RateLimitError, rateLimitWaitMs} from './infra';
-import {type IterationContext, closeOrphan, runIteration} from './iteration';
+import {type IterationContext, type Placement, closeOrphan, runIteration} from './iteration';
+import {conflictAfterAttempt, finishWorktree, folderMapFrom, inWorktree} from './parallel';
+import {createWorktree, worktreePath} from './worktree';
 import {pidAlive, RunnerLock} from './lock';
 import {appendEvent, terminalEvent, type TerminalEventKind} from './events';
 import {buildStatus, type StatusReport} from './status-report';
@@ -24,6 +26,10 @@ export interface RunnerDeps {
   /** The agent spawn; a runner built without one can report and watch, but refuses to run an iteration. */
   agent?: AgentRunner;
   gitRunner: CommandRunner;
+  /** The git runner that reports failures, for worktrees; defaults to the plain runner seen as one that never fails. */
+  gitCapture?: CapturingRunner;
+  /** The folder map the scheduling rule reads; defaults to the architecture map of the project. */
+  folderMap?: FolderMap;
   uuid?: () => string;
   /** Liveness probe for the lock holder; defaults to a signal-0 check. */
   isAlive?: (pid: number) => boolean;
@@ -31,6 +37,28 @@ export interface RunnerDeps {
   /** Clock and wait, injectable so a rate-limit wait runs in a test without waiting. */
   now?: () => number;
   sleep?: (ms: number) => Promise<void>;
+}
+
+/** How often a parallel loop looks for a finished worker or a HALT when none has finished. */
+export const PARALLEL_POLL_MS = 1000;
+
+/** The folder map from the project's architecture map; empty when there is none. */
+export function loadFolderMap(projectRoot: string): FolderMap {
+  let architecture: {modules?: {paths?: string[]}} | null = null;
+  try {
+    architecture = JSON.parse(readFileSync(forgerPath(projectRoot, '.forger/architecture.json'), 'utf-8'));
+  } catch {
+    architecture = null;
+  }
+  return folderMapFrom(architecture, root => {
+    try {
+      return readdirSync(join(projectRoot, root), {withFileTypes: true})
+        .filter(e => e.isDirectory())
+        .map(e => e.name);
+    } catch {
+      return [];
+    }
+  });
 }
 
 /** Watch redraws often; the backlog behind it is re-read only every this many redraws. */
@@ -49,6 +77,8 @@ export class AutomationRunner {
   private now: () => number;
   private sleep: (ms: number) => Promise<void>;
   private iteration: IterationContext;
+  private gitCapture: CapturingRunner;
+  private folderMap: FolderMap | undefined;
 
   constructor(
     private projectRoot: string,
@@ -65,6 +95,8 @@ export class AutomationRunner {
     this.lock = new RunnerLock(p(config.paths.lock), deps.pid, this.isAliveFn);
 
     this.gitRunner = deps.gitRunner;
+    this.gitCapture = deps.gitCapture ?? capturing(deps.gitRunner);
+    this.folderMap = deps.folderMap;
     this.agent = deps.agent ?? {run: () => Promise.reject(new Error('no agent runner was given to this runner'))};
     this.uuid = deps.uuid ?? (() => crypto.randomUUID());
     this.now = deps.now ?? Date.now;
@@ -151,8 +183,8 @@ export class AutomationRunner {
     this.logger.log('INFO', 'State reset complete');
   }
 
-  runIteration(iteration: number, countStall = true): Promise<boolean> {
-    return runIteration(this.iteration, iteration, countStall);
+  runIteration(iteration: number, countStall = true, placement?: Placement): Promise<boolean> {
+    return runIteration(this.iteration, iteration, countStall, placement);
   }
 
   /**
@@ -180,7 +212,8 @@ export class AutomationRunner {
     try {
       await this.refreshBacklog();
       this.closeOrphan();
-      await this.loop(iterations, continuous);
+      if (this.config.parallelism > 1) await this.loopParallel(iterations, continuous);
+      else await this.loop(iterations, continuous);
       return true;
     } finally {
       this.lock.release();
@@ -255,6 +288,125 @@ export class AutomationRunner {
       }
     }
 
+    this.logger.log('INFO', `Completed ${completed} iterations`);
+    this.showStatus();
+  }
+
+  /** The worktree, git runner and clean-up for one worker started on `ticket`. */
+  private placeWorker(ticket: string, abort: AbortSignal): Placement | string {
+    const stateDir = join(this.projectRoot, this.config.paths.state, '..');
+    const o = {ticket, baseBranch: this.config.base_branch, stateDir};
+    const made = createWorktree(this.gitCapture, o);
+    if (!made.ok) return `worktree for ${ticket}: ${made.error}`;
+    const cwd = worktreePath(stateDir, ticket);
+    return {
+      ticket,
+      cwd,
+      gitRunner: inWorktree(this.gitRunner, cwd),
+      abort,
+      conflicts: () => conflictAfterAttempt(this.gitCapture, o),
+      finish: conflicted => {
+        const failed = finishWorktree(this.gitCapture, o, conflicted);
+        if (failed) this.logger.log('WARN', `Could not remove the worktree for ${ticket}: ${failed}`);
+      },
+    };
+  }
+
+  /**
+   * The loop with workers side by side (ADR 0011): `pick` chooses the tickets
+   * that may run together, each in its own worktree. One HALT stops new starts
+   * and, after the kill grace, ends the workers still running; each worker
+   * keeps its own timeout.
+   */
+  private async loopParallel(iterations: number, continuous: boolean): Promise<void> {
+    if (this.store.isHalted()) {
+      this.logger.log('ERROR', 'Automation is HALTED. Run "resume" to continue.');
+      this.showStatus();
+      return;
+    }
+    const initial = this.store.load();
+    if (initial.status === 'halted') {
+      this.logger.log('ERROR', 'Automation status is halted. Run "resume" to continue.');
+      this.showStatus();
+      return;
+    }
+    initial.stall_count = 0;
+    this.store.save(initial);
+
+    const {parallelism} = this.config;
+    const {maxConsecutiveFailures, pauseAfterFailure, killGraceSeconds} = this.config.limits;
+    const map = (this.folderMap ??= loadFolderMap(this.projectRoot));
+    this.logger.log('INFO', `Starting automation (${continuous ? 'continuous' : `${iterations} iterations`}, up to ${parallelism} workers)`);
+
+    const abort = new AbortController();
+    const running = new Map<string, {done: Promise<void>; scheduled: Schedulable}>();
+    let iteration = initial.iteration;
+    let started = 0;
+    let completed = 0;
+    let killTimer: ReturnType<typeof setTimeout> | undefined;
+
+    const start = (c: Schedulable): void => {
+      iteration++;
+      started++;
+      const placed = this.placeWorker(c.id, abort.signal);
+      if (typeof placed === 'string') {
+        const state = this.store.load();
+        state.failed_iterations++;
+        state.consecutive_failures++;
+        state.last_error = placed;
+        this.store.save(state);
+        this.logger.log('ERROR', placed);
+        return;
+      }
+      const done = this.runIteration(iteration, started > 1, placed)
+        .then(async ok => {
+          if (ok) completed++;
+          else await this.sleep(pauseAfterFailure);
+        })
+        .catch(e => this.logger.log('ERROR', `Worker for ${c.id} failed: ${(e as Error).message}`))
+        .then(async () => {
+          running.delete(c.id);
+          await this.refreshBacklog();
+        });
+      running.set(c.id, {done, scheduled: c});
+    };
+
+    while (true) {
+      if (this.store.isHalted()) {
+        if (running.size === 0) {
+          this.logger.log('WARN', 'HALT file detected. Stopping.');
+          break;
+        }
+        if (killTimer === undefined) {
+          this.logger.log('WARN', `HALT file detected; ending ${running.size} running worker(s) after ${killGraceSeconds}s`);
+          killTimer = setTimeout(() => abort.abort(), killGraceSeconds * 1000);
+        }
+      } else {
+        const state = this.store.load();
+        const remaining = this.getRemainingTasks();
+        if (remaining === 0 && running.size === 0) {
+          this.logger.log('SUCCESS', 'All tasks completed!');
+          this.emit('completed', state.iteration, null, null);
+          break;
+        }
+        if (state.consecutive_failures >= maxConsecutiveFailures) {
+          this.halt(`Too many consecutive failures (${maxConsecutiveFailures})`, 'too_many_failures');
+          continue;
+        }
+        if (continuous || started < iterations) {
+          const candidates = this.backlog.candidates().filter(c => !running.has(c.id));
+          const together = [...running.values()].map(r => r.scheduled);
+          const chosen = pick(candidates, together, parallelism, map, {graph: this.backlog.graph()});
+          for (const c of chosen.slice(0, continuous ? chosen.length : iterations - started)) start(c);
+        }
+        if (running.size === 0) {
+          this.logger.log('INFO', started >= iterations && !continuous ? `Completed ${iterations} iterations (limit reached)` : 'No workable ticket to start');
+          break;
+        }
+      }
+      await Promise.race([...[...running.values()].map(r => r.done), this.sleep(PARALLEL_POLL_MS)]);
+    }
+    clearTimeout(killTimer);
     this.logger.log('INFO', `Completed ${completed} iterations`);
     this.showStatus();
   }
