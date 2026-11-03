@@ -9,7 +9,7 @@ The engine's state sits in files in one checkout, so the loop stops when that ma
 Evidence from the engine:
 
 - `config/layout.ts` lists every forger-owned entry in `OWNED`; that list is the complete set of files to assign a home.
-- `loop/lock.ts`: the runner lock is a file holding one pid, probed with signal 0. A pid means nothing on another machine.
+- `loop/lock.ts`: the engine lock is a file holding one pid, probed with signal 0. A pid means nothing on another machine.
 - `loop/state.ts`: one `state.json` record. `loop/events.ts`: an append-only `events.jsonl`. `loop/iteration-log.ts` reads `output/iteration-N.log`. The HALT file is one file.
 - The backlog is already shared: with the GitHub tracker the issues are the tickets (ADR 0001), and the claim is an assignment.
 - `supervisor/` reads state, events and logs from the working tree, so it must sit beside the engine.
@@ -73,7 +73,7 @@ The `.forger/` move is done, so this ADR only adds a home per file. A new config
 
 ### 5. Migration without losing history
 
-`migrate --state` is a command, idempotent and refusing while a runner lock or a live lease exists:
+`migrate --state` is a command, idempotent and refusing while a engine lock or a live lease exists:
 
 1. create the orphan `forger-state` branch if absent;
 2. commit the existing `state.json` and `events.jsonl` (split by day, keeping every line and its order) as the first commit, so history starts where the local one ends;
