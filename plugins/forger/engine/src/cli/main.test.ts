@@ -25,13 +25,13 @@ function projectWith(
   return root;
 }
 
-async function capture(argv: string[], run?: CommandRunner, installedSkills?: () => string[]): Promise<string> {
+async function capture(argv: string[], run?: CommandRunner, installedSkills?: () => string[], collectionRoots?: () => string[]): Promise<string> {
   const lines: string[] = [];
   const spy = spyOn(console, 'log').mockImplementation((...args: unknown[]) => {
     lines.push(args.join(' '));
   });
   try {
-    await main(argv, {run, installedSkills});
+    await main(argv, {run, installedSkills, collectionRoots});
   } finally {
     spy.mockRestore();
   }
@@ -344,9 +344,26 @@ describe('skills --json', () => {
     process.chdir(root);
     const out = JSON.parse(await capture(['skills', '--json'], undefined, () => ['c:review']));
     const by = Object.fromEntries(out.slots.map((s: {slot: string}) => [s.slot, s]));
-    expect(by.review).toMatchObject({skill: 'c:review', installed: true, use: 'skill'});
-    expect(by.diagnose).toMatchObject({skill: 'c:gone', installed: false, use: 'builtin'});
-    expect(by.interview).toMatchObject({skill: null, use: 'builtin'});
+    expect(by.review).toMatchObject({skill: 'c:review', installed: true, invoke: 'skill'});
+    expect(by.diagnose).toMatchObject({skill: 'c:gone', installed: false, invoke: 'builtin'});
+    expect(by.interview).toMatchObject({skill: null, invoke: 'builtin'});
+  });
+  test('a file slot is read from a collection root and reported with its path, forbid list and preamble', async () => {
+    const root = projectWith({});
+    const coll = mkdtempSync(join(tmpdir(), 'forger-coll-'));
+    mkdirSync(join(coll, 'skills', 'r'), {recursive: true});
+    writeFileSync(join(coll, 'skills', 'r', 'SKILL.md'), 'x');
+    writeFileSync(
+      join(root, '.forger', 'workloop.config.json'),
+      JSON.stringify({tracker: {kind: 'local'}, skills: {review: {file: 'skills/r/SKILL.md'}, diagnose: {file: 'nope/SKILL.md'}}})
+    );
+    process.chdir(root);
+    const out = JSON.parse(await capture(['skills', '--json'], undefined, () => ['tdd'], () => [coll]));
+    const by = Object.fromEntries(out.slots.map((s: {slot: string}) => [s.slot, s]));
+    expect(by.review).toMatchObject({invoke: 'file', installed: true, path: join(coll, 'skills', 'r', 'SKILL.md')});
+    expect(by.diagnose).toMatchObject({invoke: 'builtin', installed: false});
+    expect(out.forbid).toContain('mattpocock-skills:wayfinder');
+    expect(out.preamble).toContain('Do not commit');
   });
   test('--presets lists the presets whose collection is installed', async () => {
     process.chdir(projectWith({}));

@@ -16,6 +16,9 @@ export interface Tier {
   budget: number;
 }
 
+/** A skill slot maps to an installed skill name, or to a SKILL.md the worker reads and follows. */
+export type SkillMapping = string | {file: string};
+
 export interface WorkloopConfig {
   /** Only tickets with this `repo` (or no `repo`) are worked here. null = no filter. */
   repo: string | null;
@@ -88,10 +91,11 @@ export interface WorkloopConfig {
    */
   local_only: string[];
   /**
-   * Skill slot -> installed skill name. An unmapped slot, or a skill that is not
+   * Skill slot -> installed skill name, or `{file}` naming a SKILL.md (absolute, or
+   * relative to an installed collection's root or the forger plugin root). An unmapped slot, or a skill that is not
    * installed, uses forger's built-in step. `skills --json` resolves it.
    */
-  skills: Record<string, string>;
+  skills: Record<string, SkillMapping>;
   /**
    * Model and vendor names the `docs` check flags in prose, matched as whole
    * words, case-insensitively. Prose names roles; adapters and config name models.
@@ -119,7 +123,7 @@ export interface WorkloopConfigInput {
   paths?: Partial<WorkloopConfig['paths']>;
   tracker?: Partial<WorkloopConfig['tracker']>;
   local_only?: string[];
-  skills?: Record<string, string>;
+  skills?: Record<string, SkillMapping>;
   model_names?: string[];
 }
 

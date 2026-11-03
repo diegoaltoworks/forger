@@ -13,7 +13,7 @@ import {agentFor, execCapture, execRunner, findHarness} from '../adapters';
 import type {Backlog} from '../backlog';
 import {detectLayout, isProjectRoot, legacyWarning, loadConfig, type WorkloopConfig} from '../config';
 import {AutomationRunner} from '../loop';
-import {listInstalledSkills} from '../packs';
+import {listCollectionRoots, listInstalledSkills} from '../packs';
 import {STAGES, type CliDeps, type CommandContext, type Stage} from './command';
 import {FLAGS} from './flags';
 import {openBacklog} from './open-backlog';
@@ -29,7 +29,7 @@ export function findProjectRoot(start: string = process.cwd()): string {
   throw new Error('Could not find a .forger directory in this or any parent directory');
 }
 
-function contextFor(base: Pick<CommandContext, 'values' | 'positionals' | 'deps' | 'pluginRoot' | 'installedSkills'>): CommandContext {
+function contextFor(base: Pick<CommandContext, 'values' | 'positionals' | 'deps' | 'pluginRoot' | 'installedSkills' | 'collectionRoots'>): CommandContext {
   let root: string | undefined;
   let config: WorkloopConfig | undefined;
   let backlog: Backlog | undefined;
@@ -81,6 +81,7 @@ export async function main(argv: string[] = process.argv.slice(2), deps: CliDeps
     deps,
     pluginRoot: resolve(import.meta.dir, '../../..'),
     installedSkills: deps.installedSkills ?? (() => listInstalledSkills(homedir(), process.cwd())),
+    collectionRoots: deps.collectionRoots ?? (() => listCollectionRoots(homedir())),
   });
   const command = findCommand(name);
   // An unknown name is reported only once the loop is reachable, as every loop command is.

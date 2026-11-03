@@ -126,16 +126,38 @@ Map a slot to a skill in the `skills` section of `.forger/workloop.config.json`:
 { "skills": { "review": "some-collection:code-review" } }
 ```
 
-An unmapped slot, or a skill that is not installed, uses the built-in step. The
-commands never name a skill: they run `skills --json`, which reports for every
-slot the configured skill, whether it is installed, and whether the built-in
-step applies, and invoke whatever it resolves.
+A slot can also point at a file, for a skill the harness will not invoke by name
+(many collections mark their skills as user-invoked only):
+
+```json
+{ "skills": { "review": { "file": "skills/code-review/SKILL.md" } } }
+```
+
+A relative path is looked up under each installed plugin's root, then under the
+forger plugin root; an absolute path is used as it is. The worker reads the file
+and follows it.
+
+An unmapped slot, a skill that is not installed, or a file that is missing uses
+the built-in step. The commands never name a skill: they run `skills --json`,
+which reports for every slot how it is invoked (`invoke`: `skill`, `file` or
+`builtin`), the resolved `path` of a file slot, and whether it is present. It
+also reports the `preamble` and the `forbid` list.
+
+Every `skill` or `file` invocation starts with the engine-owned `preamble`: the
+intent is the ticket and its spec, never ask the owner (an open question is a
+decline), do not commit, push, merge or open pull requests (forger does), and do
+not route to another skill or start a loop. A preset's `forbid` lists the skills
+of its collection the worker must not invoke: routers, loops and anything that
+owns the process.
 
 **Worked example: the mattpocock-skills collection.** The preset
 `plugins/forger/presets/mattpocock-skills.json` maps that collection onto the
 slots it covers. `/forger:setup` offers it when the collection is installed, or
 apply it directly with `setup --preset mattpocock-skills`. A preset is a plain
-file: copy it to map another collection.
+file: copy it to map another collection. Besides the slot mapping it declares
+how to find the collection (`collection` and `plugin` for a prefixed plugin
+install, `aliases` for the bare skill names of an install without a prefix) and
+the `forbid` list, so detection and resolution work with or without the prefix.
 
 **The `design` slot** (ui pack) maps like any other. Examples: a Figma MCP
 server for boards, a prototype skill from an installed collection, or artifacts
@@ -226,7 +248,7 @@ and gitignores the per-run state. Create the label with
 | `paths` | Where the backlog, state, log, output dir, HALT file, engine lock, terminal-event file and `process.md` live. Default under `.forger/`. |
 | `local_only` | Paths that stay modified in a checkout without being the worker's doing (local settings, a work order). The dirty-tree check skips them and the engine's own files (`paths`); a directory covers what is under it. Default none. |
 | `model_names` | Model and vendor names `check docs` flags in prose, as whole words, case-insensitively. Default a list of common ones. |
-| `skills` | Skill slot -> installed skill name (see Bring your own skills). Default none: every slot uses its built-in step. |
+| `skills` | Skill slot -> installed skill name, or `{ "file": "<path to SKILL.md>" }` (see Bring your own skills). Default none: every slot uses its built-in step. |
 | `tracker` | `{ kind, label, ignore }`. `kind` is `github` (default: issues are the backlog), `local`, or `none` (both read `backlog.json`). `label` is the intake label, default `ready-for-agent`. `ignore` lists labels whose issues are not work, a trailing `*` matching a prefix (`["wayfinder:*"]`); default none. |
 
 ## How the engine runs

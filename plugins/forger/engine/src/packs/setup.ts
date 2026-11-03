@@ -8,14 +8,14 @@ import {dirname, join} from 'path';
 
 import {LOCK_PATH, loadPacks, mergeLock, parseLock, renderLock, selectPacks, sha256, type Lock, type LockedFile} from './packs';
 import type {Harness} from '../ports';
-import {CONFIG_FILE, FORGER_DIR, detectLayout, forgerPath} from '../config';
+import {CONFIG_FILE, FORGER_DIR, detectLayout, forgerPath, type SkillMapping} from '../config';
 
 export interface SetupOptions {
   gates?: string;
   baseBranch?: string;
   trackerKind?: string;
   /** Skill slots to map, from a preset. */
-  skills?: Record<string, string>;
+  skills?: Record<string, SkillMapping>;
   /** Pack ids to install; defaults to `base`. */
   packs?: string[];
   /** The harness the worker runs in; its commands are installed where it reads them. */

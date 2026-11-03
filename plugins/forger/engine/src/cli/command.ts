@@ -16,6 +16,7 @@ export interface CliDeps {
   /** Stands in for the harness's agent, so a command that spawns one can be tested. */
   agent?: AgentRunner;
   installedSkills?: () => string[];
+  collectionRoots?: () => string[];
 }
 
 /** none: runs anywhere; root: needs the consumer repo; config: and its config; loop: and the backlog and runner. */
@@ -29,6 +30,7 @@ export interface CommandContext {
   deps: CliDeps;
   pluginRoot: string;
   installedSkills: () => string[];
+  collectionRoots: () => string[];
   /** The injected runner, else real git and gh in the project root. */
   run(): CommandRunner;
   readonly projectRoot: string;
