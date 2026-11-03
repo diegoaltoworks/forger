@@ -16,6 +16,7 @@ export const FLAGS = {
   tracker: {type: 'string'},
   issue: {type: 'string'},
   ticket: {type: 'string'},
+  remove: {type: 'boolean', default: false},
   reason: {type: 'string'},
   detail: {type: 'string'},
   pr: {type: 'string'},

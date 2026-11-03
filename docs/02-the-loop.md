@@ -33,6 +33,7 @@ chosen by the `harness` config key (ADR 0009).
 | `HALT` | no | engine or worker | stops the loop until a person clears it |
 | `runner.lock` | no | engine | the pid of the one live engine; a second `run` refuses, a dead pid is taken over |
 | `declined.json` | no | worker (`decline`), engine | the worker's decline of the pick; the next run of that iteration reads it once and deletes it |
+| `worktrees/` | no | `worktree` | one git worktree per ticket, created from the remote base branch and removed after the run |
 | `verdicts/` | no | `verify` | one verdict record per verified PR head commit: a judgement and evidence for each acceptance criterion; a push after it makes it stale |
 | `events.jsonl` | no | engine | append-only terminal events (completed, halted, stalled, timed out, too many failures, engine gone), one JSON line each, for watchers |
 | owner notes (`human.md`) | yes | workers and supervisor | what only the owner can do: switches, checks owed, open choices |
@@ -172,6 +173,19 @@ comments each unmet or unclear criterion, and exits 1; the run ends as a recorde
 failure. A criterion judged `cannot_tell` in more than one round is called out in
 the comment as one to reword or make mechanical. `handover --list` reports the
 tickets handed over, with the criteria at fault.
+
+## A worktree per worker
+
+For workers that run side by side (ADR 0011) each ticket gets its own git
+worktree and branch, so no worker moves the main checkout.
+`worktree --ticket <id> --json` fetches the base branch, creates
+`feat/<id>` from the remote base in a worktree beside the engine's state, and
+prints its path; `worktree --ticket <id> --remove` removes the tree and keeps
+the branch. `rebase --ticket <id> --json` fetches the base and rebases the
+branch inside its worktree, and reports `clean`, `conflict` (with the files; the
+rebase is left in progress there for the worker to resolve and continue) or
+`error`. Both exit 1 unless they succeeded. The git calls sit behind the
+injected command port, so the decisions are tested with a fake one.
 
 ## Invariants
 

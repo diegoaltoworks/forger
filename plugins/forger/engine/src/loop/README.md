@@ -24,6 +24,8 @@ Pure:
 - `verify-input.ts` - what the verifier is given (criteria, diff and gate result,
   never the worker's claims), the tier it runs on, and its reply read into a
   verdict record: invalid output is recorded `cannot_tell` for every criterion.
+- `worktree.ts` - a worktree per ticket and the rebase of its branch on the base
+  (ADR 0011): names are pure, the git calls go through an injected capturing `CommandRunner`.
 - `merged.ts`, `run-facts.ts` - git facts, through an injected `CommandRunner`.
 - `merge.ts` - merge a PR only once every check passed; the decision is pure,
   the waiting reads the PR through an injected `CommandRunner`.

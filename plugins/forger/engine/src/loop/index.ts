@@ -23,3 +23,4 @@ export * from './verdict';
 export * from './verdict-store';
 export * from './verify';
 export * from './verify-input';
+export * from './worktree';

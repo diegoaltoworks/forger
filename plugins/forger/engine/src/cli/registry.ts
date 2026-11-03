@@ -24,6 +24,7 @@ import {skills} from './skills';
 import {slice} from './slice';
 import {orient, report} from './supervisor';
 import {verify} from './verify';
+import {rebase, worktree} from './worktree';
 
 export const COMMANDS: Command[] = [
   run,
@@ -44,6 +45,8 @@ export const COMMANDS: Command[] = [
   merge,
   verify,
   decline,
+  worktree,
+  rebase,
   handover,
   approval,
   events,
