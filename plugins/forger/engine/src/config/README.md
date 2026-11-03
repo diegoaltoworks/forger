@@ -10,6 +10,8 @@ over them, and the model roles.
 - `layout.ts` - the only file that names forger's folder: which layout a project
   has (`.forger/`, or the legacy one until `migrate`), and the logical-to-physical
   path mapping every other folder goes through.
+- `home.ts` - `homeOf`, pure: which of main, state, tracker or local each forger
+  file belongs to (ADR 0015). A path the table does not name throws.
 
 ## Entry point
 
