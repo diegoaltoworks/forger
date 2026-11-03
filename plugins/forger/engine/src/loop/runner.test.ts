@@ -595,3 +595,64 @@ describe('AutomationRunner and a rate-limited backlog', () => {
     expect(runner.watchRefresh(2 * WATCH_BACKLOG_EVERY)).toBe('offline');
   });
 });
+
+describe('AutomationRunner declines', () => {
+  const two: BacklogData = {
+    features: {
+      the_ticket: {priority: 'P1', status: 'not_started', depends_on: []},
+    },
+  };
+
+  function decliningRunner() {
+    const root = mkdtempSync(join(tmpdir(), 'forger-runner-'));
+    dirs.push(root);
+    const config = mergeConfig({limits: {maxStallIterations: 50}});
+    const runner = new AutomationRunner(root, config, backlogFrom(() => two, config), {
+      agent: {run: async () => {
+        mkdirSync(join(root, '.forger'), {recursive: true});
+        writeFileSync(
+          join(root, '.forger', 'declined.json'),
+          JSON.stringify({ticket: 'the_ticket', reason: 'unclear', detail: 'which one?', at: 't'})
+        );
+        return {exitCode: 0, signal: null, output: '<process>stop</process> unclear', timedOut: false};
+      }},
+      gitRunner: sceneRunner({}, () => true),
+      uuid: () => '00000000-0000-0000-0000-000000000000',
+    });
+    return {runner, root};
+  }
+
+  test('a decline of the pick is neutral, recorded, and the record is consumed', async () => {
+    const {runner, root} = decliningRunner();
+    expect(await runner.runIteration(1)).toBe(false);
+    const state = readState(root);
+    expect(state.status).toBe('declined');
+    expect(state.consecutive_failures).toBe(0);
+    expect(state.stall_count).toBe(1);
+    expect(state.declined_tasks).toEqual([{ticket: 'the_ticket', reason: 'unclear', iteration: 1}]);
+    expect(existsSync(join(root, '.forger', 'declined.json'))).toBe(false);
+    expect(existsSync(join(root, '.forger', 'HALT'))).toBe(false);
+  });
+
+  test('two declines in a row do not halt; the third does, naming each ticket', async () => {
+    const {runner, root} = decliningRunner();
+    await runner.runIteration(1);
+    await runner.runIteration(2);
+    expect(readState(root).consecutive_declines).toBe(2);
+    expect(existsSync(join(root, '.forger', 'HALT'))).toBe(false);
+    await runner.runIteration(3);
+    expect(readState(root).consecutive_declines).toBe(3);
+    expect(existsSync(join(root, '.forger', 'HALT'))).toBe(true);
+    expect(readFileSync(join(root, '.forger', 'HALT'), 'utf-8')).toContain('Declined 3 tickets in a row: the_ticket (unclear), the_ticket (unclear), the_ticket (unclear)');
+  });
+
+  test('a stale record from an earlier run does not decline this one', async () => {
+    const {runner, root, calls} = runnerWith({exitCode: 0, signal: null, output: '<process>stop</process> x', timedOut: false});
+    mkdirSync(join(root, '.forger'), {recursive: true});
+    writeFileSync(join(root, '.forger', 'declined.json'), JSON.stringify({ticket: 'the_ticket', reason: 'blocked', detail: 'old', at: 't'}));
+    await runner.runIteration(1);
+    expect(calls).toHaveLength(1);
+    expect(readState(root).status).toBe('halted');
+    expect(readState(root).declined_tasks).toEqual([]);
+  });
+});

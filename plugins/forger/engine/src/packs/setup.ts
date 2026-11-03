@@ -36,7 +36,7 @@ const CHECK_MARKER = /\bwork\.ts\s+check\b|\bcheck docs\b/;
 
 /** Per-run files a project never commits. */
 export function gitignoreLines(dir: string): string[] {
-  return ['state.json', 'work.log', 'output/', 'HALT', 'runner.lock', 'events.jsonl'].map(f => `${dir}/${f}`);
+  return ['state.json', 'work.log', 'output/', 'HALT', 'runner.lock', 'events.jsonl', 'declined.json'].map(f => `${dir}/${f}`);
 }
 
 /** The gates always end with the check command, run from the plugin that is installed now. */

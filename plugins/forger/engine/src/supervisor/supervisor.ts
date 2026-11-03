@@ -97,6 +97,7 @@ export interface ReportInputs {
 export interface Report {
   merged: string[];
   in_progress: Array<{ticket: string; branch: string}>;
+  declined: Array<{ticket: string; reason: string}>;
   next: string[];
   waiting_on_owner: OwnerItem[];
 }
@@ -122,6 +123,7 @@ export function buildReport(i: ReportInputs): Report {
   return {
     merged: s.completed_tasks,
     in_progress: inProgress,
+    declined: s.declined,
     next: s.next_pick ? [s.next_pick] : [],
     waiting_on_owner: waiting,
   };
@@ -135,6 +137,9 @@ export function formatReport(r: Report): string {
     '',
     '**In progress**',
     ...list(r.in_progress.map(p => `${p.ticket} on branch \`${p.branch || 'detached'}\``)),
+    '',
+    '**Declined**',
+    ...list(r.declined.map(d => `${d.ticket} (${d.reason})`)),
     '',
     '**Next**',
     ...list(r.next),

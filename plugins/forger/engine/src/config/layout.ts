@@ -30,6 +30,7 @@ export const OWNED = [
   'HALT',
   'runner.lock',
   'events.jsonl',
+  'declined.json',
   'forger.lock.json',
   'process.md',
   'human.md',

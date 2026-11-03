@@ -46,6 +46,7 @@ describe('buildStatus', () => {
       workable: 2,
       last_error: null,
       completed_tasks: [],
+      declined: [],
     });
   });
 

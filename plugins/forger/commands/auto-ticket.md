@@ -60,8 +60,10 @@ read it with `gh issue view <n>`; otherwise read it in `backlog.json`. When the
 prompt says there is no workable ticket, signal `stop`.
 
 Build it or decline it. If the ticket is blocked on something only a human can
-supply, is too large for one iteration, or is unclear, signal `stop` and say
-which and why.
+supply, is too large for one iteration, or is unclear, run
+`bun "${CLAUDE_PLUGIN_ROOT}/bin/work.ts" decline --ticket <id> --reason blocked|too-large|unclear --detail "<what the owner must change>" --json`,
+then signal `stop` and say which and why. The command records the decline and
+takes the ticket out of the backlog; do not relabel the issue by hand.
 
 ### 3. Start it
 - Branch from the configured base branch: `git checkout -b feat/<ticket-id>`

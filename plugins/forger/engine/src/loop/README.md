@@ -9,6 +9,8 @@ Pure:
 
 - `outcome.ts` - the outcome of a run, decided from facts, including whether it
   built the engine's pick, declined it, or took another ticket.
+- `decline.ts` - what a decline record must hold, and how a run of declines
+  becomes a halt.
 - `claim.ts` - the worker's completion signal.
 - `infra.ts` - an infrastructure failure or a rate limit, told from a worker
   failure.
@@ -25,6 +27,8 @@ Touch the world (their own files, the terminal, the clock):
 - `runner.ts` - the outer loop: lock, halt, stall and failure limits, status and
   watch displays.
 - `iteration.ts` - one iteration and the close-out of one a dead engine left open.
+- `decline-io.ts` - the decline record file and the tracker calls that take a
+  declined ticket out of the backlog, through the command port.
 - `state.ts`, `lock.ts`, `events.ts`, `logger.ts` - the state file and HALT, the
   single-engine lock, the event file, the work log.
 
