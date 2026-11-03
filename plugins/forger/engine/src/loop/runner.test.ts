@@ -246,7 +246,7 @@ describe('AutomationRunner outcome from facts', () => {
     );
     expect(await runner.runIteration(1)).toBe(true);
     expect(iterationLog(root, 1)).toContain('ticket: the_ticket\n');
-    expect(iterationLog(root, 1)).not.toContain('engine pick');
+    expect(iterationLog(root, 1)).toContain('ticket: the_ticket\nengine pick: the_ticket\n');
   });
 
   test('logs the ticket the worker took when it differs from the engine pick', async () => {
@@ -255,13 +255,14 @@ describe('AutomationRunner outcome from facts', () => {
       {merge: true, branch: 'feat/other'},
       {features: {...backlog.features, other: {priority: 'P1', status: 'completed'}}}
     );
-    expect(await runner.runIteration(1)).toBe(true);
+    expect(await runner.runIteration(1)).toBe(false);
     const log = iterationLog(root, 1);
     expect(log).toContain('ticket: other\nengine pick: the_ticket\n');
+    expect(readState(root).status).toBe('off-pick');
     expect(readFileSync(join(root, '.forger', 'work.log'), 'utf-8')).toContain(
       'Worker took other (engine picked the_ticket)'
     );
-    expect(readState(root).completed_tasks).toEqual(['other']);
+    expect(readState(root).completed_tasks).toEqual([]);
   });
 });
 

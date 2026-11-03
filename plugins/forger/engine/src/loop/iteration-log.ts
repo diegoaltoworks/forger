@@ -30,9 +30,7 @@ export function formatIterationLog(f: IterationLogFacts): string {
   return [
     `=== forger iteration ${f.iteration} ===`,
     `ticket: ${f.ticket ?? 'none picked'}`,
-    ...(f.enginePick !== undefined && f.enginePick !== f.ticket
-      ? [`engine pick: ${f.enginePick ?? 'none'}`]
-      : []),
+    ...(f.enginePick !== undefined ? [`engine pick: ${f.enginePick ?? 'none'}`] : []),
     `elapsed: ${f.elapsedSeconds}s`,
     `outcome: ${outcome(f)}`,
     '=== output ===',

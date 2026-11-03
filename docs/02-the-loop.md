@@ -100,14 +100,16 @@ test per branch) turns them into a status.
 ```mermaid
 flowchart TD
     S[pick the next ticket] --> W[run one worker under a deadline]
-    W --> F[gather facts: base moved, PR checks, branch pushed, backlog status, timeout, claim]
+    W --> F[gather facts: base moved, PR checks, branch pushed, backlog status, timeout, claim, decline record]
     F --> M{base branch moved?}
     M -- yes --> R{PR checks failing or pending?}
     R -- yes --> MR[merged-red: failure, halt naming the PR and check]
     R -- no --> OK[completed: success, failures reset]
     M -- no --> I{platform error?}
     I -- yes --> E[error: neutral, halt]
-    I -- no --> D{backlog says completed?}
+    I -- no --> DC{declined the pick on the record?}
+    DC -- yes --> DE[declined: neutral]
+    DC -- no --> D{backlog says completed?}
     D -- yes --> X[failed: diverged, halt]
     D -- no --> H{worker signalled stop?}
     H -- yes --> HL[halted: neutral, halt]
@@ -119,6 +121,13 @@ flowchart TD
     P -- yes --> PA[partial: failure]
     P -- no --> FN[failed: nothing happened]
 ```
+
+The engine's pick is the contract. A branch for any other ticket is `off-pick`,
+a failure, even when its own PR merged: the work is real but is never counted as
+the pick's completion. A decline record for the pick, with nothing built, is
+`declined`, the one sanctioned exit. A record for a different ticket is a
+failure. The iteration log header always prints the engine's pick next to the
+ticket the run was held to. The full table is in ADR 0008.
 
 A green merge is the only progress. Failures count toward a halt; a run that
 merged and then timed out is still a success, with a warning. A merge made on

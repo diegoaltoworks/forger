@@ -8,6 +8,8 @@ const nothing: RunFacts = {
   pushed: false,
   branch: null,
   ticket: 'the_ticket',
+  enginePick: 'the_ticket',
+  declined: null,
   claim: null,
   stopReason: null,
   exitCode: 0,
@@ -199,5 +201,64 @@ describe('decideOutcome', () => {
     const o = decideOutcome({...nothing, merged: true, infraError: 'Infrastructure error (network)'});
     expect(o.result).toBe('success');
     expect(o.halt).toBeNull();
+  });
+});
+
+describe('decideOutcome on the engine pick (ADR 0008 table)', () => {
+  const merged = {merged: true, pushed: true, branch: 'feat/the_ticket', claim: 'complete' as const, pr: pr('success')};
+  const rows: {name: string; facts: Partial<RunFacts>; status: Outcome['status']; result: Outcome['result']; merged: boolean}[] = [
+    {name: 'built the pick, merged', facts: merged, status: 'completed', result: 'success', merged: true},
+    {name: 'built the pick, not merged', facts: {branch: 'feat/the_ticket', pushed: true, claim: 'complete'}, status: 'failed', result: 'failure', merged: false},
+    {
+      name: 'declined the pick on the record',
+      facts: {declined: 'the_ticket', claim: 'stop', stopReason: 'unclear'},
+      status: 'declined',
+      result: 'neutral',
+      merged: false,
+    },
+    {
+      name: 'took another ticket, merged',
+      facts: {...merged, ticket: 'other', branch: 'feat/other'},
+      status: 'off-pick',
+      result: 'failure',
+      merged: true,
+    },
+    {
+      name: 'took another ticket, not merged',
+      facts: {ticket: 'other', branch: 'feat/other', pushed: true, claim: 'complete'},
+      status: 'off-pick',
+      result: 'failure',
+      merged: false,
+    },
+    {
+      name: 'took another ticket and declined the pick',
+      facts: {ticket: 'other', branch: 'feat/other', declined: 'the_ticket'},
+      status: 'off-pick',
+      result: 'failure',
+      merged: false,
+    },
+    {
+      name: 'declined a ticket that is not the pick',
+      facts: {declined: 'other', claim: 'stop', stopReason: 'x'},
+      status: 'failed',
+      result: 'failure',
+      merged: false,
+    },
+  ];
+  for (const r of rows) {
+    test(r.name, () => {
+      const o = decideOutcome({...nothing, ...r.facts});
+      expect(o.status).toBe(r.status);
+      expect(o.result).toBe(r.result);
+      expect(o.merged).toBe(r.merged);
+    });
+  }
+
+  test('an off-pick run halts nothing and names both tickets', () => {
+    const o = decideOutcome({...nothing, ...merged, ticket: 'other', branch: 'feat/other', declined: 'the_ticket'});
+    expect(o.halt).toBeNull();
+    expect(o.error).toContain('"other"');
+    expect(o.error).toContain('"the_ticket"');
+    expect(o.error).toContain('declined');
   });
 });
