@@ -34,10 +34,22 @@ function backlogSection(config: WorkloopConfig): string {
   ].join('\n');
 }
 
+/**
+ * The engine owns the order (ADR 0008): the worker is told which ticket to
+ * build and may decline it, never choose another.
+ */
+function pickClause(pick: string | null): string {
+  if (pick === null) {
+    return 'There is no workable ticket. Do not look for one: signal stop with the reason "no actionable tasks"';
+  }
+  return `Build ticket \`${pick}\` (the engine's pick) and no other. Read it, then build it or decline it: if it is blocked, too large or unclear, signal stop and say why`;
+}
+
 export function buildPrompt(
   config: WorkloopConfig,
   iteration: number,
-  completedTasks: string[]
+  completedTasks: string[],
+  pick: string | null
 ): string {
   const completed = completedTasks.join(', ') || 'none';
   const gatesClause = config.gates ? ` (\`${config.gates}\`)` : '';
@@ -53,7 +65,7 @@ export function buildPrompt(
 
 ## Requirements
 1. Read the inbox for human instructions FIRST
-2. Select and implement ONE ticket (deps completed, and not another repo's)
+2. ${pickClause(pick)}
 3. Run all quality gates${gatesClause}
 4. Create ONE PR with ALL changes (${changes})
 5. Squash merge onto ${config.base_branch}
