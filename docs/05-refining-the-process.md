@@ -148,10 +148,19 @@ Each of these comes from a command over the engine's state, the logs and CI, not
 from a number written in a doc. `measure --json` reports runs and failures by
 cause, the share of runs that were off-pick or declined, how often the verifier
 blocked a PR and how often a PR it passed later failed, the terminal events,
-and the time, budget cap (`budget_cap_usd`) and CI rounds per ticket
+and the time, budget cap (`budget_cap_usd`), cost (`cost_usd`) and CI rounds per ticket
 (a `feat/issue-<n>` branch attaches to ticket `issue-<n>`),
 over all runs or the last N. It also reports the merged tickets, the tickets
 that had to be redone and the events that stop the loop until a person acts.
+The cost is what the ticket's sessions spent: the work log names each worker's
+session id, the harness's transcript for that session holds the token usage per
+message, and a price table kept as data turns it into dollars. A project
+overrides or extends the default prices in `.forger/prices.json`, keyed by model
+name (a key matches any model id that contains it), each entry giving `input`,
+`output`, `cache_read` and `cache_write` in dollars per million tokens. A ticket
+whose session has no transcript, or whose model has no price, reports `cost_usd`
+as null: unknown, never zero and never the cap.
+
 `measure --report` folds these into the five-measure comparison report of
 ADR 0012, and `measure --diff A.json B.json` gives the per-measure delta between
 two saved reports.

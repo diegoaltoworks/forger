@@ -24,6 +24,8 @@ export interface BudgetRecord {
   ticket: string;
   model: string;
   budgetUsd: number;
+  /** The worker's session id, when the work log recorded it. */
+  sessionId?: string;
 }
 
 export interface CiRun {
@@ -36,6 +38,8 @@ export interface TicketMeasure {
   runs: number;
   seconds: number;
   budget_cap_usd: number | null;
+  /** What the ticket's sessions spent, from their transcripts; null unless every session has a known cost. */
+  cost_usd: number | null;
   ci_rounds: number | null;
 }
 
@@ -92,11 +96,11 @@ export function parseIterationLog(text: string): IterationRecord | null {
   };
 }
 
-/** The `Ticket: <id> [<model>, $<cap>]` lines of the work log, in order. */
+/** The `Ticket: <id> [<model>, $<cap>] session <id>` lines of the work log, in order; the session is optional. */
 export function parseBudgets(workLog: string): BudgetRecord[] {
   const out: BudgetRecord[] = [];
-  for (const m of workLog.matchAll(/Ticket: (\S+) \[([^,\]]+), \$([0-9.]+)\]/g)) {
-    out.push({ticket: m[1], model: m[2], budgetUsd: Number(m[3])});
+  for (const m of workLog.matchAll(/Ticket: (\S+) \[([^,\]]+), \$([0-9.]+)\](?: session ([0-9a-f-]+))?/g)) {
+    out.push({ticket: m[1], model: m[2], budgetUsd: Number(m[3]), ...(m[4] === undefined ? {} : {sessionId: m[4]})});
   }
   return out;
 }
@@ -126,6 +130,8 @@ export interface MeasureInputs {
   budgets: BudgetRecord[];
   events: TerminalEvent[];
   ciRuns: CiRun[];
+  /** Session id -> cost in dollars, null when its transcript is missing; absent reads as none known. */
+  sessionCosts?: Record<string, number | null>;
   /** The verdict records `verify` left; absent reads as none. */
   verdicts?: VerdictRecord[];
   /** The scheduling decisions the parallel loop left; absent reads as none. */
@@ -191,6 +197,18 @@ export function reworkMeasures(iterations: IterationRecord[]): {merged: number; 
   return {merged: merges.size, redone: redone.size};
 }
 
+/** Sum of a ticket's session costs; null unless it has sessions and every one has a known cost. */
+export function ticketCost(records: BudgetRecord[], costs: Record<string, number | null>): number | null {
+  if (records.length === 0) return null;
+  let total = 0;
+  for (const r of records) {
+    const c = r.sessionId === undefined ? null : costs[r.sessionId] ?? null;
+    if (c === null) return null;
+    total += c;
+  }
+  return total;
+}
+
 export function computeMeasures(inputs: MeasureInputs): Measures {
   const sorted = [...inputs.iterations].sort((a, b) => a.iteration - b.iteration);
   const windowed = inputs.last === null ? sorted : sorted.slice(-Math.max(inputs.last, 0));
@@ -225,7 +243,7 @@ export function computeMeasures(inputs: MeasureInputs): Measures {
   const perTicket = new Map<string, TicketMeasure>();
   for (const it of windowed) {
     if (it.ticket === null) continue;
-    const t = perTicket.get(it.ticket) ?? {ticket: it.ticket, runs: 0, seconds: 0, budget_cap_usd: null, ci_rounds: null};
+    const t = perTicket.get(it.ticket) ?? {ticket: it.ticket, runs: 0, seconds: 0, budget_cap_usd: null, cost_usd: null, ci_rounds: null};
     t.runs += 1;
     t.seconds += it.elapsedSeconds;
     perTicket.set(it.ticket, t);
@@ -233,6 +251,7 @@ export function computeMeasures(inputs: MeasureInputs): Measures {
   for (const t of perTicket.values()) {
     const caps = inputs.budgets.filter(b => b.ticket === t.ticket);
     if (caps.length > 0) t.budget_cap_usd = caps.reduce((a, b) => a + b.budgetUsd, 0);
+    t.cost_usd = ticketCost(caps, inputs.sessionCosts ?? {});
     const branch = byTicket.get(t.ticket);
     if (branch !== undefined) {
       t.ci_rounds = rounds[branch];
@@ -283,7 +302,7 @@ export function formatMeasures(m: Measures): string {
     'tickets:',
     ...m.tickets.map(
       t =>
-        `  ${t.ticket}: ${t.runs} run(s), ${t.seconds}s, cap ${t.budget_cap_usd === null ? 'unknown' : `$${t.budget_cap_usd}`}, CI rounds ${t.ci_rounds ?? 'unknown'}`
+        `  ${t.ticket}: ${t.runs} run(s), ${t.seconds}s, cap ${t.budget_cap_usd === null ? 'unknown' : `$${t.budget_cap_usd}`}, cost ${t.cost_usd === null ? 'unknown' : `$${t.cost_usd.toFixed(2)}`}, CI rounds ${t.ci_rounds ?? 'unknown'}`
     ),
   ];
   return lines.join('\n');
