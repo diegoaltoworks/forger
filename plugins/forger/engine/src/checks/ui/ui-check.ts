@@ -1,27 +1,34 @@
 /**
- * The I/O half of `check ui`: reads the ui config and the branch's changes
- * against its merge-base. A missing config or unresolvable base is an error,
+ * The I/O half of `check ui`: reads the ui config, the branch's changes
+ * against its merge-base and the UI files' contents. A missing config or unresolvable base is an error,
  * never a pass.
  */
 
-import {existsSync, readFileSync} from 'fs';
+import {readFileSync} from 'fs';
 import {join} from 'path';
 
 import {loadConfig} from '../../config';
 import type {CommandRunner} from '../../ports';
-import {UI_PATH, parseUiConfig} from '../../ui';
 import {mergeBase, parseNameStatus} from '../decisions';
 import type {Finding} from '../waivers';
+import {loadUiConfig} from './a11y-check';
+import {checkTokens, tokenScanTargets} from './tokens';
 import {checkUiEvidence} from './ui';
 
 export function runUiCheck(projectRoot: string, run: CommandRunner): Finding[] {
-  const path = join(projectRoot, UI_PATH);
-  if (!existsSync(path)) throw new Error(`${UI_PATH} not found; the ui pack's config is required`);
-  const config = parseUiConfig(readFileSync(path, 'utf-8'));
+  const config = loadUiConfig(projectRoot);
   const mb = mergeBase(run, loadConfig(projectRoot).base_branch);
   const changes = parseNameStatus(run(`git diff --name-status --no-renames ${mb}`));
   for (const p of run('git ls-files --others --exclude-standard').split('\n')) {
     if (p !== '' && !changes.some(c => c.path === p)) changes.push({path: p, status: 'added'});
   }
-  return checkUiEvidence(changes, config);
+  const tracked = [...run('git ls-files').split('\n'), ...run('git ls-files --others --exclude-standard').split('\n')].filter(p => p !== '');
+  const sources = tokenScanTargets([...new Set(tracked)], config).flatMap(path => {
+    try {
+      return [{path, content: readFileSync(join(projectRoot, path), 'utf-8')}];
+    } catch {
+      return [];
+    }
+  });
+  return [...checkUiEvidence(changes, config), ...checkTokens(sources)];
 }

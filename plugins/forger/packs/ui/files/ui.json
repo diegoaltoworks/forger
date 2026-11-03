@@ -1,5 +1,6 @@
 {
   "paths": ["src/**/*.tsx", "src/**/*.css", "src/**/*.vue", "src/**/*.svelte", "public/**"],
+  "tokens": ["src/styles/tokens.css"],
   "start": "bun run dev",
   "url": "http://localhost:3000",
   "routes": ["/"],

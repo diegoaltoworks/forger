@@ -8,13 +8,15 @@ import {mkdirSync} from 'fs';
 import {createRequire} from 'module';
 import {dirname, join} from 'path';
 
-import {UiInfrastructureError, type Screenshotter, type ShotRequest} from '../ports';
+import {UiInfrastructureError, type AccessibilityAuditor, type AuditRequest, type AuditedPage, type AxeResults, type Screenshotter, type ShotRequest} from '../ports';
 
 export const PLAYWRIGHT_HINT = 'Playwright is not installed in this project; add it with `bun add -d playwright && bunx playwright install chromium`';
 
 interface PlaywrightPage {
   goto(url: string, opts: {waitUntil: 'networkidle'}): Promise<unknown>;
   screenshot(opts: {path: string; fullPage: boolean}): Promise<unknown>;
+  addScriptTag(opts: {content: string}): Promise<unknown>;
+  evaluate(expression: string): Promise<unknown>;
 }
 interface PlaywrightContext {
   newPage(): Promise<PlaywrightPage>;
@@ -38,16 +40,63 @@ export function loadPlaywright(projectRoot: string): PlaywrightModule {
   }
 }
 
+export const AXE_HINT = 'axe-core is not installed in this project; add it with `bun add -d axe-core`';
+
+/** The axe-core script the project has installed, to inject into a page. */
+export function loadAxeSource(projectRoot: string): string {
+  try {
+    return (createRequire(join(projectRoot, 'package.json'))('axe-core') as {source: string}).source;
+  } catch (e) {
+    const code = (e as {code?: string}).code;
+    if (code === 'MODULE_NOT_FOUND' || code === 'ERR_MODULE_NOT_FOUND') throw new UiInfrastructureError('axe-missing', AXE_HINT);
+    throw e;
+  }
+}
+
+async function launch(chromium: PlaywrightModule['chromium']): Promise<PlaywrightBrowser> {
+  try {
+    return await chromium.launch();
+  } catch (e) {
+    throw new UiInfrastructureError('playwright-missing', `Playwright could not start a browser (${(e as Error).message}); run \`bunx playwright install chromium\``);
+  }
+}
+
+export function playwrightAuditor(
+  projectRoot: string,
+  load: (root: string) => PlaywrightModule = loadPlaywright,
+  axeSource: (root: string) => string = loadAxeSource
+): AccessibilityAuditor {
+  return {
+    async audit(requests: AuditRequest[]): Promise<AuditedPage[]> {
+      const {chromium} = load(projectRoot);
+      const source = axeSource(projectRoot);
+      const browser = await launch(chromium);
+      const audited: AuditedPage[] = [];
+      try {
+        for (const request of requests) {
+          const context = await browser.newContext({viewport: {width: request.width, height: request.height}, colorScheme: request.theme});
+          try {
+            const page = await context.newPage();
+            await page.goto(request.url, {waitUntil: 'networkidle'});
+            await page.addScriptTag({content: source});
+            audited.push({request, results: (await page.evaluate('axe.run()')) as AxeResults});
+          } finally {
+            await context.close();
+          }
+        }
+      } finally {
+        await browser.close();
+      }
+      return audited;
+    },
+  };
+}
+
 export function playwrightScreenshotter(projectRoot: string, load: (root: string) => PlaywrightModule = loadPlaywright): Screenshotter {
   return {
     async capture(shots: ShotRequest[]) {
       const {chromium} = load(projectRoot);
-      let browser: PlaywrightBrowser;
-      try {
-        browser = await chromium.launch();
-      } catch (e) {
-        throw new UiInfrastructureError('playwright-missing', `Playwright could not start a browser (${(e as Error).message}); run \`bunx playwright install chromium\``);
-      }
+      const browser = await launch(chromium);
       try {
         for (const shot of shots) {
           mkdirSync(dirname(shot.file), {recursive: true});

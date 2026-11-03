@@ -4,7 +4,7 @@ import {tmpdir} from 'os';
 import {join} from 'path';
 
 import {UiInfrastructureError} from '../ports';
-import {PLAYWRIGHT_HINT, loadPlaywright, playwrightScreenshotter} from './playwright';
+import {AXE_HINT, PLAYWRIGHT_HINT, loadAxeSource, loadPlaywright, playwrightAuditor, playwrightScreenshotter} from './playwright';
 
 const dirs: string[] = [];
 afterEach(() => {
@@ -45,6 +45,8 @@ describe('the Playwright adapter', () => {
                       log.push(`shot ${o.path}`);
                       throw new Error('disk full');
                     },
+                    async addScriptTag() {},
+                    async evaluate() {},
                   };
                 },
                 async close() {
@@ -63,5 +65,60 @@ describe('the Playwright adapter', () => {
     const file = join(root, 'docs', 'screenshots', 'a.png');
     await expect(shooter.capture([{url: 'http://x/', width: 10, height: 20, theme: 'dark', file}])).rejects.toThrow('disk full');
     expect(log).toEqual(['context 10x20 dark', 'goto http://x/', `shot ${file}`, 'close context', 'close browser']);
+  });
+
+  test('a project without axe-core is told how to add it', () => {
+    const root = mkdtempSync(join(tmpdir(), 'forger-pw-'));
+    dirs.push(root);
+    try {
+      loadAxeSource(root);
+      throw new Error('expected a throw');
+    } catch (e) {
+      expect((e as UiInfrastructureError).category).toBe('axe-missing');
+      expect((e as Error).message).toBe(AXE_HINT);
+    }
+  });
+
+  test('the auditor injects axe into each page, returns its results and closes everything', async () => {
+    const log: string[] = [];
+    const results = {violations: [{id: 'color-contrast', impact: 'serious' as const, help: 'h', nodes: []}]};
+    const fake = {
+      chromium: {
+        async launch() {
+          return {
+            async newContext(o: {viewport: {width: number; height: number}; colorScheme: string}) {
+              log.push(`context ${o.viewport.width}x${o.viewport.height} ${o.colorScheme}`);
+              return {
+                async newPage() {
+                  return {
+                    async goto(url: string) {
+                      log.push(`goto ${url}`);
+                    },
+                    async screenshot() {},
+                    async addScriptTag(o: {content: string}) {
+                      log.push(`inject ${o.content}`);
+                    },
+                    async evaluate(expression: string) {
+                      log.push(`eval ${expression}`);
+                      return results;
+                    },
+                  };
+                },
+                async close() {
+                  log.push('close context');
+                },
+              };
+            },
+            async close() {
+              log.push('close browser');
+            },
+          };
+        },
+      },
+    };
+    const request = {url: 'http://x/a', width: 10, height: 20, theme: 'light' as const};
+    const audited = await playwrightAuditor('/unused', () => fake, () => 'AXE').audit([request]);
+    expect(audited).toEqual([{request, results}]);
+    expect(log).toEqual(['context 10x20 light', 'goto http://x/a', 'inject AXE', 'eval axe.run()', 'close context', 'close browser']);
   });
 });

@@ -31,3 +31,26 @@ with each UI change.
 The ticket's "UI states" section says what the screen shows when it is empty,
 loading, failed and full. A state that is not named is a state nobody
 designed.
+
+## Colours come from tokens (check: ui.tokens)
+
+`check ui` also fails a raw colour literal - hex, `rgb()`, `hsl()` and their
+alpha forms - in a text file under `paths`, unless the file matches `tokens` in
+`.claude/ui.json`. Define a colour once in a token file and reference it
+everywhere else. Comments are ignored. A deliberate exception is a waiver, in
+the open.
+
+## Accessibility is run, not remembered (tool: ui.a11y)
+
+`check a11y` serves the app like `screenshot`, runs axe-core on every route at
+every viewport and theme, and fails on serious and critical violations. It uses
+the project's own Playwright and `axe-core`; when either is missing it says how
+to add it and exits 2, an environment problem rather than a failure of the
+change. It needs a browser, so it runs on its own and not inside the umbrella
+`check`; run it in CI where a browser is available.
+
+## Rules a reviewer holds the screen to
+
+- Every interactive element is reachable and operable by keyboard (ui.keyboard).
+- Text contrast meets WCAG AA (ui.contrast); axe reports the measurable cases.
+- Layouts hold at phone width (ui.responsive); the phone screenshot shows it.
