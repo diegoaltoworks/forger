@@ -24,9 +24,9 @@ export type TerminalEventKind = (typeof TERMINAL_EVENTS)[number];
  * halt a person cleared. They share the file, but the terminal readers
  * (`readEvents`, `awaitEvent`) skip them, so a watcher never wakes on one.
  * `reason` carries the detail: the action and its authority for an approval,
- * the cleared halt's reason for a clear.
+ * the cleared halt's reason for a clear, the previous holder for a lease takeover.
  */
-export const RECORDED_EVENTS = ['picked', 'approval_asked', 'halt_cleared'] as const;
+export const RECORDED_EVENTS = ['picked', 'approval_asked', 'halt_cleared', 'lease_takeover'] as const;
 
 export type RecordedEventKind = (typeof RECORDED_EVENTS)[number];
 

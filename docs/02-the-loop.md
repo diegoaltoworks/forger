@@ -225,9 +225,26 @@ and on the remote, the ticket stays open, and a later run takes it again.
 A HALT stops new starts. Workers still running get `limits.killGraceSeconds`,
 then their process groups are ended. Infrastructure errors trip HALT as before.
 
+## State on a branch and the lease
+
+With `state.home` set to `branch` the state record, the event log and a lease
+live on the state branch of the remote (ADR 0015), and `status`, `orient` and
+`measure` read them from there. Before anything else `run` claims the lease. If
+another engine holds a live lease, the run refuses and starts nothing. The
+holder renews it at the top of every iteration and on a timer inside a long
+one, and releases it when the loop ends. A lease nobody renews expires after its
+TTL; the next engine takes it over and records a `lease_takeover` event naming
+the previous holder. An engine that cannot renew, because the branch could not be
+written or another engine took over, stops starting work, and leaves HALT alone,
+since the loop itself is not at fault.
+
+The same setting serves a CI job: check out the repository, set `state.home` to
+`branch`, and run. The lease is the guard between runs on different machines;
+a CI concurrency group stays useful as a cheap first filter.
+
 ## Invariants
 
-- One engine at a time, checked before every start.
+- One engine at a time, checked before every start (the lease across machines, the lock on one).
 - One worker per ticket per iteration.
 - Gates green before every commit and merge.
 - The base branch is protected; every change, the supervisor's included, goes

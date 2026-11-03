@@ -17,6 +17,7 @@ Pure:
 - `prompt.ts` - the per-iteration prompt; it names the engine's pick, or says there is none.
 - `lease.ts` - the cross-machine lease (ADR 0015): acquire, renew, refuse or
   take over an expired one, with the clock passed in.
+- `runner.ts` takes, renews and releases the lease when the config puts the state on the branch.
 - `state.ts` - the loop state record and `LoopStore`, which persists it through the `StateStore` port.
 - `halt-label.ts` - HALT decided from the `halted` label and the local HALT file, and the generated status body for the pinned loop issue (ADR 0015).
 - `iteration-log.ts` - the per-iteration log text.

@@ -252,6 +252,7 @@ and gitignores the per-run state. Create the label with
 | `local_only` | Paths that stay modified in a checkout without being the worker's doing (local settings, a work order). The dirty-tree check skips them and the engine's own files (`paths`); a directory covers what is under it. Default none. |
 | `model_names` | Model and vendor names `check docs` flags in prose, as whole words, case-insensitively. Default a list of common ones. |
 | `skills` | Skill slot -> installed skill name, or `{ "file": "<path to SKILL.md>" }` (see Bring your own skills). Default none: every slot uses its built-in step. |
+| `state` | `{ home, branch }`. `home` is `local` (default: state and events sit in files beside the engine) or `branch` (they live on `branch` of the remote, default `forger-state`, and the engine holds a lease while it runs; ADR 0015). Move existing state with `migrate --state`; roll back by setting `home` back to `local`, nothing is deleted. Other values are refused when the config loads. |
 | `tracker` | `{ kind, label, ignore }`. `kind` is `github` (default: issues are the backlog), `local`, or `none` (both read `backlog.json`). `label` is the intake label, default `ready-for-agent`. `ignore` lists labels whose issues are not work, a trailing `*` matching a prefix (`["wayfinder:*"]`); default none. |
 
 ## How the engine runs
