@@ -17,6 +17,8 @@ an action, and the measures and retro records the refinement loop runs on.
   the scheduling rule's verdict mix. Pure.
 - `comparison.ts` - the comparison report (ADR 0012): the five measures of a run
   as one JSON document, and the per-measure delta between two reports. Pure.
+- `rework.ts` - rework inside a window of later merges, escaped defects and
+  pick-versus-built mismatch over merged PRs (ADR 0013). Pure.
 - `*.json` - recorded `gh` output the tests replay.
 
 ## Entry point

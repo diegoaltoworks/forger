@@ -5,6 +5,7 @@
  */
 
 import type {ScheduleRecord, TerminalEvent, VerdictRecord} from '../loop';
+import {computeRework, formatRework, type ReworkInputs, type ReworkMeasures} from './rework';
 import {computeParallelMeasures, type ParallelMeasures} from './parallel-measures';
 
 export type Cause = 'ok' | 'timeout' | 'signal' | 'nonzero_exit' | 'unreadable';
@@ -65,6 +66,8 @@ export interface Measures {
   rework: {redone_tickets: number};
   /** Events that stop the loop until a person acts (ADR 0012). */
   owner_interventions: {total: number; by_event: Record<string, number>};
+  /** Rework and escaped defects over merged PRs (ADR 0013); null when the tracker could not be read. */
+  change_rework: ReworkMeasures | null;
   events: Record<string, number>;
   tickets: TicketMeasure[];
   ci_rounds_unmatched: Record<string, number>;
@@ -136,6 +139,8 @@ export interface MeasureInputs {
   verdicts?: VerdictRecord[];
   /** The scheduling decisions the parallel loop left; absent reads as none. */
   schedule?: ScheduleRecord[];
+  /** Merged PRs, issues and picks for rework and escaped defects; absent reads as none gathered. */
+  changes?: ReworkInputs;
   /** Only the most recent N iterations; null = all. */
   last: number | null;
 }
@@ -270,6 +275,7 @@ export function computeMeasures(inputs: MeasureInputs): Measures {
     merged: {tickets: rework.merged},
     rework: {redone_tickets: rework.redone},
     owner_interventions: {total: Object.values(interventions).reduce((a, b) => a + b, 0), by_event: interventions},
+    change_rework: inputs.changes === undefined ? null : computeRework(inputs.changes),
     events,
     tickets: [...perTicket.values()],
     ci_rounds_unmatched: unmatched,
@@ -298,6 +304,7 @@ export function formatMeasures(m: Measures): string {
     `verification: blocked ${pct(m.verification.blocked_share)} (${m.verification.blocked} of ${m.verification.verified}), passed then failed ${pct(m.verification.passed_then_failed_share)} (${m.verification.passed_then_failed} of ${m.verification.passed})`,
     ...formatParallel(m.parallel),
     `merged tickets: ${m.merged.tickets}, redone ${m.rework.redone_tickets}, owner interventions ${m.owner_interventions.total}`,
+    ...(m.change_rework === null ? ['rework and escaped defects: unknown'] : formatRework(m.change_rework)),
     `events: ${Object.entries(m.events).map(([k, v]) => `${k} ${v}`).join(', ') || 'none'}`,
     'tickets:',
     ...m.tickets.map(

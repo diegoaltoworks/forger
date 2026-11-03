@@ -168,6 +168,14 @@ halt a person cleared (`halt_cleared`, with the halt's reason). They share the
 file with the terminal events but `events` and `await-event` skip them, so a
 watcher wakes only on a terminal event.
 
+`measure` also reports rework and escaped defects per merged PR (ADR 0013), read
+from the tracker and git history. A PR is reworked when a later merge within a
+window of merges (`--window N`, default the five after it) touches lines it
+changed, or is a revert that names it. An escaped defect is a `bug` issue that
+names a merged PR. A pick-versus-built mismatch is a `picked` event whose ticket
+differs from the issue the iteration's PR closed. When the tracker cannot be
+read the section reports unknown rather than zero.
+
 `measure --report` folds these into the five-measure comparison report of
 ADR 0012, and `measure --diff A.json B.json` gives the per-measure delta between
 two saved reports.
