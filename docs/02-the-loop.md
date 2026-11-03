@@ -33,6 +33,7 @@ chosen by the `harness` config key (ADR 0009).
 | `HALT` | no | engine or worker | stops the loop until a person clears it |
 | `runner.lock` | no | engine | the pid of the one live engine; a second `run` refuses, a dead pid is taken over |
 | `declined.json` | no | worker (`decline`), engine | the worker's decline of the pick; the next run of that iteration reads it once and deletes it |
+| `verdicts/` | no | `verify` | one verdict record per verified PR head commit: a judgement and evidence for each acceptance criterion; a push after it makes it stale |
 | `events.jsonl` | no | engine | append-only terminal events (completed, halted, stalled, timed out, too many failures, engine gone), one JSON line each, for watchers |
 | owner notes (`human.md`) | yes | workers and supervisor | what only the owner can do: switches, checks owed, open choices |
 | memory notes | no (user profile) | supervisor | durable preferences and lessons, one fact per file |
@@ -141,6 +142,23 @@ merged and then timed out is still a success, with a warning. A merge made on
 red or unfinished checks is never a success: the worker merges through
 `merge --pr <n>`, which waits for CI and refuses red, and a merge that got past
 it halts the loop.
+
+## Verifying a PR
+
+`verify --pr <n> --json` runs an independent check of a PR against its ticket
+(ADR 0010). It builds the verifier's input from the ticket's acceptance
+criteria, the diff against the base and the gate result for the PR head, and
+nothing else: never the worker's transcript, the PR body or the commit
+messages. The verifier runs through the same agent seam as a worker, in a
+read-only checkout of the head, on the `verifier` tier of the config. That tier
+defaults to one other than the default worker tier where `model_by_priority`
+has one, so the verifier does not share the worker's blind spots.
+
+The output is validated by the verdict validator. Valid output is recorded as
+judged, an unresolvable `met` demoted to `cannot_tell`; output that cannot be
+read, or breaks the validator's rules, is recorded `cannot_tell` for every
+criterion. The record sits in `verdicts/` keyed by the PR and its head commit,
+so a later push leaves it stale. The command exits 1 unless every criterion is met.
 
 ## Invariants
 

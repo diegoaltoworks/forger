@@ -22,6 +22,7 @@ import {setup} from './setup';
 import {skills} from './skills';
 import {slice} from './slice';
 import {orient, report} from './supervisor';
+import {verify} from './verify';
 
 export const COMMANDS: Command[] = [
   run,
@@ -40,6 +41,7 @@ export const COMMANDS: Command[] = [
   report,
   facts,
   merge,
+  verify,
   decline,
   approval,
   events,
