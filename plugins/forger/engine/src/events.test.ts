@@ -28,3 +28,30 @@ describe('terminal events', () => {
     expect(lines.map(l => JSON.parse(l).event)).toEqual(['halted', 'completed']);
   });
 });
+
+import {writeFileSync} from 'fs';
+import {awaitEvent, parseEvents, readEvents} from './events';
+
+describe('reading events', () => {
+  test('parseEvents skips blank, torn and unknown lines', () => {
+    const good = eventLine(terminalEvent('halted', 1, null, 'r'));
+    expect(parseEvents(`${good}\n{"event":"halt\n{"event":"other"}\n`).map(e => e.event)).toEqual(['halted']);
+  });
+  test('a missing file has no events', () => {
+    expect(readEvents('/nonexistent/events.jsonl')).toEqual([]);
+  });
+  test('awaitEvent returns the first event past those seen, or null at the deadline', async () => {
+    const d = mkdtempSync(join(tmpdir(), 'forger-ev-'));
+    dirs.push(d);
+    const f = join(d, 'e.jsonl');
+    let slept = 0;
+    const sleep = async (): Promise<void> => {
+      slept++;
+      if (slept === 2) appendEvent(f, terminalEvent('completed', 3, null, null));
+    };
+    const e = await awaitEvent(f, 0, 10_000, sleep, 1000);
+    expect(e?.event).toBe('completed');
+    writeFileSync(f, eventLine(terminalEvent('completed', 3, null, null)));
+    expect(await awaitEvent(f, 1, 2000, async () => {}, 1000)).toBeNull();
+  });
+});

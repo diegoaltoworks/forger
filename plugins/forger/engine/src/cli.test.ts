@@ -198,3 +198,45 @@ describe('setup --preset', () => {
     }
   });
 });
+
+describe('supervisor commands', () => {
+  test('orient starts a runner when work remains and none is alive', async () => {
+    process.chdir(projectWith({a: {status: 'not_started', priority: 'P0'}}));
+    const out = JSON.parse(await capture(['orient', '--json'], () => 'main'));
+    expect(out.action).toBe('start');
+    expect(out.anomalies).toEqual([]);
+  });
+
+  test('orient surfaces a halt with the reason from the HALT file', async () => {
+    const root = projectWith({a: {status: 'not_started'}});
+    writeFileSync(join(root, '.claude', 'HALT'), 'cut off before merge');
+    process.chdir(root);
+    const out = JSON.parse(await capture(['orient', '--json'], () => 'main'));
+    expect(out.action).toBe('surface_halt');
+    expect(out.reason).toBe('cut off before merge');
+  });
+
+  test('report names the real checked-out branch as an anomaly when no runner is alive', async () => {
+    process.chdir(projectWith({a: {status: 'not_started'}}));
+    const out = JSON.parse(await capture(['report', '--json'], () => 'feat/a'));
+    expect(out.waiting_on_owner[0].question).toContain('feat/a');
+    expect(out.next).toEqual(['a']);
+  });
+
+  test('approval answers from the table without a project', async () => {
+    process.chdir(tmpdir());
+    expect(await capture(['approval', 'clear_halt'])).toBe('owner');
+    expect(await capture(['approval', 'start_runner'])).toBe('alone');
+  });
+
+  test('events lists what the runner wrote', async () => {
+    const root = projectWith({});
+    writeFileSync(
+      join(root, '.claude', 'events.jsonl'),
+      '{"event":"completed","at":"2000-01-01T00:00:00.000Z","iteration":1,"ticket":null,"reason":null}\n'
+    );
+    process.chdir(root);
+    const out = JSON.parse(await capture(['events', '--json']));
+    expect(out.map((e: {event: string}) => e.event)).toEqual(['completed']);
+  });
+});
