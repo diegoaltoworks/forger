@@ -29,6 +29,12 @@ export interface WorkloopConfig {
   models: Record<string, string>;
   model_by_priority: {P0: Tier; default: Tier; [k: string]: Tier};
   effort_multiplier: Record<string, number>;
+  /**
+   * The tier the verifier runs on (ADR 0010). null picks one other than the
+   * default worker tier from `model_by_priority`, so it does not share the
+   * worker's blind spots.
+   */
+  verifier: Tier | null;
   limits: {
     timeoutMinutes: number;
     /** Seconds between SIGTERM and SIGKILL to the worker's process group on timeout. */
@@ -56,6 +62,8 @@ export interface WorkloopConfig {
     declined: string;
     /** The project's rules and gotchas, which the worker is told to follow. */
     process: string;
+    /** One verdict record per verified PR head commit. */
+    verdicts: string;
   };
   /**
    * Where the backlog lives. `github`: issues carrying the intake `label`
@@ -96,6 +104,7 @@ export interface WorkloopConfigInput {
   models?: Record<string, string>;
   model_by_priority?: Record<string, Tier>;
   effort_multiplier?: Record<string, number>;
+  verifier?: Tier | null;
   harness?: string;
   limits?: Partial<WorkloopConfig['limits']>;
   paths?: Partial<WorkloopConfig['paths']>;
@@ -128,6 +137,7 @@ export const DEFAULT_CONFIG: WorkloopConfig = {
     P0: {model: 'deep', budget: 22.5},
     default: {model: 'standard', budget: 18.0},
   },
+  verifier: null,
   /** Budget multiplier by declared effort; a truncated large ticket is worst. */
   effort_multiplier: {
     small: 1,
@@ -153,6 +163,7 @@ export const DEFAULT_CONFIG: WorkloopConfig = {
     events: `${FORGER_DIR}/events.jsonl`,
     declined: `${FORGER_DIR}/declined.json`,
     process: `${FORGER_DIR}/process.md`,
+    verdicts: `${FORGER_DIR}/verdicts`,
   },
   tracker: {kind: 'github', label: 'ready-for-agent', ignore: []},
   local_only: [],

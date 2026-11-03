@@ -8,11 +8,13 @@
 import type {Backlog} from '../backlog';
 import type {WorkloopConfig} from '../config';
 import type {AutomationRunner} from '../loop';
-import type {CommandRunner} from '../ports';
+import type {AgentRunner, CommandRunner} from '../ports';
 import type {FlagName, Values} from './flags';
 
 export interface CliDeps {
   run?: CommandRunner;
+  /** Stands in for the harness's agent, so a command that spawns one can be tested. */
+  agent?: AgentRunner;
   installedSkills?: () => string[];
 }
 

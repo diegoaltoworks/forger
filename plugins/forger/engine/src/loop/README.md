@@ -21,11 +21,17 @@ Pure:
 - `verdict.ts` - the verifier's verdict (ADR 0010): acceptance criteria parsed
   from the issue, a validator that holds a verdict to them (evidence resolution
   is injected), and the reducer to `pass`, `block` or `unclear`.
+- `verify-input.ts` - what the verifier is given (criteria, diff and gate result,
+  never the worker's claims), the tier it runs on, and its reply read into a
+  verdict record: invalid output is recorded `cannot_tell` for every criterion.
 - `merged.ts`, `run-facts.ts` - git facts, through an injected `CommandRunner`.
 - `merge.ts` - merge a PR only once every check passed; the decision is pure,
   the waiting reads the PR through an injected `CommandRunner`.
 
 Touch the world (their own files, the terminal, the clock):
+
+- `verify.ts` - `verify --pr`: a read-only checkout of the PR head, the verifier
+  run through the `AgentRunner`, the record written per PR and head commit.
 
 - `runner.ts` - the outer loop: lock, halt, stall and failure limits, status and
   watch displays.
