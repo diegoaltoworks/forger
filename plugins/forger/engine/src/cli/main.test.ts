@@ -515,7 +515,7 @@ describe('measure and retro', () => {
     process.chdir(root);
     const run: CommandRunner = () => JSON.stringify([{headBranch: 'feat/alpha-ticket', event: 'pull_request'}]);
     const out = JSON.parse(await capture(['measure', '--json'], run));
-    expect(out.tickets).toEqual([{ticket: 'alpha_ticket', runs: 1, seconds: 90, budget_usd: 20, ci_rounds: 1}]);
+    expect(out.tickets).toEqual([{ticket: 'alpha_ticket', runs: 1, seconds: 90, budget_cap_usd: 20, ci_rounds: 1}]);
   });
 
   test('measure --json carries merged tickets, rework and owner interventions', async () => {

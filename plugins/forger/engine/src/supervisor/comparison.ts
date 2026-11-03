@@ -31,8 +31,8 @@ export interface ReportDiff {
 }
 
 export function buildComparisonReport(m: Measures): ComparisonReport {
-  const budgeted = m.tickets.filter(t => t.budget_usd !== null);
-  const budget = budgeted.reduce((a, t) => a + (t.budget_usd as number), 0);
+  const budgeted = m.tickets.filter(t => t.budget_cap_usd !== null);
+  const budget = budgeted.reduce((a, t) => a + (t.budget_cap_usd as number), 0);
   return {
     tickets_merged: m.merged.tickets,
     failure_causes: {...m.runs.by_cause},

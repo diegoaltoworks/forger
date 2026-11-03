@@ -35,7 +35,7 @@ export interface TicketMeasure {
   ticket: string;
   runs: number;
   seconds: number;
-  budget_usd: number | null;
+  budget_cap_usd: number | null;
   ci_rounds: number | null;
 }
 
@@ -101,9 +101,14 @@ export function parseBudgets(workLog: string): BudgetRecord[] {
   return out;
 }
 
-/** `feat/some-ticket-id` and `some_ticket_id` name the same ticket. */
-export function normalizeBranch(branch: string): string {
-  return branch.replace(/^[a-z]+\//, '').replace(/-/g, '_');
+/**
+ * The ticket id a head branch builds. A GitHub ticket keeps its hyphen
+ * (`feat/issue-72` -> `issue-72`); a legacy ticket id uses underscores
+ * (`feat/some-ticket` -> `some_ticket`).
+ */
+export function branchTicketId(branch: string): string {
+  const name = branch.replace(/^[a-z]+\//, '');
+  return /^issue-\d+$/.test(name) ? name : name.replace(/-/g, '_');
 }
 
 /** Pull-request runs per head branch: each push a ticket needed is one round. */
@@ -213,22 +218,22 @@ export function computeMeasures(inputs: MeasureInputs): Measures {
   const rework = reworkMeasures(windowed);
 
   const rounds = ciRoundsByBranch(inputs.ciRuns);
-  const byNormalized = new Map<string, string>();
-  for (const branch of Object.keys(rounds)) byNormalized.set(normalizeBranch(branch), branch);
+  const byTicket = new Map<string, string>();
+  for (const branch of Object.keys(rounds)) byTicket.set(branchTicketId(branch), branch);
   const matched = new Set<string>();
 
   const perTicket = new Map<string, TicketMeasure>();
   for (const it of windowed) {
     if (it.ticket === null) continue;
-    const t = perTicket.get(it.ticket) ?? {ticket: it.ticket, runs: 0, seconds: 0, budget_usd: null, ci_rounds: null};
+    const t = perTicket.get(it.ticket) ?? {ticket: it.ticket, runs: 0, seconds: 0, budget_cap_usd: null, ci_rounds: null};
     t.runs += 1;
     t.seconds += it.elapsedSeconds;
     perTicket.set(it.ticket, t);
   }
   for (const t of perTicket.values()) {
     const caps = inputs.budgets.filter(b => b.ticket === t.ticket);
-    if (caps.length > 0) t.budget_usd = caps.reduce((a, b) => a + b.budgetUsd, 0);
-    const branch = byNormalized.get(t.ticket);
+    if (caps.length > 0) t.budget_cap_usd = caps.reduce((a, b) => a + b.budgetUsd, 0);
+    const branch = byTicket.get(t.ticket);
     if (branch !== undefined) {
       t.ci_rounds = rounds[branch];
       matched.add(branch);
@@ -278,7 +283,7 @@ export function formatMeasures(m: Measures): string {
     'tickets:',
     ...m.tickets.map(
       t =>
-        `  ${t.ticket}: ${t.runs} run(s), ${t.seconds}s, cap ${t.budget_usd === null ? 'unknown' : `$${t.budget_usd}`}, CI rounds ${t.ci_rounds ?? 'unknown'}`
+        `  ${t.ticket}: ${t.runs} run(s), ${t.seconds}s, cap ${t.budget_cap_usd === null ? 'unknown' : `$${t.budget_cap_usd}`}, CI rounds ${t.ci_rounds ?? 'unknown'}`
     ),
   ];
   return lines.join('\n');

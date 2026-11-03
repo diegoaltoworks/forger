@@ -148,7 +148,8 @@ Each of these comes from a command over the engine's state, the logs and CI, not
 from a number written in a doc. `measure --json` reports runs and failures by
 cause, the share of runs that were off-pick or declined, how often the verifier
 blocked a PR and how often a PR it passed later failed, the terminal events,
-and the time, budget cap and CI rounds per ticket,
+and the time, budget cap (`budget_cap_usd`) and CI rounds per ticket
+(a `feat/issue-<n>` branch attaches to ticket `issue-<n>`),
 over all runs or the last N. It also reports the merged tickets, the tickets
 that had to be redone and the events that stop the loop until a person acts.
 `measure --report` folds these into the five-measure comparison report of
