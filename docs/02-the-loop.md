@@ -163,6 +163,20 @@ read, or breaks the validator's rules, is recorded `cannot_tell` for every
 criterion. The record sits in `verdicts/` keyed by the PR and its head commit,
 so a later push leaves it stale. The command exits 1 unless every criterion is met.
 
+## Skill slots in the loop
+
+Each point of judgement is a skill slot with a built-in step (`skills --json`
+lists them, the plugin README tabulates them). Beyond building a ticket, three
+slots cover the stages around it, each with a named output:
+
+- `risk` (output `risk_report`) runs after the review and before the verifier.
+  Its findings go to the worker; the verifier stays the merge gate.
+- `pr_body` (output `pr_body`) writes the PR body. `pr-body` then checks that
+  `Closes #<n>` and the ticket's review sections survived, whatever the skill wrote.
+- `retro` (output `retro_proposals`) is used by the `retro` command.
+
+An unmapped slot runs its built-in step, so nothing changes until a project maps one.
+
 ## Bounding the verify loop
 
 `handover --pr <n> --json` reads the PR's verdict records and says the next move.

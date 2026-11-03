@@ -20,6 +20,19 @@ function skill(dir: string, name: string): void {
   writeFileSync(join(dir, name, 'SKILL.md'), '---\nname: x\n---\n');
 }
 
+describe('the three stage slots', () => {
+  test.each([
+    ['risk', 'auto-ticket', 'risk_report'],
+    ['pr_body', 'auto-ticket', 'pr_body'],
+    ['retro', 'retro', 'retro_proposals'],
+  ])('%s is used by %s and names its output %s', (slot, usedBy, output) => {
+    const def = SLOTS.find(s => s.slot === slot);
+    expect(def).toMatchObject({usedBy, output});
+    const r = resolveSkills({}, []).slots.find(s => s.slot === slot);
+    expect(r).toMatchObject({invoke: 'builtin', output});
+  });
+});
+
 describe('resolveSkills', () => {
   test('reports every slot, unmapped ones on the built-in step', () => {
     const r = resolveSkills({}, []);

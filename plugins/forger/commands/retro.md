@@ -12,6 +12,11 @@ stays here (the cause, the rung); numbers and files come from commands. Run
 every command from the repo root as `bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts <command>`;
 call it `work`.
 
+Run `work skills --json` and read the `retro` slot. `skill` or `file`: invoke it
+(or read and follow it) with the report's `preamble` first, never a skill in
+`forbid`, and treat its output as `retro_proposals` to carry through steps 3 to 6.
+`builtin`, or the tool failing: the steps below.
+
 ## 1. Capture
 
 Take the signal verbatim from `$ARGUMENTS` or the conversation: the owner's

@@ -36,8 +36,8 @@ here, as you also do when the tool fails. Start every `skill` or `file` slot
 with the report's `preamble`, verbatim, and never invoke a skill listed in
 `forbid`. Never name or choose a skill yourself.
 
-Slots used here: `test_first` (step 4), `diagnose` (step 5), `review` (step 6)
-and `merge_conflicts` (step 8).
+Slots used here: `test_first` (step 4), `diagnose` (step 5), `review` (step 6),
+`risk` (step 6), `pr_body` and `merge_conflicts` (step 8).
 
 ## Read first (in order)
 1. `.forger/process.md` - the workflow rules and the **project gotchas** (REQUIRED)
@@ -114,6 +114,11 @@ review agent, run that as well.
 Address anything at medium severity or above, or say explicitly why you are not.
 Also grep your diff for any of the hazard patterns `process.md` forbids.
 
+Then the `risk` slot. Built-in: list what the change touches beyond the diff
+(callers, consumers, docs, config) and run the tests for it. Its findings are
+input to you, to fix or to explain; the verifier, not this slot, decides the
+merge.
+
 ### 7. Docs + ticket updates (in the SAME commit)
 Documentation is part of Definition of Done, every iteration:
 - Update any doc your change caused to drift. Keep docs durable and qualitative -
@@ -125,6 +130,12 @@ Documentation is part of Definition of Done, every iteration:
 - Update `.forger/inbox/*.md` (clock -> check) for anything you finished.
 
 ### 8. Commit + PR
+The PR body comes from the `pr_body` slot. Built-in: write it by
+`docs/03-tickets.md`. Whatever the slot wrote, save it to a file and run
+`bun "${CLAUDE_PLUGIN_ROOT}/bin/work.ts" pr-body --file <file> --issue <n> --section "<title>" --fix --json`
+(one `--section` per review section the ticket names); open the PR only when it
+reports `ok`.
+
 One `feat:` commit with everything (code + tests + docs, and backlog.json when
 it is the backlog).
 
