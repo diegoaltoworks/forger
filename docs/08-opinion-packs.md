@@ -104,3 +104,15 @@ The `safety` pack holds principle 9 (data in production is sacred) and the never
 | `safety.data-forward` | a diff that touches `migration_paths` without adding or changing a test under `data_test_paths` |
 
 Both lists live in `.claude/safety.json`. A finding names the file, line and pattern and never prints the match, so a report does not spread the secret it found. The other two opinions, frozen lockfiles in the gates and destructive commands listed in the process gotchas, are rules kept by judgement. Like `check decisions`, the check reads the working tree and branch against the merge-base with the configured base branch, and an unresolvable base is an error, never a pass.
+
+## The testing pack
+
+The `testing` pack holds the testing habits the engine itself relies on. Three of its opinions are enforced, each under its own opinion id so a waiver can target one:
+
+| Opinion | Check | What it flags |
+|---|---|---|
+| `testing.fix-with-test` | `check tests` | a branch with a `fix:` commit that adds or changes no file matching `test_paths` |
+| `testing.no-network` | `check tests` | a unit test file that imports a library named in `network_modules`; files under `integration_paths` are exempt |
+| `testing.coverage-ratchet` | `check coverage` | line coverage below the generated baseline, or no baseline yet |
+
+The globs and library list live in `.claude/testing.json`, with the path of the lcov report the project's test command writes and the path of the baseline. The baseline is a generated file: `check coverage --update` creates it or raises it, and never lowers it, so the number lives only there and a deliberate drop is a recorded waiver. A missing or empty coverage report is an error, never a pass. The other opinions (tables for the pure core, fixtures for adapters, tests named for behaviour) are rules kept by judgement. Like `check decisions`, `check tests` reads commits and the working tree against the merge-base with the configured base branch.

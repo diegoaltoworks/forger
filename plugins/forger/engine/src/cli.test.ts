@@ -164,6 +164,41 @@ describe('check safety', () => {
   });
 });
 
+describe('check coverage', () => {
+  const setup = () => {
+    const root = projectWith({});
+    process.chdir(root);
+    writeFileSync(join(root, '.claude', 'testing.json'), JSON.stringify({test_paths: ['**/*.test.ts'], integration_paths: ['e2e/**'], network_modules: ['http'], coverage_report: 'lcov.info', coverage_baseline: 'base.json'}));
+    writeFileSync(join(root, 'lcov.info'), 'LF:10\nLH:9\n');
+    return root;
+  };
+
+  test('--update writes the baseline, then the check passes and a drop fails', async () => {
+    const root = setup();
+    expect(await capture(['check', 'coverage', '--update'])).toBe('coverage baseline: raised to 90.00%');
+    expect(JSON.parse(readFileSync(join(root, 'base.json'), 'utf-8'))).toEqual({line_coverage: 90});
+    expect(await capture(['check', 'coverage'])).toBe('coverage check: clean');
+    writeFileSync(join(root, 'lcov.info'), 'LF:10\nLH:8\n');
+    expect(JSON.parse(await capture(['check', 'coverage', '--json'])).map((f: {rule: string}) => f.rule)).toEqual(['coverage-dropped']);
+    expect(process.exitCode).toBe(1);
+    process.exitCode = 0;
+    expect(await capture(['check', 'coverage', '--update', '--json'])).toBe('{"updated":false,"line_coverage":null}');
+  });
+});
+
+describe('check tests', () => {
+  test('fails a fix commit with no test change', async () => {
+    const root = projectWith({});
+    process.chdir(root);
+    writeFileSync(join(root, '.claude', 'testing.json'), JSON.stringify({test_paths: ['**/*.test.ts'], integration_paths: ['e2e/**'], network_modules: ['http'], coverage_report: 'lcov.info', coverage_baseline: 'base.json'}));
+    const run: CommandRunner = cmd => (cmd.startsWith('git merge-base') ? 'abc' : cmd.startsWith('git log') ? 'fix: a' : '');
+    const out = JSON.parse(await capture(['check', 'tests', '--json'], run));
+    expect(out.map((f: {rule: string}) => f.rule)).toEqual(['fix-without-test']);
+    expect(process.exitCode).toBe(1);
+    process.exitCode = 0;
+  });
+});
+
 describe('check arch', () => {
   const map = JSON.stringify({layers: [{name: 'core', paths: ['core/**']}, {name: 'shell', paths: ['shell/**']}], allow: {shell: ['core']}});
 

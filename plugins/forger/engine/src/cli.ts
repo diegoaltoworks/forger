@@ -16,6 +16,7 @@ import {formatReport as formatCheckReport, runChecks} from './checks';
 import {runArchCheck} from './arch-check';
 import {runDecisionsCheck} from './decisions-check';
 import {runSafetyCheck} from './safety-check';
+import {runCoverageCheck, runTestsCheck, updateCoverageBaseline} from './testing-check';
 import {runDocsCheck} from './docs-check';
 import {formatViolations} from './docs-rules';
 import {AutomationRunner} from './runner';
@@ -57,6 +58,8 @@ Usage (run from the consumer repo root):
                    exit non-zero on any unwaived violation
   check decisions [--json] Fail on a new dependency or layer-map change with no ADR in the diff
   check safety [--json] Fail on an added secret or a stored-shape change with no test
+  check tests [--json] Fail on a fix with no test, or a unit test that imports a network or process module
+  check coverage [--json] [--update] Fail when line coverage drops below the baseline; --update raises it
   check arch [--json] Fail on an import that crosses a forbidden edge of .claude/architecture.json
   check docs [--json] Fail on non-ASCII punctuation, emails, home paths, denylist terms
   backlog [--json] Workable tickets in order, remaining count and next pick
@@ -101,6 +104,7 @@ export async function main(
       iterations: {type: 'string', short: 'n', default: '1'},
       continuous: {type: 'boolean', default: false},
       json: {type: 'boolean', default: false},
+      update: {type: 'boolean', default: false},
       gates: {type: 'string'},
       'base-branch': {type: 'string'},
       tracker: {type: 'string'},
@@ -198,15 +202,27 @@ export async function main(
       }
       return;
     }
-    if (positionals[1] !== 'docs' && positionals[1] !== 'arch' && positionals[1] !== 'decisions' && positionals[1] !== 'safety') {
-      console.error('Usage: check [--json] | check docs [--json] | check arch [--json] | check decisions [--json] | check safety [--json]');
+    const single = {docs: runDocsCheck, arch: runArchCheck, decisions: runDecisionsCheck, safety: runSafetyCheck, tests: runTestsCheck, coverage: runCoverageCheck};
+    if (!(positionals[1] in single)) {
+      console.error('Usage: check [--json] | check docs|arch|decisions|safety|tests|coverage [--json] | check coverage --update');
       process.exitCode = 1;
+      return;
+    }
+    if (positionals[1] === 'coverage' && values.update) {
+      try {
+        const next = updateCoverageBaseline(projectRoot);
+        const out = {updated: next !== null, line_coverage: next === null ? null : next / 100};
+        console.log(values.json ? JSON.stringify(out) : next === null ? 'coverage baseline: unchanged' : `coverage baseline: raised to ${(next / 100).toFixed(2)}%`);
+      } catch (e) {
+        console.error((e as Error).message);
+        process.exitCode = 1;
+      }
       return;
     }
     let violations;
     try {
       const run = deps.run ?? execRunner(projectRoot);
-      const runOne = {docs: runDocsCheck, arch: runArchCheck, decisions: runDecisionsCheck, safety: runSafetyCheck}[positionals[1]];
+      const runOne = single[positionals[1] as keyof typeof single];
       violations = runOne(projectRoot, run);
     } catch (e) {
       console.error((e as Error).message);

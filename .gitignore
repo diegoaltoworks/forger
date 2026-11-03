@@ -8,3 +8,4 @@ node_modules/
 .claude/events.jsonl
 .claude/settings.local.json
 .forger-denylist
+coverage/

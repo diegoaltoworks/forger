@@ -1,0 +1,7 @@
+{
+  "test_paths": ["**/*.test.*", "**/*.spec.*", "**/tests/**", "**/test/**"],
+  "integration_paths": ["**/integration/**", "**/*.integration.*", "**/e2e/**"],
+  "network_modules": ["http", "https", "http2", "net", "tls", "dgram", "child_process", "axios", "node-fetch", "undici", "got"],
+  "coverage_report": "coverage/lcov.info",
+  "coverage_baseline": ".claude/coverage-baseline.json"
+}
