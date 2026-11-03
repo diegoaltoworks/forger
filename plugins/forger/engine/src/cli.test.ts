@@ -1,5 +1,5 @@
 import {afterEach, describe, expect, spyOn, test} from 'bun:test';
-import {mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync} from 'fs';
+import {mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync} from 'fs';
 import {tmpdir} from 'os';
 import {join} from 'path';
 
@@ -134,5 +134,19 @@ describe('check docs', () => {
     expect(JSON.parse(bad)).toEqual([{file: 'a.md', line: 1, rule: 'non-ascii', detail: 'U+2014'}]);
     expect(process.exitCode).toBe(1);
     process.exitCode = 0;
+  });
+});
+
+describe('setup --json', () => {
+  test('reports each file as written, then as kept on the second run', async () => {
+    const root = realpathSync(mkdtempSync(join(tmpdir(), 'forger-cli-setup-')));
+    dirs.push(root);
+    process.chdir(root);
+    const first = JSON.parse(await capture(['setup', '--json', '--gates', 'make test', '--tracker', 'local']));
+    expect(first.files.map((f: {action: string}) => f.action)).not.toContain('kept');
+    const config = JSON.parse(readFileSync(join(root, '.claude', 'workloop.config.json'), 'utf-8'));
+    expect(config.tracker.kind).toBe('local');
+    const second = JSON.parse(await capture(['setup', '--json']));
+    expect(second.files.map((f: {action: string}) => f.action)).not.toContain('written');
   });
 });
