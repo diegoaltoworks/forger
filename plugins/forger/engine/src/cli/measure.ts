@@ -3,7 +3,7 @@ import {homedir} from 'os';
 import {join} from 'path';
 
 import {readAllEvents, readAllVerdicts, readEvents, readSchedule} from '../loop';
-import {buildComparisonReport, DEFAULT_PRICES, mergePrices, sessionCostUsd, type PriceTable, type Measures, computeMeasures, diffReports, parseDiffRanges, picksToPrs, DEFAULT_REWORK_WINDOW, type MergedPr, type TrackerIssue, type ReworkInputs, type ComparisonReport, formatMeasures, parseBudgets, parseIterationLog, type CiRun, type IterationRecord} from '../supervisor';
+import {buildComparisonReport, DEFAULT_PRICES, mergePrices, sessionCostUsd, type PriceTable, type Measures, computeMeasures, diffReports, parseDiffRanges, parseReplacedRanges, picksToPrs, DEFAULT_REWORK_WINDOW, type MergedPr, type TrackerIssue, type ReworkInputs, type ComparisonReport, formatMeasures, parseBudgets, parseIterationLog, type CiRun, type IterationRecord} from '../supervisor';
 import type {Command, CommandContext} from './command';
 
 /** The transcript a session left, searched under every project folder of the harness's config dir; null when there is none. */
@@ -13,6 +13,13 @@ function readTranscript(sessionId: string): string | null {
   for (const dir of readdirSync(projects)) {
     const file = join(projects, dir, `${sessionId}.jsonl`);
     if (existsSync(file)) return readFileSync(file, 'utf-8');
+  }
+  // The work log of older runs holds only the first characters of the id.
+  if (sessionId.length >= 8) {
+    for (const dir of readdirSync(projects)) {
+      const found = readdirSync(join(projects, dir)).filter(f => f.startsWith(sessionId) && f.endsWith('.jsonl'));
+      if (found.length === 1) return readFileSync(join(projects, dir, found[0]), 'utf-8');
+    }
   }
   return null;
 }
@@ -44,12 +51,15 @@ function gatherChanges(run: (cmd: string) => string, iterations: IterationRecord
     const listed = (JSON.parse(run(`gh pr list --state merged --limit ${limit} --json number,title,body,closingIssuesReferences`)) as GhPr[]).reverse();
     const prs: MergedPr[] = listed.map((p, order) => {
       let ranges: MergedPr['ranges'] = [];
+      let replaced: MergedPr['ranges'] = [];
       try {
-        ranges = parseDiffRanges(run(`gh pr diff ${p.number}`));
+        const diff = run(`gh pr diff ${p.number}`);
+        ranges = parseDiffRanges(diff);
+        replaced = parseReplacedRanges(diff);
       } catch {
         // A PR whose diff cannot be read has no overlap evidence, not an error.
       }
-      return {number: p.number, order, title: p.title, body: p.body ?? '', closes: p.closingIssuesReferences?.[0]?.number ?? null, ranges};
+      return {number: p.number, order, title: p.title, body: p.body ?? '', closes: p.closingIssuesReferences?.[0]?.number ?? null, ranges, replaced};
     });
     const raw = JSON.parse(run(`gh issue list --state all --label bug --limit ${limit} --json number,labels,body`)) as {number: number; labels: {name: string}[]; body: string}[];
     const issues: TrackerIssue[] = raw.map(i => ({number: i.number, labels: i.labels.map(l => l.name), body: i.body ?? ''}));

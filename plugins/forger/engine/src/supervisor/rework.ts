@@ -22,6 +22,8 @@ export interface MergedPr {
   /** The issue the PR closes, if any. */
   closes: number | null;
   ranges: LineRange[];
+  /** The lines the PR deleted or replaced, as numbered before it; absent when the diff gave none. */
+  replaced?: LineRange[];
 }
 
 export interface TrackerIssue {
@@ -118,6 +120,35 @@ export function overlappingFiles(a: LineRange[], b: LineRange[]): string[] {
   return [...files].sort();
 }
 
+/**
+ * Files whose lines every ticket touches by design: docs and READMEs, the
+ * loop's own bookkeeping, lockfiles and generated data. An overlap there says
+ * nothing about the earlier change being wrong.
+ */
+export function isBookkeepingFile(file: string): boolean {
+  return /\.(md|lock|lockb)$/i.test(file) || /(^|\/)(\.forger|\.claude)\//.test(file) || /(^|\/)(package-lock\.json|bun\.lockb?|backlog\.json)$/.test(file);
+}
+
+/**
+ * The source files in which the later PR rewrote lines the earlier one wrote.
+ * A later PR that only adds lines next to the earlier one's does not undo it,
+ * so only the lines it deleted or replaced count.
+ */
+export function reworkedFiles(original: MergedPr, later: MergedPr): string[] {
+  const touched = (later.replaced ?? later.ranges).filter(r => !isBookkeepingFile(r.file));
+  return overlappingFiles(original.ranges.filter(r => !isBookkeepingFile(r.file)), touched);
+}
+
+/**
+ * A later PR that names the earlier one, or the issue the earlier one closed,
+ * builds on it on purpose (a follow-up, a ticket blocked by it). That is
+ * planned work, not a correction.
+ */
+export function namesOriginal(later: MergedPr, original: MergedPr): boolean {
+  const named = referencedNumbers(`${later.title}\n${later.body}`);
+  return named.includes(original.number) || (original.closes !== null && named.includes(original.closes));
+}
+
 export function isRevert(pr: MergedPr): boolean {
   return /^revert\b/i.test(pr.title.trim());
 }
@@ -137,7 +168,8 @@ export function computeRework(inputs: ReworkInputs): ReworkMeasures {
         pairs.push({original: original.number, later: later.number, reason: 'revert', files: []});
         continue;
       }
-      const files = overlappingFiles(original.ranges, later.ranges);
+      if (namesOriginal(later, original)) continue;
+      const files = reworkedFiles(original, later);
       if (files.length > 0) pairs.push({original: original.number, later: later.number, reason: 'overlap', files});
     }
   }
@@ -172,24 +204,70 @@ export function computeRework(inputs: ReworkInputs): ReworkMeasures {
   };
 }
 
-/** The new-side line ranges per file in a unified diff. */
-export function parseDiffRanges(diff: string): LineRange[] {
-  const out: LineRange[] = [];
+function pushLine(out: LineRange[], file: string, n: number): void {
+  const last = out[out.length - 1];
+  if (last !== undefined && last.file === file && last.end === n - 1) last.end = n;
+  else out.push({file, start: n, end: n});
+}
+
+/**
+ * The lines a unified diff changed, per file: the new-side numbers of the
+ * lines it added and the old-side numbers of the lines it deleted. Context
+ * lines around a hunk are not changes and are left out.
+ */
+export function parseDiffChanges(diff: string): {added: LineRange[]; deleted: LineRange[]} {
+  const added: LineRange[] = [];
+  const deleted: LineRange[] = [];
   let file: string | null = null;
+  let oldLeft = 0;
+  let newLeft = 0;
+  let oldN = 0;
+  let newN = 0;
   for (const line of diff.split('\n')) {
+    if (oldLeft > 0 || newLeft > 0) {
+      const c = line[0];
+      if (c === '-') {
+        if (file !== null) pushLine(deleted, file, oldN);
+        oldN += 1;
+        oldLeft -= 1;
+      } else if (c === '+') {
+        if (file !== null) pushLine(added, file, newN);
+        newN += 1;
+        newLeft -= 1;
+      } else if (c === '\\') {
+        // "\ No newline at end of file" belongs to no line.
+      } else {
+        oldN += 1;
+        newN += 1;
+        oldLeft -= 1;
+        newLeft -= 1;
+      }
+      continue;
+    }
     const f = /^\+\+\+ (?:b\/)?(.+)$/.exec(line);
     if (f) {
       file = f[1] === '/dev/null' ? null : f[1];
       continue;
     }
-    const h = /^@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@/.exec(line);
-    if (h && file !== null) {
-      const start = Number(h[1]);
-      const len = h[2] === undefined ? 1 : Number(h[2]);
-      if (len > 0) out.push({file, start, end: start + len - 1});
+    const h = /^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@/.exec(line);
+    if (h) {
+      oldN = Number(h[1]);
+      oldLeft = h[2] === undefined ? 1 : Number(h[2]);
+      newN = Number(h[3]);
+      newLeft = h[4] === undefined ? 1 : Number(h[4]);
     }
   }
-  return out;
+  return {added, deleted};
+}
+
+/** The lines a diff added, per file. */
+export function parseDiffRanges(diff: string): LineRange[] {
+  return parseDiffChanges(diff).added;
+}
+
+/** The lines a diff deleted or replaced, numbered as before the change. */
+export function parseReplacedRanges(diff: string): LineRange[] {
+  return parseDiffChanges(diff).deleted;
 }
 
 export function formatRework(r: ReworkMeasures): string[] {

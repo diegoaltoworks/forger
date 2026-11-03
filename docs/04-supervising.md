@@ -84,10 +84,14 @@ reviews them, merging any edits made there, and record the commit synced to.
 
 In plain words, in the owner's timezone:
 
-- **Merged**, with what it means for a user.
+- **Merged** in the period, with what it means for a user. The period runs
+  from the previous `report` (or `report --since DATE`).
 - **In progress**, the real branch.
 - **Next.**
-- **Waiting on you**, each item with a recommendation.
+- **Waiting on you**, each item with a recommendation: every open issue
+  labelled `needs-info`, `needs-human` or `needs-triage`, every Proposed ADR,
+  and a halt or anomaly. The recommendation is the one the text states, else
+  the report says the text makes none.
 
 Interrupt at once for a halt, a timeout or anything that touches production.
 When the backlog empties, stop the cadence with a final list of owner items.
@@ -115,7 +119,7 @@ improvise them:
   own): whether it merged and its CI conclusion, `success`, `failure`,
   `pending` or `none` when the repo has no CI, read without touching the
   working tree.
-- `report`: the report sections from the same facts, including the tickets the
+- `report [--since DATE]`: the report sections from the same facts, including the tickets the
   worker declined, and the owner measures from `measure` (cost, rework, escaped
   defects, interventions).
 - `approval <action>`: who may do an action, from the table below.

@@ -1,0 +1,64 @@
+import {describe, expect, test} from 'bun:test';
+
+import {mergedInPeriod, proposedAdrs, recommendationFrom, reportPeriod, waitingIssues} from './waiting';
+
+describe('recommendationFrom', () => {
+  test('the paragraph under a Recommendation heading', () => {
+    expect(recommendationFrom('# T\n\nbody\n\n## Recommendation\n\nAccept it,\nthen build.\n\n## More\nx')).toBe('Accept it, then build');
+  });
+  test('a line that says I recommend, or starts Recommendation:', () => {
+    expect(recommendationFrom('text\nI recommend splitting it.\n')).toBe('I recommend splitting it');
+    expect(recommendationFrom('**Recommendation:** drop it')).toBe('drop it');
+  });
+  test('none when the text makes none', () => {
+    expect(recommendationFrom('just a description')).toBeNull();
+  });
+});
+
+describe('waitingIssues', () => {
+  const issues = [
+    {number: 82, title: 'b', labels: ['needs-triage'], body: ''},
+    {number: 81, title: 'a', labels: ['ready-for-agent', 'needs-info'], body: 'Recommendation: split it'},
+    {number: 5, title: 'fine', labels: ['ready-for-agent'], body: ''},
+    {number: 9, title: 'c', labels: ['needs-human'], body: ''},
+  ];
+  test('every needs-info, needs-human and needs-triage issue, in number order, with its recommendation when it has one', () => {
+    const w = waitingIssues(issues);
+    expect(w.map(i => i.question)).toEqual(['#9 c is needs-human', '#81 a is needs-info', '#82 b is needs-triage']);
+    expect(w[1].recommendation).toBe('split it');
+    expect(w[0].recommendation).toContain('no recommendation');
+  });
+});
+
+describe('proposedAdrs', () => {
+  test('lists Proposed records only, with their recommendation', () => {
+    const adrs = [
+      {name: '0002-b.md', text: '# B\n\nStatus: Accepted\n\nx'},
+      {name: '0001-a.md', text: '# A thing\n\nStatus: Proposed\n\nWhy it matters.\n\n## Recommendation\n\nAccept.'},
+    ];
+    const w = proposedAdrs(adrs);
+    expect(w).toHaveLength(1);
+    expect(w[0].question).toBe('ADR 0001-a is Proposed: A thing');
+    expect(w[0].recommendation).toBe('Accept');
+  });
+});
+
+describe('the period', () => {
+  const prs = [
+    {number: 3, title: 'c', mergedAt: '2026-11-03T12:00:00Z'},
+    {number: 1, title: 'a', mergedAt: '2026-11-01T12:00:00Z'},
+    {number: 2, title: 'b', mergedAt: '2026-11-02T12:00:00Z'},
+  ];
+  test('--since wins over the last report, which wins over none', () => {
+    expect(reportPeriod('2026-11-02', '2026-11-03T00:00:00Z').source).toBe('flag');
+    expect(reportPeriod(undefined, '2026-11-03T00:00:00Z')).toEqual({since: '2026-11-03T00:00:00.000Z', source: 'last_report'});
+    expect(reportPeriod(undefined, null)).toEqual({since: null, source: 'none'});
+  });
+  test('a bad --since is an error', () => {
+    expect(() => reportPeriod('yesterday-ish', null)).toThrow('--since');
+  });
+  test('Merged lists only the merges inside the period, oldest first', () => {
+    expect(mergedInPeriod(prs, reportPeriod('2026-11-02T00:00:00Z', null))).toEqual(['#2 b', '#3 c']);
+    expect(mergedInPeriod(prs, reportPeriod(undefined, null))).toEqual(['#1 a', '#2 b', '#3 c']);
+  });
+});

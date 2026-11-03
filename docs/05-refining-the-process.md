@@ -170,8 +170,11 @@ watcher wakes only on a terminal event.
 
 `measure` also reports rework and escaped defects per merged PR (ADR 0013), read
 from the tracker and git history. A PR is reworked when a later merge within a
-window of merges (`--window N`, default the five after it) touches lines it
-changed, or is a revert that names it. An escaped defect is a `bug` issue that
+window of merges (`--window N`, default the five after it) deletes or replaces
+lines it added, or is a revert that names it. Context lines around a change,
+docs, lockfiles and the loop's own bookkeeping files do not count, and neither
+does a later PR that names the earlier one or its issue, which builds on it on
+purpose. An escaped defect is a `bug` issue that
 names a merged PR. A pick-versus-built mismatch is a `picked` event whose ticket
 differs from the issue the iteration's PR closed. When the tracker cannot be
 read the section reports unknown rather than zero.
@@ -184,7 +187,10 @@ two saved reports.
 ticket (the mean over tickets whose cost is known, with how many are unknown),
 the rework rate, escaped defects and owner interventions, all from `measure`.
 `report --json` carries them under `measures`; an unreadable tracker reports
-them as null, not zero.
+them as null, not zero. Owner interventions are unknown, with the reason, when
+the events file has no record of a run in the period. Cost finds a session's
+transcript from the full id in the work log, or from the shortened id older
+runs wrote.
 
 With workers side by side (ADR 0011) the same command reports what that bought
 and cost, from the iteration logs and the scheduling decisions the parallel loop

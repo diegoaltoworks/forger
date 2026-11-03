@@ -1,6 +1,6 @@
 import {describe, expect, test} from 'bun:test';
 
-import {computeRework, picksToPrs, parseDiffRanges, referencedNumbers, type MergedPr} from './rework';
+import {computeRework, picksToPrs, parseDiffRanges, parseReplacedRanges, referencedNumbers, type MergedPr} from './rework';
 
 function pr(number: number, order: number, extra: Partial<MergedPr> = {}): MergedPr {
   return {number, order, title: `feat: ${number}`, body: '', closes: null, ranges: [], ...extra};
@@ -90,9 +90,14 @@ test('referencedNumbers ignores anchors and repeats', () => {
   expect(referencedNumbers('see #3, #3 and a#4 and &#5 and #6.')).toEqual([3, 6]);
 });
 
-test('parseDiffRanges reads new-side hunks per file', () => {
-  const diff = ['--- a/x.ts', '+++ b/x.ts', '@@ -1,2 +1,3 @@', '+a', '@@ -10 +12 @@', '--- a/gone.ts', '+++ /dev/null', '@@ -1,2 +0,0 @@'].join('\n');
-  expect(parseDiffRanges(diff)).toEqual([r('x.ts', 1, 3), r('x.ts', 12, 12)]);
+test('parseDiffRanges reads the added lines per file, not the context around them', () => {
+  const diff = ['--- a/x.ts', '+++ b/x.ts', '@@ -1,3 +1,4 @@', ' ctx', '+a', '+b', ' ctx', ' ctx', '@@ -10,2 +12,2 @@', '-old', ' ctx', '+new', '--- a/gone.ts', '+++ /dev/null', '@@ -1,2 +0,0 @@', '-a', '-b'].join('\n');
+  expect(parseDiffRanges(diff)).toEqual([r('x.ts', 2, 3), r('x.ts', 13, 13)]);
+});
+
+test('parseReplacedRanges reads the deleted lines as numbered before the change', () => {
+  const diff = ['--- a/x.ts', '+++ b/x.ts', '@@ -1,3 +1,4 @@', ' ctx', '+a', ' ctx', ' ctx', '@@ -10,2 +12,2 @@', '-old', ' ctx', '+new', '--- a/gone.ts', '+++ /dev/null', '@@ -1,2 +0,0 @@', '-a', '-b'].join('\n');
+  expect(parseReplacedRanges(diff)).toEqual([r('x.ts', 10, 10)]);
 });
 
 test('picksToPrs joins a pick to the PR its iteration built', () => {

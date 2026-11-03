@@ -8,6 +8,7 @@ const ticket = (cost_usd: number | null) => ({ticket: 't', runs: 1, seconds: 1, 
 const measures = {
   tickets: [ticket(1), ticket(3), ticket(null)],
   owner_interventions: {total: 3, by_event: {halted: 2, merged_red: 1}},
+  interventions_unknown: null,
   change_rework: {window: 5, merged: 4, pairs: [], reworked: 1, rework_rate: 0.25, escaped_defects: [{issue: 9, pr: 2}], defective: 1, escaped_defect_rate: 0.25, pick_mismatches: []},
 } as unknown as Measures;
 
@@ -19,7 +20,7 @@ describe('buildReportMeasures', () => {
       merged_prs: 4,
       rework_rate: 0.25,
       escaped_defects: 1,
-      owner_interventions: {total: 3, by_event: {halted: 2, merged_red: 1}},
+      owner_interventions: {total: 3, by_event: {halted: 2, merged_red: 1}, unknown_reason: null},
     });
   });
   test('unknown stays unknown, never zero', () => {

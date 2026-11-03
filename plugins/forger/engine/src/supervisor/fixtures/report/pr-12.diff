@@ -1,0 +1,9 @@
+--- a/src/a.ts
++++ b/src/a.ts
+@@ -2,4 +2,4 @@
+ context
+-x
+-y
++X
++Y
+ context
