@@ -29,6 +29,8 @@ interface GitScene {
   pushed?: boolean;
   /** The conclusion of the branch PR's one check; the PR reads merged when `merge` is set. */
   prCheck?: string;
+  /** The decision recorded for the PR head; absent means a passing one, 'none' means no record. */
+  verdict?: 'pass' | 'block' | 'none';
 }
 
 /**
@@ -46,9 +48,10 @@ function sceneRunner(scene: GitScene, spawned: () => boolean) {
         ? `checkout: moving from ${scene.branch} to main\ncheckout: moving from main to ${scene.branch}\nold`
         : 'old';
     }
-    if (scene.branch && scene.prCheck && cmd === `gh pr view ${scene.branch} --json number,state,mergedAt,statusCheckRollup`) {
+    if (scene.branch && scene.prCheck && cmd === `gh pr view ${scene.branch} --json number,state,mergedAt,statusCheckRollup,headRefOid`) {
       return JSON.stringify({
         number: 75,
+        headRefOid: 'head75',
         state: after && scene.merge ? 'MERGED' : 'OPEN',
         statusCheckRollup: [{__typename: 'CheckRun', name: 'gates', status: 'COMPLETED', conclusion: scene.prCheck}],
       });
@@ -71,6 +74,11 @@ function runnerWith(
 } {
   const root = mkdtempSync(join(tmpdir(), 'forger-runner-'));
   dirs.push(root);
+  if (scene.prCheck && scene.verdict !== 'none') {
+    const dir = join(root, '.forger', 'verdicts');
+    mkdirSync(dir, {recursive: true});
+    writeFileSync(join(dir, 'pr-75-head75.json'), JSON.stringify({pr: 75, head: 'head75', decision: scene.verdict ?? 'pass', entries: []}));
+  }
   const calls: AgentRunOptions[] = [];
   const config = mergeConfig({limits: {timeoutMinutes: 7, killGraceSeconds: 11, maxStallIterations: 2}});
   const runner = new AutomationRunner(root, config, backlogFrom(() => data, config), {
@@ -228,6 +236,21 @@ describe('AutomationRunner outcome from facts', () => {
     );
     expect(await runner.runIteration(1)).toBe(true);
     expect(readState(root).completed_tasks).toEqual(['the_ticket']);
+  });
+
+  test('a merge with no verdict for its head halts as unverified and never counts as completed', async () => {
+    const {runner, root} = runnerWith(
+      {exitCode: 0, signal: null, output: '<process>complete</process>', timedOut: false},
+      {merge: true, branch: 'feat/the_ticket', prCheck: 'SUCCESS', verdict: 'none'},
+      done
+    );
+    expect(await runner.runIteration(1)).toBe(false);
+    const state = readState(root);
+    expect(state.status).toBe('halted');
+    expect(state.completed_tasks).toEqual([]);
+    expect(state.last_error).toContain('PR #75 merged into main with no verdict recorded for its head');
+    const events = readFileSync(join(root, '.forger', 'events.jsonl'), 'utf-8').trim().split('\n').map(l => JSON.parse(l));
+    expect(events.map(e => e.event)).toEqual(['unverified']);
   });
 
   test('stalls by merges: runs without a merge halt the loop', async () => {

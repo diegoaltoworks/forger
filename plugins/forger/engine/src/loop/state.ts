@@ -14,6 +14,7 @@ export type AutomationStatus =
   | 'running'
   | 'completed'
   | 'merged-red'
+  | 'unverified'
   | 'partial'
   | 'off-pick'
   | 'declined'

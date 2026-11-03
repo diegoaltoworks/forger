@@ -23,6 +23,8 @@ export interface PrFact {
   checks_ok: boolean;
   /** The checks that failed, by name. */
   failing_checks: string[];
+  /** The head commit the PR stands at; null when gh did not report it. */
+  head: string | null;
 }
 
 interface RollupEntry {
@@ -78,7 +80,7 @@ function parseJson(text: string): unknown {
 }
 
 export function parsePr(prJson: string, ciConfigured = false): PrFact | null {
-  const p = parseJson(prJson) as {number?: number; state?: string; mergedAt?: string | null; statusCheckRollup?: unknown} | null;
+  const p = parseJson(prJson) as {number?: number; state?: string; mergedAt?: string | null; statusCheckRollup?: unknown; headRefOid?: string} | null;
   if (!p || typeof p.number !== 'number' || typeof p.state !== 'string') return null;
   const checks = checksConclusion(p.statusCheckRollup, ciConfigured);
   return {
@@ -88,10 +90,11 @@ export function parsePr(prJson: string, ciConfigured = false): PrFact | null {
     checks,
     checks_ok: checks === 'success' || checks === 'none',
     failing_checks: failingChecks(p.statusCheckRollup),
+    head: typeof p.headRefOid === 'string' && p.headRefOid !== '' ? p.headRefOid : null,
   };
 }
 
-export const PR_FIELDS = 'number,state,mergedAt,statusCheckRollup';
+export const PR_FIELDS = 'number,state,mergedAt,statusCheckRollup,headRefOid';
 
 /** HEAD too: the PR that adds a repo's first workflow has CI before its base does. */
 export function ciConfigured(run: CommandRunner, baseBranch: string): boolean {

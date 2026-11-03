@@ -6,6 +6,8 @@
  */
 
 import type {CommandRunner} from '../ports';
+import {verdictRefusal, readVerdicts} from './verdict-store';
+import type {VerdictRecord} from './verify-input';
 import {ciConfigured, viewPr, type ChecksConclusion, type PrFact} from './pr-checks';
 
 export type MergeStep = {action: 'wait'} | {action: 'merge'} | {action: 'refuse'; reason: string} | {action: 'done'};
@@ -20,7 +22,7 @@ export interface MergeResult {
 }
 
 /** What to do with a PR after waiting `waitedMs` of an allowed `timeoutMs`. */
-export function mergeStep(pr: PrFact | null, waitedMs: number, timeoutMs: number): MergeStep {
+export function mergeStep(pr: PrFact | null, verdicts: VerdictRecord[], waitedMs: number, timeoutMs: number): MergeStep {
   if (!pr) return {action: 'refuse', reason: 'cannot read the PR'};
   if (pr.merged) return {action: 'done'};
   if (pr.state !== 'OPEN') return {action: 'refuse', reason: `PR #${pr.number} is ${pr.state.toLowerCase()}`};
@@ -33,12 +35,16 @@ export function mergeStep(pr: PrFact | null, waitedMs: number, timeoutMs: number
     }
     return {action: 'wait'};
   }
+  const unverified = verdictRefusal(verdicts, pr.head);
+  if (unverified) return {action: 'refuse', reason: unverified};
   return {action: 'merge'};
 }
 
 export interface MergeOptions {
   pr: number;
   baseBranch: string;
+  /** Directory holding the verdict records `verify` wrote. */
+  verdictsDir: string;
   timeoutMs: number;
   pollMs?: number;
   sleep?: (ms: number) => Promise<void>;
@@ -62,7 +68,7 @@ export async function mergePr(run: CommandRunner, opts: MergeOptions): Promise<M
 
   for (let waited = 0; ; waited += pollMs) {
     const pr = read();
-    const step = mergeStep(pr, waited, opts.timeoutMs);
+    const step = mergeStep(pr, readVerdicts(opts.verdictsDir, opts.pr), waited, opts.timeoutMs);
     if (step.action === 'wait') {
       await sleep(pollMs);
       continue;

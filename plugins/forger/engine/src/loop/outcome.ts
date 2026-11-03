@@ -7,6 +7,7 @@
  */
 
 import type {Claim} from './claim';
+import type {Decision} from './verdict';
 import type {TerminalEventKind} from './events';
 import type {PrFact} from './pr-checks';
 import type {AutomationStatus} from './state';
@@ -40,6 +41,8 @@ export interface RunFacts {
   infraError: string | null;
   /** The worker's PR and its CI result; null when there is none to read. */
   pr: PrFact | null;
+  /** The decision recorded for the PR's head commit; null when there is no record for it. */
+  verdict: Decision | null;
 }
 
 export interface Outcome {
@@ -69,6 +72,17 @@ export function redMerge(pr: PrFact | null, baseBranch: string): string | null {
   return `PR #${pr.number} merged into ${baseBranch} with ${why}. ${baseBranch} may be red; fix it before more work lands.`;
 }
 
+/**
+ * Why a merge counts as unverified: the PR merged without a passing verdict
+ * recorded for its head commit (ADR 0010). Null when it passed, or when there
+ * is no PR to read.
+ */
+export function unverifiedMerge(pr: PrFact | null, verdict: Decision | null, baseBranch: string): string | null {
+  if (!pr || verdict === 'pass') return null;
+  const why = verdict === null ? 'no verdict recorded for its head' : `a ${verdict} verdict for its head`;
+  return `PR #${pr.number} merged into ${baseBranch} with ${why}. Nothing independent checked it; review what landed before more work does.`;
+}
+
 function timeoutText(f: RunFacts): string {
   const by = f.signal ? `, ended by ${f.signal}` : '';
   return `Timeout after ${f.timeoutMinutes} minutes${by}`;
@@ -94,6 +108,11 @@ export function decideOutcome(f: RunFacts): Outcome {
   const red = f.merged ? redMerge(f.pr, f.baseBranch) : null;
   if (red) {
     return {status: 'merged-red', result: 'failure', merged: true, error: red, warning: null, halt: red, haltKind: 'merged_red'};
+  }
+
+  const unverified = f.merged ? unverifiedMerge(f.pr, f.verdict, f.baseBranch) : null;
+  if (unverified) {
+    return {status: 'unverified', result: 'failure', merged: true, error: unverified, warning: null, halt: unverified, haltKind: 'unverified'};
   }
 
   // The pick is the contract: work on another ticket is real but is never the

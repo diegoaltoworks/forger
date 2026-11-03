@@ -72,7 +72,8 @@ recovered, and where the lasting fix belongs: **E** the engine, **S** a skill
   check and refuses a red PR, and `check docs` fails a command file that spells
   out a raw merge. The outcome reads the merged PR's checks: a merge on failing
   or pending checks is `merged-red`, never completed, and halts the loop naming
-  the PR and the failing check. S: read a gate's exit status, not the tail of
+  the PR and the failing check; one with no passing `verify` verdict for its
+  head is `unverified` and halts the same way. S: read a gate's exit status, not the tail of
   its output, and run the gates again after the last edit.
 
 ### Adopting new work looks like a stall

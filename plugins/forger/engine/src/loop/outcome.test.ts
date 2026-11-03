@@ -21,10 +21,11 @@ const nothing: RunFacts = {
   unclean: null,
   infraError: null,
   pr: null,
+  verdict: 'pass',
 };
 
 function pr(checks: PrFact['checks'], failing: string[] = []): PrFact {
-  return {number: 75, state: 'MERGED', merged: true, checks, checks_ok: checks === 'success' || checks === 'none', failing_checks: failing};
+  return {number: 75, state: 'MERGED', merged: true, checks, checks_ok: checks === 'success' || checks === 'none', failing_checks: failing, head: 'h1'};
 }
 
 describe('decideOutcome on the PR checks of a merge', () => {
@@ -260,5 +261,31 @@ describe('decideOutcome on the engine pick (ADR 0008 table)', () => {
     expect(o.error).toContain('"other"');
     expect(o.error).toContain('"the_ticket"');
     expect(o.error).toContain('declined');
+  });
+});
+
+describe('decideOutcome on the verdict of a merged PR (ADR 0010)', () => {
+  const rows: {name: string; verdict: RunFacts['verdict']; status: Outcome['status']; result: Outcome['result']}[] = [
+    {name: 'merged with a passing verdict', verdict: 'pass', status: 'completed', result: 'success'},
+    {name: 'merged with no verdict for its head', verdict: null, status: 'unverified', result: 'failure'},
+    {name: 'merged on a block', verdict: 'block', status: 'unverified', result: 'failure'},
+    {name: 'merged on an unclear verdict', verdict: 'unclear', status: 'unverified', result: 'failure'},
+  ];
+  for (const r of rows) {
+    test(r.name, () => {
+      const o = decideOutcome({...nothing, merged: true, pr: pr('success'), verdict: r.verdict});
+      expect(o.status).toBe(r.status);
+      expect(o.result).toBe(r.result);
+      expect(o.merged).toBe(true);
+      expect(o.halt === null).toBe(r.status === 'completed');
+    });
+  }
+
+  test('an unverified merge is recorded as the unverified event', () => {
+    expect(decideOutcome({...nothing, merged: true, pr: pr('success'), verdict: null}).haltKind).toBe('unverified');
+  });
+
+  test('a red merge stays merged-red whatever the verdict', () => {
+    expect(decideOutcome({...nothing, merged: true, pr: pr('failure', ['gates']), verdict: null}).status).toBe('merged-red');
   });
 });

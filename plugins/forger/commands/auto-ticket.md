@@ -137,11 +137,14 @@ git push -u origin feat/<ticket-id>     # FIRST - do not defer this
 gh pr create --title "feat: <summary>" --body "<what + how + gate results>
 
 Closes #<issue>" --base <base-branch>
+bun "${CLAUDE_PLUGIN_ROOT}/bin/work.ts" verify --pr <pr> --json
 bun "${CLAUDE_PLUGIN_ROOT}/bin/work.ts" merge --pr <pr> --json
 git checkout <base-branch> && git pull
 ```
 **Never merge red, and never merge by hand.** `merge` waits for every check to
-finish, squash-merges only when all passed, and confirms the merge from the
+finish, squash-merges only when all passed and `verify` recorded a passing
+verdict for the PR's current head (a later push makes it stale; `block` and
+`unclear` both refuse and name the criteria), and confirms the merge from the
 PR's state; it exits 1 when it refuses. Act on its JSON, not on your reading of
 CI:
 - `merged: true` - done. `checks: "none"` means the repo has no CI workflow; say
@@ -154,7 +157,8 @@ CI:
 
 The engine reads the merged PR's checks after the run. A ticket merged on
 failing or pending checks is recorded as `merged-red` and halts the loop: it
-never counts as completed.
+never counts as completed. A ticket merged with no passing verdict for its
+head is recorded as `unverified` and halts the same way.
 
 `Closes #<issue>` (when the ticket has one) is what closes the tracker issue:
 the merge does it, no extra call. Clean commit messages only - no AI

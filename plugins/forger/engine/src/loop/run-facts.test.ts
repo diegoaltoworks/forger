@@ -84,7 +84,7 @@ describe('takeSnapshot and gatherFacts', () => {
           reflogBefore,
         ].join('\n'),
         'git branch --show-current': 'main',
-        'gh pr view feat/new --json number,state,mergedAt,statusCheckRollup': prJson('MERGED', 'SUCCESS'),
+        'gh pr view feat/new --json number,state,mergedAt,statusCheckRollup,headRefOid': prJson('MERGED', 'SUCCESS'),
         'git ls-tree -r --name-only origin/main -- .github/workflows': '.github/workflows/ci.yml',
       }),
       'main',
@@ -94,7 +94,7 @@ describe('takeSnapshot and gatherFacts', () => {
       merged: true,
       branch: 'feat/new',
       pushed: false,
-      pr: {number: 9, state: 'MERGED', merged: true, checks: 'success', checks_ok: true, failing_checks: []},
+      pr: {number: 9, state: 'MERGED', merged: true, checks: 'success', checks_ok: true, failing_checks: [], head: null},
     });
   });
 
@@ -104,7 +104,7 @@ describe('takeSnapshot and gatherFacts', () => {
         'git rev-parse origin/main': 'aaa',
         'git reflog --format=%gs': 'checkout: moving from main to feat/new',
         'git branch --show-current': 'main',
-        'gh pr view feat/new --json number,state,mergedAt,statusCheckRollup': prJson('MERGED', 'FAILURE'),
+        'gh pr view feat/new --json number,state,mergedAt,statusCheckRollup,headRefOid': prJson('MERGED', 'FAILURE'),
       }),
       'main',
       {baseSha: 'aaa', reflogLength: 0}
@@ -120,7 +120,7 @@ describe('takeSnapshot and gatherFacts', () => {
         'git merge-base --is-ancestor aaa bbb && echo yes': 'yes',
         'git reflog --format=%gs': 'checkout: moving from main to feat/new',
         'git branch --show-current': 'feat/new',
-        'gh pr view feat/new --json number,state,mergedAt,statusCheckRollup': prJson('OPEN', 'SUCCESS'),
+        'gh pr view feat/new --json number,state,mergedAt,statusCheckRollup,headRefOid': prJson('OPEN', 'SUCCESS'),
       }),
       'main',
       {baseSha: 'aaa', reflogLength: 0}
