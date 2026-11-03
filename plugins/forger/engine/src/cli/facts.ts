@@ -10,14 +10,14 @@ export const facts: Command = {
                    and a PR's CI conclusion with whether it allows a merge`,
   run(ctx) {
     const {values, config} = ctx;
-    const {state, log, output, halt, lock, events} = config.paths;
+    const {state, log, output, halt, lock, events, declined, verdicts} = config.paths;
     const num = (v: string | undefined) => {
       const n = v === undefined ? NaN : parseInt(v, 10);
       return Number.isNaN(n) ? undefined : n;
     };
     const facts = gatherLoopFacts(ctx.run(), {
       baseBranch: config.base_branch,
-      ignore: [state, log, output, halt, lock, events, ...config.local_only],
+      ignore: [state, log, output, halt, lock, events, declined, verdicts, ...config.local_only],
       issue: num(values.issue),
       pr: num(values.pr),
     });

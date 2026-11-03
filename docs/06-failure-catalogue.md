@@ -188,7 +188,7 @@ recovered, and where the lasting fix belongs: **E** the engine, **S** a skill
   the run was counted as a failure for a dirty tree.
 - **Cause:** the merge check treated every modified path alike.
 - **Fix:** E (in place): paths the engine owns (state, log, output, HALT, lock,
-  events) and the configured `local_only` list are ignored when checking the
+  events, declined, verdicts) and the configured `local_only` list are ignored when checking the
   tree. P: list files that stay local in `local_only`.
 
 ### An engine restarted mid-iteration re-runs the ticket

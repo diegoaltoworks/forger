@@ -66,6 +66,11 @@ describe('dirtyEntries', () => {
     expect(dirtyEntries('R  a.ts -> .forger/state.json', ['.forger/state.json'])).toEqual([]);
   });
 
+  test('a verdict file under the verdicts path is not dirt', () => {
+    const porcelain = ['?? .forger/verdicts/', ' M .forger/verdicts/pr-1.json'].join('\n');
+    expect(dirtyEntries(porcelain, ['.forger/verdicts'])).toEqual([]);
+  });
+
   test('a sibling that merely shares a prefix is not ignored', () => {
     expect(dirtyEntries(' M .forger/state.json.bak', ['.forger/state.json'])).toHaveLength(1);
   });
