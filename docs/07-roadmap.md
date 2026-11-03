@@ -13,6 +13,18 @@ From the failure catalogue, with a test for each outcome:
 - `status --json`, the runner's own process id in a file, and a terminal-event
   file for watchers.
 - Adopt labelled issues from the tracker, with `depends_on`.
+- Refuse to start a runner whose tracker access is not a scoped token, so a
+  loop never acts as the machine's global account.
+- Start the runner detached from the session that launched it, and write its
+  own process id for `status`.
+- Run the cheap checks (commit message, docs) before the long gates, so a
+  rejection comes in seconds.
+
+Already in place, with a test each: killing the worker's whole process group on
+timeout, deciding an outcome from facts, telling infrastructure errors from
+worker failures, clearing a HALT together with its counters, ignoring local-only
+paths when checking the tree, one runner at a time with orphan close-out, and
+progress measured by merges.
 
 ## 2. A `manage` skill for the supervisor
 
@@ -27,8 +39,15 @@ skill, so every session walks the same layers instead of improvising.
 - **The refinement loop is first class:** `retro` builds the timeline from a
   transcript and CI's logs and proposes rules; `refine` lands approved changes
   in the playbook, the process doc or a ticket for a check, by PR.
+- **Facts before belief:** it reads `status --json`, the terminal-event file and
+  the PR checks, never a completion notice or its own pattern match, and it
+  compares the work order with `backlog --json` before accepting "all done"
+  (backlog ticket `work_supervisor`).
 - **Approval policy enforced:** never clears a HALT or resets counters without
   the configured approval.
+- **Impact analysis:** before a worker pushes, it lists what a change touches
+  and runs only the affected tests (`retro_and_measures` measures the CI rounds
+  per ticket that show when this is missing).
 - **Evals:** setup, intake of a bug, a feature and a spike, ordering, an anomaly
   (a dead runner, a misleading ticket label, a ticket completed but unmerged), a
   report, a retro.
