@@ -56,8 +56,17 @@ describe('formatIterationLog', () => {
     expect(log).toContain('ticket: other\nengine pick: engine_timeout_kills_group\n');
   });
 
-  test('omits the engine pick when it matches', () => {
+  test('prints the engine pick when it matches', () => {
     const log = formatIterationLog({...base, enginePick: 'engine_timeout_kills_group'});
-    expect(log).not.toContain('engine pick');
+    expect(log).toContain('engine pick: engine_timeout_kills_group');
+  });
+
+  test('the engine pick always prints, also when the worker took it', () => {
+    const log = formatIterationLog({...base, enginePick: base.ticket});
+    expect(log).toContain(`engine pick: ${base.ticket}`);
+  });
+
+  test('an engine with no pick prints none', () => {
+    expect(formatIterationLog({...base, ticket: null, enginePick: null})).toContain('engine pick: none');
   });
 });

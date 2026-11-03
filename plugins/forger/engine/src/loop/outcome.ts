@@ -20,6 +20,10 @@ export interface RunFacts {
   branch: string | null;
   /** The ticket the run is held to: the worker's, else the engine's pick. */
   ticket: string | null;
+  /** The ticket the engine handed the worker; null when it had none. */
+  enginePick: string | null;
+  /** The ticket a decline record names; null when the worker declined nothing. */
+  declined: string | null;
   /** What the worker's own completion signal said, if anything. */
   claim: Claim['claim'];
   stopReason: string | null;
@@ -81,10 +85,31 @@ function divergence(f: RunFacts): string {
   );
 }
 
+/** A run that built a ticket other than the engine's pick. */
+export function offPick(f: RunFacts): boolean {
+  return f.enginePick !== null && f.ticket !== null && f.ticket !== f.enginePick;
+}
+
 export function decideOutcome(f: RunFacts): Outcome {
   const red = f.merged ? redMerge(f.pr, f.baseBranch) : null;
   if (red) {
     return {status: 'merged-red', result: 'failure', merged: true, error: red, warning: null, halt: red, haltKind: 'merged_red'};
+  }
+
+  // The pick is the contract: work on another ticket is real but is never the
+  // pick's completion, even when its own PR merged. The decline record is
+  // still honoured, so the pick leaves the queue either way.
+  if (offPick(f)) {
+    const declinedNote =
+      f.declined === f.enginePick ? ` The pick "${f.enginePick}" was declined on the record.` : '';
+    return {
+      status: 'off-pick',
+      result: 'failure',
+      merged: f.merged,
+      error: `Built "${f.ticket}" but the engine picked "${f.enginePick}".${declinedNote}`,
+      warning: null,
+      halt: null,
+    };
   }
 
   if (f.merged) {
@@ -121,6 +146,20 @@ export function decideOutcome(f: RunFacts): Outcome {
       warning: null,
       halt: f.infraError,
     };
+  }
+
+  // A decline for the pick, with nothing built, is the sanctioned exit from it.
+  // It must come before the stop claim the worker ends a decline with.
+  if (!f.merged && f.branch === null && f.declined !== null && f.declined === f.enginePick) {
+    const why = `Declined "${f.declined}" on the record`;
+    return {status: 'declined', result: 'neutral', merged: false, error: why, warning: null, halt: null};
+  }
+
+  if (f.declined !== null && f.declined !== f.enginePick && f.branch === null) {
+    return failure(
+      'failed',
+      `Declined "${f.declined}" but the engine picked "${f.enginePick ?? 'none'}"; the record is not for this run's pick`
+    );
   }
 
   if (f.backlogCompleted && f.ticket) {

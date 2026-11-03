@@ -7,7 +7,8 @@ left, decide the outcome, apply it, and decide whether to go again.
 
 Pure:
 
-- `outcome.ts` - the outcome of a run, decided from facts.
+- `outcome.ts` - the outcome of a run, decided from facts, including whether it
+  built the engine's pick, declined it, or took another ticket.
 - `claim.ts` - the worker's completion signal.
 - `infra.ts` - an infrastructure failure or a rate limit, told from a worker
   failure.

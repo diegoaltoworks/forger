@@ -14,6 +14,8 @@ export type AutomationStatus =
   | 'completed'
   | 'merged-red'
   | 'partial'
+  | 'off-pick'
+  | 'declined'
   | 'failed'
   | 'timeout'
   | 'error'
