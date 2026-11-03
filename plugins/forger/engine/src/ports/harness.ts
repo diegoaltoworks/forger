@@ -26,6 +26,6 @@ export interface Harness {
   commandPath(name: string): string | null;
   /** The variable the source commands use for the plugin root; `packageCommand` resolves it. */
   pluginRootVar: string;
-  /** The source command text in this harness's format. */
-  packageCommand(source: string, pluginRoot: string): string;
+  /** The source command text in this harness's format; `name` is the command's file name without extension. */
+  packageCommand(source: string, pluginRoot: string, name?: string): string;
 }

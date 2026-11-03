@@ -5,10 +5,12 @@
 
 import type {AgentRunner, Harness} from '../ports';
 import {claudeHarness} from './claude';
+import {codexHarness} from './codex';
+import {copilotHarness} from './copilot';
 import {opencodeHarness} from './opencode';
 import {runSupervised} from './supervise';
 
-export const HARNESSES: Harness[] = [claudeHarness, opencodeHarness];
+export const HARNESSES: Harness[] = [claudeHarness, opencodeHarness, codexHarness, copilotHarness];
 
 export function findHarness(id: string, harnesses: Harness[] = HARNESSES): Harness {
   const found = harnesses.find(h => h.id === id);

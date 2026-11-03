@@ -2,6 +2,8 @@ import {describe, expect, test} from 'bun:test';
 
 import type {AgentRunOptions} from '../ports';
 import {claudeHarness} from './claude';
+import {codexHarness} from './codex';
+import {copilotHarness} from './copilot';
 import {findHarness, HARNESSES} from './harnesses';
 import {opencodeCommandName, opencodeHarness, stripClaudeFrontmatter} from './opencode';
 
@@ -51,5 +53,29 @@ describe('registry', () => {
   test('finds each shipped harness by id', () => {
     for (const h of HARNESSES) expect(findHarness(h.id)).toBe(h);
   });
-  test('an unknown id names the available ones', () => expect(() => findHarness('nope')).toThrow('claude, opencode'));
+  test('an unknown id names the available ones', () => expect(() => findHarness('nope')).toThrow('claude, opencode, codex, copilot'));
+});
+
+describe('skill harnesses', () => {
+  test('codex execs with the prompt on stdin, after the worker skill mention', () => {
+    expect(codexHarness.spawn({...opts, model: 'gpt-5'})).toEqual({
+      command: 'codex',
+      args: ['exec', '--dangerously-bypass-approvals-and-sandbox', '--model', 'gpt-5'],
+      input: '$forger-auto-ticket\n\ndo the ticket',
+    });
+  });
+  test('copilot runs the prompt non-interactively with every permission granted', () => {
+    expect(copilotHarness.spawn({...opts, model: 'gpt-5'})).toEqual({
+      command: 'copilot',
+      args: ['-p', '/forger-auto-ticket\n\ndo the ticket', '--model', 'gpt-5', '--allow-all', '--no-ask-user'],
+    });
+  });
+  test('codex installs under .agents/skills', () => expect(codexHarness.commandPath('auto-ticket')).toBe('.agents/skills/forger-auto-ticket/SKILL.md'));
+  test('copilot installs under .github/skills', () => expect(copilotHarness.commandPath('auto-ticket')).toBe('.github/skills/forger-auto-ticket/SKILL.md'));
+  const source = '---\ndescription: d\nallowed-tools: Bash(*)\n---\n\nrun "${CLAUDE_PLUGIN_ROOT}/bin/work.ts"\n';
+  for (const h of [codexHarness, copilotHarness]) {
+    test(`${h.id} keeps name and description, drops the rest, resolves the plugin root`, () => {
+      expect(h.packageCommand(source, '/plug', 'auto-ticket')).toBe('---\nname: forger-auto-ticket\ndescription: d\n---\n\nrun "/plug/bin/work.ts"\n');
+    });
+  }
 });

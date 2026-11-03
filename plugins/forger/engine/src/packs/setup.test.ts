@@ -3,7 +3,7 @@ import {existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync}
 import {tmpdir} from 'os';
 import {join, resolve} from 'path';
 
-import {opencodeHarness} from '../adapters';
+import {codexHarness, copilotHarness, opencodeHarness} from '../adapters';
 import {sha256} from './packs';
 import {gitignoreLines, mergeGitignore, renderConfig, runSetup, withCheck} from './setup';
 
@@ -184,4 +184,19 @@ describe('runSetup layout and harness', () => {
     const second = runSetup(root, PLUGIN_ROOT, {harness: opencodeHarness});
     expect(second.files.every(f => f.action === 'kept')).toBe(true);
   });
+
+  for (const [harness, path] of [
+    [codexHarness, '.agents/skills/forger-auto-ticket/SKILL.md'],
+    [copilotHarness, '.github/skills/forger-auto-ticket/SKILL.md'],
+  ] as const) {
+    test(`${harness.id} gets its commands as skills, once`, () => {
+      const root = emptyProject();
+      const first = runSetup(root, PLUGIN_ROOT, {harness});
+      const text = readFileSync(join(root, path), 'utf-8');
+      expect(text).toContain('name: forger-auto-ticket');
+      expect(text).not.toContain('allowed-tools');
+      expect(first.files.find(f => f.path === path)?.action).toBe('written');
+      expect(runSetup(root, PLUGIN_ROOT, {harness}).files.every(f => f.action === 'kept')).toBe(true);
+    });
+  }
 });

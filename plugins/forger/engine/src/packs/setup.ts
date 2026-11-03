@@ -83,7 +83,7 @@ function installCommands(projectRoot: string, pluginRoot: string, harness: Harne
     const rel = harness.commandPath(name);
     if (rel === null) return [];
     const target = join(projectRoot, rel);
-    const content = harness.packageCommand(readFileSync(join(dir, `${name}.md`), 'utf-8'), pluginRoot);
+    const content = harness.packageCommand(readFileSync(join(dir, `${name}.md`), 'utf-8'), pluginRoot, name);
     if (existsSync(target) && readFileSync(target, 'utf-8') === content) return [{path: rel, action: 'kept'}];
     mkdirSync(dirname(target), {recursive: true});
     writeFileSync(target, content);

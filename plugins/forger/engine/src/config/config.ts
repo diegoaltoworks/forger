@@ -38,7 +38,7 @@ export interface WorkloopConfig {
     pauseAfterFailure: number;
     maxStallIterations: number;
   };
-  /** The harness that runs the worker: `claude` (default) or `opencode`. */
+  /** The harness that runs the worker: `claude` (default), `opencode`, `codex` or `copilot`. */
   harness: string;
   paths: {
     backlog: string;
