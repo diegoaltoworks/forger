@@ -267,35 +267,13 @@ bun test          # unit tests for config merge, ticket selection, tiering,
 bun run typecheck # tsc --noEmit
 ```
 
-Layout - pure logic is split from I/O so it is unit-testable without a repo:
-
-```
-engine/src/
-  config.ts    types, defaults, mergeConfig (pure) + loadConfig
-  backlog.ts   the Backlog interface; ticket selection, remaining/workable
-               counts, tiering, the backlog report (pure)
-  file-backlog.ts the Backlog read from backlog.json
-  github-backlog.ts the Backlog read from GitHub Issues: the query, and the
-               issue-to-ticket mapping (pure) behind an injectable runner
-  graphql-cost.ts a GraphQL query's worst-case rate-limit cost (pure)
-  open-backlog.ts which Backlog the tracker kind selects
-  prompt.ts    per-iteration prompt (pure): worker command, gates, tracker
-  git.ts       merge verification against an injectable command runner (pure)
-  run-facts.ts the git facts a run is judged by: merged, pushed, branch taken
-  claim.ts     the worker's completion signal, parsed (pure)
-  outcome.ts   a run's outcome from its facts (pure)
-  facts.ts     read-only loop facts for the supervisor: branch, issue -> PR,
-               and a PR's CI conclusion (pure folding behind a runner)
-  ci.ts        the CI job summary, workflow-gates drift and the
-               wait-before-merge rule (pure)
-  infra.ts     tells infrastructure errors from worker failures (pure)
-  state.ts     state shape, stall detection by merges (pure) + StateStore (I/O)
-  logger.ts    terminal + file logging
-  claude.ts    headless `claude` spawn (the side-effect boundary)
-  runner.ts    orchestration: the run loop and one iteration
-  cli.ts       arg parsing + dispatch
-bin/work.ts    stable entry the plugin commands call
-```
+Layout - the source is one folder per domain, and the layer is in the path:
+the pure core, `adapters/` for the side effects the core is handed, and `cli/`
+which wires them together. `check arch` enforces the dependency rule through
+`.claude/architecture.json`. Start at [`engine/src/README.md`](engine/src/README.md)
+for the folder map; each folder's README says what it owns, which files are
+pure, and what it may import. `bin/work.ts` is the stable entry the plugin
+commands call.
 
 ## Safety
 

@@ -1,22 +1,13 @@
 {
   "layers": [
-    {
-      "name": "core",
-      "paths": [
-        "plugins/forger/engine/src/claim.ts",
-        "plugins/forger/engine/src/docs-content.ts",
-        "plugins/forger/engine/src/docs-rules.ts",
-        "plugins/forger/engine/src/infra.ts",
-        "plugins/forger/engine/src/iteration-log.ts",
-        "plugins/forger/engine/src/arch.ts",
-        "plugins/forger/engine/src/waivers.ts"
-      ]
-    },
     {"name": "tests", "paths": ["plugins/forger/engine/src/**/*.test.ts"]},
-    {"name": "shell", "paths": ["plugins/forger/engine/src/**", "plugins/forger/bin/**"]}
+    {"name": "adapters", "paths": ["plugins/forger/engine/src/adapters/**"]},
+    {"name": "cli", "paths": ["plugins/forger/engine/src/cli/**", "plugins/forger/bin/**"]},
+    {"name": "core", "paths": ["plugins/forger/engine/src/**"]}
   ],
   "allow": {
-    "tests": ["core", "shell"],
-    "shell": ["core"]
+    "tests": ["core", "adapters", "cli"],
+    "adapters": ["core"],
+    "cli": ["core", "adapters"]
   }
 }
