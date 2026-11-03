@@ -13,6 +13,7 @@ import {execRunner, type CommandRunner} from './git';
 import {formatBacklogReport} from './backlog';
 import {openBacklog} from './open-backlog';
 import {formatReport as formatCheckReport, runChecks} from './checks';
+import {formatSummary} from './ci';
 import {runArchCheck} from './arch-check';
 import {runDecisionsCheck} from './decisions-check';
 import {runSafetyCheck} from './safety-check';
@@ -54,8 +55,10 @@ Usage (run from the consumer repo root):
   skills [--json] [--presets]
                    Resolve each skill slot to its configured skill and the built-in fallback;
                    --presets lists the presets whose skill collection is installed
-  check [--json]   Run every check the installed packs declare, apply .claude/waivers.json,
-                   exit non-zero on any unwaived violation
+  check [--json | --summary]
+                   Run every check the installed packs declare, apply .claude/waivers.json,
+                   exit non-zero on any unwaived violation; --summary prints the CI job
+                   summary in markdown
   check decisions [--json] Fail on a new dependency or layer-map change with no ADR in the diff
   check safety [--json] Fail on an added secret or a stored-shape change with no test
   check tests [--json] Fail on a fix with no test, or a unit test that imports a network or process module
@@ -65,8 +68,9 @@ Usage (run from the consumer repo root):
   backlog [--json] Workable tickets in order, remaining count and next pick
   orient [--json]  What the supervisor should do on arrival: surface_halt, attach, start, nothing_to_do
   report [--json]  Merged, in progress (real branch), next, waiting on the owner
-  facts [--json] [--issue N]
-                   Read-only: branch, clean, origin base head, and issue -> closing PR -> merged
+  facts [--json] [--issue N] [--pr N]
+                   Read-only: branch, clean, origin base head, issue -> closing PR -> merged,
+                   and a PR's CI conclusion with whether it allows a merge
   approval ACTION  Who may do ACTION: alone, alone_and_report, owner or never
   events [--json]  Terminal events so far
   await-event [--seen N] [--timeout S]
@@ -109,6 +113,8 @@ export async function main(
       'base-branch': {type: 'string'},
       tracker: {type: 'string'},
       issue: {type: 'string'},
+      pr: {type: 'string'},
+      summary: {type: 'boolean', default: false},
       preset: {type: 'string'},
       packs: {type: 'string'},
       presets: {type: 'boolean', default: false},
@@ -194,7 +200,7 @@ export async function main(
     if (positionals[1] === undefined) {
       try {
         const report = runChecks(projectRoot, pluginRoot, deps.run ?? execRunner(projectRoot));
-        console.log(values.json ? JSON.stringify(report) : formatCheckReport(report));
+        console.log(values.json ? JSON.stringify(report) : values.summary ? formatSummary(report) : formatCheckReport(report));
         if (!report.ok) process.exitCode = 1;
       } catch (e) {
         console.error((e as Error).message);
@@ -204,7 +210,7 @@ export async function main(
     }
     const single = {docs: runDocsCheck, arch: runArchCheck, decisions: runDecisionsCheck, safety: runSafetyCheck, tests: runTestsCheck, coverage: runCoverageCheck};
     if (!(positionals[1] in single)) {
-      console.error('Usage: check [--json] | check docs|arch|decisions|safety|tests|coverage [--json] | check coverage --update');
+      console.error('Usage: check [--json | --summary] | check docs|arch|decisions|safety|tests|coverage [--json] | check coverage --update');
       process.exitCode = 1;
       return;
     }
@@ -346,11 +352,15 @@ export async function main(
     }
     case 'facts': {
       const {state, log, output, halt, lock, events} = config.paths;
-      const issue = values.issue === undefined ? undefined : parseInt(values.issue, 10);
+      const num = (v: string | undefined) => {
+        const n = v === undefined ? NaN : parseInt(v, 10);
+        return Number.isNaN(n) ? undefined : n;
+      };
       const facts = gatherLoopFacts(deps.run ?? execRunner(projectRoot), {
         baseBranch: config.base_branch,
         ignore: [state, log, output, halt, lock, events, ...config.local_only],
-        issue: Number.isNaN(issue) ? undefined : issue,
+        issue: num(values.issue),
+        pr: num(values.pr),
       });
       console.log(values.json ? JSON.stringify(facts) : formatFacts(facts));
       break;

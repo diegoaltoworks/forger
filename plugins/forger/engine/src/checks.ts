@@ -13,13 +13,15 @@ import {runDocsCheck} from './docs-check';
 import type {CommandRunner} from './git';
 import {runSafetyCheck} from './safety-check';
 import {runCoverageCheck, runTestsCheck} from './testing-check';
-import {LOCK_PATH, loadPacks, parseLock, type Lock, type LoadedPack} from './packs';
+import {listOpinions, LOCK_PATH, loadPacks, parseLock, type Lock, type LoadedPack, type Opinion} from './packs';
 import {applyWaivers, parseWaivers, staleWaivers, WAIVERS_PATH, type Finding, type WaivedFinding, type Waiver} from './waivers';
 
 export type CheckStatus = 'passed' | 'failed' | 'waived';
 
 export interface CheckResult {
   check: string;
+  /** The installed opinions this check enforces, so a reader sees what is asserted, not just a status. */
+  opinions: string[];
   status: CheckStatus;
   violations: Finding[];
   waived: WaivedFinding[];
@@ -28,6 +30,8 @@ export interface CheckResult {
 export interface CheckReport {
   ok: boolean;
   results: CheckResult[];
+  /** Every waiver in force, matched or not. */
+  waivers: Waiver[];
   staleWaivers: Waiver[];
 }
 
@@ -60,15 +64,20 @@ export function checksToRun(available: LoadedPack[], lock: Lock, known: string[]
   return ids;
 }
 
-export function buildReport(findings: Array<{check: string; findings: Finding[]}>, waivers: Waiver[]): CheckReport {
+export function buildReport(
+  findings: Array<{check: string; findings: Finding[]}>,
+  waivers: Waiver[],
+  opinions: Array<Pick<Opinion, 'id' | 'check'>> = []
+): CheckReport {
   const results = findings.map(({check, findings: fs}): CheckResult => {
     const {violations, waived} = applyWaivers(fs, waivers);
     const status: CheckStatus = violations.length > 0 ? 'failed' : waived.length > 0 ? 'waived' : 'passed';
-    return {check, status, violations, waived};
+    return {check, opinions: opinions.filter(o => o.check === check).map(o => o.id), status, violations, waived};
   });
   return {
     ok: results.every(r => r.status !== 'failed'),
     results,
+    waivers,
     staleWaivers: staleWaivers(findings.flatMap(f => f.findings), waivers),
   };
 }
@@ -89,9 +98,10 @@ export function runChecks(projectRoot: string, pluginRoot: string, run: CommandR
   const lockPath = join(projectRoot, LOCK_PATH);
   if (!existsSync(lockPath)) throw new Error(`${LOCK_PATH} not found; run setup to install packs`);
   const lock = parseLock(readFileSync(lockPath, 'utf-8'));
-  const ids = checksToRun(loadPacks(pluginRoot), lock);
+  const available = loadPacks(pluginRoot);
+  const ids = checksToRun(available, lock);
   const waiversPath = join(projectRoot, WAIVERS_PATH);
   const waivers = existsSync(waiversPath) ? parseWaivers(readFileSync(waiversPath, 'utf-8')) : [];
   const ctx: CheckContext = {projectRoot, run};
-  return buildReport(ids.map(check => ({check, findings: CHECKS[check](ctx)})), waivers);
+  return buildReport(ids.map(check => ({check, findings: CHECKS[check](ctx)})), waivers, listOpinions(available, lock));
 }

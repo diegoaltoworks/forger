@@ -28,7 +28,7 @@ describe('checksToRun', () => {
 describe('buildReport', () => {
   test('no findings: passed and ok', () => {
     const r = buildReport([{check: 'docs', findings: []}], []);
-    expect(r).toEqual({ok: true, staleWaivers: [], results: [{check: 'docs', status: 'passed', violations: [], waived: []}]});
+    expect(r).toEqual({ok: true, waivers: [], staleWaivers: [], results: [{check: 'docs', opinions: [], status: 'passed', violations: [], waived: []}]});
   });
   test('an open violation fails the report', () => {
     const r = buildReport([{check: 'docs', findings: [finding]}], []);
@@ -50,6 +50,11 @@ describe('buildReport', () => {
     const r = buildReport([{check: 'docs', findings: []}], [waiver]);
     expect(r.ok).toBe(true);
     expect(r.staleWaivers).toEqual([waiver]);
+  });
+  test('each result names the installed opinions its check enforces', () => {
+    const opinions = [{id: 'base.ascii', check: 'docs'}, {id: 'base.rule-only', check: null}, {id: 'arch.layers', check: 'arch'}, {id: 'base.personal', check: 'docs'}];
+    const r = buildReport([{check: 'docs', findings: []}, {check: 'arch', findings: []}], [], opinions);
+    expect(r.results.map(x => x.opinions)).toEqual([['base.ascii', 'base.personal'], ['arch.layers']]);
   });
   test('a waiver matching a finding in another check is not stale', () => {
     const r = buildReport([{check: 'docs', findings: []}, {check: 'arch', findings: [finding]}], [waiver]);
