@@ -43,6 +43,16 @@ export interface StateStore {
   releaseLease(self: string): void;
 }
 
+/** What a migration needs of the state branch beyond the loop's own reads and writes. */
+export interface StateBranch {
+  /** Whether the branch already exists on the remote. */
+  exists(): boolean;
+  /** The lease record kept on the branch, or null when there is none. */
+  readLease(): unknown;
+  /** Creates the branch (orphan) with these files as its first commit; false when the push was refused. */
+  seed(files: Record<string, string>, message: string): boolean;
+}
+
 /** The UTC day an event belongs to, `YYYY-MM-DD`. */
 export function eventDay(at: Date): string {
   return at.toISOString().slice(0, 10);
