@@ -16,9 +16,10 @@ world, and is tested against real processes.
   group, ready when the url answers.
 - `playwright.ts` - the `Screenshotter` and `AccessibilityAuditor` ports over the project's own Playwright,
   resolved from the project, never a dependency of forger.
-- `claude.ts`, `opencode.ts` - the shipped `Harness` adapters. A harness is
+- `claude.ts`, `opencode.ts`, `codex.ts`, `copilot.ts` - the shipped `Harness` adapters. A harness is
   another file here implementing the same interface; its spawn arguments and
   install paths are pure and table-tested.
+- `skill-package.ts` - repackages a command as a repository skill, for the harnesses that load skills.
 - `harnesses.ts` - the shipped harnesses by id, and `agentFor`, the
   `AgentRunner` any of them yields over `supervise.ts`.
 
