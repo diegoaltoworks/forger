@@ -1,5 +1,6 @@
 import {describe, expect, test} from 'bun:test';
 
+import type {Measures} from './measure';
 import {APPROVAL_POLICY, approvalFor, buildReport, formatReport, orient} from './supervisor';
 import {buildStatus} from '../loop';
 import {defaultState} from '../loop';
@@ -102,5 +103,15 @@ describe('report', () => {
     const r = buildReport({status: s, plan: orient({...base, status: s}), branch: 'main', baseBranch: 'main', handedOver: handed});
     expect(r.handed_over).toEqual([{ticket: 'issue-9', pr: 3, criteria: ['c2 cannot_tell']}]);
     expect(formatReport(r)).toContain('issue-9 (PR #3): c2 cannot_tell');
+  });
+  test('the measures section appears only when measures are given', () => {
+    const s = status();
+    const input = {status: s, plan: orient({...base, status: s}), branch: 'main', baseBranch: 'main'};
+    expect(buildReport(input).measures).toBeNull();
+    expect(formatReport(buildReport(input))).not.toContain('**Measures**');
+    const m = {tickets: [], owner_interventions: {total: 0, by_event: {}}, change_rework: null} as unknown as Measures;
+    const r = buildReport({...input, measures: m});
+    expect(r.measures?.owner_interventions.total).toBe(0);
+    expect(formatReport(r)).toContain('**Measures**');
   });
 });

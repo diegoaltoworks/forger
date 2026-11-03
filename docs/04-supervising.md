@@ -116,7 +116,8 @@ improvise them:
   `pending` or `none` when the repo has no CI, read without touching the
   working tree.
 - `report`: the report sections from the same facts, including the tickets the
-  worker declined.
+  worker declined, and the owner measures from `measure` (cost, rework, escaped
+  defects, interventions).
 - `approval <action>`: who may do an action, from the table below.
 
 ## Read-only on the loop's checkout

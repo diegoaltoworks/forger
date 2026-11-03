@@ -4,6 +4,7 @@ import {join} from 'path';
 import {handedOver, listRepoLabels, loopLabels, missingLabels, readAllVerdicts} from '../loop';
 import {buildReport, formatReport, orient as orientPlan} from '../supervisor';
 import type {Command, CommandContext} from './command';
+import {gatherMeasures} from './measure';
 
 function supervise(which: 'orient' | 'report') {
   return (ctx: CommandContext): void => {
@@ -29,6 +30,7 @@ function supervise(which: 'orient' | 'report') {
     });
     const out = which === 'orient' ? plan : buildReport({
           status,
+          measures: gatherMeasures(ctx),
           plan,
           branch,
           baseBranch: config.base_branch,
@@ -52,6 +54,6 @@ export const report: Command = {
   name: 'report',
   needs: 'loop',
   flags: ['json'],
-  help: '  report [--json]  Merged, in progress (real branch), next, waiting on the owner',
+  help: '  report [--json]  Merged, in progress (real branch), next, waiting on the owner; cost per merged ticket, rework rate, escaped defects, owner interventions',
   run: supervise('report'),
 };
