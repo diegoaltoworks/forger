@@ -300,3 +300,37 @@ describe('measure and retro', () => {
     expect(out.body).toContain('- e1\n- e2');
   });
 });
+
+describe('packs and opinions', () => {
+  test('before setup nothing is installed and no opinions are listed', async () => {
+    process.chdir(projectWith({}));
+    const packs = JSON.parse(await capture(['packs', '--json']));
+    expect(packs.find((p: {id: string}) => p.id === 'base')).toMatchObject({installed: false, installedVersion: null});
+    expect(JSON.parse(await capture(['opinions', '--json']))).toEqual([]);
+  });
+
+  test('after setup the base pack and its opinions are listed', async () => {
+    const root = projectWith({});
+    process.chdir(root);
+    await capture(['setup', '--json']);
+    const packs = JSON.parse(await capture(['packs', '--json']));
+    expect(packs.find((p: {id: string}) => p.id === 'base').installed).toBe(true);
+    const opinions = JSON.parse(await capture(['opinions', '--json']));
+    expect(opinions.every((o: {pack: string}) => o.pack === 'base')).toBe(true);
+    expect(opinions.find((o: {id: string}) => o.id === 'base.ascii-punctuation')).toMatchObject({rung: 'check', check: 'docs'});
+    expect(opinions.find((o: {id: string}) => o.id === 'base.determinism-first').check).toBeNull();
+  });
+
+  test('setup with an unknown pack fails', async () => {
+    process.chdir(projectWith({}));
+    const err = spyOn(console, 'error').mockImplementation(() => {});
+    try {
+      await capture(['setup', '--packs', 'nope']);
+      expect(err).toHaveBeenCalledWith('Unknown pack: nope');
+      expect(process.exitCode).toBe(1);
+    } finally {
+      err.mockRestore();
+      process.exitCode = 0;
+    }
+  });
+});

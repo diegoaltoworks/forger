@@ -43,7 +43,9 @@ The tool writes the config (with the docs check appended to the gates),
 `process.md` with principle 0 and the default gotchas, a starter `backlog.json`,
 the ticket, PR, work order, report, retro and rule templates under
 `.claude/templates/`, and the per-run `.gitignore` lines. It never overwrites,
-and reports each file as `written` or `kept`; a second run writes nothing.
+and reports each file as `written` or `kept`; a second run writes nothing. The files
+come from opinion packs (`--packs`, default `base`), and `.claude/forger.lock.json`
+records what was installed.
 
 ## 3. Label
 

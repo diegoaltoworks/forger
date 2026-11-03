@@ -166,7 +166,8 @@ worker treats these as enforced. Run `/forger:plan` to generate the
 first tickets, and `/forger:work` to start.
 
 The copy is a tested command: `bun "$CLAUDE_PLUGIN_ROOT/bin/work.ts" setup --json
-[--gates CMD] [--base-branch B] [--tracker KIND] [--preset NAME]`. It writes `.claude/` files
+[--gates CMD] [--base-branch B] [--tracker KIND] [--preset NAME] [--packs A,B]`. It installs the
+chosen opinion packs (default `base`), records them in `.claude/forger.lock.json`, and writes `.claude/` files
 only where they are absent, installs the default `process.md`, the ticket, PR,
 work order, report, retro and rule templates, adds the docs check to the gates
 and gitignores the per-run state. Create the label with
@@ -200,6 +201,8 @@ bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts run --continuous   # the loop
 bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts status [--json]      # where it's at: runner pid and liveness, halt, counters, current ticket, next pick
 bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts backlog --json     # workable tickets, remaining, next pick
 bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts skills [--json] [--presets]  # each skill slot's configured skill, whether installed, and the built-in fallback; --presets lists offered presets
+bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts packs [--json]        # available packs and which are installed
+bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts opinions [--json]     # installed opinions: pack, rung, enforcing check
 bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts check docs [--json]  # writing rules: ASCII punctuation, no emails or home paths, no hard-coded skill calls in commands or templates, optional .forger-denylist
 bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts resume             # clear a HALT
 ```

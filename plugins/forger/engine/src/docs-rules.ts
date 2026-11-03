@@ -26,7 +26,7 @@ const THIRD_PARTY_SKILLS =
  * Instruction prose: what the loop executes. It reaches a skill only through a
  * slot (`skills --json`). READMEs, docs and presets may name skills as examples.
  */
-const SHIPPED = [/^plugins\/forger\/commands\//, /^plugins\/forger\/templates\//];
+const SHIPPED = [/^plugins\/forger\/commands\//, /^plugins\/forger\/templates\//, /^plugins\/forger\/packs\//];
 
 export function isShipped(file: string): boolean {
   return SHIPPED.some(r => r.test(file));

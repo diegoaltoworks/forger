@@ -60,11 +60,12 @@ installed. The slots, the config and the preset are described in
 5. [`docs/05-refining-the-process.md`](docs/05-refining-the-process.md) - how the process improves itself.
 6. [`docs/06-failure-catalogue.md`](docs/06-failure-catalogue.md) - failures seen in real runs, their causes and their fixes.
 7. [`docs/07-roadmap.md`](docs/07-roadmap.md) - what to build next.
+8. [`docs/08-opinion-packs.md`](docs/08-opinion-packs.md) - opinions as packs, the lock and the ladder.
 
 [`GLOSSARY.md`](GLOSSARY.md) holds the vocabulary; [`docs/adr/`](docs/adr/) the
 decisions; [`docs/plan-foundation.md`](docs/plan-foundation.md) the plan the
-foundation was built from. `plugins/forger/templates/` holds the files a repository adopts: the ticket and PR
-shapes, the work order, the report, the retro and the rule record.
+foundation was built from. `plugins/forger/packs/` holds the opinion packs a repository adopts: the `base` pack carries
+the ticket and PR shapes, the work order, the report, the retro and the rule record.
 
 ## Status
 

@@ -39,3 +39,15 @@ _Avoid_: inbox, brief
 **Skill slot**:
 A named point where a model does judgement work, with a built-in forger step that an installed skill can replace through the `skills` section of the config.
 _Avoid_: hook, plugin point
+
+**Opinion**:
+One rule forger holds about how the work is done, with an id, the why, a rung on the refinement ladder and, when it has one, the check that enforces it.
+_Avoid_: preference, guideline
+
+**Pack**:
+A named, versioned set of opinions with the files and checks that carry them, installed into a project by `setup` and recorded in the lock.
+_Avoid_: bundle, module
+
+**Lock**:
+`.claude/forger.lock.json`: each installed pack's id and version and the hash of every file as it was installed. Written by `setup`, never by hand.
+_Avoid_: manifest (that is the pack's own file)

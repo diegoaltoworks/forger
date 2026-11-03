@@ -21,6 +21,7 @@ import {approvalFor, buildReport, formatReport, orient} from './supervisor';
 import {mkdirSync, readdirSync, readFileSync, writeFileSync} from 'fs';
 import {computeMeasures, draftUpstreamIssue, formatMeasures, parseBudgets, parseIterationLog, renderRule, ruleFilePath, ruleProblem, type CiRun, type IterationRecord, type RuleRecord} from './measure';
 import {formatSetup, runSetup} from './setup';
+import {formatOpinions, formatPacks, listOpinions, listPacks, loadPacks, parseLock, parsePackList, LOCK_PATH} from './packs';
 import {formatSkills, listInstalledSkills, loadPresets, offerPresets, resolveSkills} from './skills';
 
 /** Nearest ancestor directory containing a `.claude` folder. */
@@ -40,8 +41,11 @@ Usage (run from the consumer repo root):
   run [N]          Run N iterations (default: 1)
   run --continuous Run until all tasks complete
   status [--json] Show current status, runner pid and liveness
-  setup [--json] [--gates CMD] [--base-branch B] [--tracker KIND] [--preset NAME]
-                   Install forger's default files into .claude/, never overwriting
+  setup [--json] [--gates CMD] [--base-branch B] [--tracker KIND] [--preset NAME] [--packs A,B]
+                   Install the chosen opinion packs (default base) into .claude/, never overwriting,
+                   and record them in .claude/forger.lock.json
+  packs [--json]   Available packs and which are installed
+  opinions [--json] Every installed opinion with its pack, rung and enforcing check
   skills [--json] [--presets]
                    Resolve each skill slot to its configured skill and the built-in fallback;
                    --presets lists the presets whose skill collection is installed
@@ -93,6 +97,7 @@ export async function main(
       tracker: {type: 'string'},
       issue: {type: 'string'},
       preset: {type: 'string'},
+      packs: {type: 'string'},
       presets: {type: 'boolean', default: false},
       seen: {type: 'string', default: '0'},
       timeout: {type: 'string', default: '3600'},
@@ -133,12 +138,20 @@ export async function main(
       }
       skills = preset.skills;
     }
-    const result = runSetup(process.cwd(), pluginRoot, {
-      gates: values.gates,
-      baseBranch: values['base-branch'],
-      trackerKind: values.tracker,
-      skills,
-    });
+    let result;
+    try {
+      result = runSetup(process.cwd(), pluginRoot, {
+        packs: parsePackList(values.packs),
+        gates: values.gates,
+        baseBranch: values['base-branch'],
+        trackerKind: values.tracker,
+        skills,
+      });
+    } catch (e) {
+      console.error((e as Error).message);
+      process.exitCode = 1;
+      return;
+    }
     const offered = offerPresets(loadPresets(pluginRoot), installedSkills());
     console.log(values.json ? JSON.stringify({...result, presets: offered.map(p => p.name)}) : formatSetup(result, offered.map(p => p.name)));
     return;
@@ -148,6 +161,22 @@ export async function main(
     return;
   }
   const projectRoot = findProjectRoot();
+  if (command === 'packs' || command === 'opinions') {
+    const lockPath = join(projectRoot, LOCK_PATH);
+    let out;
+    try {
+      const lock = existsSync(lockPath) ? parseLock(readFileSync(lockPath, 'utf-8')) : {packs: []};
+      const available = loadPacks(pluginRoot);
+      out = command === 'packs' ? listPacks(available, lock) : listOpinions(available, lock);
+    } catch (e) {
+      console.error((e as Error).message);
+      process.exitCode = 1;
+      return;
+    }
+    if (values.json) console.log(JSON.stringify(out));
+    else console.log(command === 'packs' ? formatPacks(out as ReturnType<typeof listPacks>) : formatOpinions(out as ReturnType<typeof listOpinions>));
+    return;
+  }
   if (command === 'check') {
     if (positionals[1] !== 'docs') {
       console.error('Usage: check docs [--json]');
