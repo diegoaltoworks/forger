@@ -1,11 +1,13 @@
 {
   "id": "ui",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "A UI change is reviewable only when it can be seen: screenshots come from a command, a branch that changes UI files updates them, and accessibility and design tokens are checked.",
   "detect": [],
   "files": [
     {"source": "files/ui.md", "target": ".claude/opinions/ui.md"},
-    {"source": "files/ui.json", "target": ".claude/ui.json"}
+    {"source": "files/ui.json", "target": ".claude/ui.json"},
+    {"source": "files/wireframe.css", "target": "docs/design/wireframe.css"},
+    {"source": "files/example.html", "target": "docs/design/example/index.html"}
   ],
   "opinions": [
     {"id": "ui.evidence", "rung": "check", "summary": "A branch that changes files matching ui.paths also updates files under docs/screenshots/.", "check": "ui"},
@@ -15,8 +17,9 @@
     {"id": "ui.contrast", "rung": "rule", "summary": "Text contrast meets WCAG AA.", "check": null},
     {"id": "ui.responsive", "rung": "rule", "summary": "Layouts hold at phone width.", "check": null},
     {"id": "ui.screenshots-in-pr", "rung": "template", "summary": "The PR body links the updated screenshots at the head commit.", "check": null},
-    {"id": "ui.states", "rung": "template", "summary": "A UI ticket says what the screen shows when empty, loading, failed and full.", "check": null}
+    {"id": "ui.states", "rung": "template", "summary": "A UI ticket says what the screen shows when empty, loading, failed and full.", "check": null},
+    {"id": "ui.wireframe", "rung": "template", "summary": "A ticket that changes a screen gets a wireframe under docs/design/<ticket>/ first, captured with screenshot --wireframe and approved by the owner before the build ticket starts.", "check": null}
   ],
   "checks": ["ui"],
-  "slots": []
+  "slots": ["design"]
 }

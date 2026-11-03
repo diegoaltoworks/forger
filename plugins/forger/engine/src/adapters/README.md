@@ -10,6 +10,7 @@ world, and is tested against real processes.
   empty output, one that keeps stdout, stderr and the exit code.
 - `supervise.ts` - spawns a worker as its own process group and ends the whole
   group at the deadline.
+- `static-server.ts` - the `AppServer` port over one folder served in-process, for wireframes
 - `app-server.ts` - the `AppServer` port over a shell command in its own process
   group, ready when the url answers.
 - `playwright.ts` - the `Screenshotter` and `AccessibilityAuditor` ports over the project's own Playwright,

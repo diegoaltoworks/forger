@@ -19,6 +19,7 @@ export interface SlotDefinition {
 export const SLOTS: readonly SlotDefinition[] = [
   {slot: 'interview', usedBy: 'plan', builtin: 'Ask the open decisions in numbered rounds, each with a recommended answer'},
   {slot: 'glossary', usedBy: 'plan', builtin: 'Record new terms in GLOSSARY.md and decisions in docs/adr/'},
+  {slot: 'design', usedBy: 'plan', builtin: 'Write a static grey-box HTML wireframe to docs/design/<ticket>/index.html, capture it with screenshot --wireframe, link both'},
   {slot: 'test_first', usedBy: 'auto-ticket', builtin: 'Write the failing test, make it pass, then refactor'},
   {slot: 'review', usedBy: 'auto-ticket', builtin: 'Review the diff against the base on standards and spec'},
   {slot: 'diagnose', usedBy: 'auto-ticket', builtin: 'Reproduce the red gate, form one hypothesis, test it'},

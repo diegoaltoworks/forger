@@ -34,7 +34,7 @@ For a slot, when `use` is `skill`, invoke the skill named in `skill` and let it
 do that step. When `use` is `builtin`, do the step yourself as written here, as
 you also do when the tool fails. Never name or choose a skill yourself.
 
-Slots used here: `interview` (step 3) and `glossary` (steps 3 and 4).
+Slots used here: `interview` (step 3), `glossary` (steps 3 and 4) and `design` (step 5).
 
 ## 1. Ground yourself (before asking anything)
 
@@ -127,6 +127,14 @@ Turn the agreed plan into tickets in the `process.md` shape, for
   starting cold, not as a contract;
 - has testable acceptance criteria written in the glossary's vocabulary;
 - carries `priority`, `effort`, and `depends_on` for a mechanical build order.
+
+A ticket that changes a screen gets its wireframe first, in the `design` slot,
+when `docs/design/wireframe.css` exists (the ui pack is installed). Built-in:
+copy `docs/design/example/` to `docs/design/<ticket>/`, replace the boxes, run
+`screenshot --wireframe <ticket>`, and link the page and the images from the
+ticket's Design review section. Label the build ticket `needs-human` and note
+that it waits for the owner to approve the wireframe; the owner removes the
+label to release it.
 
 Show the user the drafted tickets and get a final confirmation before writing
 anything.

@@ -1,0 +1,32 @@
+/* Wireframe stylesheet: greys and boxes, no brand. A wireframe argues about
+   layout and content, so it carries no colour, type or imagery to argue about. */
+:root {
+  --ink: #222;
+  --line: #888;
+  --fill: #e6e6e6;
+  --paper: #fff;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  padding: 16px;
+  font: 16px/1.4 sans-serif;
+  color: var(--ink);
+  background: var(--paper);
+}
+
+h1, h2, h3 { margin: 0 0 8px; font-weight: 600; }
+p { margin: 0 0 8px; }
+
+.wf-screen { max-width: 960px; margin: 0 auto; border: 2px solid var(--line); padding: 16px; }
+.wf-row { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 16px; }
+.wf-col { flex: 1 1 240px; min-width: 0; }
+.wf-box { border: 1px solid var(--line); padding: 12px; margin-bottom: 12px; background: var(--paper); }
+.wf-image { border: 1px solid var(--line); background: var(--fill); min-height: 120px; display: flex; align-items: center; justify-content: center; }
+.wf-image::before { content: "image"; color: var(--line); }
+.wf-button { display: inline-block; border: 1px solid var(--ink); padding: 8px 16px; background: var(--fill); }
+.wf-input { border: 1px solid var(--line); padding: 8px; min-height: 36px; background: var(--paper); margin-bottom: 8px; }
+.wf-note { border-left: 4px solid var(--line); padding-left: 8px; color: var(--line); font-style: italic; }
+.wf-state { border: 1px dashed var(--line); padding: 12px; margin-bottom: 12px; }

@@ -20,9 +20,10 @@ export async function runScreenshots(
   config: UiConfig,
   projectRoot: string,
   server: AppServer,
-  shooter: Screenshotter
+  shooter: Screenshotter,
+  dir?: string
 ): Promise<ScreenshotReport> {
-  const captures = planCaptures(config);
+  const captures = planCaptures(config, dir);
   try {
     await server.start(config.start);
     await server.waitReady(config.url, config.ready_timeout * 1000);

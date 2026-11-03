@@ -22,11 +22,11 @@ export function routeSlug(route: string): string {
   return slug === '' ? 'index' : slug;
 }
 
-export function captureFile(route: string, viewport: string, theme: Theme): string {
-  return `${SCREENSHOT_DIR}${routeSlug(route)}-${viewport}-${theme}.png`;
+export function captureFile(route: string, viewport: string, theme: Theme, dir: string = SCREENSHOT_DIR): string {
+  return `${dir}${routeSlug(route)}-${viewport}-${theme}.png`;
 }
 
-export function planCaptures(config: UiConfig): Capture[] {
+export function planCaptures(config: UiConfig, dir: string = SCREENSHOT_DIR): Capture[] {
   const plan: Capture[] = [];
   for (const route of config.routes) {
     for (const v of config.viewports) {
@@ -38,7 +38,7 @@ export function planCaptures(config: UiConfig): Capture[] {
           height: v.height,
           theme,
           url: `${config.url}${route}`,
-          file: captureFile(route, v.name, theme),
+          file: captureFile(route, v.name, theme, dir),
         });
       }
     }
