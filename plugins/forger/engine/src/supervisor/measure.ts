@@ -13,6 +13,8 @@ export interface IterationRecord {
   ticket: string | null;
   elapsedSeconds: number;
   cause: Cause;
+  /** The decided outcome status; null in a log written before it was recorded. */
+  status: string | null;
 }
 
 export interface BudgetRecord {
@@ -37,6 +39,8 @@ export interface TicketMeasure {
 export interface Measures {
   window: {last: number | null; iterations: number};
   runs: {total: number; ok: number; failed: number; by_cause: Record<string, number>};
+  /** Share of runs in the window by how they related to the engine's pick; 0 when there are no runs. */
+  pick: {off_pick: number; off_pick_share: number; declined: number; declined_share: number};
   events: Record<string, number>;
   tickets: TicketMeasure[];
   ci_rounds_unmatched: Record<string, number>;
@@ -62,6 +66,7 @@ export function parseIterationLog(text: string): IterationRecord | null {
     ticket: ticket === null || ticket === 'none picked' ? null : ticket,
     elapsedSeconds: elapsed === null ? 0 : parseInt(elapsed, 10) || 0,
     cause,
+    status: field('status'),
   };
 }
 
@@ -107,6 +112,10 @@ export function computeMeasures(inputs: MeasureInputs): Measures {
   for (const it of windowed) if (it.cause !== 'ok') byCause[it.cause] = (byCause[it.cause] ?? 0) + 1;
   const failed = Object.values(byCause).reduce((a, b) => a + b, 0);
 
+  const offPick = windowed.filter(it => it.status === 'off-pick').length;
+  const declinedRuns = windowed.filter(it => it.status === 'declined').length;
+  const share = (n: number) => (windowed.length === 0 ? 0 : n / windowed.length);
+
   const events: Record<string, number> = {};
   for (const e of inputs.events) {
     if (first !== null && e.iteration < first) continue;
@@ -141,16 +150,22 @@ export function computeMeasures(inputs: MeasureInputs): Measures {
   return {
     window: {last: inputs.last, iterations: windowed.length},
     runs: {total: windowed.length, ok: windowed.length - failed, failed, by_cause: byCause},
+    pick: {off_pick: offPick, off_pick_share: share(offPick), declined: declinedRuns, declined_share: share(declinedRuns)},
     events,
     tickets: [...perTicket.values()],
     ci_rounds_unmatched: unmatched,
   };
 }
 
+function pct(share: number): string {
+  return `${Math.round(share * 100)}%`;
+}
+
 export function formatMeasures(m: Measures): string {
   const causes = Object.entries(m.runs.by_cause).map(([k, v]) => `${k} ${v}`).join(', ');
   const lines = [
     `runs: ${m.runs.total} (ok ${m.runs.ok}, failed ${m.runs.failed}${causes ? `: ${causes}` : ''})`,
+    `pick: off-pick ${pct(m.pick.off_pick_share)} (${m.pick.off_pick}), declined ${pct(m.pick.declined_share)} (${m.pick.declined})`,
     `events: ${Object.entries(m.events).map(([k, v]) => `${k} ${v}`).join(', ') || 'none'}`,
     'tickets:',
     ...m.tickets.map(

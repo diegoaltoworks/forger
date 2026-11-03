@@ -14,6 +14,8 @@ export interface IterationLogFacts {
   timedOut: boolean;
   timeoutMinutes: number;
   output: string;
+  /** The decided outcome status; absent while the run is still being judged. */
+  status?: string;
 }
 
 function outcome(f: IterationLogFacts): string {
@@ -33,6 +35,7 @@ export function formatIterationLog(f: IterationLogFacts): string {
     ...(f.enginePick !== undefined ? [`engine pick: ${f.enginePick ?? 'none'}`] : []),
     `elapsed: ${f.elapsedSeconds}s`,
     `outcome: ${outcome(f)}`,
+    ...(f.status !== undefined ? [`status: ${f.status}`] : []),
     '=== output ===',
     body.endsWith('\n') ? body : `${body}\n`,
   ].join('\n');

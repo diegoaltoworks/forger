@@ -140,11 +140,14 @@ The process is working when, over time:
 - fewer runs time out or fail, and a failure leaves enough behind to diagnose;
 - a ticket needs fewer CI rounds before it merges;
 - the owner corrects the same thing less often;
+- fewer runs build something other than the engine's pick, and fewer picks are
+  declined;
 - the per-ticket cost and time fall without the budget rising.
 
 Each of these comes from a command over the engine's state, the logs and CI, not
 from a number written in a doc. `measure --json` reports runs and failures by
-cause, the terminal events, and the time, budget cap and CI rounds per ticket,
+cause, the share of runs that were off-pick or declined, the terminal events,
+and the time, budget cap and CI rounds per ticket,
 over all runs or the last N. `/forger:retro` runs it to find a cause, writes a
 rule record with `retro rule`, and drafts an upstream issue with the evidence
 using `retro upstream`.

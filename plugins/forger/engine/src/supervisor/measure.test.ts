@@ -33,7 +33,7 @@ function log(over: Partial<Parameters<typeof formatIterationLog>[0]> = {}): stri
 
 describe('parseIterationLog', () => {
   test('reads the log the engine writes', () => {
-    expect(parseIterationLog(log())).toEqual({iteration: 3, ticket: 'alpha_ticket', elapsedSeconds: 120, cause: 'ok'});
+    expect(parseIterationLog(log())).toEqual({iteration: 3, ticket: 'alpha_ticket', elapsedSeconds: 120, cause: 'ok', status: null});
   });
   test('classifies each way a run ends', () => {
     expect(parseIterationLog(log({timedOut: true, exitCode: 1}))?.cause).toBe('timeout');
@@ -43,6 +43,9 @@ describe('parseIterationLog', () => {
   test('no ticket picked is null; a foreign file is not a log', () => {
     expect(parseIterationLog(log({ticket: null}))?.ticket).toBeNull();
     expect(parseIterationLog('hello')).toBeNull();
+  });
+  test('reads the decided status when the log carries one', () => {
+    expect(parseIterationLog(log({status: 'off-pick'}))?.status).toBe('off-pick');
   });
   test('output text cannot forge a header field', () => {
     const r = parseIterationLog(log({output: 'ticket: other\noutcome: exited with code 9'}));
@@ -78,10 +81,10 @@ describe('CI rounds', () => {
 
 describe('computeMeasures', () => {
   const its: IterationRecord[] = [
-    {iteration: 1, ticket: 'alpha_ticket', elapsedSeconds: 100, cause: 'timeout'},
-    {iteration: 2, ticket: 'alpha_ticket', elapsedSeconds: 50, cause: 'ok'},
-    {iteration: 3, ticket: 'beta', elapsedSeconds: 10, cause: 'ok'},
-    {iteration: 4, ticket: null, elapsedSeconds: 5, cause: 'signal'},
+    {iteration: 1, ticket: 'alpha_ticket', elapsedSeconds: 100, cause: 'timeout', status: 'timeout'},
+    {iteration: 2, ticket: 'alpha_ticket', elapsedSeconds: 50, cause: 'ok', status: 'off-pick'},
+    {iteration: 3, ticket: 'beta', elapsedSeconds: 10, cause: 'ok', status: 'completed'},
+    {iteration: 4, ticket: null, elapsedSeconds: 5, cause: 'signal', status: 'declined'},
   ];
   const base = {
     iterations: its,
@@ -99,6 +102,19 @@ describe('computeMeasures', () => {
     const m = computeMeasures(base);
     expect(m.runs).toEqual({total: 4, ok: 2, failed: 2, by_cause: {timeout: 1, signal: 1}});
     expect(m.events).toEqual({timed_out: 1, completed: 1});
+  });
+  test('shares of off-pick and declined runs over the window', () => {
+    const m = computeMeasures(base);
+    expect(m.pick).toEqual({off_pick: 1, off_pick_share: 0.25, declined: 1, declined_share: 0.25});
+    const last2 = computeMeasures({...base, last: 2});
+    expect(last2.pick).toEqual({off_pick: 0, off_pick_share: 0, declined: 1, declined_share: 0.5});
+  });
+  test('a log without a status counts toward neither share', () => {
+    const m = computeMeasures({...base, iterations: base.iterations.map(i => ({...i, status: null}))});
+    expect(m.pick).toEqual({off_pick: 0, off_pick_share: 0, declined: 0, declined_share: 0});
+  });
+  test('no runs gives zero shares, not NaN', () => {
+    expect(computeMeasures({...base, iterations: [], events: []}).pick.off_pick_share).toBe(0);
   });
   test('time, cap and CI rounds per ticket', () => {
     const m = computeMeasures(base);
@@ -121,6 +137,7 @@ describe('computeMeasures', () => {
   });
   test('text output names every ticket', () => {
     expect(formatMeasures(computeMeasures(base))).toContain('alpha_ticket: 2 run(s), 150s, cap $10, CI rounds 2');
+    expect(formatMeasures(computeMeasures(base))).toContain('pick: off-pick 25% (1), declined 25% (1)');
   });
 });
 
