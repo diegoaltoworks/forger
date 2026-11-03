@@ -351,7 +351,7 @@
     },
     "docs_with_diagrams": {
       "priority": "P2",
-      "status": "not_started",
+      "status": "completed",
       "type": "feature",
       "depends_on": [
         "pure_forger",

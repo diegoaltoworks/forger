@@ -40,6 +40,9 @@ the headless `claude` processes the engine spawns, each running
 
 ## The pipeline
 
+The roles, the lifecycle of a request, ticket statuses and the engine's
+outcome decision are drawn in [`docs/02-the-loop.md`](../../docs/02-the-loop.md).
+
 ```
 intent                         plan                       build
 /forger:plan  ------------->  tickets + issues  ------>  /forger:work

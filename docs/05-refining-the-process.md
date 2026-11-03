@@ -40,6 +40,14 @@ followed. Forms, from weakest to strongest:
 5. **An engine or skill change.** For failures of the loop itself: timeouts,
    counting, process handling. Filed against the engine, with the evidence.
 
+```mermaid
+flowchart LR
+    N[note] --> R[rule in the process doc]
+    R --> T[template section]
+    T --> C[check]
+    C --> L[tool]
+```
+
 Climb only as far as the rule needs. A one-off preference stays a note. A rule
 every worker needs goes in the process doc. A rule that has been broken once
 after being written down earns a template section or a check.
@@ -67,6 +75,26 @@ after being written down earns a template section or a check.
 - Timeline from the transcript: where the time went, phase by phase.
 - Two forms: a process rule ("push the moment the gates are green, before
   anything slow") and an engine change (count a timed-out run by its outcome).
+
+## Two loops
+
+A lesson lands in one of two places, and the difference is who else needs it.
+
+```mermaid
+flowchart TD
+    SIG[signal: correction, failure, friction, cost] --> Q{holds for every project?}
+    Q -- no --> P[project loop: edit the project's own installed files by PR]
+    P --> PF[process.md, templates, config, checks]
+    PF --> NEXT[next worker reads the better process]
+    Q -- yes --> U[upstream loop: issue on forger with the evidence]
+    U --> UF[forger defaults, templates, tools]
+    UF --> SET[setup installs them into projects]
+    SET --> PF
+```
+
+A project refines the files that setup installed into it and owns them from then
+on. A lesson that is true everywhere is filed against forger, so every project
+gets it at the next setup or update.
 
 ## The steps
 
