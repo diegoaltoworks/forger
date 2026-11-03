@@ -174,11 +174,22 @@ describe('backlogFromIssues', () => {
     });
   });
 
-  test('ignored issues are not tickets, only when configured', () => {
+  test('ignored issues are never work, only when configured', () => {
     const issues = [issue(1, {labels: ['ready-for-agent', 'wayfinder:map']}), issue(2)];
-    expect(Object.keys(backlogFromIssues(issues, tracker).features)).toEqual(['issue-2']);
-    const unfiltered = mergeConfig({}).tracker;
-    expect(Object.keys(backlogFromIssues(issues, unfiltered).features)).toEqual(['issue-1', 'issue-2']);
+    expect(backlogReport(backlogFromIssues(issues, tracker), config).workable).toEqual([
+      {id: 'issue-2', priority: 'P3'},
+    ]);
+    const unfiltered = mergeConfig({});
+    expect(backlogReport(backlogFromIssues(issues, unfiltered.tracker), unfiltered).remaining).toBe(2);
+  });
+
+  test('an ignored intake issue blocks until closed, then releases its dependants', () => {
+    const labels = ['ready-for-agent', 'wayfinder:decision'];
+    const open = issue(1, {labels});
+    const blocked = (decision: TrackedIssue) => [decision, issue(2, {blockedBy: [decision]})];
+    expect(backlogReport(backlogFromIssues(blocked(open), tracker), config).workable).toEqual([]);
+    const closed = issue(1, {labels, state: 'CLOSED', closer: null});
+    expect(backlogReport(backlogFromIssues(blocked(closed), tracker), config).next).toBe('issue-2');
   });
 
   test('the recorded response maps to a consistent backlog', () => {

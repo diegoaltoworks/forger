@@ -45,7 +45,6 @@ Stopping behaviour:
 Config: .claude/workloop.config.json in the consumer repo (see plugin README).
 `;
 
-/** `run` is the command runner the GitHub backlog's gh calls go through. */
 export async function main(
   argv: string[] = process.argv.slice(2),
   deps: {run?: CommandRunner} = {}

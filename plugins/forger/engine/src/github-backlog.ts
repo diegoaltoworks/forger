@@ -49,7 +49,6 @@ function labelsOf(issue: IssueNode): string[] {
   return (issue.labels?.nodes ?? []).map(l => l.name);
 }
 
-/** `wayfinder:*` matches any label starting `wayfinder:`; anything else matches exactly. */
 export function labelMatches(label: string, pattern: string): boolean {
   return pattern.endsWith('*') ? label.startsWith(pattern.slice(0, -1)) : label === pattern;
 }
@@ -99,22 +98,21 @@ export function ticketFromIssue(issue: TrackedIssue, tracker: TrackerSettings): 
 
 /**
  * Tickets keyed `issue-<n>`, in issue order so equal priorities pick the older
- * issue. Ignored issues are dropped; a blocker outside the fetched set is kept
- * as a ticket of its own so its dependants can see whether it is done.
+ * issue. Ignored issues and blockers outside the fetched set are kept, never as
+ * work, so their dependants can see whether they are done.
  */
 export function backlogFromIssues(issues: TrackedIssue[], tracker: TrackerSettings): BacklogData {
   const features: Record<string, Ticket> = {};
   const sorted = [...issues].sort((a, b) => a.number - b.number);
   for (const issue of sorted) {
-    if (isIgnored(labelsOf(issue), tracker)) continue;
-    features[ticketId(issue.number)] = ticketFromIssue(issue, tracker);
+    features[ticketId(issue.number)] = isIgnored(labelsOf(issue), tracker)
+      ? {status: issueStatus(issue, tracker), issue: issue.number}
+      : ticketFromIssue(issue, tracker);
   }
-  const all = new Set(issues.map(i => i.number));
   for (const issue of sorted) {
     for (const blocker of issue.blockedBy?.nodes ?? []) {
       const id = ticketId(blocker.number);
-      if (all.has(blocker.number) || features[id]) continue;
-      features[id] = {status: issueStatus(blocker, tracker), issue: blocker.number};
+      if (!features[id]) features[id] = {status: issueStatus(blocker, tracker), issue: blocker.number};
     }
   }
   return {features};

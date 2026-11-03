@@ -30,7 +30,7 @@ it is the authority on tracker operations.
 2. `.claude/workloop.config.json` - gates, base branch, model tiers, tracker
 3. This repo's docs (whatever `process.md` points at: architecture, domain,
    decisions; `CONTEXT.md` and ADRs if present - use their vocabulary)
-4. `.claude/backlog.md` - human summary; `.claude/inbox/*.md` - human instructions
+4. `.claude/inbox/*.md` - human instructions
 5. The backlog: with `tracker.kind` `github` the open issues carrying
    `tracker.label` are the tickets; otherwise `.claude/backlog.json`
 
@@ -138,7 +138,7 @@ End your response with exactly one:
 
 ## Rules
 - ONE ticket per iteration. Quality gates must pass. Small, clean commits.
-- Check the inbox and the intake first - human instructions win.
+- Check the inbox first - human instructions win.
 - Claim the issue before working it; close it through the PR.
 - Never adopt or work an issue whose labels match `tracker.ignore`.
 - If blocked, signal `stop` with a clear reason rather than guessing.

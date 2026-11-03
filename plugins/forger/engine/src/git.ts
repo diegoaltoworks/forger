@@ -15,7 +15,9 @@ export type CommandRunner = (cmd: string) => string;
 export function execRunner(cwd: string): CommandRunner {
   return (cmd: string): string => {
     try {
-      return execSync(cmd, {cwd, encoding: 'utf-8'}).trim();
+      // The GitHub backlog query returns every intake issue ever closed too;
+      // the default 1MB buffer would fail it once the history grows.
+      return execSync(cmd, {cwd, encoding: 'utf-8', maxBuffer: 64 * 1024 * 1024}).trim();
     } catch {
       return '';
     }
