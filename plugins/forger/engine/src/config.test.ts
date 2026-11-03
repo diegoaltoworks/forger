@@ -62,4 +62,10 @@ describe('mergeConfig', () => {
     expect(DEFAULT_CONFIG.base_branch).toBe('main');
     expect(DEFAULT_CONFIG.limits.timeoutMinutes).toBe(45);
   });
+
+  test('skills default to none and merge over the base', () => {
+    expect(mergeConfig({}).skills).toEqual({});
+    const c = mergeConfig({skills: {review: 'a:b'}}, {...DEFAULT_CONFIG, skills: {diagnose: 'c:d'}});
+    expect(c.skills).toEqual({diagnose: 'c:d', review: 'a:b'});
+  });
 });

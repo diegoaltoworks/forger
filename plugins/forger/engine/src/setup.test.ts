@@ -28,6 +28,17 @@ describe('withDocsCheck', () => {
   });
 });
 
+describe('renderConfig skills', () => {
+  const template = JSON.stringify({gates: 'g', skills: {}});
+  test('a preset fills the skill slots', () => {
+    const out = JSON.parse(renderConfig(template, {skills: {review: 'c:r'}}, 'c check docs'));
+    expect(out.skills).toEqual({review: 'c:r'});
+  });
+  test('without a preset the slots stay empty', () => {
+    expect(JSON.parse(renderConfig(template, {}, 'c check docs')).skills).toEqual({});
+  });
+});
+
 describe('renderConfig', () => {
   const template = JSON.stringify({gates: 'old', base_branch: 'main', tracker: {kind: 'github', label: 'l'}});
   test('applies the answers and keeps the rest', () => {

@@ -25,13 +25,13 @@ function projectWith(
   return root;
 }
 
-async function capture(argv: string[], run?: CommandRunner): Promise<string> {
+async function capture(argv: string[], run?: CommandRunner, installedSkills?: () => string[]): Promise<string> {
   const lines: string[] = [];
   const spy = spyOn(console, 'log').mockImplementation((...args: unknown[]) => {
     lines.push(args.join(' '));
   });
   try {
-    await main(argv, {run});
+    await main(argv, {run, installedSkills});
   } finally {
     spy.mockRestore();
   }
@@ -148,5 +148,53 @@ describe('setup --json', () => {
     expect(config.tracker.kind).toBe('local');
     const second = JSON.parse(await capture(['setup', '--json']));
     expect(second.files.map((f: {action: string}) => f.action)).not.toContain('written');
+  });
+});
+
+describe('skills --json', () => {
+  test('resolves each slot from the config against the installed skills', async () => {
+    const root = projectWith({});
+    writeFileSync(
+      join(root, '.claude', 'workloop.config.json'),
+      JSON.stringify({tracker: {kind: 'local'}, skills: {review: 'c:review', diagnose: 'c:gone'}})
+    );
+    process.chdir(root);
+    const out = JSON.parse(await capture(['skills', '--json'], undefined, () => ['c:review']));
+    const by = Object.fromEntries(out.slots.map((s: {slot: string}) => [s.slot, s]));
+    expect(by.review).toMatchObject({skill: 'c:review', installed: true, use: 'skill'});
+    expect(by.diagnose).toMatchObject({skill: 'c:gone', installed: false, use: 'builtin'});
+    expect(by.interview).toMatchObject({skill: null, use: 'builtin'});
+  });
+  test('--presets lists the presets whose collection is installed', async () => {
+    process.chdir(projectWith({}));
+    const hit = JSON.parse(await capture(['skills', '--presets', '--json'], undefined, () => ['mattpocock-skills:tdd']));
+    expect(hit.map((p: {name: string}) => p.name)).toEqual(['mattpocock-skills']);
+    expect(JSON.parse(await capture(['skills', '--presets', '--json'], undefined, () => []))).toEqual([]);
+  });
+});
+
+describe('setup --preset', () => {
+  test('writes the preset into the new config and offers it when installed', async () => {
+    const root = realpathSync(mkdtempSync(join(tmpdir(), 'forger-cli-')));
+    dirs.push(root);
+    mkdirSync(join(root, '.claude'));
+    process.chdir(root);
+    const out = JSON.parse(await capture(['setup', '--json', '--preset', 'mattpocock-skills'], undefined, () => ['mattpocock-skills:tdd']));
+    expect(out.presets).toEqual(['mattpocock-skills']);
+    const config = JSON.parse(readFileSync(join(root, '.claude', 'workloop.config.json'), 'utf-8'));
+    expect(config.skills.review).toBe('mattpocock-skills:code-review');
+  });
+  test('an unknown preset fails without writing', async () => {
+    const root = realpathSync(mkdtempSync(join(tmpdir(), 'forger-cli-')));
+    dirs.push(root);
+    process.chdir(root);
+    const err = spyOn(console, 'error').mockImplementation(() => {});
+    try {
+      await capture(['setup', '--preset', 'nope'], undefined, () => []);
+      expect(process.exitCode).toBe(1);
+    } finally {
+      err.mockRestore();
+      process.exitCode = 0;
+    }
   });
 });

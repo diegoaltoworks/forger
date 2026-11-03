@@ -5,8 +5,9 @@ with a human-facing supervisor and an interactive planner. The engine is generic
 everything project-specific lives in the consumer repo's `.claude/`.
 
 Forger carries its own steps for planning, test-first implementation, review and
-diagnosis; it depends on no other skill collection. Needs only Bun, the `claude`
-CLI and `gh`.
+diagnosis; it depends on no other skill collection, and any installed skill can
+replace a step (see Bring your own skills). Needs only Bun, the `claude` CLI and
+`gh`.
 
 Work is tracked on **GitHub Issues**.
 
@@ -91,6 +92,37 @@ rather than reading as an empty backlog.
 With `local` or `none`, `backlog.json` is the backlog and the worker sets a
 ticket's `status` there in its PR.
 
+## Bring your own skills
+
+Forger incorporates any skill you have installed. The points where a model does
+judgement work are named **skill slots**, and each has a built-in forger step:
+
+| Slot | Used by | Built-in step |
+|---|---|---|
+| `interview` | `plan` | numbered rounds of open decisions, each with a recommendation |
+| `glossary` | `plan` | terms into `GLOSSARY.md`, decisions into `docs/adr/` |
+| `test_first` | `auto-ticket` | failing test, then pass, then refactor |
+| `review` | `auto-ticket` | the diff against the base, on standards and spec |
+| `diagnose` | `auto-ticket` | reproduce the red gate, one hypothesis, test it |
+| `merge_conflicts` | `auto-ticket` | resolve by hand, re-run the gates |
+
+Map a slot to a skill in the `skills` section of `.claude/workloop.config.json`:
+
+```json
+{ "skills": { "review": "some-collection:code-review" } }
+```
+
+An unmapped slot, or a skill that is not installed, uses the built-in step. The
+commands never name a skill: they run `skills --json`, which reports for every
+slot the configured skill, whether it is installed, and whether the built-in
+step applies, and invoke whatever it resolves.
+
+**Worked example: the mattpocock-skills collection.** The preset
+`plugins/forger/presets/mattpocock-skills.json` maps that collection onto the
+slots it covers. `/forger:setup` offers it when the collection is installed, or
+apply it directly with `setup --preset mattpocock-skills`. A preset is a plain
+file: copy it to map another collection.
+
 ## Install and update
 
 Add this repository as a marketplace once, then install. A local checkout works
@@ -130,7 +162,7 @@ worker treats these as enforced. Run `/forger:plan` to generate the
 first tickets, and `/forger:work` to start.
 
 The copy is a tested command: `bun "$CLAUDE_PLUGIN_ROOT/bin/work.ts" setup --json
-[--gates CMD] [--base-branch B] [--tracker KIND]`. It writes `.claude/` files
+[--gates CMD] [--base-branch B] [--tracker KIND] [--preset NAME]`. It writes `.claude/` files
 only where they are absent, installs the default `process.md`, the ticket, PR,
 work order, report, retro and rule templates, adds the docs check to the gates
 and gitignores the per-run state. Create the label with
@@ -151,6 +183,7 @@ and gitignores the per-run state. Create the label with
 | `limits` | `timeoutMinutes`, `killGraceSeconds` (SIGTERM to SIGKILL on timeout), `maxConsecutiveFailures`, `pauseBetweenIterations`, `pauseAfterFailure`, `maxStallIterations`. |
 | `paths` | Where the backlog, state, log, output dir, HALT file, runner lock and terminal-event file live. |
 | `local_only` | Paths that stay modified in a checkout without being the worker's doing (local settings, a work order). The dirty-tree check skips them and the engine's own files (`paths`); a directory covers what is under it. Default none. |
+| `skills` | Skill slot -> installed skill name (see Bring your own skills). Default none: every slot uses its built-in step. |
 | `tracker` | `{ kind, label, ignore }`. `kind` is `github` (default: issues are the backlog), `local`, or `none` (both read `backlog.json`). `label` is the intake label, default `ready-for-agent`. `ignore` lists labels whose issues are not work, a trailing `*` matching a prefix (`["wayfinder:*"]`); default none. |
 
 ## How the engine runs
@@ -162,7 +195,8 @@ from the consumer repo root so it finds `.claude/`:
 bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts run --continuous   # the loop
 bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts status [--json]      # where it's at: runner pid and liveness, halt, counters, current ticket, next pick
 bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts backlog --json     # workable tickets, remaining, next pick
-bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts check docs [--json]  # writing rules: ASCII punctuation, no emails or home paths, no third-party skill hooks in shipped prose, optional .forger-denylist
+bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts skills [--json] [--presets]  # each skill slot's configured skill, whether installed, and the built-in fallback; --presets lists offered presets
+bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts check docs [--json]  # writing rules: ASCII punctuation, no emails or home paths, no hard-coded skill calls in commands or templates, optional .forger-denylist
 bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts resume             # clear a HALT
 ```
 

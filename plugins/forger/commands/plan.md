@@ -21,6 +21,21 @@ there are enough well-formed tickets to hand to `/forger:work`.
 - **Domain glossary (`GLOSSARY.md`):** !`test -f GLOSSARY.md && echo present || echo absent`
 - **Wayfinder maps on the tracker:** !`gh issue list --label wayfinder:map --state all --json number,title,state --jq '.[] | "#\(.number) \(.title) (\(.state))"' 2>/dev/null || echo "none, or gh unavailable"`
 
+## Skill slots
+
+Some steps below are skill slots: the project may plug an installed skill into
+each. Resolve them once, up front:
+
+```
+bun "${CLAUDE_PLUGIN_ROOT}/bin/work.ts" skills --json
+```
+
+For a slot, when `use` is `skill`, invoke the skill named in `skill` and let it
+do that step. When `use` is `builtin`, do the step yourself as written here, as
+you also do when the tool fails. Never name or choose a skill yourself.
+
+Slots used here: `interview` (step 3) and `glossary` (steps 3 and 4).
+
 ## 1. Ground yourself (before asking anything)
 
 Read enough to hold an intelligent conversation - do not interrogate the user for
@@ -60,7 +75,7 @@ This scope bounds step 3: "nothing left to decide" means nothing left to decide
 
 ## 3. Grill until the plan is clear
 
-Run the interview yourself, in this shape:
+Run the interview in the `interview` slot, or yourself when it is `builtin`, in this shape:
 
 - Map the decisions as a tree. The **frontier** is every question whose
   prerequisites are settled. Ask the whole frontier in one round, numbered, each
@@ -69,9 +84,9 @@ Run the interview yourself, in this shape:
   round belongs to a later round.
 - Facts are your job, never the user's: look up anything the filesystem or tools
   can answer, with sub-agents where it helps.
-- Challenge terms against `GLOSSARY.md` and stress-test with edge cases. Write
-  new terms into `GLOSSARY.md` and notable decisions into `docs/adr/` as they
-  settle.
+- Challenge terms against `GLOSSARY.md` and stress-test with edge cases. Record
+  new terms and notable decisions as they settle, in the `glossary` slot or, when
+  it is `builtin`, in `GLOSSARY.md` and `docs/adr/`.
 - Do not move on until the frontier is empty for this goal and the user confirms
   a shared understanding.
 
