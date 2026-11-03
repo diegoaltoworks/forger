@@ -31,6 +31,7 @@ export const FLAGS = {
   seen: {type: 'string', default: '0'},
   timeout: {type: 'string', default: '3600'},
   last: {type: 'string'},
+  window: {type: 'string'},
   report: {type: 'boolean', default: false},
   diff: {type: 'boolean', default: false},
   name: {type: 'string'},

@@ -2,8 +2,8 @@ import {existsSync, readdirSync, readFileSync} from 'fs';
 import {homedir} from 'os';
 import {join} from 'path';
 
-import {readAllVerdicts, readEvents, readSchedule} from '../loop';
-import {buildComparisonReport, DEFAULT_PRICES, mergePrices, sessionCostUsd, type PriceTable, computeMeasures, diffReports, type ComparisonReport, formatMeasures, parseBudgets, parseIterationLog, type CiRun, type IterationRecord} from '../supervisor';
+import {readAllEvents, readAllVerdicts, readEvents, readSchedule} from '../loop';
+import {buildComparisonReport, DEFAULT_PRICES, mergePrices, sessionCostUsd, type PriceTable, computeMeasures, diffReports, parseDiffRanges, picksToPrs, DEFAULT_REWORK_WINDOW, type MergedPr, type TrackerIssue, type ReworkInputs, type ComparisonReport, formatMeasures, parseBudgets, parseIterationLog, type CiRun, type IterationRecord} from '../supervisor';
 import type {Command} from './command';
 
 /** The transcript a session left, searched under every project folder of the harness's config dir; null when there is none. */
@@ -31,13 +31,42 @@ function readPrices(projectRoot: string): PriceTable {
   return merged;
 }
 
+interface GhPr {
+  number: number;
+  title: string;
+  body: string;
+  closingIssuesReferences?: {number: number}[];
+}
+
+/** Merged PRs oldest first with their touched lines, and the issues; null when gh cannot read them. */
+function gatherChanges(run: (cmd: string) => string, iterations: IterationRecord[], picked: {iteration: number; ticket: string | null}[], window: number, limit: number): ReworkInputs | null {
+  try {
+    const listed = (JSON.parse(run(`gh pr list --state merged --limit ${limit} --json number,title,body,closingIssuesReferences`)) as GhPr[]).reverse();
+    const prs: MergedPr[] = listed.map((p, order) => {
+      let ranges: MergedPr['ranges'] = [];
+      try {
+        ranges = parseDiffRanges(run(`gh pr diff ${p.number}`));
+      } catch {
+        // A PR whose diff cannot be read has no overlap evidence, not an error.
+      }
+      return {number: p.number, order, title: p.title, body: p.body ?? '', closes: p.closingIssuesReferences?.[0]?.number ?? null, ranges};
+    });
+    const raw = JSON.parse(run(`gh issue list --state all --label bug --limit ${limit} --json number,labels,body`)) as {number: number; labels: {name: string}[]; body: string}[];
+    const issues: TrackerIssue[] = raw.map(i => ({number: i.number, labels: i.labels.map(l => l.name), body: i.body ?? ''}));
+    return {prs, issues, picks: picksToPrs(picked, iterations, prs), window};
+  } catch {
+    return null;
+  }
+}
+
 export const measure: Command = {
   name: 'measure',
   needs: 'config',
-  flags: ['json', 'last', 'report', 'diff'],
-  help: `  measure [--json] [--last N] [--report]
+  flags: ['json', 'last', 'report', 'diff', 'window'],
+  help: `  measure [--json] [--last N] [--window N] [--report]
   measure --diff A.json B.json
                    Runs, failures by cause, time, budget cap, cost from the session transcripts (unknown without one; prices in .forger/prices.json override the defaults) and CI rounds per ticket; merges per hour by parallelism, conflicts, rework, redone tickets, owner interventions.
+                   Rework and escaped defects per merged PR: a later merge within --window N merges (default 5) that touches its lines or reverts it, bug issues naming it, and picks that differ from the issue the PR closed.
                    --report prints the five-measure comparison report as JSON; --diff prints the per-measure delta between two saved reports (A is the baseline)`,
   run(ctx) {
     const {values, projectRoot, config, positionals} = ctx;
@@ -65,7 +94,12 @@ export const measure: Command = {
     const prices = readPrices(projectRoot);
     const sessionCosts: Record<string, number | null> = {};
     for (const b of budgets) if (b.sessionId !== undefined) sessionCosts[b.sessionId] = sessionCostUsd(readTranscript(b.sessionId), prices);
+    const window = values.window === undefined ? DEFAULT_REWORK_WINDOW : parseInt(values.window, 10);
+    if (!(window >= 1)) throw new Error('--window must be a whole number of merges, 1 or more');
+    const picked = readAllEvents(join(projectRoot, config.paths.events)).filter(e => e.event === 'picked');
+    const changes = gatherChanges(ctx.run(), iterations, picked, window, 100);
     const measures = computeMeasures({
+      ...(changes === null ? {} : {changes}),
       iterations,
       budgets,
       sessionCosts,
