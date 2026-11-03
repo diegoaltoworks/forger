@@ -7,7 +7,7 @@ import {
   computeMeasures,
   draftUpstreamIssue,
   formatMeasures,
-  normalizeBranch,
+  branchTicketId,
   parseBudgets,
   parseIterationLog,
   renderRule,
@@ -74,8 +74,14 @@ describe('CI rounds', () => {
     ];
     expect(ciRoundsByBranch(runs)).toEqual({'feat/a': 2});
   });
-  test('a branch name matches its ticket id', () => {
-    expect(normalizeBranch('feat/alpha-ticket')).toBe('alpha_ticket');
+  test.each([
+    ['feat/alpha-ticket', 'alpha_ticket'],
+    ['feat/a', 'a'],
+    ['feat/issue-72', 'issue-72'],
+    ['fix/issue-5', 'issue-5'],
+    ['feat/issue-72-extra', 'issue_72_extra'],
+  ])('branch %s builds ticket %s', (branch, ticket) => {
+    expect(branchTicketId(branch)).toBe(ticket);
   });
 });
 
@@ -119,10 +125,19 @@ describe('computeMeasures', () => {
   test('time, cap and CI rounds per ticket', () => {
     const m = computeMeasures(base);
     expect(m.tickets).toEqual([
-      {ticket: 'alpha_ticket', runs: 2, seconds: 150, budget_usd: 10, ci_rounds: 2},
-      {ticket: 'beta', runs: 1, seconds: 10, budget_usd: null, ci_rounds: null},
+      {ticket: 'alpha_ticket', runs: 2, seconds: 150, budget_cap_usd: 10, ci_rounds: 2},
+      {ticket: 'beta', runs: 1, seconds: 10, budget_cap_usd: null, ci_rounds: null},
     ]);
     expect(m.ci_rounds_unmatched).toEqual({'feat/stray': 1});
+  });
+  test('a GitHub ticket branch attaches its CI rounds', () => {
+    const m = computeMeasures({
+      ...base,
+      iterations: [{...base.iterations[0], ticket: 'issue-72'}],
+      ciRuns: [{headBranch: 'feat/issue-72', event: 'pull_request'}],
+    });
+    expect(m.tickets[0].ci_rounds).toBe(1);
+    expect(m.ci_rounds_unmatched).toEqual({});
   });
   test('a window keeps only the last N iterations and the events within it', () => {
     const m = computeMeasures({...base, last: 2});
