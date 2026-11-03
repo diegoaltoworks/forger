@@ -60,9 +60,41 @@ describe('runDecisionsCheck', () => {
   });
 
   test('a changed layer map with no ADR fails', () => {
-    const root = repo({});
-    const out = runDecisionsCheck(root, git({diff: 'M\t.forger/architecture.json'}));
+    const root = repo({'.forger/architecture.json': '{"layers":["b"]}'});
+    const out = runDecisionsCheck(root, git({diff: 'M\t.forger/architecture.json', base: {'.forger/architecture.json': '{"layers":["a"]}'}}));
     expect(out.map(f => f.rule)).toEqual(['layer-map-without-adr']);
+  });
+
+  const map = JSON.stringify({layers: [{name: 'a'}]});
+
+  test('a layer map moved from the legacy home with the same content passes', () => {
+    const root = repo({'.forger/architecture.json': map});
+    const run = git({diff: 'D\t.claude/architecture.json\nA\t.forger/architecture.json', base: {'.claude/architecture.json': map}});
+    expect(runDecisionsCheck(root, run)).toEqual([]);
+  });
+
+  test('a layer map moved with a changed layer fails', () => {
+    const root = repo({'.forger/architecture.json': JSON.stringify({layers: [{name: 'b'}]})});
+    const run = git({diff: 'D\t.claude/architecture.json\nA\t.forger/architecture.json', base: {'.claude/architecture.json': map}});
+    expect(runDecisionsCheck(root, run).map(f => f.rule)).toEqual(['layer-map-without-adr']);
+  });
+
+  test('a layer map changed in place at the legacy home fails', () => {
+    const root = repo({'.claude/architecture.json': JSON.stringify({layers: [{name: 'b'}]})});
+    const run = git({diff: 'M\t.claude/architecture.json', base: {'.claude/architecture.json': map}});
+    expect(runDecisionsCheck(root, run).map(f => f.rule)).toEqual(['layer-map-without-adr']);
+  });
+
+  test('a moved package.json with the same dependencies passes', () => {
+    const root = repo({'sub/package.json': pkg({a: '1'})});
+    const run = git({diff: 'D\tpackage.json\nA\tsub/package.json', base: {'package.json': pkg({a: '1'})}});
+    expect(runDecisionsCheck(root, run)).toEqual([]);
+  });
+
+  test('a moved package.json that adds a dependency fails', () => {
+    const root = repo({'sub/package.json': pkg({a: '1', b: '1'})});
+    const run = git({diff: 'D\tpackage.json\nA\tsub/package.json', base: {'package.json': pkg({a: '1'})}});
+    expect(runDecisionsCheck(root, run).map(f => f.rule)).toEqual(['dependency-without-adr']);
   });
 
   test('an empty diff passes', () => {

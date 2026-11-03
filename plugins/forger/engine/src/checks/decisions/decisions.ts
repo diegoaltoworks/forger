@@ -67,6 +67,33 @@ export function diffDependencies(before: string | null, after: string | null, re
   };
 }
 
+/** Whitespace and key-order-insensitive for JSON; plain text otherwise. A missing side is a change unless both are missing. */
+export function layerMapChanged(before: string | null, after: string | null): boolean {
+  if (before === null || after === null) return before !== after;
+  try {
+    return JSON.stringify(sortKeys(JSON.parse(before))) !== JSON.stringify(sortKeys(JSON.parse(after)));
+  } catch {
+    return before !== after;
+  }
+}
+
+function sortKeys(v: unknown): unknown {
+  if (Array.isArray(v)) return v.map(sortKeys);
+  if (typeof v === 'object' && v !== null) {
+    return Object.fromEntries(Object.entries(v).sort(([a], [b]) => (a < b ? -1 : 1)).map(([k, x]) => [k, sortKeys(x)]));
+  }
+  return v;
+}
+
+/**
+ * A manifest that moved arrives as an add plus a delete; its dependencies are the
+ * ones it adds over the deleted manifest of the same name that leaves the fewest.
+ */
+export function diffAgainstMoved(after: string, deleted: string[], read: ManifestReader): DependencyDiff {
+  const candidates = [null, ...deleted].map(before => diffDependencies(before, after, read));
+  return deleted.length === 0 ? candidates[0] : candidates.slice(1).reduce((best, d) => (d.added.length < best.added.length ? d : best));
+}
+
 export function hasAdr(changes: FileChange[]): boolean {
   return changes.some(c => c.status !== 'deleted' && c.path.startsWith(ADR_DIR) && c.path.endsWith('.md'));
 }
