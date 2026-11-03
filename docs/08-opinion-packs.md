@@ -93,3 +93,14 @@ A layer may always import itself, and files outside every layer, packages and bu
 `check decisions` reads the working tree and branch against the merge-base with the configured base branch. A dependency added to a manifest (`package.json` today; another manifest is another entry behind the manifest-reader interface), or any change to `.claude/architecture.json`, needs a new or changed Markdown file under `docs/adr/` in the same diff. A version bump or a removed dependency is classified and needs no ADR. The pack ships an ADR template with context, decision, consequences and status; an accepted ADR is superseded by a new one, never edited. Like every opinion, it is waivable in `.claude/waivers.json`. A base branch that cannot be resolved is an error, never a pass.
 
 The decision to use packs is [ADR 0003](adr/0003-opinion-packs.md).
+
+## The safety pack
+
+The `safety` pack holds principle 9 (data in production is sacred) and the never-commit-a-secret rule. Two of its opinions are enforced by `check safety`, each under its own opinion id so a waiver can target one:
+
+| Opinion | What the check flags |
+|---|---|
+| `safety.secrets` | an added line, in the diff or an untracked file, that matches a known credential pattern, or an added `.env` file |
+| `safety.data-forward` | a diff that touches `migration_paths` without adding or changing a test under `data_test_paths` |
+
+Both lists live in `.claude/safety.json`. A finding names the file, line and pattern and never prints the match, so a report does not spread the secret it found. The other two opinions, frozen lockfiles in the gates and destructive commands listed in the process gotchas, are rules kept by judgement. Like `check decisions`, the check reads the working tree and branch against the merge-base with the configured base branch, and an unresolvable base is an error, never a pass.
