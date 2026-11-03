@@ -1,7 +1,7 @@
 import {existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync} from 'fs';
 import {join} from 'path';
 
-import {handedOver, listRepoLabels, loopLabels, missingLabels, readAllVerdicts} from '../loop';
+import {decideHalt, GhTrackerHalt, handedOver, listRepoLabels, loopLabels, missingLabels, readAllVerdicts} from '../loop';
 import {buildReport, formatReport, mergedInPeriod, orient as orientPlan, proposedAdrs, reportPeriod, waitingIssues, OWNER_LABELS, type AdrText, type MergedPrFact, type OwnerItem, type WaitingIssue} from '../supervisor';
 import type {Command, CommandContext} from './command';
 import {gatherMeasures} from './measure';
@@ -38,6 +38,11 @@ function ownerWaiting(ctx: CommandContext): OwnerItem[] {
   return out;
 }
 
+function haltReasonOf(file: string | null, tracker: {label: boolean; reason: string | null}): string | null {
+  const d = decideHalt({label: tracker.label, labelReason: tracker.reason, file});
+  return d.halted ? (file !== null && d.source === 'file' ? file : d.reason) : null;
+}
+
 function supervise(which: 'orient' | 'report') {
   return (ctx: CommandContext): void => {
     const {values, projectRoot, config, runner} = ctx;
@@ -56,7 +61,10 @@ function supervise(which: 'orient' | 'report') {
       backlogAnomalies: ctx.backlog.report().anomalies,
       missingLabels: missing,
       status,
-      haltReason: existsSync(haltFile) ? readFileSync(haltFile, 'utf-8') : null,
+      haltReason: haltReasonOf(
+        existsSync(haltFile) ? readFileSync(haltFile, 'utf-8') : null,
+        config.tracker.kind === 'github' ? new GhTrackerHalt(ctx.run()).read() : {label: false, reason: null}
+      ),
       branch,
       baseBranch: config.base_branch,
     });

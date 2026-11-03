@@ -4,10 +4,12 @@
  * the default shape and stall detection - are pure and live here.
  */
 
-import {existsSync, unlinkSync, writeFileSync} from 'fs';
+import {existsSync, readFileSync, unlinkSync, writeFileSync} from 'fs';
 
 import type {StateStore} from '../ports';
 import type {DeclineEntry} from './decline';
+import {decideHalt, statusBody} from './halt-label';
+import type {TrackerHalt} from './halt-tracker';
 import type {RunSnapshot} from './run-facts';
 
 export type AutomationStatus =
@@ -141,7 +143,8 @@ export function stallUpdate(
 export class LoopStore {
   constructor(
     private store: StateStore,
-    private haltFile: string
+    private haltFile: string,
+    private tracker: TrackerHalt | null = null
   ) {}
 
   load(): AutomationState {
@@ -161,18 +164,66 @@ export class LoopStore {
     this.save(defaultState());
   }
 
+  private haltFacts(): {label: boolean; labelReason: string | null; file: string | null} {
+    const t = this.tracker?.read() ?? {label: false, reason: null};
+    return {
+      label: t.label,
+      labelReason: t.reason,
+      file: existsSync(this.haltFile) ? readFileSync(this.haltFile, 'utf-8') : null,
+    };
+  }
+
   isHalted(): boolean {
+    return decideHalt(this.haltFacts()).halted;
+  }
+
+  /** True when only the local file halts, so `resume` knows what to remove. */
+  haltFileExists(): boolean {
     return existsSync(this.haltFile);
   }
 
+  /** With a tracker the label is the halt, so the owner resumes by removing it; the file is the fallback when the tracker cannot be written. */
   writeHalt(reason: string): void {
+    if (this.tracker && this.trySet(this.tracker, reason)) return;
     writeFileSync(
       this.haltFile,
       `Halted: ${reason}\nTime: ${new Date().toISOString()}\n`
     );
   }
 
+  /** True when the owner can resume by removing a tracker label. */
+  hasTracker(): boolean {
+    return this.tracker !== null;
+  }
+
+  private trySet(tracker: TrackerHalt, reason: string): boolean {
+    try {
+      tracker.set(reason);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
   clearHalt(): void {
     if (existsSync(this.haltFile)) unlinkSync(this.haltFile);
+    this.bestEffort(() => this.tracker?.clear());
+  }
+
+  /** Regenerates the pinned issue's body from state; the body is never read back. */
+  publishStatus(state: AutomationState, now: Date = new Date()): void {
+    const t = this.tracker;
+    if (!t) return;
+    const halted = this.isHalted() || state.status === 'halted';
+    this.bestEffort(() => t.writeStatus(statusBody(state, halted, now)));
+  }
+
+  // The file is the per-machine switch and already written; a tracker outage must not undo it.
+  private bestEffort(fn: () => void): void {
+    try {
+      fn();
+    } catch {
+      // see above
+    }
   }
 }

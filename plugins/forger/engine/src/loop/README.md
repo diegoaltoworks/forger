@@ -18,6 +18,7 @@ Pure:
 - `lease.ts` - the cross-machine lease (ADR 0015): acquire, renew, refuse or
   take over an expired one, with the clock passed in.
 - `state.ts` - the loop state record and `LoopStore`, which persists it through the `StateStore` port.
+- `halt-label.ts` - HALT decided from the `halted` label and the local HALT file, and the generated status body for the pinned loop issue (ADR 0015).
 - `iteration-log.ts` - the per-iteration log text.
 - `status-report.ts` - the machine-readable status a supervisor acts on.
 - `pr-checks.ts` - a PR's CI result folded from its check rollup.
@@ -44,6 +45,7 @@ Touch the world (their own files, the terminal, the clock):
 
 - `runner.ts` - the outer loop: lock, halt, stall and failure limits, status and
   watch displays.
+- `halt-tracker.ts` - the `halted` label and status body on the pinned loop issue, through the command port; a failed read is "not halted".
 - `iteration.ts` - one iteration and the close-out of one a dead engine left open.
 - `labels.ts` - the GitHub labels the loop relies on, declared once; creating the
   missing ones, and checking a decline's relabel from the issue's labels read back.

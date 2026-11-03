@@ -1,6 +1,11 @@
 import {describe, expect, test} from 'bun:test';
 
-import {defaultState, endRun, migrateState, stallUpdate, startRun, updateRun} from './state';
+import {mkdtempSync} from 'fs';
+import {tmpdir} from 'os';
+import {join} from 'path';
+
+import type {StateStore} from '../ports';
+import {defaultState, endRun, LoopStore, migrateState, stallUpdate, startRun, updateRun} from './state';
 
 describe('defaultState', () => {
   test('starts ready with empty history', () => {
@@ -106,5 +111,75 @@ describe('run list helpers', () => {
     startRun(s, run('a'));
     startRun(s, run('a'));
     expect(s.in_flight).toHaveLength(1);
+  });
+});
+
+describe('LoopStore with a tracker halt', () => {
+  function setup(label: boolean) {
+    const dir = mkdtempSync(join(tmpdir(), 'halt-'));
+    const calls: string[] = [];
+    let on = label;
+    const tracker = {
+      read: () => ({label: on, reason: on ? 'owner' : null}),
+      set: (r: string) => {
+        calls.push(`set:${r}`);
+        on = true;
+      },
+      clear: () => {
+        calls.push('clear');
+        on = false;
+      },
+      writeStatus: (b: string) => calls.push(`status:${b.includes('Loop: halted') ? 'h' : 'r'}`),
+    };
+    const mem = {readState: () => null, writeState: () => {}} as unknown as StateStore;
+    return {store: new LoopStore(mem, join(dir, 'HALT'), tracker), calls};
+  }
+
+  test('the label halts without a file', () => {
+    expect(setup(true).store.isHalted()).toBe(true);
+    expect(setup(false).store.isHalted()).toBe(false);
+  });
+
+  test('writeHalt writes the file and the label; clearHalt resumes', () => {
+    const {store, calls} = setup(false);
+    store.writeHalt('why');
+    expect(store.haltFileExists()).toBe(false);
+    expect(store.isHalted()).toBe(true);
+    expect(calls).toEqual(['set:why']);
+    store.clearHalt();
+    expect(store.isHalted()).toBe(false);
+    expect(calls).toEqual(['set:why', 'clear']);
+  });
+
+  test('removing the label alone resumes', () => {
+    const {store} = setup(true);
+    expect(store.isHalted()).toBe(true);
+    const owner = setup(false);
+    owner.store.writeHalt('why');
+    expect(owner.store.isHalted()).toBe(true);
+    owner.calls.length = 0;
+    owner.store.clearHalt();
+    expect(owner.store.isHalted()).toBe(false);
+  });
+
+  test('a tracker outage falls back to the local file', () => {
+    const broken = new LoopStore({readState: () => null, writeState: () => {}} as unknown as StateStore, join(mkdtempSync(join(tmpdir(), 'halt-')), 'HALT'), {
+      read: () => ({label: false, reason: null}),
+      set: () => {
+        throw new Error('down');
+      },
+      clear: () => {},
+      writeStatus: () => {},
+    });
+    broken.writeHalt('x');
+    expect(broken.isHalted()).toBe(true);
+    broken.clearHalt();
+    expect(broken.isHalted()).toBe(false);
+  });
+
+  test('publishStatus writes the generated body', () => {
+    const {store, calls} = setup(false);
+    store.publishStatus(defaultState());
+    expect(calls).toEqual(['status:r']);
   });
 });

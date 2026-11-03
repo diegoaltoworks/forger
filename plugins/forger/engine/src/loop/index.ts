@@ -2,6 +2,8 @@ export * from './claim';
 export * from './decline';
 export * from './decline-io';
 export * from './events';
+export * from './halt-label';
+export * from './halt-tracker';
 export * from './handover';
 export * from './handover-io';
 export * from './infra';

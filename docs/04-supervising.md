@@ -25,7 +25,8 @@ Asked once, written down, refined later (see `05-refining-the-process.md`):
 ## 1. Orient
 
 - Read the playbook, the open owner questions and the memory notes.
-- Engine status, the HALT file, whether an engine is alive.
+- Engine status, HALT (the `halted` label on the pinned loop issue, or the local HALT file), whether an engine is alive.
+  Add the label with a comment to stop the loop from anywhere; remove it to resume. The issue body is a generated status view.
 - What merged since the last session; what the checked-out branch really is.
 - Anything stuck: a ticket marked completed with no merged PR, a branch with
   commits and no PR.
