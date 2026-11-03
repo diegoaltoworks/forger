@@ -3,23 +3,16 @@
  * composes the pure modules (config, backlog, prompt, git, state) with the two
  * side-effect boundaries (logger, claude spawn). The interesting decisions have
  * been pushed into those pure modules; this file is the wiring and the control
- * flow. The claude spawn, git runner, and backlog loader are injectable so the
+ * flow. The claude spawn, git runner, and backlog are injectable so the
  * loop can be driven in a test without a real agent or repo.
  */
 
-import {existsSync, mkdirSync, readFileSync, writeFileSync} from 'fs';
+import {existsSync, mkdirSync, writeFileSync} from 'fs';
 import {join} from 'path';
 
 import type {WorkloopConfig} from './config';
-import {
-  type PRD,
-  hasTicket,
-  isTicketCompleted,
-  nextTaskName,
-  remainingTasks,
-  tierFor,
-  workableCount,
-} from './backlog';
+import type {Backlog} from './backlog';
+import {fileBacklog} from './file-backlog';
 import {type CommandRunner, execRunner, verifyMerged} from './git';
 import {buildPrompt} from './prompt';
 import {type AutomationState, StateStore, stallUpdate} from './state';
@@ -33,18 +26,17 @@ import {gatherFacts, takeSnapshot, ticketFromBranch} from './run-facts';
 export interface RunnerDeps {
   runClaude?: (opts: RunClaudeOptions) => Promise<ClaudeResult>;
   gitRunner?: CommandRunner;
-  loadPRD?: () => PRD | null;
+  backlog?: Backlog;
   uuid?: () => string;
 }
 
 export class AutomationRunner {
   private logger: Logger;
   private store: StateStore;
-  private backlogFile: string;
   private outputDir: string;
   private gitRunner: CommandRunner;
   private spawnClaude: (opts: RunClaudeOptions) => Promise<ClaudeResult>;
-  private loadPRDImpl: () => PRD | null;
+  private backlog: Backlog;
   private uuid: () => string;
 
   constructor(
@@ -55,35 +47,26 @@ export class AutomationRunner {
     const p = (rel: string): string => join(projectRoot, rel);
     this.logger = new Logger(p(config.paths.log));
     this.store = new StateStore(p(config.paths.state), p(config.paths.halt));
-    this.backlogFile = p(config.paths.backlog);
     this.outputDir = p(config.paths.output);
 
     this.gitRunner = deps.gitRunner ?? execRunner(projectRoot);
     this.spawnClaude = deps.runClaude ?? runClaude;
-    this.loadPRDImpl = deps.loadPRD ?? (() => this.readBacklog());
+    this.backlog = deps.backlog ?? fileBacklog(p(config.paths.backlog), config);
     this.uuid = deps.uuid ?? (() => crypto.randomUUID());
 
     if (!existsSync(this.outputDir)) mkdirSync(this.outputDir, {recursive: true});
   }
 
-  private readBacklog(): PRD | null {
-    try {
-      return JSON.parse(readFileSync(this.backlogFile, 'utf-8')) as PRD;
-    } catch {
-      return null;
-    }
-  }
-
   getRemainingTasks(): number {
-    return remainingTasks(this.loadPRDImpl(), this.config);
+    return this.backlog.remaining();
   }
 
   getWorkableCount(): number {
-    return workableCount(this.loadPRDImpl(), this.config);
+    return this.backlog.workableCount();
   }
 
   getNextTaskName(): string | null {
-    return nextTaskName(this.loadPRDImpl(), this.config);
+    return this.backlog.next();
   }
 
   private verify(): string | null {
@@ -138,7 +121,7 @@ export class AutomationRunner {
     this.store.save(state);
 
     const prompt = buildPrompt(this.config, iteration, state.completed_tasks);
-    const tier = tierFor(this.loadPRDImpl(), this.config, attemptedTask);
+    const tier = this.backlog.tier(attemptedTask);
     this.logger.log('INFO', `Running Claude (session: ${sessionId.slice(0, 8)}...)`);
     if (attemptedTask) {
       this.logger.log('INFO', `Ticket: ${attemptedTask} [${tier.model}, $${tier.budget}]`);
@@ -162,7 +145,7 @@ export class AutomationRunner {
     // A branch that names no backlog ticket (a typo fix, a recovery branch)
     // leaves the run held to the engine's pick.
     const branchTicket = ticketFromBranch(gitFacts.branch);
-    const taken = branchTicket && hasTicket(this.loadPRDImpl(), branchTicket) ? branchTicket : null;
+    const taken = branchTicket && this.backlog.has(branchTicket) ? branchTicket : null;
     const ticket = taken ?? attemptedTask;
     if (taken && taken !== attemptedTask) {
       this.logger.log('INFO', `Worker took ${taken} (engine picked ${attemptedTask ?? 'none'})`);
@@ -185,7 +168,7 @@ export class AutomationRunner {
     this.logger.log('INFO', `Claude finished in ${duration}s (exit: ${result.exitCode})`);
 
     const claim = parseClaim(result.output);
-    const backlogCompleted = ticket !== null && isTicketCompleted(this.loadPRDImpl(), ticket);
+    const backlogCompleted = ticket !== null && this.backlog.isCompleted(ticket);
     const outcome = decideOutcome({
       ...gitFacts,
       ticket,

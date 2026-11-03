@@ -1,8 +1,9 @@
 import {describe, expect, test} from 'bun:test';
 
 import {mergeConfig} from './config';
-import type {PRD} from './backlog';
+import type {BacklogData} from './backlog';
 import {
+  backlogReport,
   hasTicket,
   isTicketCompleted,
   nextTaskName,
@@ -15,13 +16,13 @@ import {
 const config = mergeConfig({repo: 'demo', gates: 'x'});
 const noRepoFilter = mergeConfig({});
 
-function prd(features: PRD['features']): PRD {
+function backlogOf(features: BacklogData['features']): BacklogData {
   return {features};
 }
 
 describe('workableTasks', () => {
   test('only not_started tickets, ordered by priority', () => {
-    const p = prd({
+    const p = backlogOf({
       c: {status: 'not_started', priority: 'P2'},
       a: {status: 'not_started', priority: 'P0'},
       b: {status: 'not_started', priority: 'P1'},
@@ -31,7 +32,7 @@ describe('workableTasks', () => {
   });
 
   test('a ticket with an unmet dependency is not workable', () => {
-    const p = prd({
+    const p = backlogOf({
       dep: {status: 'not_started', priority: 'P0'},
       blocked: {status: 'not_started', priority: 'P0', depends_on: ['dep']},
     });
@@ -41,7 +42,7 @@ describe('workableTasks', () => {
   });
 
   test('a ticket becomes workable once its dependency is completed', () => {
-    const p = prd({
+    const p = backlogOf({
       dep: {status: 'completed', priority: 'P0'},
       unblocked: {status: 'not_started', priority: 'P0', depends_on: ['dep']},
     });
@@ -49,7 +50,7 @@ describe('workableTasks', () => {
   });
 
   test('foreign-repo tickets are excluded when config.repo is set', () => {
-    const p = prd({
+    const p = backlogOf({
       mine: {status: 'not_started', priority: 'P0'},
       theirs: {status: 'not_started', priority: 'P0', repo: 'other'},
       alsoMine: {status: 'not_started', priority: 'P0', repo: 'demo'},
@@ -58,7 +59,7 @@ describe('workableTasks', () => {
   });
 
   test('with no repo filter, every repo is included', () => {
-    const p = prd({
+    const p = backlogOf({
       a: {status: 'not_started', priority: 'P0'},
       b: {status: 'not_started', priority: 'P0', repo: 'anything'},
     });
@@ -74,7 +75,7 @@ describe('workableTasks', () => {
 
 describe('remainingTasks', () => {
   test('counts not_started in this repo regardless of dependencies', () => {
-    const p = prd({
+    const p = backlogOf({
       dep: {status: 'not_started', priority: 'P0'},
       blocked: {status: 'not_started', priority: 'P0', depends_on: ['dep']},
       done: {status: 'completed', priority: 'P0'},
@@ -94,7 +95,7 @@ describe('tierFor', () => {
   const fallback = config.model_by_priority.default;
 
   test('P0 uses the P0 tier, scaled by effort', () => {
-    const p = prd({t: {status: 'not_started', priority: 'P0', effort: 'medium'}});
+    const p = backlogOf({t: {status: 'not_started', priority: 'P0', effort: 'medium'}});
     expect(tierFor(p, config, 't')).toEqual({
       model: p0.model,
       budget: p0.budget * config.effort_multiplier.medium,
@@ -102,7 +103,7 @@ describe('tierFor', () => {
   });
 
   test('non-P0 priority falls back to the default tier', () => {
-    const p = prd({t: {status: 'not_started', priority: 'P2', effort: 'small'}});
+    const p = backlogOf({t: {status: 'not_started', priority: 'P2', effort: 'small'}});
     expect(tierFor(p, config, 't')).toEqual({
       model: fallback.model,
       budget: fallback.budget * config.effort_multiplier.small,
@@ -110,19 +111,19 @@ describe('tierFor', () => {
   });
 
   test('unknown effort defaults to a 1x multiplier', () => {
-    const p = prd({t: {status: 'not_started', priority: 'P0', effort: 'colossal'}});
+    const p = backlogOf({t: {status: 'not_started', priority: 'P0', effort: 'colossal'}});
     expect(tierFor(p, config, 't')).toEqual({model: p0.model, budget: p0.budget});
   });
 
   test('large effort applies the large multiplier', () => {
-    const p = prd({t: {status: 'not_started', priority: 'P0', effort: 'large'}});
+    const p = backlogOf({t: {status: 'not_started', priority: 'P0', effort: 'large'}});
     expect(tierFor(p, config, 't').budget).toBe(
       p0.budget * config.effort_multiplier.large,
     );
   });
 
   test('a null task name gets the default tier', () => {
-    expect(tierFor(prd({}), config, null)).toEqual({
+    expect(tierFor(backlogOf({}), config, null)).toEqual({
       model: fallback.model,
       budget: fallback.budget,
     });
@@ -131,7 +132,7 @@ describe('tierFor', () => {
 
 describe('isTicketCompleted', () => {
   test('reflects the backlog status', () => {
-    const p = prd({a: {status: 'completed'}, b: {status: 'not_started'}});
+    const p = backlogOf({a: {status: 'completed'}, b: {status: 'not_started'}});
     expect(isTicketCompleted(p, 'a')).toBe(true);
     expect(isTicketCompleted(p, 'b')).toBe(false);
     expect(isTicketCompleted(p, 'missing')).toBe(false);
@@ -139,12 +140,37 @@ describe('isTicketCompleted', () => {
 });
 
 describe('hasTicket', () => {
-  const p: PRD = {features: {a: {status: 'not_started'}, junk: 'x'}};
+  const p: BacklogData = {features: {a: {status: 'not_started'}, junk: 'x'}};
   test('true for a ticket in the backlog', () => {
     expect(hasTicket(p, 'a')).toBe(true);
   });
   test('false for an unknown or malformed entry', () => {
     expect(hasTicket(p, 'typo')).toBe(false);
     expect(hasTicket(p, 'junk')).toBe(false);
+  });
+});
+
+describe('backlogReport', () => {
+  test('workable tickets in order with their priority, remaining and next', () => {
+    const p = backlogOf({
+      blocked: {status: 'not_started', priority: 'P0', depends_on: ['later']},
+      later: {status: 'not_started', priority: 'P2'},
+      unlabelled: {status: 'not_started'},
+      first: {status: 'not_started', priority: 'P0'},
+      done: {status: 'completed', priority: 'P0'},
+    });
+    expect(backlogReport(p, config)).toEqual({
+      workable: [
+        {id: 'first', priority: 'P0'},
+        {id: 'later', priority: 'P2'},
+        {id: 'unlabelled', priority: 'P3'},
+      ],
+      remaining: 4,
+      next: 'first',
+    });
+  });
+
+  test('a missing backlog reports nothing to do', () => {
+    expect(backlogReport(null, config)).toEqual({workable: [], remaining: 0, next: null});
   });
 });

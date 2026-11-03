@@ -185,6 +185,7 @@ from the consumer repo root so it finds `.claude/`:
 ```
 bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts run --continuous   # the loop
 bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts status             # where it's at
+bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts backlog --json     # workable tickets, remaining, next pick
 bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts resume             # clear a HALT
 ```
 
@@ -222,7 +223,9 @@ Layout - pure logic is split from I/O so it is unit-testable without a repo:
 ```
 engine/src/
   config.ts    types, defaults, mergeConfig (pure) + loadConfig
-  backlog.ts   ticket selection, remaining/workable counts, tiering (pure)
+  backlog.ts   the Backlog interface; ticket selection, remaining/workable
+               counts, tiering, the backlog report (pure)
+  file-backlog.ts the Backlog read from backlog.json
   prompt.ts    per-iteration prompt (pure): worker command, gates, tracker
   git.ts       merge verification against an injectable command runner (pure)
   run-facts.ts the git facts a run is judged by: merged, pushed, branch taken
