@@ -1,0 +1,4 @@
+{
+  "migration_paths": ["**/migrations/**", "**/schema/**", "**/*.sql"],
+  "data_test_paths": ["**/*.test.*", "**/*.spec.*", "**/tests/**", "**/test/**"]
+}

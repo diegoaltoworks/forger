@@ -149,6 +149,21 @@ describe('check decisions', () => {
   });
 });
 
+describe('check safety', () => {
+  test('fails on an added env file and passes on a clean branch', async () => {
+    const root = projectWith({});
+    process.chdir(root);
+    writeFileSync(join(root, '.claude', 'safety.json'), '{"migration_paths":["db/**"],"data_test_paths":["tests/**"]}');
+    writeFileSync(join(root, '.env'), 'A=1\n');
+    const run = (untracked: string): CommandRunner => cmd => (cmd.startsWith('git merge-base') ? 'abc' : cmd.startsWith('git ls-files') ? untracked : '');
+    const bad = await capture(['check', 'safety', '--json'], run('.env'));
+    expect(JSON.parse(bad).map((f: {rule: string}) => f.rule)).toEqual(['env-file']);
+    expect(process.exitCode).toBe(1);
+    process.exitCode = 0;
+    expect(await capture(['check', 'safety'], run(''))).toBe('safety check: clean');
+  });
+});
+
 describe('check arch', () => {
   const map = JSON.stringify({layers: [{name: 'core', paths: ['core/**']}, {name: 'shell', paths: ['shell/**']}], allow: {shell: ['core']}});
 

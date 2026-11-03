@@ -67,7 +67,8 @@ decisions; [`docs/plan-foundation.md`](docs/plan-foundation.md) the plan the
 foundation was built from. `plugins/forger/packs/` holds the opinion packs a repository adopts: the `base` pack carries
 the ticket and PR shapes, the work order, the report, the retro and the rule record, and the `docs` pack carries
 the docs habits with checks for links, images, diagrams and glossary terms, and the `architecture` pack carries
-the functional-core habits with the dependency rule enforced by `check arch` and decisions recorded as ADRs by `check decisions`.
+the functional-core habits with the dependency rule enforced by `check arch` and decisions recorded as ADRs by `check decisions`, and the `safety` pack carries
+the never-commit-a-secret and carry-stored-data-forward habits enforced by `check safety`.
 
 ## Status
 

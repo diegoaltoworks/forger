@@ -53,6 +53,20 @@
           "sha256": "3ad094e5febda6439164233c8b7f6d0aad66e6aa43410e93d11afc75bb4dd924"
         }
       ]
+    },
+    {
+      "id": "safety",
+      "version": "1.0.0",
+      "files": [
+        {
+          "path": ".claude/opinions/safety.md",
+          "sha256": "a2b0fc95082c0a1eda1e27cdf1f73139d2061bd322eea1f5d4968635d03a930d"
+        },
+        {
+          "path": ".claude/safety.json",
+          "sha256": "67c256049a81bbb8a88f80fb86e923f02c7f99413a469de2e9ecdbb23493d315"
+        }
+      ]
     }
   ]
 }

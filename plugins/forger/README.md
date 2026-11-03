@@ -206,6 +206,7 @@ bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts opinions [--json]     # installed opinions
 bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts check [--json]       # every check the installed packs declare, with .claude/waivers.json applied; non-zero on an unwaived violation
 bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts check arch [--json]  # with the architecture pack: imports that cross a forbidden edge of .claude/architecture.json
 bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts check decisions [--json]  # with the architecture pack: a new dependency or layer-map change needs an ADR in the diff
+bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts check safety [--json]  # with the safety pack: added secrets and env files, and stored-shape changes with no test
 bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts check docs [--json]  # writing rules: ASCII punctuation, no emails or home paths, no hard-coded skill calls in commands or templates, optional .forger-denylist; with the docs pack also links, anchors, images, mermaid blocks and avoided glossary terms
 bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts resume             # clear a HALT
 ```

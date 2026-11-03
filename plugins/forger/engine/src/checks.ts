@@ -11,6 +11,7 @@ import {runArchCheck} from './arch-check';
 import {runDecisionsCheck} from './decisions-check';
 import {runDocsCheck} from './docs-check';
 import type {CommandRunner} from './git';
+import {runSafetyCheck} from './safety-check';
 import {LOCK_PATH, loadPacks, parseLock, type Lock, type LoadedPack} from './packs';
 import {applyWaivers, parseWaivers, staleWaivers, WAIVERS_PATH, type Finding, type WaivedFinding, type Waiver} from './waivers';
 
@@ -39,6 +40,7 @@ export const CHECKS: Record<string, (ctx: CheckContext) => Finding[]> = {
   docs: ctx => runDocsCheck(ctx.projectRoot, ctx.run),
   arch: ctx => runArchCheck(ctx.projectRoot, ctx.run),
   decisions: ctx => runDecisionsCheck(ctx.projectRoot, ctx.run),
+  safety: ctx => runSafetyCheck(ctx.projectRoot, ctx.run),
 };
 
 /** The check ids of the installed packs, in lock order, each once. An installed pack that cannot be found is an error. */
