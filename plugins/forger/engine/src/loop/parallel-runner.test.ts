@@ -95,6 +95,15 @@ describe('parallelism 2', () => {
     expect(t.calls).toHaveLength(2);
   });
 
+  test('records each pair the rule judged, once, for the measures', async () => {
+    const t = setup(2, only('tk_a', 'tk_c'), slow);
+    await t.runner.run(2);
+    const lines = readFileSync(join(t.root, '.forger', 'output', 'schedule-decisions.jsonl'), 'utf-8').trim().split('\n').map(l => JSON.parse(l));
+    const key = (l: {ticket: string; other: string; verdict: string; reason: string}) => `${l.ticket}>${l.other}:${l.verdict}:${l.reason}`;
+    expect(lines.map(key)).toContain('tk_c>tk_a:serial:same-folder');
+    expect(new Set(lines.map(key)).size).toBe(lines.length);
+  });
+
   test('takes the compatible ticket past a conflicting one in the order', async () => {
     const t = setup(2, data, slow);
     await t.runner.run(2);

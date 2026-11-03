@@ -11,6 +11,8 @@ an action, and the measures and retro records the refinement loop runs on.
 - `supervisor.ts` - orient, report and approval. Pure.
 - `measure.ts` - measures from iteration logs, budgets, events and CI runs;
   rule records and upstream drafts. Pure.
+- `parallel-measures.ts` - merges per hour by parallelism, conflicts, rework and
+  the scheduling rule's verdict mix. Pure.
 - `*.json` - recorded `gh` output the tests replay.
 
 ## Entry point
