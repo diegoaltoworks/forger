@@ -6,6 +6,7 @@ import {join} from 'path';
 
 import {execRunner} from '../adapters';
 import {main} from '../cli';
+import {runDecisionsCheck} from '../checks';
 import {MigrateRefused, planMoves, runMigrate, trackedNames} from './migrate';
 
 const dirs: string[] = [];
@@ -42,6 +43,21 @@ describe('planMoves', () => {
   });
   test('trackedNames reads the top-level names under the legacy folder', () => {
     expect([...trackedNames('.claude/a.json\n.claude/opinions/x.md\nother/y')]).toEqual(['a.json', 'opinions']);
+  });
+});
+
+describe('migrate then check decisions', () => {
+  test('a branch that only runs migrate needs no ADR for the moved layer map', () => {
+    const root = legacyRepo();
+    const git = (cmd: string) => execSync(`git -c user.name=t -c user.email=t@t ${cmd}`, {cwd: root, stdio: 'pipe'});
+    git('checkout -q -b main');
+    writeFileSync(join(root, '.claude/architecture.json'), '{"layers":[{"name":"core"}]}');
+    git('add .claude/architecture.json');
+    git('commit -q -m base');
+    git('checkout -q -b feat/migrate');
+    expect(runMigrate(root, execRunner(root)).status).toBe('migrated');
+    expect(existsSync(join(root, '.forger/architecture.json'))).toBe(true);
+    expect(runDecisionsCheck(root, execRunner(root))).toEqual([]);
   });
 });
 

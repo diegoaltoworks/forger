@@ -1,6 +1,6 @@
 import {describe, expect, test} from 'bun:test';
 
-import {checkDecisions, diffDependencies, hasAdr, lineOf, manifestReaderFor, parseNameStatus, readPackageJson, type DependencyDiff} from './decisions';
+import {checkDecisions, diffAgainstMoved, layerMapChanged, diffDependencies, hasAdr, lineOf, manifestReaderFor, parseNameStatus, readPackageJson, type DependencyDiff} from './decisions';
 
 const pkg = (deps: Record<string, string>, dev: Record<string, string> = {}) => JSON.stringify({dependencies: deps, devDependencies: dev});
 const none: DependencyDiff = {added: [], removed: [], bumped: []};
@@ -65,4 +65,35 @@ describe('helpers', () => {
     ]);
   });
   test('parseNameStatus rejects a line it cannot read', () => expect(() => parseNameStatus('garbage')).toThrow('name-status'));
+});
+
+describe('layerMapChanged', () => {
+  const map = JSON.stringify({layers: [{name: 'a'}]});
+  const cases: [string, string | null, string | null, boolean][] = [
+    ['identical content', map, map, false],
+    ['reformatted content', map, JSON.stringify({layers: [{name: 'a'}]}, null, 2), false],
+    ['reordered keys', '{"a":1,"b":2}', '{"b":2,"a":1}', false],
+    ['a changed layer', map, JSON.stringify({layers: [{name: 'b'}]}), true],
+    ['a new map', null, map, true],
+    ['a deleted map', map, null, true],
+    ['no map either side', null, null, false],
+    ['non-JSON text that differs', 'x', 'y', true],
+  ];
+  for (const [name, before, after, expected] of cases) test(name, () => expect(layerMapChanged(before, after)).toBe(expected));
+});
+
+describe('diffAgainstMoved', () => {
+  const pkg = (deps: Record<string, string>) => JSON.stringify({dependencies: deps});
+  test('a moved manifest with the same dependencies adds none', () => {
+    expect(diffAgainstMoved(pkg({a: '1'}), [pkg({a: '1'})], readPackageJson).added).toEqual([]);
+  });
+  test('a moved manifest with a new dependency adds that one', () => {
+    expect(diffAgainstMoved(pkg({a: '1', b: '1'}), [pkg({a: '1'})], readPackageJson).added).toEqual(['b']);
+  });
+  test('with no deleted manifest every dependency is added', () => {
+    expect(diffAgainstMoved(pkg({a: '1'}), [], readPackageJson).added).toEqual(['a']);
+  });
+  test('picks the deleted manifest it matches best', () => {
+    expect(diffAgainstMoved(pkg({a: '1'}), [pkg({z: '1'}), pkg({a: '1'})], readPackageJson).added).toEqual([]);
+  });
 });

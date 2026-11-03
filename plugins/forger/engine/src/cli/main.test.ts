@@ -158,8 +158,11 @@ describe('check docs', () => {
 
 describe('check decisions', () => {
   test('fails on a layer map change with no ADR; an ADR in the diff passes', async () => {
-    process.chdir(projectWith({}));
-    const run = (extra: string): CommandRunner => cmd => (cmd.startsWith('git merge-base') ? 'abc' : cmd.startsWith('git diff') ? `M\t.forger/architecture.json${extra}` : '');
+    const root = projectWith({});
+    writeFileSync(join(root, '.forger', 'architecture.json'), '{"layers":["b"]}');
+    process.chdir(root);
+    const run = (extra: string): CommandRunner => cmd =>
+      cmd.startsWith('git merge-base') ? 'abc' : cmd.startsWith('git diff') ? `M\t.forger/architecture.json${extra}` : cmd.startsWith('git show') ? '{"layers":["a"]}' : '';
     const bad = await capture(['check', 'decisions', '--json'], run(''));
     expect(JSON.parse(bad).map((f: {rule: string}) => f.rule)).toEqual(['layer-map-without-adr']);
     expect(process.exitCode).toBe(1);
