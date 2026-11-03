@@ -9,6 +9,9 @@ the skill slots a project can plug its own skills into.
   reads the pack directories and hashes the files it records.
 - `setup.ts` - installs the chosen packs into a project, never overwriting.
   Writes files.
+- `upgrade.ts` - `setup --upgrade`: the pure classifier over the lock, disk and
+  pack hashes, and the shell that applies it. Never overwrites a file whose
+  hash differs from the lock. Writes files.
 - `skills.ts` - resolving each slot to a configured skill or its built-in
   fallback; reads presets and the installed skills.
 

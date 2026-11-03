@@ -47,6 +47,21 @@ and reports each file as `written` or `kept`; a second run writes nothing. The f
 come from opinion packs (`--packs`, default `base`), and `.claude/forger.lock.json`
 records what was installed.
 
+## Upgrading
+
+When `.claude/forger.lock.json` already exists, the repo is set up and the job is
+an upgrade, not an install:
+```
+bun "${CLAUDE_PLUGIN_ROOT}/bin/work.ts" setup --upgrade --json
+```
+The tool classifies each installed file by comparing the lock, the disk and the
+pack: untouched files take the new version, refined files are kept, new files are
+installed, and nothing is deleted. Relay the report. For each path in `review`:
+a `conflict` has the pack's version beside it as `<file>.upstream` - show the
+difference and ask the owner whether to merge, keep theirs or take the pack's;
+a `removed` or `deleted` file only needs mentioning. Once the owner has decided,
+delete the `.upstream` file. Do not decide a conflict yourself.
+
 ## 3. Label
 
 When the tracker is `github`: create the intake label if missing:
