@@ -146,7 +146,8 @@ The process is working when, over time:
 
 Each of these comes from a command over the engine's state, the logs and CI, not
 from a number written in a doc. `measure --json` reports runs and failures by
-cause, the share of runs that were off-pick or declined, the terminal events,
+cause, the share of runs that were off-pick or declined, how often the verifier
+blocked a PR and how often a PR it passed later failed, the terminal events,
 and the time, budget cap and CI rounds per ticket,
 over all runs or the last N. `/forger:retro` runs it to find a cause, writes a
 rule record with `retro rule`, and drafts an upstream issue with the evidence

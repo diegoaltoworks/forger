@@ -4,7 +4,7 @@
  * events and CI's run list. Pure; the CLI gathers the inputs.
  */
 
-import type {TerminalEvent} from '../loop';
+import type {TerminalEvent, VerdictRecord} from '../loop';
 
 export type Cause = 'ok' | 'timeout' | 'signal' | 'nonzero_exit' | 'unreadable';
 
@@ -41,6 +41,15 @@ export interface Measures {
   runs: {total: number; ok: number; failed: number; by_cause: Record<string, number>};
   /** Share of runs in the window by how they related to the engine's pick; 0 when there are no runs. */
   pick: {off_pick: number; off_pick_share: number; declined: number; declined_share: number};
+  /** How the verifier's verdicts held up (ADR 0010), over the tickets in the window. */
+  verification: {
+    verified: number;
+    blocked: number;
+    blocked_share: number;
+    passed: number;
+    passed_then_failed: number;
+    passed_then_failed_share: number;
+  };
   events: Record<string, number>;
   tickets: TicketMeasure[];
   ci_rounds_unmatched: Record<string, number>;
@@ -99,8 +108,47 @@ export interface MeasureInputs {
   budgets: BudgetRecord[];
   events: TerminalEvent[];
   ciRuns: CiRun[];
+  /** The verdict records `verify` left; absent reads as none. */
+  verdicts?: VerdictRecord[];
   /** Only the most recent N iterations; null = all. */
   last: number | null;
+}
+
+/** Statuses of a run that failed after its PR was verified. */
+const LATER_FAILURES: readonly string[] = ['merged-red', 'failed', 'error'];
+
+/**
+ * A PR counts once however many rounds it took. `blocked`: some round did not
+ * pass. `passed_then_failed`: a round passed and a run of that ticket then
+ * ended in a failure status.
+ */
+export function verificationMeasures(verdicts: VerdictRecord[], iterations: IterationRecord[]): Measures['verification'] {
+  const tickets = new Set(iterations.flatMap(it => (it.ticket === null ? [] : [it.ticket])));
+  const failedTickets = new Set(iterations.filter(it => it.ticket !== null && it.status !== null && LATER_FAILURES.includes(it.status)).map(it => it.ticket));
+  const byPr = new Map<number, VerdictRecord[]>();
+  for (const r of verdicts) {
+    if (!tickets.has(r.ticket)) continue;
+    byPr.set(r.pr, [...(byPr.get(r.pr) ?? []), r]);
+  }
+  let blocked = 0;
+  let passed = 0;
+  let passedThenFailed = 0;
+  for (const records of byPr.values()) {
+    if (records.some(r => r.decision !== 'pass')) blocked += 1;
+    if (records.some(r => r.decision === 'pass')) {
+      passed += 1;
+      if (failedTickets.has(records[0].ticket)) passedThenFailed += 1;
+    }
+  }
+  const verified = byPr.size;
+  return {
+    verified,
+    blocked,
+    blocked_share: verified === 0 ? 0 : blocked / verified,
+    passed,
+    passed_then_failed: passedThenFailed,
+    passed_then_failed_share: passed === 0 ? 0 : passedThenFailed / passed,
+  };
 }
 
 export function computeMeasures(inputs: MeasureInputs): Measures {
@@ -151,6 +199,7 @@ export function computeMeasures(inputs: MeasureInputs): Measures {
     window: {last: inputs.last, iterations: windowed.length},
     runs: {total: windowed.length, ok: windowed.length - failed, failed, by_cause: byCause},
     pick: {off_pick: offPick, off_pick_share: share(offPick), declined: declinedRuns, declined_share: share(declinedRuns)},
+    verification: verificationMeasures(inputs.verdicts ?? [], windowed),
     events,
     tickets: [...perTicket.values()],
     ci_rounds_unmatched: unmatched,
@@ -166,6 +215,7 @@ export function formatMeasures(m: Measures): string {
   const lines = [
     `runs: ${m.runs.total} (ok ${m.runs.ok}, failed ${m.runs.failed}${causes ? `: ${causes}` : ''})`,
     `pick: off-pick ${pct(m.pick.off_pick_share)} (${m.pick.off_pick}), declined ${pct(m.pick.declined_share)} (${m.pick.declined})`,
+    `verification: blocked ${pct(m.verification.blocked_share)} (${m.verification.blocked} of ${m.verification.verified}), passed then failed ${pct(m.verification.passed_then_failed_share)} (${m.verification.passed_then_failed} of ${m.verification.passed})`,
     `events: ${Object.entries(m.events).map(([k, v]) => `${k} ${v}`).join(', ') || 'none'}`,
     'tickets:',
     ...m.tickets.map(

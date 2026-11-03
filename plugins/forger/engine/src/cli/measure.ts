@@ -1,7 +1,7 @@
 import {existsSync, readdirSync, readFileSync} from 'fs';
 import {join} from 'path';
 
-import {readEvents} from '../loop';
+import {readAllVerdicts, readEvents} from '../loop';
 import {computeMeasures, formatMeasures, parseBudgets, parseIterationLog, type CiRun, type IterationRecord} from '../supervisor';
 import type {Command} from './command';
 
@@ -29,6 +29,7 @@ export const measure: Command = {
     const measures = computeMeasures({
       iterations,
       budgets: existsSync(workLog) ? parseBudgets(readFileSync(workLog, 'utf-8')) : [],
+      verdicts: readAllVerdicts(join(projectRoot, config.paths.verdicts)),
       events: readEvents(join(projectRoot, config.paths.events)),
       ciRuns,
       last: values.last === undefined ? null : parseInt(values.last, 10),

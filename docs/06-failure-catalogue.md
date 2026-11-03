@@ -104,6 +104,23 @@ recovered, and where the lasting fix belongs: **E** the engine, **S** a skill
   share of runs that were off-pick and the share declined over a window, so a
   rise in either shows up before it costs a ticket.
 
+### A worker certifies its own acceptance
+
+- **Seen:** the worker built a change, reviewed it in its own context and ticked
+  the acceptance boxes; nothing independent checked that each criterion held.
+  Gates and CI proved the code compiled and its tests passed, not that the
+  ticket's words were met.
+- **Cause:** "done" was a decision the model made about its own work.
+- **Fix:** E (in place): `verify --pr <n>` runs a fresh-context verifier on the
+  PR's head and records a verdict per criterion; `merge` refuses without a
+  passing verdict for the current head, `handover` bounds the rounds and hands
+  the criteria at fault to the owner, and a merge with no passing verdict is
+  `unverified` and halts the loop. A criterion bound to a satisfied spec
+  requirement with `[spec:ID]` is decided by the spec check and never reaches
+  the verifier. Check: `measure --json` reports how often the verifier blocked
+  a PR and how often a PR it passed later failed, so a verifier that earns
+  nothing, or passes what breaks, shows up. See ADR 0010.
+
 ### A timed-out run leaves an empty log
 
 - **Seen:** a run far past its timeout went unnoticed because its log held
