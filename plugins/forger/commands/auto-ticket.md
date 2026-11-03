@@ -30,9 +30,11 @@ each. Resolve them once, up front:
 bun "${CLAUDE_PLUGIN_ROOT}/bin/work.ts" skills --json
 ```
 
-For a slot, when `use` is `skill`, invoke the skill named in `skill` and let it
-do that step. When `use` is `builtin`, do the step yourself as written here, as
-you also do when the tool fails. Never name or choose a skill yourself.
+For a slot, read `invoke`. `skill`: invoke the skill named in `skill`. `file`:
+read the file at `path` and follow it. `builtin`: do the step yourself as written
+here, as you also do when the tool fails. Start every `skill` or `file` slot
+with the report's `preamble`, verbatim, and never invoke a skill listed in
+`forbid`. Never name or choose a skill yourself.
 
 Slots used here: `test_first` (step 4), `diagnose` (step 5), `review` (step 6)
 and `merge_conflicts` (step 8).

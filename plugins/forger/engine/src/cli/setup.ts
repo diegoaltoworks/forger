@@ -1,5 +1,5 @@
 import {ensureLabels} from '../loop';
-import {loadConfig} from '../config';
+import {loadConfig, type SkillMapping} from '../config';
 import {findHarness} from '../adapters';
 import {formatSetup, formatUpgrade, loadPresets, offerPresets, parsePackList, runSetup, runUpgrade} from '../packs';
 import type {Command, CommandContext} from './command';
@@ -42,7 +42,7 @@ export const setup: Command = {
       }
       return;
     }
-    let skills: Record<string, string> | undefined;
+    let skills: Record<string, SkillMapping> | undefined;
     if (values.preset) {
       const preset = loadPresets(pluginRoot).find(p => p.name === values.preset);
       if (!preset) {
