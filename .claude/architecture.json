@@ -9,5 +9,6 @@
     "tests": ["core", "adapters", "cli"],
     "adapters": ["core"],
     "cli": ["core", "adapters"]
-  }
+  },
+  "modules": {"paths": ["plugins/forger/engine/src/*"], "entry": "index.ts"}
 }

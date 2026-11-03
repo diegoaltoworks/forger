@@ -4,6 +4,7 @@ import {tmpdir} from 'os';
 import {join} from 'path';
 
 import {ARCH_OPINION} from './arch';
+import {MODULE_README_OPINION, PUBLIC_ENTRY_OPINION} from './modules';
 import {runArchCheck} from './arch-check';
 import {loadPacks} from '../../packs';
 
@@ -60,11 +61,28 @@ describe('runArchCheck', () => {
   });
 });
 
+describe('runArchCheck modules', () => {
+  test('reports a missing README and an internal import', () => {
+    const root = repo({
+      '.claude/architecture.json': JSON.stringify({layers: [], modules: {paths: ['src/*']}}),
+      'src/a/index.ts': '',
+      'src/a/inner.ts': '',
+      'src/b/index.ts': "import '../a/inner';",
+      'src/b/README.md': '',
+    });
+    const out = runArchCheck(root, () => 'src/a/index.ts\nsrc/a/inner.ts\nsrc/b/index.ts\nsrc/b/README.md');
+    expect(out.map(f => [f.file, f.opinion])).toEqual([
+      ['src/a/README.md', MODULE_README_OPINION],
+      ['src/b/index.ts', PUBLIC_ENTRY_OPINION],
+    ]);
+  });
+});
+
 describe('the shipped architecture pack', () => {
   const pack = loadPacks(join(import.meta.dir, '..', '..', '..', '..')).find(p => p.manifest.id === 'architecture')!;
 
   test('declares the dependency rule as the opinion the check emits', () => {
-    expect(pack.manifest.opinions.filter(o => o.check === 'arch').map(o => o.id)).toEqual([ARCH_OPINION]);
+    expect(pack.manifest.opinions.filter(o => o.check === 'arch').map(o => o.id)).toEqual([ARCH_OPINION, MODULE_README_OPINION, PUBLIC_ENTRY_OPINION]);
   });
 
   test('the starter layer map parses and passes', () => {

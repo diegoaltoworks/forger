@@ -20,6 +20,15 @@ export interface ArchConfig {
   layers: Layer[];
   /** layer -> other layers it may import; a layer may always import itself. */
   allow: Record<string, string[]>;
+  /** Optional: folders that are modules, each with a README and one entry file the rest of the code imports through. */
+  modules?: ModuleConfig;
+}
+
+export interface ModuleConfig {
+  /** Globs matching module folders, e.g. `src/*` or `src/*\/`; a trailing slash is allowed. */
+  paths: string[];
+  /** File inside a module that other modules import through. */
+  entry: string;
 }
 
 export class ArchConfigError extends Error {
@@ -63,7 +72,19 @@ export function parseArchConfig(text: string): ArchConfig {
     allow[from] = strings(to, `allow.${from}`);
     for (const t of allow[from]) if (!names.includes(t)) throw new ArchConfigError(`allow.${from} names unknown layer ${t}`);
   }
-  return {layers, allow};
+  const modules = parseModules(obj.modules);
+  return modules ? {layers, allow, modules} : {layers, allow};
+}
+
+function parseModules(raw: unknown): ModuleConfig | undefined {
+  if (raw === undefined) return undefined;
+  if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) throw new ArchConfigError('"modules" must be an object');
+  const m = raw as Record<string, unknown>;
+  const entry = m.entry ?? 'index.ts';
+  if (typeof entry !== 'string' || entry.trim() === '' || entry.includes('/')) {
+    throw new ArchConfigError('modules.entry must be a file name without a slash');
+  }
+  return {paths: strings(m.paths, 'modules.paths').map(p => p.replace(/\/+$/, '')), entry: entry.trim()};
 }
 
 /** The first layer whose globs match; a file in no layer is not constrained. */
