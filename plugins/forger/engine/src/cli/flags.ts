@@ -19,6 +19,7 @@ export const FLAGS = {
   reason: {type: 'string'},
   detail: {type: 'string'},
   pr: {type: 'string'},
+  list: {type: 'boolean'},
   summary: {type: 'boolean', default: false},
   preset: {type: 'string'},
   packs: {type: 'string'},

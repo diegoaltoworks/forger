@@ -91,4 +91,11 @@ describe('report', () => {
     const text = formatReport(buildReport({status: s, plan: orient({...base, status: s}), branch: 'main', baseBranch: 'main'}));
     for (const h of ['**Merged**', '**In progress**', '**Next**', '**Waiting on you**']) expect(text).toContain(h);
   });
+  test('handed-over tickets are listed with the criteria at fault', () => {
+    const s = status();
+    const handed = [{ticket: 'issue-9', pr: 3, rounds: 2, open: [{criterion: 'c2', verdict: 'cannot_tell' as const}], reword: []}];
+    const r = buildReport({status: s, plan: orient({...base, status: s}), branch: 'main', baseBranch: 'main', handedOver: handed});
+    expect(r.handed_over).toEqual([{ticket: 'issue-9', pr: 3, criteria: ['c2 cannot_tell']}]);
+    expect(formatReport(r)).toContain('issue-9 (PR #3): c2 cannot_tell');
+  });
 });

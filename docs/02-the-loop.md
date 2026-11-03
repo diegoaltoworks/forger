@@ -162,6 +162,17 @@ read, or breaks the validator's rules, is recorded `cannot_tell` for every
 criterion. The record sits in `verdicts/` keyed by the PR and its head commit,
 so a later push leaves it stale. The command exits 1 unless every criterion is met.
 
+## Bounding the verify loop
+
+`handover --pr <n> --json` reads the PR's verdict records and says the next move.
+A round is one record. A passing latest record means merge. Otherwise the worker
+fixes and verifies again while rounds remain (`limits.maxVerifyRounds`). Once they
+are spent the command labels the issue `needs-human`, takes it out of the backlog,
+comments each unmet or unclear criterion, and exits 1; the run ends as a recorded
+failure. A criterion judged `cannot_tell` in more than one round is called out in
+the comment as one to reword or make mechanical. `handover --list` reports the
+tickets handed over, with the criteria at fault.
+
 ## Invariants
 
 - One engine at a time, checked before every start.
