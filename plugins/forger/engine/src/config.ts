@@ -58,6 +58,11 @@ export interface WorkloopConfig {
    * with the files the engine owns (`paths`). A directory covers what is under it.
    */
   local_only: string[];
+  /**
+   * Skill slot -> installed skill name. An unmapped slot, or a skill that is not
+   * installed, uses forger's built-in step. `skills --json` resolves it.
+   */
+  skills: Record<string, string>;
 }
 
 /**
@@ -76,6 +81,7 @@ export interface WorkloopConfigInput {
   paths?: Partial<WorkloopConfig['paths']>;
   tracker?: Partial<WorkloopConfig['tracker']>;
   local_only?: string[];
+  skills?: Record<string, string>;
 }
 
 export const DEFAULT_CONFIG: WorkloopConfig = {
@@ -119,6 +125,7 @@ export const DEFAULT_CONFIG: WorkloopConfig = {
   },
   tracker: {kind: 'github', label: 'ready-for-agent', ignore: []},
   local_only: [],
+  skills: {},
 };
 
 /**
@@ -144,6 +151,7 @@ export function mergeConfig(
     limits: {...base.limits, ...(user.limits ?? {})},
     paths: {...base.paths, ...(user.paths ?? {})},
     tracker: {...base.tracker, ...(user.tracker ?? {})},
+    skills: {...base.skills, ...(user.skills ?? {})},
   };
 }
 

@@ -1,0 +1,11 @@
+{
+  "collection": "mattpocock-skills",
+  "description": "Maps the mattpocock-skills collection onto forger's skill slots. A slot the collection has no skill for is left unmapped and uses forger's built-in step.",
+  "skills": {
+    "interview": "mattpocock-skills:grilling",
+    "glossary": "mattpocock-skills:domain-modeling",
+    "test_first": "mattpocock-skills:tdd",
+    "review": "mattpocock-skills:code-review",
+    "diagnose": "mattpocock-skills:diagnosing-bugs"
+  }
+}

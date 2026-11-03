@@ -52,7 +52,9 @@ ticket's issue by assigning yourself; close it through the PR with
   issue numbers from other projects. Owner quotes are attributed to "the owner"
   with product nouns made generic ("a record", "a thing"). A local, untracked
   `.forger-denylist` lists terms that must never appear.
-- **No third-party skill collections.** Forger carries its own steps.
+- **No hard-coded third-party skills.** Forger carries its own steps. A command
+  or template reaches a skill only through a skill slot (`skills --json`); docs,
+  READMEs and presets may name skills as examples.
 - **Never wait with `pgrep -f` or `pkill -f` on a pattern that can match your own
   command line.** It hung a worker for a day and a half. Wait on a pid, or on a
   file.

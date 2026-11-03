@@ -26,10 +26,17 @@ know:
 - the **tracker** (`github` when `origin` is a GitHub remote and `gh` is
   authenticated, else `local`; say why).
 
+Then ask about skills. List the presets whose skill collection is installed:
+```
+bun "${CLAUDE_PLUGIN_ROOT}/bin/work.ts" skills --presets --json
+```
+For each one, offer to map it onto the skill slots; an empty list means ask
+nothing. The user can map slots by hand later in `.claude/workloop.config.json`.
+
 ## 2. Install
 
 ```
-bun "${CLAUDE_PLUGIN_ROOT}/bin/work.ts" setup --json --gates "<gates>" --base-branch "<branch>" --tracker "<kind>"
+bun "${CLAUDE_PLUGIN_ROOT}/bin/work.ts" setup --json --gates "<gates>" --base-branch "<branch>" --tracker "<kind>" [--preset "<name>"]
 ```
 
 The tool writes the config (with the docs check appended to the gates),

@@ -401,6 +401,26 @@
       "reuse": [
         "thirdPartySkills rule"
       ]
+    },
+    "bring_your_own_skills": {
+      "priority": "P1",
+      "status": "completed",
+      "type": "feature",
+      "depends_on": [
+        "setup_installs_opinions"
+      ],
+      "effort": "large",
+      "issue": 25,
+      "title": "Bring your own skills: pluggable skill slots, with a preset for a popular collection",
+      "description": "Named skill slots with built-in fallbacks, mapped to installed skills in the config and resolved by `skills --json`; a preset for one collection; the docs rule narrowed to hard-coded skill calls in commands and templates.",
+      "acceptance_criteria": [
+        "skills --json reports each slot",
+        "plan and auto-ticket resolve slots through the tool",
+        "preset exists and setup offers it",
+        "docs rule allows names in docs and presets",
+        "READMEs carry the section",
+        "gates green"
+      ]
     }
   }
 }

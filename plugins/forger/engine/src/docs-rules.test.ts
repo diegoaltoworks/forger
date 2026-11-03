@@ -65,6 +65,7 @@ describe('thirdPartySkills', () => {
   test('flags a collection name and skill-tool hooks', () => {
     expect(thirdPartySkills('install mattpocock-skills')).toEqual(['mattpocock']);
     expect(thirdPartySkills('call the Skill tool with "tdd"')).toHaveLength(1);
+    expect(thirdPartySkills('Skill with `coll:review`')).toHaveLength(1);
     expect(thirdPartySkills('use the matt pocock skills')).toHaveLength(1);
   });
   test('flags the collection tracker doc', () => {
@@ -79,15 +80,20 @@ describe('thirdPartySkills', () => {
   test('does not flag paths that merely contain triage', () => {
     expect(thirdPartySkills('src/triage/index.ts')).toEqual([]);
   });
+  test('a slot-based skill step is clean', () => {
+    expect(thirdPartySkills('invoke the skill that `skills --json` resolves for the review slot')).toEqual([]);
+  });
   test('plain prose is clean', () => {
     expect(thirdPartySkills('write the failing test first')).toEqual([]);
   });
   test('applies only to shipped prose', () => {
     expect(isShipped('plugins/forger/commands/plan.md')).toBe(true);
     expect(isShipped('plugins/forger/templates/process.md')).toBe(true);
-    expect(isShipped('plugins/forger/README.md')).toBe(true);
+    expect(isShipped('plugins/forger/README.md')).toBe(false);
     expect(isShipped('docs/07-roadmap.md')).toBe(false);
     expect(checkText('docs/a.md', 'mattpocock-skills')).toEqual([]);
+    expect(checkText('README.md', 'install mattpocock-skills, then call the Skill tool with "x:y"')).toEqual([]);
+    expect(checkText('plugins/forger/presets/a.json', '"mattpocock-skills:grilling"')).toEqual([]);
     expect(checkText('plugins/forger/commands/a.md', 'mattpocock-skills').map(v => v.rule)).toEqual(['third-party-skills']);
   });
 });

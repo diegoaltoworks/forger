@@ -20,10 +20,13 @@ const EMAIL = /[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,}
 const HOME_PATH = /(?:\/home\/|\/Users\/)[A-Za-z0-9._-]+/g;
 
 const THIRD_PARTY_SKILLS =
-  /matt-?\s?pocock|\bSkill tool\b|\bcall(?:s|ed)? the Skill\b|docs\/agents\/issue-tracker\.md|(?<![\w/])\/(?:to-tickets|triage)\b/gi;
+  /matt-?\s?pocock|\bSkill(?: tool)? with\s+["'`][\w:-]+["'`]|docs\/agents\/issue-tracker\.md|(?<![\w/])\/(?:to-tickets|triage)\b/gi;
 
-/** Shipped prose: what a project adopts or reads as instructions. */
-const SHIPPED = [/^plugins\/forger\/commands\//, /^plugins\/forger\/templates\//, /(^|\/)README\.md$/];
+/**
+ * Instruction prose: what the loop executes. It reaches a skill only through a
+ * slot (`skills --json`). READMEs, docs and presets may name skills as examples.
+ */
+const SHIPPED = [/^plugins\/forger\/commands\//, /^plugins\/forger\/templates\//];
 
 export function isShipped(file: string): boolean {
   return SHIPPED.some(r => r.test(file));
@@ -48,7 +51,7 @@ export function parseDenylist(text: string): string[] {
     .filter(l => l !== '' && !l.startsWith('#'));
 }
 
-/** Forger carries its own steps: shipped prose never hooks another skill collection. */
+/** Instruction prose never hard-codes a skill call or names a skill collection. */
 export const thirdPartySkills: LineRule = line => line.match(THIRD_PARTY_SKILLS) ?? [];
 
 export function denylist(terms: string[]): LineRule {

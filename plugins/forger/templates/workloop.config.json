@@ -25,5 +25,6 @@
     "lock": ".claude/runner.lock",
     "events": ".claude/events.jsonl"
   },
+  "skills": {},
   "tracker": { "kind": "github", "label": "ready-for-agent", "ignore": ["wayfinder:*"] }
 }

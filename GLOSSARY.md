@@ -35,3 +35,7 @@ _Avoid_: PRD, queue
 **Work order**:
 The owner's current priority, written by the supervisor, read by every worker first.
 _Avoid_: inbox, brief
+
+**Skill slot**:
+A named point where a model does judgement work, with a built-in forger step that an installed skill can replace through the `skills` section of the config.
+_Avoid_: hook, plugin point

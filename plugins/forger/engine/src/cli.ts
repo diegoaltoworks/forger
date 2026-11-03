@@ -4,6 +4,7 @@
  */
 
 import {existsSync} from 'fs';
+import {homedir} from 'os';
 import {dirname, join, resolve} from 'path';
 import {parseArgs} from 'util';
 
@@ -15,6 +16,7 @@ import {runDocsCheck} from './docs-check';
 import {formatViolations} from './docs-rules';
 import {AutomationRunner} from './runner';
 import {formatSetup, runSetup} from './setup';
+import {formatSkills, listInstalledSkills, loadPresets, offerPresets, resolveSkills} from './skills';
 
 /** Nearest ancestor directory containing a `.claude` folder. */
 export function findProjectRoot(start: string = process.cwd()): string {
@@ -33,8 +35,11 @@ Usage (run from the consumer repo root):
   run [N]          Run N iterations (default: 1)
   run --continuous Run until all tasks complete
   status [--json] Show current status, runner pid and liveness
-  setup [--json] [--gates CMD] [--base-branch B] [--tracker KIND]
+  setup [--json] [--gates CMD] [--base-branch B] [--tracker KIND] [--preset NAME]
                    Install forger's default files into .claude/, never overwriting
+  skills [--json] [--presets]
+                   Resolve each skill slot to its configured skill and the built-in fallback;
+                   --presets lists the presets whose skill collection is installed
   check docs [--json] Fail on non-ASCII punctuation, emails, home paths, denylist terms
   backlog [--json] Workable tickets in order, remaining count and next pick
   reset            Reset state to start fresh
@@ -56,7 +61,7 @@ Config: .claude/workloop.config.json in the consumer repo (see plugin README).
 
 export async function main(
   argv: string[] = process.argv.slice(2),
-  deps: {run?: CommandRunner} = {}
+  deps: {run?: CommandRunner; installedSkills?: () => string[]} = {}
 ): Promise<void> {
   const {values, positionals} = parseArgs({
     args: argv,
@@ -67,6 +72,8 @@ export async function main(
       gates: {type: 'string'},
       'base-branch': {type: 'string'},
       tracker: {type: 'string'},
+      preset: {type: 'string'},
+      presets: {type: 'boolean', default: false},
       help: {type: 'boolean', short: 'h', default: false},
     },
     allowPositionals: true,
@@ -78,13 +85,27 @@ export async function main(
   }
 
   const command = positionals[0] || 'status';
+  const pluginRoot = resolve(import.meta.dir, '../..');
+  const installedSkills = deps.installedSkills ?? (() => listInstalledSkills(homedir(), process.cwd()));
   if (command === 'setup') {
-    const result = runSetup(process.cwd(), resolve(import.meta.dir, '../..'), {
+    let skills: Record<string, string> | undefined;
+    if (values.preset) {
+      const preset = loadPresets(pluginRoot).find(p => p.name === values.preset);
+      if (!preset) {
+        console.error(`Unknown preset: ${values.preset}`);
+        process.exitCode = 1;
+        return;
+      }
+      skills = preset.skills;
+    }
+    const result = runSetup(process.cwd(), pluginRoot, {
       gates: values.gates,
       baseBranch: values['base-branch'],
       trackerKind: values.tracker,
+      skills,
     });
-    console.log(values.json ? JSON.stringify(result) : formatSetup(result));
+    const offered = offerPresets(loadPresets(pluginRoot), installedSkills());
+    console.log(values.json ? JSON.stringify({...result, presets: offered.map(p => p.name)}) : formatSetup(result, offered.map(p => p.name)));
     return;
   }
   const projectRoot = findProjectRoot();
@@ -100,6 +121,14 @@ export async function main(
     return;
   }
   const config = loadConfig(projectRoot);
+  if (command === 'skills') {
+    const installed = installedSkills();
+    const out = values.presets ? offerPresets(loadPresets(pluginRoot), installed) : resolveSkills(config.skills, installed);
+    if (values.json) console.log(JSON.stringify(out));
+    else if (values.presets) console.log((out as ReturnType<typeof offerPresets>).map(p => `${p.name}: ${p.description}`).join('\n') || 'no preset matches an installed skill collection');
+    else console.log(formatSkills(out as ReturnType<typeof resolveSkills>));
+    return;
+  }
   const backlog = openBacklog(projectRoot, config, deps.run);
   const runner = new AutomationRunner(projectRoot, config, backlog);
 

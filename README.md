@@ -22,6 +22,21 @@ anyone remembering it, and the process is measured by commands, not claims.
 | **Supervisor** | an interactive session with the owner | intake, ordering, dispatch, watching, verifying, reporting | `docs/04-supervising.md` |
 | **Refinement** | the supervisor, within the owner's approval policy | turns corrections, failures and friction into rules, templates, checks and tools | `docs/05-refining-the-process.md` |
 
+## Bring your own skills
+
+Forger depends on no skill collection, and it incorporates any you install. The
+points where a model does judgement work (interview, glossary, test-first,
+review, diagnosis, merge conflicts) are named **skill slots**. Each has a
+built-in forger step, and you map an installed skill onto a slot in the `skills`
+section of `.claude/workloop.config.json`. The commands never name a skill: they
+ask `skills --json` what each slot resolves to, and fall back to the built-in
+step when a slot is unmapped or its skill is missing.
+
+The mattpocock-skills collection is the worked example: a ready-made preset maps
+it onto the slots, and `/forger:setup` offers it when the collection is
+installed. The slots, the config and the preset are described in
+[`plugins/forger/README.md`](plugins/forger/README.md).
+
 ## Read in this order
 
 1. [`docs/01-principles.md`](docs/01-principles.md) - the few ideas everything else follows from.

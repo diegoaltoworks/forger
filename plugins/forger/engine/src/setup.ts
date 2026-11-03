@@ -10,6 +10,8 @@ export interface SetupOptions {
   gates?: string;
   baseBranch?: string;
   trackerKind?: string;
+  /** Skill slots to map, from a preset. */
+  skills?: Record<string, string>;
 }
 
 export interface SetupEntry {
@@ -58,6 +60,7 @@ export function renderConfig(template: string, opts: SetupOptions, docsCheckComm
   };
   config.gates = withDocsCheck(opts.gates ?? config.gates, docsCheckCommand);
   if (opts.baseBranch) config.base_branch = opts.baseBranch;
+  if (opts.skills) config.skills = {...opts.skills};
   if (opts.trackerKind) config.tracker = {...config.tracker, kind: opts.trackerKind};
   return JSON.stringify(config, null, 2) + '\n';
 }
@@ -102,8 +105,9 @@ export function runSetup(projectRoot: string, pluginRoot: string, opts: SetupOpt
   return {files, gitignore: {added: merged.added, kept: merged.kept}};
 }
 
-export function formatSetup(result: SetupResult): string {
+export function formatSetup(result: SetupResult, offeredPresets: string[] = []): string {
   const lines = result.files.map(f => `${f.action.padEnd(7)} ${f.path}`);
   lines.push(...result.gitignore.added.map(l => `ignored ${l}`));
+  lines.push(...offeredPresets.map(p => `preset available: ${p} (setup --preset ${p})`));
   return lines.join('\n');
 }

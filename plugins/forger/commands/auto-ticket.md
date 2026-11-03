@@ -20,6 +20,22 @@ and `.claude/workloop.config.json`. Read them; do not assume another repo's rule
 
 The tracker settings are in `.claude/workloop.config.json`; its conventions are in `.claude/process.md`.
 
+## Skill slots
+
+Some steps below are skill slots: the project may plug an installed skill into
+each. Resolve them once, up front:
+
+```
+bun "${CLAUDE_PLUGIN_ROOT}/bin/work.ts" skills --json
+```
+
+For a slot, when `use` is `skill`, invoke the skill named in `skill` and let it
+do that step. When `use` is `builtin`, do the step yourself as written here, as
+you also do when the tool fails. Never name or choose a skill yourself.
+
+Slots used here: `test_first` (step 4), `diagnose` (step 5), `review` (step 6)
+and `merge_conflicts` (step 8).
+
 ## Read first (in order)
 1. `.claude/process.md` - the workflow rules and the **project gotchas** (REQUIRED)
 2. `.claude/workloop.config.json` - gates, base branch, model tiers, tracker
@@ -63,19 +79,21 @@ can supply, signal `stop`.
 - Separate files per concern where the codebase is organised that way - a new
   responsibility gets a new file, not a section bolted onto an existing one.
 - Work test-first from the ticket's acceptance criteria, at the highest existing
-  seam: write the failing test, make it pass, then refactor.
+  seam, in the `test_first` slot. Built-in: write the failing test, make it pass,
+  then refactor.
 - Pure logic must be pure and tested as such.
 
 ### 5. Quality gates (must all pass)
 Run the gate command from `workloop.config.json` (`gates`). Fix failures; do not
 proceed on red. If a gate is red for a reason you cannot see, make one honest
-diagnosis attempt: reproduce it, read the failing output, form one hypothesis and
-test it. If it is still red, signal `stop`.
+diagnosis attempt in the `diagnose` slot. Built-in: reproduce it, read the
+failing output, form one hypothesis and test it. If it is still red, signal `stop`.
 
 ### 6. Review pass
 A second pass is part of Done, not a nicety.
 
-Review your own diff (`git diff <base>...HEAD`) on two axes: **standards** - does
+Review the diff against the base in the `review` slot, with the ticket as the
+spec. Built-in: review your own diff (`git diff <base>...HEAD`) on two axes: **standards** - does
 it follow this repo's documented standards and the patterns around it; and
 **spec** - does it do exactly what the ticket asked (the ticket's issue, or its
 body in `backlog.json`), nothing missing, nothing extra. If `process.md` names a
@@ -115,8 +133,8 @@ gh pr merge --squash --delete-branch    # after CI is green
 the merge does it, no extra call. Clean commit messages only - no AI
 attribution, no Co-Authored-By. If `gh` is unavailable, squash-merge locally to
 the base branch, push, and close the issue with `gh issue close` if you can.
-If the merge conflicts, resolve it by hand and re-run the gates; never `--abort`
-and walk away from a green ticket.
+If the merge conflicts, resolve it in the `merge_conflicts` slot (built-in: by
+hand) and re-run the gates; never `--abort` and walk away from a green ticket.
 
 ### 9. Completion signal
 End your response with exactly one:
