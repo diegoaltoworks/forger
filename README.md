@@ -37,16 +37,17 @@ pull request: the workflow's step is the `gates` command from
 `.claude/workloop.config.json`, verbatim, and a test fails if the two drift
 apart. The job summary lists each check with the opinion ids it enforces,
 whether it passed, failed or was waived, and the waivers in force, so a reader
-sees which opinions hold, not just a green tick. The worker merges only when
-`facts --json --pr <n>` says the PR's checks allow it.
+sees which opinions hold, not just a green tick. The worker merges only through
+`merge --pr <n>`, which waits for every check to finish and refuses a red PR;
+a merge that lands on red anyway halts the loop.
 
 ```mermaid
 flowchart LR
     A[worker: builds the ticket] --> B{{tool: gates, locally}}
     B --> C{{tool: push and PR}}
     C --> D{{tool: the same gates in CI}}
-    D --> E{{tool: facts --json, checks_ok}}
-    E --> F{{tool: squash merge}}
+    D --> E{{tool: merge --pr, waits for every check}}
+    E --> F{{tool: squash merge, only when all passed}}
     D -. failure .-> G[worker: reads the log, fixes the cause]
     G --> B
 ```

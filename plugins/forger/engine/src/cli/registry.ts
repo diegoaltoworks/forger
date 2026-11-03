@@ -11,6 +11,7 @@ import {awaitEventCommand, events} from './events';
 import {facts} from './facts';
 import {halt, reset, resume, run, status, watch} from './loop';
 import {measure} from './measure';
+import {merge} from './merge';
 import {opinions, packs} from './packs';
 import {retro} from './retro';
 import {screenshot} from './screenshot';
@@ -31,6 +32,7 @@ export const COMMANDS: Command[] = [
   orient,
   report,
   facts,
+  merge,
   approval,
   events,
   awaitEventCommand,

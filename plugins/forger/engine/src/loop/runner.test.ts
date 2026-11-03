@@ -27,6 +27,8 @@ interface GitScene {
   /** The branch the worker checks out during the run. */
   branch?: string;
   pushed?: boolean;
+  /** The conclusion of the branch PR's one check; the PR reads merged when `merge` is set. */
+  prCheck?: string;
 }
 
 /**
@@ -43,6 +45,13 @@ function sceneRunner(scene: GitScene, spawned: () => boolean) {
       return after && scene.branch
         ? `checkout: moving from ${scene.branch} to main\ncheckout: moving from main to ${scene.branch}\nold`
         : 'old';
+    }
+    if (scene.branch && scene.prCheck && cmd === `gh pr view ${scene.branch} --json number,state,mergedAt,statusCheckRollup`) {
+      return JSON.stringify({
+        number: 75,
+        state: after && scene.merge ? 'MERGED' : 'OPEN',
+        statusCheckRollup: [{__typename: 'CheckRun', name: 'gates', status: 'COMPLETED', conclusion: scene.prCheck}],
+      });
     }
     if (scene.branch && cmd === `git ls-remote --heads origin ${scene.branch}`) {
       return scene.pushed ? 'ccc' : '';
@@ -193,6 +202,32 @@ describe('AutomationRunner outcome from facts', () => {
     expect(state.stall_count).toBe(1);
     expect(state.last_error).toContain('"the_ticket" reads completed in the backlog but nothing merged');
     expect(existsSync(join(root, '.claude', 'HALT'))).toBe(true);
+  });
+
+  test('a merge on failing checks halts as merged_red and never counts as completed', async () => {
+    const {runner, root} = runnerWith(
+      {exitCode: 0, signal: null, output: '<process>complete</process>', timedOut: false},
+      {merge: true, branch: 'feat/the_ticket', prCheck: 'FAILURE'},
+      done
+    );
+    expect(await runner.runIteration(1)).toBe(false);
+    const state = readState(root);
+    expect(state.status).toBe('halted');
+    expect(state.completed_tasks).toEqual([]);
+    expect(state.last_error).toBe('PR #75 merged into main with failing check: gates. main may be red; fix it before more work lands.');
+    expect(existsSync(join(root, '.claude', 'HALT'))).toBe(true);
+    const events = readFileSync(join(root, '.claude', 'events.jsonl'), 'utf-8').trim().split('\n').map(l => JSON.parse(l));
+    expect(events.map(e => e.event)).toEqual(['merged_red']);
+  });
+
+  test('a merge on passing checks is a success', async () => {
+    const {runner, root} = runnerWith(
+      {exitCode: 0, signal: null, output: '<process>complete</process>', timedOut: false},
+      {merge: true, branch: 'feat/the_ticket', prCheck: 'SUCCESS'},
+      done
+    );
+    expect(await runner.runIteration(1)).toBe(true);
+    expect(readState(root).completed_tasks).toEqual(['the_ticket']);
   });
 
   test('stalls by merges: runs without a merge halt the loop', async () => {

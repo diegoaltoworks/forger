@@ -7,7 +7,7 @@ terms) over every tracked text file.
 ## Files
 
 - `docs-rules.ts`, `docs-content.ts` - the rules. Pure.
-- `docs-check.ts` - reads the tracked files and the denylist. Touches the world.
+- `docs-check.ts` - reads the project files and the denylist. Touches the world.
 
 ## Entry point
 

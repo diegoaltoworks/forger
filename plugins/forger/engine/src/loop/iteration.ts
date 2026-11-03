@@ -191,7 +191,7 @@ function settle(
   }
 
   if (outcome.halt) {
-    ctx.halt(outcome.halt);
+    ctx.halt(outcome.halt, outcome.haltKind);
   } else if (stall.stalled) {
     const reason = `Stalled: nothing merged in ${maxStallIterations} iterations`;
     ctx.logger.log('ERROR', reason);

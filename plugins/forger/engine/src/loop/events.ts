@@ -8,6 +8,7 @@ import {appendFileSync, existsSync, readFileSync} from 'fs';
 
 export const TERMINAL_EVENTS = [
   'completed',
+  'merged_red',
   'halted',
   'stalled',
   'timed_out',

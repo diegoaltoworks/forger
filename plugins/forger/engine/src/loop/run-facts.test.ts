@@ -7,6 +7,15 @@ function stubRunner(answers: Record<string, string>): CommandRunner {
   return (cmd: string) => answers[cmd] ?? '';
 }
 
+function prJson(state: string, conclusion: string): string {
+  return JSON.stringify({
+    number: 9,
+    state,
+    mergedAt: state === 'MERGED' ? '2026-01-01T00:00:00Z' : null,
+    statusCheckRollup: [{__typename: 'CheckRun', name: 'gates', status: 'COMPLETED', conclusion}],
+  });
+}
+
 describe('branchFromReflog', () => {
   test('finds the newest branch HEAD moved to', () => {
     const subjects = [
@@ -75,12 +84,33 @@ describe('takeSnapshot and gatherFacts', () => {
           reflogBefore,
         ].join('\n'),
         'git branch --show-current': 'main',
-        'gh pr view feat/new --json state --jq .state': 'MERGED',
+        'gh pr view feat/new --json number,state,mergedAt,statusCheckRollup': prJson('MERGED', 'SUCCESS'),
+        'git ls-tree -r --name-only origin/main -- .github/workflows': '.github/workflows/ci.yml',
       }),
       'main',
       before
     );
-    expect(facts).toEqual({merged: true, branch: 'feat/new', pushed: false});
+    expect(facts).toEqual({
+      merged: true,
+      branch: 'feat/new',
+      pushed: false,
+      pr: {number: 9, state: 'MERGED', merged: true, checks: 'success', checks_ok: true, failing_checks: []},
+    });
+  });
+
+  test('a merge on failing checks carries the PR and the failing check', () => {
+    const facts = gatherFacts(
+      stubRunner({
+        'git rev-parse origin/main': 'aaa',
+        'git reflog --format=%gs': 'checkout: moving from main to feat/new',
+        'git branch --show-current': 'main',
+        'gh pr view feat/new --json number,state,mergedAt,statusCheckRollup': prJson('MERGED', 'FAILURE'),
+      }),
+      'main',
+      {baseSha: 'aaa', reflogLength: 0}
+    );
+    expect(facts.merged).toBe(true);
+    expect(facts.pr).toMatchObject({number: 9, checks: 'failure', checks_ok: false, failing_checks: ['gates']});
   });
 
   test('base moved by someone else while the worker\'s PR is open', () => {
@@ -90,7 +120,7 @@ describe('takeSnapshot and gatherFacts', () => {
         'git merge-base --is-ancestor aaa bbb && echo yes': 'yes',
         'git reflog --format=%gs': 'checkout: moving from main to feat/new',
         'git branch --show-current': 'feat/new',
-        'gh pr view feat/new --json state --jq .state': 'OPEN',
+        'gh pr view feat/new --json number,state,mergedAt,statusCheckRollup': prJson('OPEN', 'SUCCESS'),
       }),
       'main',
       {baseSha: 'aaa', reflogLength: 0}
@@ -109,7 +139,7 @@ describe('takeSnapshot and gatherFacts', () => {
       'main',
       {baseSha: 'aaa', reflogLength: 2}
     );
-    expect(facts).toEqual({merged: false, branch: 'feat/new', pushed: true});
+    expect(facts).toEqual({merged: false, branch: 'feat/new', pushed: true, pr: null});
   });
 
   test('does not attribute an older run\'s branch to this one', () => {
@@ -122,7 +152,7 @@ describe('takeSnapshot and gatherFacts', () => {
       'main',
       {baseSha: 'aaa', reflogLength: 2}
     );
-    expect(facts).toEqual({merged: false, branch: null, pushed: false});
+    expect(facts).toEqual({merged: false, branch: null, pushed: false, pr: null});
   });
 
   test('an unreadable remote base counts no merge', () => {

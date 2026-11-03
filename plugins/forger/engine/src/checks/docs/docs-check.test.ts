@@ -44,8 +44,24 @@ describe('runDocsCheck', () => {
   });
 
   test('scans only the files git lists', () => {
-    const root = repo({'a.md': 'ok', 'untracked.md': 'bad \u2014'});
+    const root = repo({'a.md': 'ok', 'ignored.md': 'bad \u2014'});
     expect(runDocsCheck(root, lister(['a.md']))).toEqual([]);
+  });
+
+  test('scans a new file before it is committed', () => {
+    const root = repo({'a.md': 'ok', 'new.md': 'bad \u2014'});
+    const run = (cmd: string) => (cmd === 'git ls-files --others --exclude-standard' ? 'new.md' : 'a.md');
+    expect(runDocsCheck(root, run).map(v => `${v.file}:${v.rule}`)).toEqual(['new.md:non-ascii']);
+  });
+
+  test('fails a raw gh pr merge in a command file, and only there', () => {
+    const merge = 'gh pr merge --squash --delete-branch\n';
+    const root = repo({'commands/ship.md': merge, '.claude/commands/ship.md': merge, 'docs/notes.md': merge});
+    const v = runDocsCheck(root, lister(['commands/ship.md', '.claude/commands/ship.md', 'docs/notes.md']));
+    expect(v.map(x => `${x.file}:${x.line}:${x.rule}:${x.opinion}`)).toEqual([
+      'commands/ship.md:1:raw-merge:base.merge-through-tool',
+      '.claude/commands/ship.md:1:raw-merge:base.merge-through-tool',
+    ]);
   });
 
   test('reads the denylist when present', () => {

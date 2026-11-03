@@ -44,7 +44,7 @@ describe('gatherLoopFacts', () => {
       clean: true,
       base_branch: 'main',
       origin_base_head: 'abc123',
-      issue: {number: 5, state: 'CLOSED', closing_pr: {number: 7, state: 'MERGED', merged: true, checks: 'success', checks_ok: true}},
+      issue: {number: 5, state: 'CLOSED', closing_pr: {number: 7, state: 'MERGED', merged: true, checks: 'success', checks_ok: true, failing_checks: []}},
     });
     expect(formatFacts(f)).toContain('PR #7 merged, checks success');
   });
@@ -95,7 +95,7 @@ describe('checksConclusion', () => {
 describe('gatherLoopFacts --pr', () => {
   test('reports a PR on its own, and no CI configured means none', () => {
     const f = gatherLoopFacts(stub({'gh pr view 8 --json number,state,mergedAt,statusCheckRollup': '{"number":8,"state":"OPEN","statusCheckRollup":[]}'}), {baseBranch: 'main', ignore: [], pr: 8});
-    expect(f.pr).toEqual({number: 8, state: 'OPEN', merged: false, checks: 'none', checks_ok: true});
+    expect(f.pr).toEqual({number: 8, state: 'OPEN', merged: false, checks: 'none', checks_ok: true, failing_checks: []});
     expect(f.issue).toBeUndefined();
     expect(formatFacts(f)).toContain('PR #8 open, checks none');
   });

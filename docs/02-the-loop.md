@@ -94,9 +94,11 @@ test per branch) turns them into a status.
 ```mermaid
 flowchart TD
     S[pick the next ticket] --> W[run one worker under a deadline]
-    W --> F[gather facts: base moved, branch pushed, backlog status, timeout, claim]
+    W --> F[gather facts: base moved, PR checks, branch pushed, backlog status, timeout, claim]
     F --> M{base branch moved?}
-    M -- yes --> OK[completed: success, failures reset]
+    M -- yes --> R{PR checks failing or pending?}
+    R -- yes --> MR[merged-red: failure, halt naming the PR and check]
+    R -- no --> OK[completed: success, failures reset]
     M -- no --> I{platform error?}
     I -- yes --> E[error: neutral, halt]
     I -- no --> D{backlog says completed?}
@@ -112,8 +114,11 @@ flowchart TD
     P -- no --> FN[failed: nothing happened]
 ```
 
-A merge is the only progress. Failures count toward a halt; a run that merged
-and then timed out is still a success, with a warning.
+A green merge is the only progress. Failures count toward a halt; a run that
+merged and then timed out is still a success, with a warning. A merge made on
+red or unfinished checks is never a success: the worker merges through
+`merge --pr <n>`, which waits for CI and refuses red, and a merge that got past
+it halts the loop.
 
 ## Invariants
 

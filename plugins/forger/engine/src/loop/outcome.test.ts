@@ -1,6 +1,7 @@
 import {describe, expect, test} from 'bun:test';
 
-import {type RunFacts, decideOutcome} from './outcome';
+import {type Outcome, type RunFacts, decideOutcome} from './outcome';
+import type {PrFact} from './pr-checks';
 
 const nothing: RunFacts = {
   merged: false,
@@ -17,7 +18,55 @@ const nothing: RunFacts = {
   backlogCompleted: false,
   unclean: null,
   infraError: null,
+  pr: null,
 };
+
+function pr(checks: PrFact['checks'], failing: string[] = []): PrFact {
+  return {number: 75, state: 'MERGED', merged: true, checks, checks_ok: checks === 'success' || checks === 'none', failing_checks: failing};
+}
+
+describe('decideOutcome on the PR checks of a merge', () => {
+  const cases: {name: string; facts: Partial<RunFacts>; status: Outcome['status']; result: Outcome['result']; halt: string | null}[] = [
+    {name: 'merged green', facts: {merged: true, pr: pr('success')}, status: 'completed', result: 'success', halt: null},
+    {name: 'merged on a repo without CI', facts: {merged: true, pr: pr('none')}, status: 'completed', result: 'success', halt: null},
+    {
+      name: 'merged red',
+      facts: {merged: true, pr: pr('failure', ['gates'])},
+      status: 'merged-red',
+      result: 'failure',
+      halt: 'PR #75 merged into main with failing check: gates. main may be red; fix it before more work lands.',
+    },
+    {
+      name: 'merged pending',
+      facts: {merged: true, pr: pr('pending')},
+      status: 'merged-red',
+      result: 'failure',
+      halt: 'PR #75 merged into main with checks still pending. main may be red; fix it before more work lands.',
+    },
+    {
+      name: 'not merged, checks failing',
+      facts: {merged: false, pr: {...pr('failure', ['gates']), state: 'OPEN', merged: false}},
+      status: 'failed',
+      result: 'failure',
+      halt: null,
+    },
+  ];
+  for (const c of cases) {
+    test(c.name, () => {
+      const o = decideOutcome({...nothing, claim: 'complete', backlogCompleted: false, ...c.facts});
+      expect(o.status).toBe(c.status);
+      expect(o.result).toBe(c.result);
+      expect(o.halt).toBe(c.halt);
+    });
+  }
+
+  test('a red merge is recorded as merged_red and names every failing check', () => {
+    const o = decideOutcome({...nothing, merged: true, claim: 'complete', backlogCompleted: true, pr: pr('failure', ['gates', 'lint'])});
+    expect(o.merged).toBe(true);
+    expect(o.haltKind).toBe('merged_red');
+    expect(o.error).toContain('failing checks: gates, lint');
+  });
+});
 
 describe('decideOutcome', () => {
   test('merged with a completion claim is a success', () => {

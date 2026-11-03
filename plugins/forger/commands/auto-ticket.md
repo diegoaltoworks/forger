@@ -89,6 +89,12 @@ proceed on red. If a gate is red for a reason you cannot see, make one honest
 diagnosis attempt in the `diagnose` slot. Built-in: reproduce it, read the
 failing output, form one hypothesis and test it. If it is still red, signal `stop`.
 
+Read the gate's exit status, not its last lines: a gate piped into `tail` or
+chained with `;` reports success whatever happened. A failing gate stops the
+push. Any edit after a gate run - a test, an import, a doc - makes that run
+stale: the gates run once more on the final tree, after the last edit and
+before the commit.
+
 ### 6. Review pass
 A second pass is part of Done, not a nicety.
 
@@ -127,24 +133,29 @@ git push -u origin feat/<ticket-id>     # FIRST - do not defer this
 gh pr create --title "feat: <summary>" --body "<what + how + gate results>
 
 Closes #<issue>" --base <base-branch>
-gh pr checks <pr> --watch               # block until every check finishes
-bun "${CLAUDE_PLUGIN_ROOT}/bin/work.ts" facts --json --pr <pr>
-gh pr merge --squash --delete-branch    # only when facts says checks_ok
+bun "${CLAUDE_PLUGIN_ROOT}/bin/work.ts" merge --pr <pr> --json
+git checkout <base-branch> && git pull
 ```
-**Never merge red.** The merge decision is `pr.checks_ok` in `facts --json`, not
-your reading of the watch output:
-- `success` - every check passed: merge.
-- `none` - the repo has no CI workflow; say so in the PR and rely on the local
-  gates.
-- `pending` - checks are not registered or not finished yet: watch again. If it
-  is still `pending` after a second watch, signal `stop`.
-- `failure` - read the failed job's log (`gh run view <run> --log-failed`), fix
-  the cause, re-run the gates locally, push, and watch again.
+**Never merge red, and never merge by hand.** `merge` waits for every check to
+finish, squash-merges only when all passed, and confirms the merge from the
+PR's state; it exits 1 when it refuses. Act on its JSON, not on your reading of
+CI:
+- `merged: true` - done. `checks: "none"` means the repo has no CI workflow; say
+  so in the PR, the local gates were the only assertion.
+- `checks: "failure"` - `failing_checks` names them. Read the failed job's log
+  (`gh run view <run> --log-failed`), fix the cause, re-run the gates locally,
+  push, and run `merge` again.
+- `checks: "pending"` - CI did not finish within the timeout: run `merge` once
+  more; if it refuses again, signal `stop`.
+
+The engine reads the merged PR's checks after the run. A ticket merged on
+failing or pending checks is recorded as `merged-red` and halts the loop: it
+never counts as completed.
 
 `Closes #<issue>` (when the ticket has one) is what closes the tracker issue:
 the merge does it, no extra call. Clean commit messages only - no AI
-attribution, no Co-Authored-By. If `gh` is unavailable, squash-merge locally to
-the base branch, push, and close the issue with `gh issue close` if you can.
+attribution, no Co-Authored-By. If `gh` is unavailable, signal `stop`: a merge
+that no tool has checked against CI is not one the loop makes.
 If the merge conflicts, resolve it in the `merge_conflicts` slot (built-in: by
 hand) and re-run the gates; never `--abort` and walk away from a green ticket.
 
