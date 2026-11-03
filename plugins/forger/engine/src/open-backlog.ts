@@ -8,7 +8,7 @@ import {join} from 'path';
 import type {Backlog} from './backlog';
 import type {WorkloopConfig} from './config';
 import {fileBacklog} from './file-backlog';
-import {type CommandRunner, execRunner} from './git';
+import {type CommandRunner, capturing, execCapture} from './git';
 import {githubBacklog} from './github-backlog';
 
 export type BacklogSource = 'github' | 'file';
@@ -23,6 +23,6 @@ export function openBacklog(
   run?: CommandRunner
 ): Backlog {
   return backlogSource(config) === 'github'
-    ? githubBacklog(run ?? execRunner(projectRoot), config)
+    ? githubBacklog(run ? capturing(run) : execCapture(projectRoot), config)
     : fileBacklog(join(projectRoot, config.paths.backlog), config);
 }

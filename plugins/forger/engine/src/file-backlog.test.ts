@@ -39,11 +39,13 @@ describe('fileBacklog', () => {
     expect(backlog.has('later')).toBe(true);
   });
 
-  test('re-reads the file on every call, so a worker edit is seen', () => {
+  test('reads the file once, and sees a worker edit on refresh', () => {
     const file = tempFile(JSON.stringify({features: {a: {status: 'not_started'}}}));
     const backlog = fileBacklog(file, config);
     expect(backlog.next()).toBe('a');
     writeFileSync(file, JSON.stringify({features: {a: {status: 'completed'}}}));
+    expect(backlog.next()).toBe('a');
+    backlog.refresh();
     expect(backlog.next()).toBeNull();
     expect(backlog.isCompleted('a')).toBe(true);
   });

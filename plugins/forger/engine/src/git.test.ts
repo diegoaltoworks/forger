@@ -1,6 +1,8 @@
 import {describe, expect, test} from 'bun:test';
 
-import {type CommandRunner, dirtyEntries, verifyMerged} from './git';
+import {tmpdir} from 'os';
+
+import {type CommandRunner, capturing, dirtyEntries, execCapture, execRunner, verifyMerged} from './git';
 
 /** A runner that answers each git command from a lookup, '' for anything else. */
 function stubRunner(answers: Record<string, string>): CommandRunner {
@@ -81,5 +83,31 @@ describe('verifyMerged with ignored paths', () => {
   });
   test('the same tree is dirty when nothing is ignored', () => {
     expect(verifyMerged(stubRunner(answers), 'main')).toBe('working tree is dirty');
+  });
+});
+
+describe('execCapture', () => {
+  const run = execCapture(tmpdir());
+
+  test('a success gives trimmed stdout and exit 0', () => {
+    expect(run('echo hi')).toEqual({stdout: 'hi', stderr: '', exitCode: 0});
+  });
+
+  test('a failure keeps its stderr and exit code', () => {
+    expect(run("sh -c 'echo partial; echo why >&2; exit 3'")).toEqual({stdout: 'partial', stderr: 'why', exitCode: 3});
+  });
+});
+
+describe('execRunner', () => {
+  test('gives trimmed stdout, and empty output on a failure', () => {
+    const run = execRunner(tmpdir());
+    expect(run('echo hi')).toBe('hi');
+    expect(run("sh -c 'exit 2' 2>/dev/null")).toBe('');
+  });
+});
+
+describe('capturing', () => {
+  test('sees a plain runner as one that never fails', () => {
+    expect(capturing(() => 'out')('x')).toEqual({stdout: 'out', stderr: '', exitCode: 0});
   });
 });

@@ -15,13 +15,41 @@ export type CommandRunner = (cmd: string) => string;
 export function execRunner(cwd: string): CommandRunner {
   return (cmd: string): string => {
     try {
-      // The GitHub backlog query returns every intake issue ever closed too;
-      // the default 1MB buffer would fail it once the history grows.
       return execSync(cmd, {cwd, encoding: 'utf-8', maxBuffer: 64 * 1024 * 1024}).trim();
     } catch {
       return '';
     }
   };
+}
+
+/** A command's whole result, for callers that must tell a failure from empty output. */
+export interface CommandResult {
+  stdout: string;
+  stderr: string;
+  exitCode: number;
+}
+
+export type CapturingRunner = (cmd: string) => CommandResult;
+
+export function execCapture(cwd: string): CapturingRunner {
+  return (cmd: string): CommandResult => {
+    try {
+      const stdout = execSync(cmd, {cwd, encoding: 'utf-8', maxBuffer: 64 * 1024 * 1024, stdio: ['ignore', 'pipe', 'pipe']});
+      return {stdout: stdout.trim(), stderr: '', exitCode: 0};
+    } catch (e) {
+      const err = e as {stdout?: string | Buffer; stderr?: string | Buffer; status?: number | null};
+      return {
+        stdout: String(err.stdout ?? '').trim(),
+        stderr: String(err.stderr ?? '').trim(),
+        exitCode: typeof err.status === 'number' ? err.status : 1,
+      };
+    }
+  };
+}
+
+/** A plain runner seen as a capturing one: output is stdout, and nothing failed. */
+export function capturing(run: CommandRunner): CapturingRunner {
+  return cmd => ({stdout: run(cmd), stderr: '', exitCode: 0});
 }
 
 /** Path part of one `git status --porcelain` line; the runner trims the first line's lead. */

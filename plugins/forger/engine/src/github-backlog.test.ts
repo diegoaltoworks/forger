@@ -13,12 +13,23 @@ import {
   issueStatus,
   issuesCommand,
   labelMatches,
+  ISSUES_QUERY,
+  PAGE,
+  QUERY_COST_BUDGET,
+  RATE_LIMIT_COMMAND,
   parseIssuesResponse,
   ticketFromIssue,
+  truncatedLists,
 } from './github-backlog';
+import type {CommandResult} from './git';
+import {graphqlCost} from './graphql-cost';
+import {RateLimitError} from './infra';
 
 /** A real `gh api graphql --paginate --slurp` response, recorded. */
 const recorded = readFileSync(join(import.meta.dir, 'fixtures', 'github-issues.json'), 'utf-8');
+
+const rateLimitStderr = readFileSync(join(import.meta.dir, 'fixtures', 'gh-rate-limit.stderr'), 'utf-8');
+const rateLimitJson = readFileSync(join(import.meta.dir, 'fixtures', 'gh-rate-limit.json'), 'utf-8');
 
 const config = mergeConfig({tracker: {kind: 'github', label: 'ready-for-agent', ignore: ['wayfinder:*']}});
 const tracker = config.tracker;
@@ -203,24 +214,92 @@ describe('backlogFromIssues', () => {
   });
 });
 
+const ok = (stdout: string): CommandResult => ({stdout, stderr: '', exitCode: 0});
+
 describe('githubBacklog', () => {
-  test('reads tickets from a gh graphql call with the intake label, afresh on every call', () => {
+  test('reads tickets once from a gh graphql call with the intake label, until refreshed', () => {
     const calls: string[] = [];
     const backlog = githubBacklog(cmd => {
       calls.push(cmd);
-      return JSON.stringify([page([issue(3, {labels: ['ready-for-agent', 'P0']})])]);
+      return ok(JSON.stringify([page([issue(3, {labels: ['ready-for-agent', 'P0']})])]));
     }, config);
     expect(backlog.next()).toBe('issue-3');
     expect(backlog.tier('issue-3')).toEqual(config.model_by_priority.P0);
-    expect(calls).toHaveLength(2);
-    expect(calls[1]).toBe(calls[0]);
+    backlog.report();
+    expect(calls).toHaveLength(1);
     expect(calls[0]).toStartWith('gh api graphql --paginate --slurp');
     expect(calls[0]).toContain("-f label='ready-for-agent'");
+    backlog.refresh();
+    expect(calls).toHaveLength(2);
+    expect(calls[1]).toBe(calls[0]);
   });
 
-  test('a failed gh call throws instead of reporting an empty backlog', () => {
-    const backlog = githubBacklog(() => '', config);
-    expect(() => backlog.remaining()).toThrow(/GitHub backlog/);
+  test('empty output throws with what gh printed on stderr, not a guess', () => {
+    const failed = githubBacklog(() => ({stdout: '', stderr: 'HTTP 502: Bad Gateway', exitCode: 1}), config);
+    expect(() => failed.remaining()).toThrow('GitHub backlog: gh exited 1 with no output, on stderr: HTTP 502: Bad Gateway');
+    const silent = githubBacklog(() => ok(''), config);
+    expect(() => silent.remaining()).toThrow('GitHub backlog: gh exited 0 with no output, nothing on stderr');
+  });
+
+  test("gh's rate-limit stderr is a rate-limit infrastructure error with the reset time", () => {
+    const calls: string[] = [];
+    const backlog = githubBacklog(cmd => {
+      calls.push(cmd);
+      if (cmd === RATE_LIMIT_COMMAND) return ok(rateLimitJson);
+      return {stdout: '', stderr: rateLimitStderr, exitCode: 1};
+    }, config);
+    let error: unknown;
+    try {
+      backlog.remaining();
+    } catch (e) {
+      error = e;
+    }
+    expect(error).toBeInstanceOf(RateLimitError);
+    const limited = error as RateLimitError;
+    expect(limited.window).toEqual({resource: 'graphql', limit: 5000, remaining: 0, resetAt: 1793703600000});
+    expect(limited.message).toContain('Infrastructure error (rate_limit)');
+    expect(limited.message).toContain('GitHub graphql rate limit (5000 an hour)');
+    expect(limited.message).toContain(`resets at ${new Date(1793703600000).toISOString()}`);
+    expect(calls).toEqual([calls[0], RATE_LIMIT_COMMAND]);
+  });
+
+  test('a rate limit whose reset cannot be read still reads as a rate limit', () => {
+    const backlog = githubBacklog(
+      cmd => (cmd === RATE_LIMIT_COMMAND ? {stdout: '', stderr: 'boom', exitCode: 1} : {stdout: '', stderr: rateLimitStderr, exitCode: 1}),
+      config
+    );
+    expect(() => backlog.remaining()).toThrow(/rate_limit.*reset time unknown/);
+  });
+});
+
+describe('the backlog query cost', () => {
+  test('stays within its budget', () => {
+    expect(graphqlCost(ISSUES_QUERY)).toBeLessThanOrEqual(QUERY_COST_BUDGET);
+  });
+
+  test('a page size raised past the budget breaks it', () => {
+    const raised = ISSUES_QUERY.replace(`blockedBy(first: ${PAGE.blockers})`, 'blockedBy(first: 50)');
+    expect(raised).not.toBe(ISSUES_QUERY);
+    expect(graphqlCost(raised)).toBeGreaterThan(QUERY_COST_BUDGET);
+  });
+});
+
+describe('parseIssuesResponse with recently closed issues', () => {
+  function pageWithClosed(nodes: TrackedIssue[], closed: TrackedIssue[]): unknown {
+    return {data: {repository: {issues: {nodes}, closed: {nodes: closed}}}};
+  }
+
+  test('keeps each issue once though the closed list repeats on every page', () => {
+    const done = issue(1, {state: 'CLOSED', closer: mergedPr});
+    const raw = JSON.stringify([pageWithClosed([issue(2)], [done]), pageWithClosed([issue(3)], [done])]);
+    expect(parseIssuesResponse(raw).map(i => i.number).sort()).toEqual([1, 2, 3]);
+    expect(backlogFromIssues(parseIssuesResponse(raw), tracker).features['issue-1']).toMatchObject({status: 'completed'});
+  });
+
+  test('a list longer than its page fails the read instead of dropping entries', () => {
+    const many = {...issue(2), blockedBy: {totalCount: PAGE.blockers + 1, nodes: [issue(1)]}};
+    expect(() => parseIssuesResponse(JSON.stringify([page([many])]))).toThrow(/more than a page of blockers on #2/);
+    expect(truncatedLists([{...issue(4), labels: {totalCount: 3, nodes: [{name: 'a'}]}}])).toEqual(['labels on #4']);
   });
 });
 

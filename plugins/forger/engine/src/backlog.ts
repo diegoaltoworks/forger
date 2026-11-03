@@ -145,8 +145,10 @@ export function formatBacklogReport(report: BacklogReport): string {
 }
 
 /**
- * The backlog as the runner sees it. Every call reads afresh, because the
- * worker edits ticket statuses while the engine is running.
+ * The backlog as the runner sees it. The tickets are read on first use and
+ * reused until `refresh()`, so one command or one iteration costs one read: a
+ * tracker read spends rate limit, and the worker only changes statuses while
+ * it runs, after which the runner refreshes.
  */
 export interface Backlog {
   remaining(): number;
@@ -156,17 +158,24 @@ export interface Backlog {
   isCompleted(ticket: string): boolean;
   has(ticket: string): boolean;
   report(): BacklogReport;
+  /** Read the tickets now, replacing what was read before. */
+  refresh(): void;
 }
 
 /** A Backlog over any loader; implementations differ only in where the tickets come from. */
 export function backlogFrom(load: () => BacklogData | null, config: WorkloopConfig): Backlog {
+  let read: {data: BacklogData | null} | null = null;
+  const data = (): BacklogData | null => (read ??= {data: load()}).data;
   return {
-    remaining: () => remainingTasks(load(), config),
-    workableCount: () => workableCount(load(), config),
-    next: () => nextTaskName(load(), config),
-    tier: ticket => tierFor(load(), config, ticket),
-    isCompleted: ticket => isTicketCompleted(load(), ticket),
-    has: ticket => hasTicket(load(), ticket),
-    report: () => backlogReport(load(), config),
+    remaining: () => remainingTasks(data(), config),
+    workableCount: () => workableCount(data(), config),
+    next: () => nextTaskName(data(), config),
+    tier: ticket => tierFor(data(), config, ticket),
+    isCompleted: ticket => isTicketCompleted(data(), ticket),
+    has: ticket => hasTicket(data(), ticket),
+    report: () => backlogReport(data(), config),
+    refresh: () => {
+      read = {data: load()};
+    },
   };
 }

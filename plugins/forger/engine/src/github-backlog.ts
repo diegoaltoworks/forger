@@ -1,42 +1,64 @@
 /**
- * The Backlog read from GitHub Issues (ADR 0001). One GraphQL query fetches
- * every issue carrying the intake label, open or closed, with its labels, the
- * PR that closed it and its native blocked-by issues. The mapping from issues
- * to tickets is pure and tested against recorded responses; the gh call goes
- * through the injectable CommandRunner.
+ * The Backlog read from GitHub Issues (ADR 0001). One GraphQL query fetches the
+ * open issues carrying the intake label, with their labels and their native
+ * blocked-by issues (each with the PR that closed it), plus the most recently
+ * closed intake issues - enough to see the ticket an iteration just closed.
+ * Older closed issues are never scanned: a dependency's status comes with the
+ * blocker itself. The mapping from issues to tickets is pure and tested against
+ * recorded responses; the gh call goes through an injectable runner.
  */
 
 import {type Backlog, type BacklogData, type Ticket, backlogFrom} from './backlog';
 import type {WorkloopConfig} from './config';
-import type {CommandRunner} from './git';
+import type {CapturingRunner} from './git';
+import {RateLimitError, isRateLimited, parseRateLimit} from './infra';
+
+interface Page<T> {
+  totalCount?: number;
+  nodes?: T[];
+}
 
 export interface IssueNode {
   number: number;
   state: string;
-  labels?: {nodes?: Array<{name: string}>};
+  labels?: Page<{name: string}>;
   timelineItems?: {nodes?: Array<{closer?: {__typename?: string; merged?: boolean} | null}>};
 }
 
 export interface TrackedIssue extends IssueNode {
-  blockedBy?: {nodes?: IssueNode[]};
+  blockedBy?: Page<IssueNode>;
 }
 
 export type TrackerSettings = WorkloopConfig['tracker'];
+
+/**
+ * Page sizes, kept small because cost multiplies down the nesting. A list that
+ * outgrows its page fails the read loudly (see truncatedLists) rather than
+ * dropping a label or a blocker.
+ */
+export const PAGE = {issues: 30, labels: 20, blockers: 5, recentlyClosed: 20} as const;
+
+/** The most the backlog query may cost, in GitHub rate-limit points. */
+export const QUERY_COST_BUDGET = 5;
 
 const CLOSER = `timelineItems(itemTypes: [CLOSED_EVENT], last: 1) {
   nodes { ... on ClosedEvent { closer { __typename ... on PullRequest { merged } } } }
 }`;
 
+const LABELS = `labels(first: ${PAGE.labels}) { totalCount nodes { name } }`;
+
 export const ISSUES_QUERY = `query($owner: String!, $repo: String!, $label: String!, $endCursor: String) {
   repository(owner: $owner, name: $repo) {
-    issues(first: 100, after: $endCursor, labels: [$label], states: [OPEN, CLOSED]) {
+    issues(first: ${PAGE.issues}, after: $endCursor, labels: [$label], states: [OPEN]) {
       pageInfo { hasNextPage endCursor }
       nodes {
         number state
-        labels(first: 50) { nodes { name } }
-        ${CLOSER}
-        blockedBy(first: 50) { nodes { number state labels(first: 50) { nodes { name } } ${CLOSER} } }
+        ${LABELS}
+        blockedBy(first: ${PAGE.blockers}) { totalCount nodes { number state ${LABELS} ${CLOSER} } }
       }
+    }
+    closed: issues(first: ${PAGE.recentlyClosed}, labels: [$label], states: [CLOSED], orderBy: {field: UPDATED_AT, direction: DESC}) {
+      nodes { number state ${LABELS} ${CLOSER} }
     }
   }
 }`;
@@ -119,12 +141,14 @@ export function backlogFromIssues(issues: TrackedIssue[], tracker: TrackerSettin
 }
 
 /**
- * The issues from `gh api graphql --paginate --slurp`: an array of pages.
- * Anything else throws - an unreadable tracker must never read as an empty
- * backlog, or the loop would stop as if every ticket were done.
+ * The issues from `gh api graphql --paginate --slurp`: an array of pages, each
+ * with the open issues and the recently closed ones (repeated on every page, so
+ * an issue is kept once). Anything else throws - an unreadable tracker must
+ * never read as an empty backlog, or the loop would stop as if every ticket
+ * were done.
  */
 export function parseIssuesResponse(raw: string): TrackedIssue[] {
-  if (raw.trim() === '') throw new Error('GitHub backlog: gh returned nothing (not authenticated, or offline?)');
+  if (raw.trim() === '') throw new Error('GitHub backlog: gh printed nothing');
   let pages: unknown;
   try {
     pages = JSON.parse(raw);
@@ -132,14 +156,39 @@ export function parseIssuesResponse(raw: string): TrackedIssue[] {
     throw new Error('GitHub backlog: gh returned invalid JSON');
   }
   if (!Array.isArray(pages)) throw new Error('GitHub backlog: expected an array of pages');
-  const issues: TrackedIssue[] = [];
+  const issues = new Map<number, TrackedIssue>();
   for (const page of pages) {
-    const nodes = (page as {data?: {repository?: {issues?: {nodes?: unknown}}}})?.data?.repository
-      ?.issues?.nodes;
+    const repo = (page as {data?: {repository?: {issues?: {nodes?: unknown}; closed?: {nodes?: unknown}}}})?.data
+      ?.repository;
+    const nodes = repo?.issues?.nodes;
     if (!Array.isArray(nodes)) throw new Error('GitHub backlog: a page has no issues');
-    issues.push(...(nodes as TrackedIssue[]));
+    const closed = Array.isArray(repo?.closed?.nodes) ? (repo.closed.nodes as TrackedIssue[]) : [];
+    for (const issue of [...(nodes as TrackedIssue[]), ...closed]) {
+      if (!issues.has(issue.number)) issues.set(issue.number, issue);
+    }
   }
-  return issues;
+  const truncated = truncatedLists([...issues.values()]);
+  if (truncated.length > 0) {
+    throw new Error(`GitHub backlog: more than a page of ${truncated.join(', ')}; raise PAGE in github-backlog.ts`);
+  }
+  return [...issues.values()];
+}
+
+function isTruncated(page: Page<unknown> | undefined): boolean {
+  return typeof page?.totalCount === 'number' && page.totalCount > (page.nodes?.length ?? 0);
+}
+
+/** Lists the query cut short; a missing label or blocker would change the pick. */
+export function truncatedLists(issues: TrackedIssue[]): string[] {
+  const found: string[] = [];
+  for (const issue of issues) {
+    if (isTruncated(issue.labels)) found.push(`labels on #${issue.number}`);
+    if (isTruncated(issue.blockedBy)) found.push(`blockers on #${issue.number}`);
+    for (const b of issue.blockedBy?.nodes ?? []) {
+      if (isTruncated(b.labels)) found.push(`labels on #${b.number}`);
+    }
+  }
+  return found;
 }
 
 function shellQuote(s: string): string {
@@ -155,10 +204,30 @@ export function issuesCommand(tracker: TrackerSettings): string {
   ].join(' ');
 }
 
-export function readIssueBacklog(run: CommandRunner, tracker: TrackerSettings): BacklogData {
-  return backlogFromIssues(parseIssuesResponse(run(issuesCommand(tracker))), tracker);
+export const RATE_LIMIT_COMMAND = 'gh api rate_limit';
+
+/**
+ * Why a gh call gave no backlog, from what gh printed. A rate limit becomes a
+ * RateLimitError carrying the reset, read from `gh api rate_limit` (which the
+ * limit does not count).
+ */
+export function ghFailure(run: CapturingRunner, exitCode: number, stderr: string): Error {
+  if (isRateLimited(stderr)) {
+    const limits = run(RATE_LIMIT_COMMAND);
+    return new RateLimitError('graphql', limits.exitCode === 0 ? parseRateLimit(limits.stdout, 'graphql') : null, stderr);
+  }
+  const said = stderr.trim() === '' ? 'nothing on stderr' : `on stderr: ${stderr.trim()}`;
+  return new Error(`GitHub backlog: gh exited ${exitCode} with no output, ${said}`);
 }
 
-export function githubBacklog(run: CommandRunner, config: WorkloopConfig): Backlog {
+export function readIssueBacklog(run: CapturingRunner, tracker: TrackerSettings): BacklogData {
+  const result = run(issuesCommand(tracker));
+  if (result.exitCode !== 0 || result.stdout.trim() === '') {
+    throw ghFailure(run, result.exitCode, result.stderr);
+  }
+  return backlogFromIssues(parseIssuesResponse(result.stdout), tracker);
+}
+
+export function githubBacklog(run: CapturingRunner, config: WorkloopConfig): Backlog {
   return backlogFrom(() => readIssueBacklog(run, config.tracker), config);
 }
