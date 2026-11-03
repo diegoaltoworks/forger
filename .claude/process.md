@@ -17,8 +17,8 @@ why `worker_command` is not a forger command yet.
 ## The gates
 
 The command is `gates` in `.claude/workloop.config.json`. Never proceed on red.
-The gates do not yet check the docs; until `forger check docs` is wired in, a
-worker checks its own prose against the rules below.
+The gates end with `forger check`, which runs the checks of the installed packs
+(the writing rules among them) with `.claude/waivers.json` applied.
 
 ## The tracker
 

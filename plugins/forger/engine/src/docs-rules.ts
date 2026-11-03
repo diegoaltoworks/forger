@@ -10,8 +10,19 @@ export interface Violation {
   file: string;
   line: number;
   rule: RuleName;
+  /** The opinion this violation enforces, so a waiver can match it. */
+  opinion: string;
   detail: string;
 }
+
+/** The opinion id each rule enforces; these are declared by the base pack. */
+export const RULE_OPINION: Record<RuleName, string> = {
+  'non-ascii': 'base.ascii-punctuation',
+  email: 'base.nothing-personal',
+  'home-path': 'base.nothing-personal',
+  denylist: 'base.nothing-personal',
+  'third-party-skills': 'base.no-hard-coded-skills',
+};
 
 type LineRule = (line: string) => string[];
 
@@ -74,7 +85,7 @@ export function checkText(file: string, text: string, terms: string[] = []): Vio
   const out: Violation[] = [];
   text.split('\n').forEach((line, i) => {
     for (const [rule, fn] of rules) {
-      for (const detail of fn(line)) out.push({file, line: i + 1, rule, detail});
+      for (const detail of fn(line)) out.push({file, line: i + 1, rule, opinion: RULE_OPINION[rule], detail});
     }
   });
   return out;

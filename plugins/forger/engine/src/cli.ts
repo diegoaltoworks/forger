@@ -12,6 +12,7 @@ import {loadConfig} from './config';
 import {execRunner, type CommandRunner} from './git';
 import {formatBacklogReport} from './backlog';
 import {openBacklog} from './open-backlog';
+import {formatReport as formatCheckReport, runChecks} from './checks';
 import {runDocsCheck} from './docs-check';
 import {formatViolations} from './docs-rules';
 import {AutomationRunner} from './runner';
@@ -49,6 +50,8 @@ Usage (run from the consumer repo root):
   skills [--json] [--presets]
                    Resolve each skill slot to its configured skill and the built-in fallback;
                    --presets lists the presets whose skill collection is installed
+  check [--json]   Run every check the installed packs declare, apply .claude/waivers.json,
+                   exit non-zero on any unwaived violation
   check docs [--json] Fail on non-ASCII punctuation, emails, home paths, denylist terms
   backlog [--json] Workable tickets in order, remaining count and next pick
   orient [--json]  What the supervisor should do on arrival: surface_halt, attach, start, nothing_to_do
@@ -178,8 +181,19 @@ export async function main(
     return;
   }
   if (command === 'check') {
+    if (positionals[1] === undefined) {
+      try {
+        const report = runChecks(projectRoot, pluginRoot, deps.run ?? execRunner(projectRoot));
+        console.log(values.json ? JSON.stringify(report) : formatCheckReport(report));
+        if (!report.ok) process.exitCode = 1;
+      } catch (e) {
+        console.error((e as Error).message);
+        process.exitCode = 1;
+      }
+      return;
+    }
     if (positionals[1] !== 'docs') {
-      console.error('Usage: check docs [--json]');
+      console.error('Usage: check [--json] | check docs [--json]');
       process.exitCode = 1;
       return;
     }

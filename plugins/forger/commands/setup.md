@@ -39,7 +39,7 @@ nothing. The user can map slots by hand later in `.claude/workloop.config.json`.
 bun "${CLAUDE_PLUGIN_ROOT}/bin/work.ts" setup --json --gates "<gates>" --base-branch "<branch>" --tracker "<kind>" [--preset "<name>"]
 ```
 
-The tool writes the config (with the docs check appended to the gates),
+The tool writes the config (with `check` appended to the gates),
 `process.md` with principle 0 and the default gotchas, a starter `backlog.json`,
 the ticket, PR, work order, report, retro and rule templates under
 `.claude/templates/`, and the per-run `.gitignore` lines. It never overwrites,

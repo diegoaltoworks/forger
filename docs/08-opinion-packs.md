@@ -36,4 +36,24 @@ Read it left to right: `setup` reads each chosen pack's manifest, writes its fil
 - `packs --json` lists the available packs and which are installed.
 - `opinions --json` lists every installed opinion with its pack, rung and enforcing check, or none.
 
+## Checks and waivers
+
+```mermaid
+flowchart LR
+    L[forger.lock.json] --> C[check]
+    P[pack manifests] --> C
+    C --> V[violations with opinion ids]
+    W[waivers.json] --> M{match by id and path}
+    V --> M
+    M --> R[passed, failed or waived]
+```
+
+Read it left to right: `check` takes the checks that the locked packs declare, in lock order, runs each, and matches every violation against the waivers by opinion id and path glob. A check is `passed` with no violations, `waived` when every violation is covered, and `failed` otherwise; any failed check makes the exit code non-zero.
+
+`.claude/waivers.json` is how a project switches an opinion off in the open. Each entry names the opinion, a path glob, a reason and who approved it; an entry missing the reason or the approver is an error, not a waiver. A waiver that matches no violation is reported as stale, so it gets deleted once it is no longer needed.
+
+- `check --json` runs everything and reports per check, plus the stale waivers. `/forger:retro` reads it for the waiver list.
+- `check docs` runs the writing rules alone, without waivers.
+- `setup` appends `check` to the gates.
+
 The decision to use packs is [ADR 0003](adr/0003-opinion-packs.md).

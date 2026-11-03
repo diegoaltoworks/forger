@@ -28,7 +28,7 @@ export interface SetupResult {
   gitignore: {added: string[]; kept: string[]};
 }
 
-const DOCS_CHECK_MARKER = 'check docs';
+const CHECK_MARKER = /\bwork\.ts\s+check\b|\bcheck docs\b/;
 
 /** Per-run files a project never commits. */
 export const GITIGNORE_LINES = [
@@ -40,18 +40,18 @@ export const GITIGNORE_LINES = [
   '.claude/events.jsonl',
 ];
 
-/** The gates always end with the docs check, run from the plugin that is installed now. */
-export function withDocsCheck(gates: string, docsCheckCommand: string): string {
-  if (gates.includes(DOCS_CHECK_MARKER)) return gates;
-  return gates.trim() === '' ? docsCheckCommand : `${gates} && ${docsCheckCommand}`;
+/** The gates always end with the check command, run from the plugin that is installed now. */
+export function withCheck(gates: string, checkCommand: string): string {
+  if (CHECK_MARKER.test(gates)) return gates;
+  return gates.trim() === '' ? checkCommand : `${gates} && ${checkCommand}`;
 }
 
-export function renderConfig(template: string, opts: SetupOptions, docsCheckCommand: string): string {
+export function renderConfig(template: string, opts: SetupOptions, checkCommand: string): string {
   const config = JSON.parse(template) as Record<string, unknown> & {
     gates: string;
     tracker: Record<string, unknown>;
   };
-  config.gates = withDocsCheck(opts.gates ?? config.gates, docsCheckCommand);
+  config.gates = withCheck(opts.gates ?? config.gates, checkCommand);
   if (opts.baseBranch) config.base_branch = opts.baseBranch;
   if (opts.skills) config.skills = {...opts.skills};
   if (opts.trackerKind) config.tracker = {...config.tracker, kind: opts.trackerKind};
@@ -78,7 +78,7 @@ function writeIfAbsent(path: string, content: () => string): 'written' | 'kept' 
 export function runSetup(projectRoot: string, pluginRoot: string, opts: SetupOptions): SetupResult {
   const templates = join(pluginRoot, 'templates');
   const read = (name: string) => readFileSync(join(templates, name), 'utf-8');
-  const docsCheck = `bun ${join(pluginRoot, 'bin', 'work.ts')} check docs`;
+  const check = `bun ${join(pluginRoot, 'bin', 'work.ts')} check`;
 
   const {packs, unknown} = selectPacks(loadPacks(pluginRoot), opts.packs ?? ['base']);
   if (unknown.length > 0) throw new Error(`Unknown pack: ${unknown.join(', ')}`);
@@ -87,7 +87,7 @@ export function runSetup(projectRoot: string, pluginRoot: string, opts: SetupOpt
     {
       path: '.claude/workloop.config.json',
       action: writeIfAbsent(join(projectRoot, '.claude/workloop.config.json'), () =>
-        renderConfig(read('workloop.config.json'), opts, docsCheck)
+        renderConfig(read('workloop.config.json'), opts, check)
       ),
     },
   ];

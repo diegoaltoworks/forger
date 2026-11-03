@@ -4,7 +4,7 @@ import {tmpdir} from 'os';
 import {join, resolve} from 'path';
 
 import {sha256} from './packs';
-import {GITIGNORE_LINES, mergeGitignore, renderConfig, runSetup, withDocsCheck} from './setup';
+import {GITIGNORE_LINES, mergeGitignore, renderConfig, runSetup, withCheck} from './setup';
 
 const PLUGIN_ROOT = resolve(import.meta.dir, '../..');
 const dirs: string[] = [];
@@ -17,15 +17,21 @@ function emptyProject(): string {
   return root;
 }
 
-describe('withDocsCheck', () => {
-  test('appends the docs check to the gates', () => {
-    expect(withDocsCheck('npm test', 'forger check docs')).toBe('npm test && forger check docs');
+describe('withCheck', () => {
+  test('appends the check to the gates', () => {
+    expect(withCheck('npm test', 'forger check docs')).toBe('npm test && forger check docs');
   });
   test('does not add it twice', () => {
-    expect(withDocsCheck('npm test && x check docs', 'y check docs')).toBe('npm test && x check docs');
+    expect(withCheck('npm test && x check docs', 'y check docs')).toBe('npm test && x check docs');
   });
-  test('empty gates become the docs check alone', () => {
-    expect(withDocsCheck(' ', 'c check docs')).toBe('c check docs');
+  test('gates already ending in the check command are kept', () => {
+    expect(withCheck('npm test && bun /p/bin/work.ts check', 'bun /q/bin/work.ts check')).toBe('npm test && bun /p/bin/work.ts check');
+  });
+  test('a bare "run check" script is not the check command', () => {
+    expect(withCheck('bun run check', 'c')).toBe('bun run check && c');
+  });
+  test('empty gates become the check alone', () => {
+    expect(withCheck(' ', 'c check docs')).toBe('c check docs');
   });
 });
 
@@ -97,12 +103,12 @@ describe('runSetup', () => {
     expect(process).toContain('Comments say why');
   });
 
-  test('the gates written into the config include the docs check', () => {
+  test('the gates written into the config include the check', () => {
     const root = emptyProject();
     runSetup(root, PLUGIN_ROOT, {gates: 'make test'});
     const config = JSON.parse(readFileSync(join(root, '.claude/workloop.config.json'), 'utf-8'));
     expect(config.gates).toStartWith('make test && bun ');
-    expect(config.gates).toEndWith('bin/work.ts check docs');
+    expect(config.gates).toEndWith('bin/work.ts check');
   });
 
   test('installs the ticket, PR, work order, report, retro and rule templates', () => {
