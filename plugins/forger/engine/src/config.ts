@@ -48,6 +48,12 @@ export interface WorkloopConfig {
    * trailing `*` matches a prefix, as in `wayfinder:*`.
    */
   tracker: {kind: 'github' | 'local' | 'none'; label: string; ignore: string[]};
+  /**
+   * Paths that stay modified in a checkout without being the worker's doing
+   * (local settings, a work order). The dirty-tree check skips them, along
+   * with the files the engine owns (`paths`). A directory covers what is under it.
+   */
+  local_only: string[];
 }
 
 /**
@@ -65,6 +71,7 @@ export interface WorkloopConfigInput {
   limits?: Partial<WorkloopConfig['limits']>;
   paths?: Partial<WorkloopConfig['paths']>;
   tracker?: Partial<WorkloopConfig['tracker']>;
+  local_only?: string[];
 }
 
 export const DEFAULT_CONFIG: WorkloopConfig = {
@@ -105,6 +112,7 @@ export const DEFAULT_CONFIG: WorkloopConfig = {
     halt: '.claude/HALT',
   },
   tracker: {kind: 'github', label: 'ready-for-agent', ignore: []},
+  local_only: [],
 };
 
 /**

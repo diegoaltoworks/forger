@@ -16,7 +16,7 @@ describe('nonAscii', () => {
 
 describe('email', () => {
   test('flags an address', () => {
-    expect(email('mail ' + 'someone' + '@' + 'example.com now')).toEqual(['someone@example.com']);
+    expect(email('mail ' + 'someone' + '@' + 'example.com now')).toEqual(['someone' + '@' + 'example.com']);
   });
   test('ignores scoped package names and bare at-signs', () => {
     expect(email('@types/bun and a @ b and @forger/engine')).toEqual([]);
@@ -25,7 +25,7 @@ describe('email', () => {
 
 describe('homePath', () => {
   test('flags linux and mac home directories', () => {
-    expect(homePath('see ' + '/ho' + 'me/' + 'x/y and ' + '/Us' + 'ers/' + 'z')).toEqual(['/home/x', '/Users/z']);
+    expect(homePath('see ' + '/ho' + 'me/' + 'x/y and ' + '/Us' + 'ers/' + 'z')).toEqual(['/ho' + 'me/x', '/Us' + 'ers/z']);
   });
   test('ignores home as an ordinary word', () => {
     expect(homePath('go home, or ~/work')).toEqual([]);

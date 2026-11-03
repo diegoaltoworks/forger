@@ -16,6 +16,7 @@ const nothing: RunFacts = {
   baseBranch: 'main',
   backlogCompleted: false,
   unclean: null,
+  infraError: null,
 };
 
 describe('decideOutcome', () => {
@@ -135,5 +136,19 @@ describe('decideOutcome', () => {
     expect(o.status).toBe('failed');
     expect(o.result).toBe('failure');
     expect(o.error).toBe('Nothing merged or pushed, exit code 2');
+  });
+
+  test('an infrastructure error halts with its reason and is not a failure', () => {
+    const o = decideOutcome({...nothing, exitCode: 1, infraError: 'Infrastructure error (billing)'});
+    expect(o.result).toBe('neutral');
+    expect(o.status).toBe('error');
+    expect(o.halt).toBe('Infrastructure error (billing)');
+    expect(o.merged).toBe(false);
+  });
+
+  test('a merge outranks an infrastructure error', () => {
+    const o = decideOutcome({...nothing, merged: true, infraError: 'Infrastructure error (network)'});
+    expect(o.result).toBe('success');
+    expect(o.halt).toBeNull();
   });
 });
