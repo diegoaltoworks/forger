@@ -3,6 +3,7 @@ import {existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, 
 import {tmpdir} from 'os';
 import {join} from 'path';
 
+import {execRunner, gitStateStore} from '../adapters';
 import {main} from './main';
 import type {CommandRunner} from '../ports';
 
@@ -888,5 +889,46 @@ describe('pr-body', () => {
     expect(bad.ok).toBe(false);
     expect(process.exitCode).toBe(1);
     process.exitCode = 0;
+  });
+});
+
+describe('reading state from the state branch', () => {
+  /** A project whose clone has no state file, beside a remote whose state branch holds one. */
+  function cloneWithRemoteState(): string {
+    const root = projectWith({a: {status: 'not_started', priority: 'P0'}});
+    const remote = realpathSync(mkdtempSync(join(tmpdir(), 'forger-remote-')));
+    dirs.push(remote);
+    const sh = (cwd: string, cmd: string) => execRunner(cwd)(cmd);
+    sh(remote, 'git init --bare -q');
+    sh(root, `git init -q && git remote add origin ${remote} && git -c user.name=t -c user.email=t@t commit -q --allow-empty -m init`);
+    const store = gitStateStore({repo: root});
+    store.writeState(JSON.stringify({iteration: 7, completed_iterations: 3, status: 'running'}));
+    store.appendEvent(JSON.stringify({event: 'completed', iteration: 7, ticket: 'a', at: '2026-01-01T00:00:00.000Z'}), new Date('2026-01-01T00:00:00Z'));
+    return root;
+  }
+
+  test('status --json from a clone reads the state branch', async () => {
+    process.chdir(cloneWithRemoteState());
+    const out = JSON.parse(await capture(['status', '--json', '--from', 'branch']));
+    expect(out.iteration).toBe(7);
+    expect(out.counters.completed).toBe(3);
+  });
+
+  test('local home behaves as before: the same clone reads no state without --from', async () => {
+    process.chdir(cloneWithRemoteState());
+    const out = JSON.parse(await capture(['status', '--json']));
+    expect(out.iteration).toBe(0);
+  });
+
+  test('measure reports iteration logs and transcripts as not on this machine, not as an error', async () => {
+    process.chdir(cloneWithRemoteState());
+    const out = JSON.parse(await capture(['measure', '--json', '--from', 'branch']));
+    expect(out.not_on_this_machine).toContain('iteration logs');
+    expect(out.events.completed).toBe(1);
+  });
+
+  test('--from rejects an unknown home', async () => {
+    process.chdir(cloneWithRemoteState());
+    await expect(capture(['status', '--json', '--from', 'cloud'])).rejects.toThrow('--from must be local or branch');
   });
 });

@@ -20,6 +20,7 @@ an action, and the measures and retro records the refinement loop runs on.
 - `rework.ts` - rework inside a window of later merges, escaped defects and
   pick-versus-built mismatch over merged PRs (ADR 0013). Pure.
 - `waiting.ts` - what waits on the owner (parked issues, Proposed ADRs with their stated recommendation) and the report period with its merges. Pure.
+- Reads of the state record and events go through the `StateStore` port (ADR 0015): `--from branch` on `status`, `orient`, `report` and `measure` reads the state branch of a clone, no engine on the machine. Inputs that stay on the engine's machine (iteration logs, transcripts) are listed as not on this machine, never an error.
 - `*.json` - recorded `gh` output the tests replay.
 
 ## Entry point

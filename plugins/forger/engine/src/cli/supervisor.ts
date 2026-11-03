@@ -95,15 +95,15 @@ function supervise(which: 'orient' | 'report') {
 export const orient: Command = {
   name: 'orient',
   needs: 'loop',
-  flags: ['json'],
-  help: '  orient [--json]  What the supervisor should do on arrival: surface_halt, attach, start, nothing_to_do',
+  flags: ['json', 'from'],
+  help: '  orient [--json] [--from local|branch]  What the supervisor should do on arrival: surface_halt, attach, start, nothing_to_do',
   run: supervise('orient'),
 };
 
 export const report: Command = {
   name: 'report',
   needs: 'loop',
-  flags: ['json', 'since'],
-  help: '  report [--json] [--since DATE]  Merged since the last report (or --since), in progress (real branch), next, waiting on the owner (needs-info, needs-human, needs-triage issues and Proposed ADRs); cost per merged ticket, rework rate, escaped defects, owner interventions',
+  flags: ['json', 'since', 'from'],
+  help: '  report [--json] [--since DATE] [--from local|branch]  Merged since the last report (or --since), in progress (real branch), next, waiting on the owner (needs-info, needs-human, needs-triage issues and Proposed ADRs); cost per merged ticket, rework rate, escaped defects, owner interventions',
   run: supervise('report'),
 };

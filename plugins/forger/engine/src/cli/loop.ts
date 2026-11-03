@@ -19,8 +19,8 @@ export const run: Command = {
 export const status: Command = {
   name: 'status',
   needs: 'loop',
-  flags: ['json'],
-  help: '  status [--json] Show current status, runner pid and liveness',
+  flags: ['json', 'from'],
+  help: '  status [--json] [--from local|branch] Show current status, runner pid and liveness; --from branch reads the state branch of a clone',
   run({values, runner}) {
     if (values.json) console.log(JSON.stringify(runner.statusReport()));
     else runner.showStatus();

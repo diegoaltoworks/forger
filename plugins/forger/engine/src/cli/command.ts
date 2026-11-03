@@ -8,13 +8,15 @@
 import type {Backlog} from '../backlog';
 import type {WorkloopConfig} from '../config';
 import type {AutomationRunner} from '../loop';
-import type {AgentRunner, CommandRunner} from '../ports';
+import type {AgentRunner, CommandRunner, StateStore} from '../ports';
 import type {FlagName, Values} from './flags';
 
 export interface CliDeps {
   run?: CommandRunner;
   /** Stands in for the harness's agent, so a command that spawns one can be tested. */
   agent?: AgentRunner;
+  /** Stands in for the store the loop's state is read from. */
+  stateStore?: StateStore;
   installedSkills?: () => string[];
   collectionRoots?: () => string[];
 }
@@ -35,6 +37,8 @@ export interface CommandContext {
   run(): CommandRunner;
   readonly projectRoot: string;
   readonly config: WorkloopConfig;
+  /** Where the state record and events are read from: files beside the engine, or with `--from branch` the state branch of a clone. */
+  readonly stateStore: StateStore;
   readonly backlog: Backlog;
   readonly runner: AutomationRunner;
 }

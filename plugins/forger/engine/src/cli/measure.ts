@@ -2,7 +2,7 @@ import {existsSync, readdirSync, readFileSync} from 'fs';
 import {homedir} from 'os';
 import {join} from 'path';
 
-import {readAllEvents, readAllVerdicts, readEvents, readSchedule} from '../loop';
+import {parseAllEvents, parseEvents, readAllVerdicts, readSchedule} from '../loop';
 import {buildComparisonReport, DEFAULT_PRICES, mergePrices, sessionCostUsd, type PriceTable, type Measures, computeMeasures, diffReports, parseDiffRanges, parseReplacedRanges, picksToPrs, DEFAULT_REWORK_WINDOW, type MergedPr, type TrackerIssue, type ReworkInputs, type ComparisonReport, formatMeasures, parseBudgets, parseIterationLog, type CiRun, type IterationRecord} from '../supervisor';
 import type {Command, CommandContext} from './command';
 
@@ -91,8 +91,12 @@ export function gatherMeasures(ctx: CommandContext): Measures {
   for (const b of budgets) if (b.sessionId !== undefined) sessionCosts[b.sessionId] = sessionCostUsd(readTranscript(b.sessionId), prices);
   const window = values.window === undefined ? DEFAULT_REWORK_WINDOW : parseInt(values.window, 10);
   if (!(window >= 1)) throw new Error('--window must be a whole number of merges, 1 or more');
-  const picked = readAllEvents(join(projectRoot, config.paths.events)).filter(e => e.event === 'picked');
+  const picked = parseAllEvents(ctx.stateStore.readEvents()).filter(e => e.event === 'picked');
   const changes = gatherChanges(ctx.run(), iterations, picked, window, 100);
+  const notHere = [
+    ...(iterations.length === 0 ? ['iteration logs'] : []),
+    ...(Object.values(sessionCosts).some(c => c === null) ? ['session transcripts'] : []),
+  ];
   const measures = computeMeasures({
     ...(changes === null ? {} : {changes}),
     iterations,
@@ -100,21 +104,22 @@ export function gatherMeasures(ctx: CommandContext): Measures {
     sessionCosts,
     verdicts: readAllVerdicts(join(projectRoot, config.paths.verdicts)),
     schedule: readSchedule(join(outDir, 'schedule-decisions.jsonl')),
-    events: readEvents(join(projectRoot, config.paths.events)),
+    events: parseEvents(ctx.stateStore.readEvents()),
     ciRuns,
     last: values.last === undefined ? null : parseInt(values.last, 10),
   });
-return measures;
+return {...measures, not_on_this_machine: notHere};
 }
 
 export const measure: Command = {
   name: 'measure',
   needs: 'config',
-  flags: ['json', 'last', 'report', 'diff', 'window'],
-  help: `  measure [--json] [--last N] [--window N] [--report]
+  flags: ['json', 'last', 'report', 'diff', 'window', 'from'],
+  help: `  measure [--json] [--last N] [--window N] [--report] [--from local|branch]
   measure --diff A.json B.json
                    Runs, failures by cause, time, budget cap, cost from the session transcripts (unknown without one; prices in .forger/prices.json override the defaults) and CI rounds per ticket; merges per hour by parallelism, conflicts, rework, redone tickets, owner interventions.
                    Rework and escaped defects per merged PR: a later merge within --window N merges (default 5) that touches its lines or reverts it, bug issues naming it, and picks that differ from the issue the PR closed.
+                   --from branch reads the state record and events from the state branch of a clone; iteration logs and transcripts stay on the engine's machine and are reported as not on this machine.
                    --report prints the five-measure comparison report as JSON; --diff prints the per-measure delta between two saved reports (A is the baseline)`,
   run(ctx) {
     const {values, projectRoot, config, positionals} = ctx;
