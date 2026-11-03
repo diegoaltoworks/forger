@@ -284,6 +284,10 @@ engine/src/
   run-facts.ts the git facts a run is judged by: merged, pushed, branch taken
   claim.ts     the worker's completion signal, parsed (pure)
   outcome.ts   a run's outcome from its facts (pure)
+  facts.ts     read-only loop facts for the supervisor: branch, issue -> PR,
+               and a PR's CI conclusion (pure folding behind a runner)
+  ci.ts        the CI job summary, workflow-gates drift and the
+               wait-before-merge rule (pure)
   infra.ts     tells infrastructure errors from worker failures (pure)
   state.ts     state shape, stall detection by merges (pure) + StateStore (I/O)
   logger.ts    terminal + file logging

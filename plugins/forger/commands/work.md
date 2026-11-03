@@ -62,8 +62,9 @@ or match a process name.
 
 On each event, and on each tick, verify from facts: `work facts --json` gives
 the checkout's branch, whether it is clean, the base head on `origin`, and with
-`--issue <n>` the PR that closed that issue and whether it merged; `work report
---json` gives the rest. A ticket marked completed with
+`--issue <n>` the PR that closed that issue, whether it merged and its CI
+`checks` (a merge on a repo with CI whose checks are not `success` is an
+anomaly); `work report --json` gives the rest. A ticket marked completed with
 nothing merged is not done. A worker that timed out after pushing has made
 progress.
 

@@ -240,8 +240,20 @@ describe('check', () => {
   test('all clean: every check passed, exit 0', async () => {
     installed();
     const report = JSON.parse(await capture(['check', '--json'], () => 'a.md'));
-    expect(report).toEqual({ok: true, results: [{check: 'docs', status: 'passed', violations: [], waived: []}], staleWaivers: []});
+    expect(report).toEqual({
+      ok: true,
+      results: [{check: 'docs', opinions: ['base.ascii-punctuation', 'base.nothing-personal', 'base.no-hard-coded-skills'], status: 'passed', violations: [], waived: []}],
+      waivers: [],
+      staleWaivers: [],
+    });
     expect(process.exitCode).not.toBe(1);
+  });
+
+  test('--summary prints the CI job summary in markdown', async () => {
+    installed();
+    const out = await capture(['check', '--summary'], () => 'a.md');
+    expect(out).toContain('## forger check: passed');
+    expect(out).toContain('| docs | `base.ascii-punctuation`, `base.nothing-personal`, `base.no-hard-coded-skills` | passed | 0 | 0 |');
   });
 
   test('one violation: failed, carries the opinion id, exit 1', async () => {

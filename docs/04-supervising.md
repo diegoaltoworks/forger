@@ -68,6 +68,9 @@ On each tick, from facts, not from labels:
 
 Act on anomalies by the approval policy. A worker that timed out after pushing
 has made progress; a ticket marked completed with nothing merged is not done.
+Verify each merge against its PR's CI result: `facts --json --issue <n>` gives
+the closing PR's `checks`. A merge whose checks are anything but `success`, on a
+repo with CI, is an anomaly: the worker merged red or did not wait.
 
 ## 6. Sync
 
@@ -99,9 +102,11 @@ improvise them:
 - `orient --json`: halt, attach, start or nothing to do, with anomalies.
 - `status --json`, `backlog --json`: counters, current ticket, next pick.
 - `events`, `await-event`: the terminal-event file, read as data.
-- `facts --json [--issue N]`: the loop checkout's branch, whether it is clean,
-  the base head on `origin`, and an issue's closing PR and whether it merged,
-  read without touching the working tree.
+- `facts --json [--issue N] [--pr N]`: the loop checkout's branch, whether it
+  is clean, the base head on `origin`, and an issue's closing PR (or a PR on its
+  own): whether it merged and its CI conclusion, `success`, `failure`,
+  `pending` or `none` when the repo has no CI, read without touching the
+  working tree.
 - `report`: the four report sections from the same facts.
 - `approval <action>`: who may do an action, from the table below.
 

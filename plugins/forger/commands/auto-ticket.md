@@ -127,8 +127,20 @@ git push -u origin feat/<ticket-id>     # FIRST - do not defer this
 gh pr create --title "feat: <summary>" --body "<what + how + gate results>
 
 Closes #<issue>" --base <base-branch>
-gh pr merge --squash --delete-branch    # after CI is green
+gh pr checks <pr> --watch               # block until every check finishes
+bun "${CLAUDE_PLUGIN_ROOT}/bin/work.ts" facts --json --pr <pr>
+gh pr merge --squash --delete-branch    # only when facts says checks_ok
 ```
+**Never merge red.** The merge decision is `pr.checks_ok` in `facts --json`, not
+your reading of the watch output:
+- `success` - every check passed: merge.
+- `none` - the repo has no CI workflow; say so in the PR and rely on the local
+  gates.
+- `pending` - checks are not registered or not finished yet: watch again. If it
+  is still `pending` after a second watch, signal `stop`.
+- `failure` - read the failed job's log (`gh run view <run> --log-failed`), fix
+  the cause, re-run the gates locally, push, and watch again.
+
 `Closes #<issue>` (when the ticket has one) is what closes the tracker issue:
 the merge does it, no extra call. Clean commit messages only - no AI
 attribution, no Co-Authored-By. If `gh` is unavailable, squash-merge locally to
