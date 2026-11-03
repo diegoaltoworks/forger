@@ -240,3 +240,54 @@ describe('supervisor commands', () => {
     expect(out.map((e: {event: string}) => e.event)).toEqual(['completed']);
   });
 });
+
+describe('measure and retro', () => {
+  test('measure reads the logs, the work log and CI runs', async () => {
+    const root = projectWith({});
+    mkdirSync(join(root, '.claude/output'));
+    writeFileSync(
+      join(root, '.claude/output/iteration-1.log'),
+      '=== forger iteration 1 ===\nticket: alpha_ticket\nelapsed: 90s\noutcome: exited with code 0\n=== output ===\nok\n'
+    );
+    writeFileSync(join(root, '.claude/work.log'), '[t] [INFO] Ticket: alpha_ticket [opus, $20]\n');
+    process.chdir(root);
+    const run: CommandRunner = () => JSON.stringify([{headBranch: 'feat/alpha-ticket', event: 'pull_request'}]);
+    const out = JSON.parse(await capture(['measure', '--json'], run));
+    expect(out.tickets).toEqual([{ticket: 'alpha_ticket', runs: 1, seconds: 90, budget_usd: 20, ci_rounds: 1}]);
+  });
+
+  test('measure survives gh failing', async () => {
+    const root = projectWith({});
+    process.chdir(root);
+    const run: CommandRunner = () => {
+      throw new Error('gh: not logged in');
+    };
+    expect(JSON.parse(await capture(['measure', '--json'], run)).runs.total).toBe(0);
+  });
+
+  test('retro rule writes the record into .claude/rules', async () => {
+    const root = projectWith({});
+    process.chdir(root);
+    const out = await capture([
+      'retro', 'rule', '--name', 'a-rule', '--description', 'd', '--type', 'feedback', '--rule', 'Do it.',
+      '--owner', 'their words', '--date', '2026-11-03', '--why', 'because', '--how', 'always',
+    ]);
+    expect(out).toBe('.claude/rules/a-rule.md');
+    expect(readFileSync(join(root, out), 'utf-8')).toContain('Owner (2026-11-03): "their words"');
+  });
+
+  test('retro rule refuses a bad name and writes nothing', async () => {
+    const root = projectWith({});
+    process.chdir(root);
+    await capture(['retro', 'rule', '--name', '../x']);
+    expect(process.exitCode).toBe(1);
+    process.exitCode = 0;
+  });
+
+  test('retro upstream drafts an issue with the evidence', async () => {
+    const root = projectWith({});
+    process.chdir(root);
+    const out = JSON.parse(await capture(['retro', 'upstream', '--title', 'T', '--lesson', 'L', '--evidence', 'e1', '--evidence', 'e2', '--json']));
+    expect(out.body).toContain('- e1\n- e2');
+  });
+});
