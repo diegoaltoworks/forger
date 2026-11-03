@@ -6,13 +6,14 @@ One ticket per iteration, quality gates green, small clean commits.
 
 Forger: deterministic tools and skills for an unattended, self-improving
 development loop in Claude Code. The plugin lives in `plugins/forger/` (engine in
-`plugins/forger/engine/`, commands in `plugins/forger/commands/`, the files a
-project adopts in `plugins/forger/templates/`). The process it
+`plugins/forger/engine/`, commands in `plugins/forger/commands/`, the packs a
+project adopts in `plugins/forger/packs/`). The process it
 encodes lives in `docs/`. Read `README.md`, `docs/01-principles.md`,
 `GLOSSARY.md`, `docs/adr/` and `docs/plan-foundation.md` before a ticket.
 
-Forger is built by an existing loop plugin until it can build itself; that is
-why `worker_command` is not a forger command yet.
+Forger builds itself: `worker_command` is `forger:auto-ticket`, run from this
+checkout through a local-scope plugin install, so a worker always runs the
+commands on `main`.
 
 ## The gates
 
