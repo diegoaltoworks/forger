@@ -210,7 +210,7 @@
     },
     "docs_check": {
       "priority": "P1",
-      "status": "not_started",
+      "status": "completed",
       "type": "feature",
       "depends_on": [],
       "effort": "small",

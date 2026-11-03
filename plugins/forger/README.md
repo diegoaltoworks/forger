@@ -204,6 +204,7 @@ from the consumer repo root so it finds `.claude/`:
 bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts run --continuous   # the loop
 bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts status             # where it's at
 bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts backlog --json     # workable tickets, remaining, next pick
+bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts check docs [--json]  # writing rules: ASCII punctuation, no emails or home paths, optional .forger-denylist
 bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts resume             # clear a HALT
 ```
 

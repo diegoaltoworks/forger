@@ -8,9 +8,11 @@ import {dirname, join} from 'path';
 import {parseArgs} from 'util';
 
 import {loadConfig} from './config';
-import type {CommandRunner} from './git';
+import {execRunner, type CommandRunner} from './git';
 import {formatBacklogReport} from './backlog';
 import {openBacklog} from './open-backlog';
+import {runDocsCheck} from './docs-check';
+import {formatViolations} from './docs-rules';
 import {AutomationRunner} from './runner';
 
 /** Nearest ancestor directory containing a `.claude` folder. */
@@ -30,6 +32,7 @@ Usage (run from the consumer repo root):
   run [N]          Run N iterations (default: 1)
   run --continuous Run until all tasks complete
   status           Show current status
+  check docs [--json] Fail on non-ASCII punctuation, emails, home paths, denylist terms
   backlog [--json] Workable tickets in order, remaining count and next pick
   reset            Reset state to start fresh
   watch            Live status display
@@ -67,6 +70,17 @@ export async function main(
 
   const command = positionals[0] || 'status';
   const projectRoot = findProjectRoot();
+  if (command === 'check') {
+    if (positionals[1] !== 'docs') {
+      console.error('Usage: check docs [--json]');
+      process.exitCode = 1;
+      return;
+    }
+    const violations = runDocsCheck(projectRoot, deps.run ?? execRunner(projectRoot));
+    console.log(values.json ? JSON.stringify(violations) : formatViolations(violations));
+    if (violations.length > 0) process.exitCode = 1;
+    return;
+  }
   const config = loadConfig(projectRoot);
   const backlog = openBacklog(projectRoot, config, deps.run);
   const runner = new AutomationRunner(projectRoot, config, backlog);
