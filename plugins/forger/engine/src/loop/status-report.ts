@@ -5,10 +5,12 @@
  */
 
 import {declinedTickets, type DeclineReason} from './decline';
-import type {AutomationState} from './state';
+import {currentTicket, type AutomationState} from './state';
 
 export interface StatusInputs {
   state: AutomationState;
+  /** Whether a pid is a live process; decides each run's liveness. */
+  isAlive: (pid: number) => boolean;
   /** The pid in the lock file, if any. */
   runnerPid: number | null;
   runnerAlive: boolean;
@@ -18,6 +20,15 @@ export interface StatusInputs {
   next: string | null;
   maxStallIterations: number;
   maxConsecutiveFailures: number;
+}
+
+export interface InFlightStatus {
+  ticket: string | null;
+  pid: number | null;
+  session_id: string;
+  started_at: string;
+  /** False when the run has no known pid or the pid is gone. */
+  alive: boolean;
 }
 
 export interface StatusReport {
@@ -34,6 +45,8 @@ export interface StatusReport {
     max_stall_iterations: number;
   };
   current_ticket: string | null;
+  /** One entry per run in flight, oldest first. */
+  in_flight: InFlightStatus[];
   next_pick: string | null;
   remaining: number;
   workable: number;
@@ -58,7 +71,14 @@ export function buildStatus(i: StatusInputs): StatusReport {
       stall_count: s.stall_count || 0,
       max_stall_iterations: i.maxStallIterations,
     },
-    current_ticket: s.current_task,
+    current_ticket: currentTicket(s),
+    in_flight: s.in_flight.map(r => ({
+      ticket: r.ticket,
+      pid: r.pid,
+      session_id: r.session_id,
+      started_at: r.started_at,
+      alive: r.pid !== null && i.isAlive(r.pid),
+    })),
     next_pick: i.next,
     remaining: i.remaining,
     workable: i.workable,

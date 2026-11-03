@@ -23,45 +23,100 @@ export type AutomationStatus =
   | 'error'
   | 'halted';
 
+/** One worker run that has started and not yet been settled. */
+export interface InFlightRun {
+  /** The ticket the run was started on; null when the engine had no pick. */
+  ticket: string | null;
+  /** The worker process, once known; null for a run read from the old shape. */
+  pid: number | null;
+  session_id: string;
+  /** Git position when the run began; closes out an orphan from facts. */
+  snapshot: RunSnapshot | null;
+  started_at: string;
+}
+
 export interface AutomationState {
   iteration: number;
   status: AutomationStatus;
-  started_at: string | null;
   last_completed_at: string | null;
   completed_iterations: number;
   failed_iterations: number;
   consecutive_failures: number;
   completed_tasks: string[];
-  current_task: string | null;
+  /** Runs in progress, oldest first. Counters below stay global across them. */
+  in_flight: InFlightRun[];
   last_error: string | null;
-  session_id: string | null;
   stall_count: number;
   /** Recent runs the worker declined, oldest first. */
   declined_tasks: DeclineEntry[];
   /** Declined runs in a row; any other outcome ends the run. */
   consecutive_declines: number;
-  /** Git position when the open iteration began; closes out an orphan from facts. */
-  snapshot: RunSnapshot | null;
 }
 
 export function defaultState(): AutomationState {
   return {
     iteration: 0,
     status: 'ready',
-    started_at: null,
     last_completed_at: null,
     completed_iterations: 0,
     failed_iterations: 0,
     consecutive_failures: 0,
     completed_tasks: [],
-    current_task: null,
+    in_flight: [],
     last_error: null,
-    session_id: null,
     stall_count: 0,
     declined_tasks: [],
     consecutive_declines: 0,
-    snapshot: null,
   };
+}
+
+/** The ticket of the oldest run in flight, for the places that name one. */
+export function currentTicket(state: AutomationState): string | null {
+  return state.in_flight[0]?.ticket ?? null;
+}
+
+export function startRun(state: AutomationState, run: InFlightRun): void {
+  state.in_flight = [...state.in_flight.filter(r => r.session_id !== run.session_id), run];
+}
+
+export function updateRun(state: AutomationState, sessionId: string, patch: Partial<Omit<InFlightRun, 'session_id'>>): void {
+  state.in_flight = state.in_flight.map(r => (r.session_id === sessionId ? {...r, ...patch} : r));
+}
+
+export function endRun(state: AutomationState, sessionId: string): void {
+  state.in_flight = state.in_flight.filter(r => r.session_id !== sessionId);
+}
+
+const LEGACY_RUN_FIELDS = ['current_task', 'session_id', 'snapshot', 'started_at'] as const;
+
+/**
+ * Reads a stored state of either shape. The old shape held one run in
+ * `current_task`, `session_id`, `snapshot` and `started_at`; it reads as one
+ * in-flight run while the status is `running`, and as none otherwise (a
+ * settled run left its fields behind only as stale values).
+ */
+export function migrateState(raw: unknown): AutomationState {
+  const stored = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>;
+  const merged = {...defaultState(), ...stored} as AutomationState & Record<string, unknown>;
+  let inFlight: InFlightRun[];
+  if (Array.isArray(stored.in_flight)) {
+    inFlight = stored.in_flight as InFlightRun[];
+  } else if (stored.status === 'running') {
+    inFlight = [
+      {
+        ticket: typeof stored.current_task === 'string' ? stored.current_task : null,
+        pid: null,
+        session_id: typeof stored.session_id === 'string' ? stored.session_id : '',
+        snapshot: (stored.snapshot as RunSnapshot | null | undefined) ?? null,
+        started_at: typeof stored.started_at === 'string' ? stored.started_at : '',
+      },
+    ];
+  } else {
+    inFlight = [];
+  }
+  for (const field of LEGACY_RUN_FIELDS) delete merged[field];
+  merged.in_flight = inFlight;
+  return merged;
 }
 
 /**
@@ -90,7 +145,7 @@ export class StateStore {
   load(): AutomationState {
     if (existsSync(this.stateFile)) {
       try {
-        return {...defaultState(), ...(JSON.parse(readFileSync(this.stateFile, 'utf-8')) as Partial<AutomationState>)};
+        return migrateState(JSON.parse(readFileSync(this.stateFile, 'utf-8')));
       } catch {
         return defaultState();
       }

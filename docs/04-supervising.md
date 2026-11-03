@@ -103,7 +103,12 @@ Every fact and decision above comes from a command, so a session does not
 improvise them:
 
 - `orient --json`: halt, attach, start or nothing to do, with anomalies.
-- `status --json`, `backlog --json`: counters, current ticket, next pick.
+- `status --json`, `backlog --json`: counters, the runs in flight, next pick.
+  Each in-flight run reports its ticket, worker pid and whether that pid is
+  alive; `current_ticket` names the oldest. The counters are global across
+  runs, and a merge by any run resets the stall counter. A state file written
+  before the run list existed reads as one in-flight run while its status is
+  `running`.
 - `events`, `await-event`: the terminal-event file, read as data.
 - `facts --json [--issue N] [--pr N]`: the loop checkout's branch, whether it
   is clean, the base head on `origin`, and an issue's closing PR (or a PR on its

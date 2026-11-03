@@ -26,7 +26,7 @@ import type {Decision} from './verdict';
 import {decisionForHead, readVerdicts} from './verdict-store';
 import {buildPrompt} from './prompt';
 import {gatherFacts, takeSnapshot, ticketFromBranch} from './run-facts';
-import {type AutomationState, type StateStore, stallUpdate} from './state';
+import {type AutomationState, endRun, type StateStore, stallUpdate, startRun, updateRun} from './state';
 
 /** What an iteration reads and writes, handed in by the runner that owns it. */
 export interface IterationContext {
@@ -59,15 +59,14 @@ export async function runIteration(ctx: IterationContext, iteration: number, cou
 
   state.iteration = iteration;
   state.status = 'running';
-  state.started_at = new Date().toISOString();
-  state.session_id = sessionId;
+  startRun(state, {ticket: null, pid: null, session_id: sessionId, snapshot: null, started_at: new Date().toISOString()});
   ctx.store.save(state);
 
   // Capture the ticket we are ABOUT to work before the agent runs. Reading it
   // afterwards records the *next* not-started ticket instead of the one just
   // implemented, so completed_tasks would lag a ticket behind.
   const attemptedTask = ctx.backlog.next();
-  state.current_task = attemptedTask;
+  updateRun(state, sessionId, {ticket: attemptedTask});
   ctx.store.save(state);
 
   const prompt = buildPrompt(ctx.config, iteration, state.completed_tasks, attemptedTask);
@@ -80,7 +79,7 @@ export async function runIteration(ctx: IterationContext, iteration: number, cou
   const {timeoutMinutes, killGraceSeconds} = ctx.config.limits;
   const base = ctx.config.base_branch;
   const snapshot = takeSnapshot(ctx.gitRunner, base);
-  state.snapshot = snapshot;
+  updateRun(state, sessionId, {snapshot});
   ctx.store.save(state);
   // A record left by an earlier run must not speak for this one.
   const declinedFile = join(ctx.projectRoot, ctx.config.paths.declined);
@@ -153,7 +152,7 @@ export async function runIteration(ctx: IterationContext, iteration: number, cou
 
   const declined: DeclineEntry | null =
     outcome.status === 'declined' && record ? {ticket: record.ticket, reason: record.reason, iteration} : null;
-  return settle(ctx, state, iteration, ticket, backlogCompleted, outcome, countStall, declined);
+  return settle(ctx, state, sessionId, iteration, ticket, backlogCompleted, outcome, countStall, declined);
 }
 
 /**
@@ -164,6 +163,7 @@ export async function runIteration(ctx: IterationContext, iteration: number, cou
 function settle(
   ctx: IterationContext,
   state: AutomationState,
+  sessionId: string,
   iteration: number,
   ticket: string | null,
   backlogCompleted: boolean,
@@ -172,14 +172,13 @@ function settle(
   declined: DeclineEntry | null = null
 ): boolean {
   const {maxStallIterations, maxConsecutiveDeclines} = ctx.config.limits;
-  state.snapshot = null;
+  endRun(state, sessionId);
   state.status = outcome.status;
   if (outcome.result === 'success') {
     ctx.logger.log('SUCCESS', `Iteration ${iteration} merged ${ticket ?? 'a change'}`);
     state.last_completed_at = new Date().toISOString();
     state.completed_iterations++;
     state.consecutive_failures = 0;
-    state.current_task = null;
     state.last_error = null;
     // Merged is the fact; the backlog naming the ticket completed is what
     // makes the name safe to feed the next prompt as history.
@@ -236,13 +235,14 @@ export function closeOrphan(ctx: IterationContext): void {
   const state = ctx.store.load();
   if (state.status !== 'running') return;
   const iteration = state.iteration;
-  const ticket = state.current_task;
+  const run = state.in_flight[0];
+  const ticket = run?.ticket ?? null;
   const base = ctx.config.base_branch;
   ctx.logger.log('WARN', `Iteration ${iteration} was left open by a dead runner; closing it out`);
 
   // Without a snapshot nothing is known about the run's start, so only the
   // current branch and its PR can speak.
-  const snapshot = state.snapshot ?? {baseSha: '', reflogLength: Number.MAX_SAFE_INTEGER};
+  const snapshot = run?.snapshot ?? {baseSha: '', reflogLength: Number.MAX_SAFE_INTEGER};
   const gitFacts = gatherFacts(ctx.gitRunner, base, snapshot);
   const taken = ticketFromBranch(gitFacts.branch);
   const held = taken && ctx.backlog.has(taken) ? taken : ticket;
@@ -265,7 +265,7 @@ export function closeOrphan(ctx: IterationContext): void {
     verdict: verdictOf(ctx, gitFacts.pr),
   });
   ctx.emit('runner_gone', iteration, held, outcome.error ?? outcome.warning);
-  settle(ctx, state, iteration, held, backlogCompleted, outcome, false);
+  settle(ctx, state, run?.session_id ?? '', iteration, held, backlogCompleted, outcome, false);
 }
 
 /** The decision recorded for the head of the run's PR; null when there is no PR or no record for its head. */
