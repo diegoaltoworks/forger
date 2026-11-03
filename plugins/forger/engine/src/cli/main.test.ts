@@ -491,6 +491,15 @@ describe('supervisor commands', () => {
     expect(await capture(['approval', 'start_runner'])).toBe('alone');
   });
 
+  test('approval inside a project records the ask, and events still lists terminal events only', async () => {
+    const root = projectWith({});
+    process.chdir(root);
+    expect(await capture(['approval', 'clear_halt'])).toBe('owner');
+    const lines = readFileSync(join(root, '.forger', 'events.jsonl'), 'utf-8').trim().split('\n').map(l => JSON.parse(l));
+    expect(lines).toEqual([expect.objectContaining({event: 'approval_asked', reason: 'clear_halt: owner'})]);
+    expect(JSON.parse(await capture(['events', '--json']))).toEqual([]);
+  });
+
   test('events lists what the runner wrote', async () => {
     const root = projectWith({});
     writeFileSync(

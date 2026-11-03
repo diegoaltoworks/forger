@@ -19,8 +19,21 @@ export const TERMINAL_EVENTS = [
 
 export type TerminalEventKind = (typeof TERMINAL_EVENTS)[number];
 
+/**
+ * Facts about the run that are not terminal: the pick, an approval asked and a
+ * halt a person cleared. They share the file, but the terminal readers
+ * (`readEvents`, `awaitEvent`) skip them, so a watcher never wakes on one.
+ * `reason` carries the detail: the action and its authority for an approval,
+ * the cleared halt's reason for a clear.
+ */
+export const RECORDED_EVENTS = ['picked', 'approval_asked', 'halt_cleared'] as const;
+
+export type RecordedEventKind = (typeof RECORDED_EVENTS)[number];
+
+export type EventKind = TerminalEventKind | RecordedEventKind;
+
 export interface TerminalEvent {
-  event: TerminalEventKind;
+  event: EventKind;
   at: string;
   iteration: number;
   ticket: string | null;
@@ -28,7 +41,7 @@ export interface TerminalEvent {
 }
 
 export function terminalEvent(
-  event: TerminalEventKind,
+  event: EventKind,
   iteration: number,
   ticket: string | null,
   reason: string | null,
@@ -46,12 +59,21 @@ export function appendEvent(file: string, e: TerminalEvent): void {
 }
 
 export function parseEvents(text: string): TerminalEvent[] {
+  return parseKinds(text, TERMINAL_EVENTS);
+}
+
+/** Every line the file holds: terminal and recorded events alike. */
+export function parseAllEvents(text: string): TerminalEvent[] {
+  return parseKinds(text, [...TERMINAL_EVENTS, ...RECORDED_EVENTS]);
+}
+
+function parseKinds(text: string, kinds: readonly string[]): TerminalEvent[] {
   const out: TerminalEvent[] = [];
   for (const line of text.split('\n')) {
     if (line.trim() === '') continue;
     try {
       const e = JSON.parse(line) as TerminalEvent;
-      if ((TERMINAL_EVENTS as readonly string[]).includes(e.event)) out.push(e);
+      if (kinds.includes(e.event)) out.push(e);
     } catch {
       // A torn line is not an event; the next read sees it whole.
     }
@@ -61,6 +83,10 @@ export function parseEvents(text: string): TerminalEvent[] {
 
 export function readEvents(file: string): TerminalEvent[] {
   return existsSync(file) ? parseEvents(readFileSync(file, 'utf-8')) : [];
+}
+
+export function readAllEvents(file: string): TerminalEvent[] {
+  return existsSync(file) ? parseAllEvents(readFileSync(file, 'utf-8')) : [];
 }
 
 /**

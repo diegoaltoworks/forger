@@ -13,7 +13,7 @@ import type {Backlog} from '../backlog';
 import {resolveModel, type WorkloopConfig} from '../config';
 import type {AgentRunner, CommandRunner} from '../ports';
 import {parseClaim} from './claim';
-import type {TerminalEventKind} from './events';
+import type {EventKind, TerminalEventKind} from './events';
 import {declineUpdate, type DeclineEntry} from './decline';
 import {clearDeclineRecord, readDeclineRecord} from './decline-io';
 import {classifyExit} from './infra';
@@ -40,7 +40,7 @@ export interface IterationContext {
   agent: AgentRunner;
   uuid: () => string;
   refreshBacklog(): Promise<void>;
-  emit(kind: TerminalEventKind, iteration: number, ticket: string | null, reason: string | null): void;
+  emit(kind: EventKind, iteration: number, ticket: string | null, reason: string | null): void;
   halt(reason: string, kind?: TerminalEventKind): void;
 }
 
@@ -93,6 +93,7 @@ export async function runIteration(
   const attemptedTask = placement ? placement.ticket : ctx.backlog.next();
   updateRun(state, sessionId, {ticket: attemptedTask});
   ctx.store.save(state);
+  if (attemptedTask) ctx.emit('picked', iteration, attemptedTask, null);
 
   const prompt = buildPrompt(ctx.config, iteration, state.completed_tasks, attemptedTask, placement !== undefined);
   const tier = ctx.backlog.tier(attemptedTask);

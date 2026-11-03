@@ -161,6 +161,13 @@ name (a key matches any model id that contains it), each entry giving `input`,
 whose session has no transcript, or whose model has no price, reports `cost_usd`
 as null: unknown, never zero and never the cap.
 
+The event log (`events.jsonl`) also records what the owner-intervention and
+pick-versus-built measures need: the engine's pick (`picked`, with the ticket),
+an approval asked (`approval_asked`, with the action and who may do it) and a
+halt a person cleared (`halt_cleared`, with the halt's reason). They share the
+file with the terminal events but `events` and `await-event` skip them, so a
+watcher wakes only on a terminal event.
+
 `measure --report` folds these into the five-measure comparison report of
 ADR 0012, and `measure --diff A.json B.json` gives the per-measure delta between
 two saved reports.

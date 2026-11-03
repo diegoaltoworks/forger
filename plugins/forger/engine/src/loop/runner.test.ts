@@ -358,10 +358,17 @@ describe('AutomationRunner infrastructure errors and resume', () => {
   });
 });
 
-function eventsOf(root: string): {event: string; reason: string | null; ticket: string | null}[] {
+function allEventsOf(root: string): {event: string; reason: string | null; ticket: string | null; iteration: number}[] {
   const f = join(root, '.forger', 'events.jsonl');
   if (!existsSync(f)) return [];
   return readFileSync(f, 'utf-8').trimEnd().split('\n').map(l => JSON.parse(l));
+}
+
+const RECORDED = ['picked', 'approval_asked', 'halt_cleared'];
+
+/** The terminal events only; the recorded ones have their own tests. */
+function eventsOf(root: string): {event: string; reason: string | null; ticket: string | null}[] {
+  return allEventsOf(root).filter(e => !RECORDED.includes(e.event));
 }
 
 describe('AutomationRunner single runner', () => {
@@ -454,6 +461,27 @@ describe('AutomationRunner single runner', () => {
     expect(state.failed_iterations).toBe(1);
     expect(state.stall_count).toBe(0);
     expect(eventsOf(root)[0].event).toBe('runner_gone');
+  });
+
+  test('the engine pick is recorded before the worker runs', async () => {
+    const {runner, root} = runnerWith(fail);
+    await runner.runIteration(1);
+    const picked = allEventsOf(root).filter(e => e.event === 'picked');
+    expect(picked).toEqual([expect.objectContaining({iteration: 1, ticket: 'the_ticket', reason: null})]);
+  });
+
+  test('clearing a halt records who cleared what', () => {
+    const {runner, root} = runnerWith(fail);
+    runner.halt('by hand');
+    runner.clearHalt();
+    const cleared = allEventsOf(root).filter(e => e.event === 'halt_cleared');
+    expect(cleared).toEqual([expect.objectContaining({reason: 'by hand'})]);
+  });
+
+  test('resume with nothing halted records nothing', () => {
+    const {runner, root} = runnerWith(fail);
+    runner.clearHalt();
+    expect(allEventsOf(root).filter(e => e.event === 'halt_cleared')).toEqual([]);
   });
 
   test('closeOrphan leaves a finished state alone', () => {

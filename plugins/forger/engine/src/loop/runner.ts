@@ -19,7 +19,7 @@ import {type IterationContext, type Placement, closeOrphan, runIteration} from '
 import {conflictAfterAttempt, finishWorktree, folderMapFrom, inWorktree} from './parallel';
 import {createWorktree, worktreePath} from './worktree';
 import {pidAlive, RunnerLock} from './lock';
-import {appendEvent, terminalEvent, type TerminalEventKind} from './events';
+import {appendEvent, terminalEvent, type EventKind, type TerminalEventKind} from './events';
 import {appendSchedule} from './schedule-log';
 import {buildStatus, type StatusReport} from './status-report';
 
@@ -153,7 +153,7 @@ export class AutomationRunner {
     }
   }
 
-  private emit(kind: TerminalEventKind, iteration: number, ticket: string | null, reason: string | null): void {
+  private emit(kind: EventKind, iteration: number, ticket: string | null, reason: string | null): void {
     appendEvent(this.eventsFile, terminalEvent(kind, iteration, ticket, reason));
   }
 
@@ -168,10 +168,13 @@ export class AutomationRunner {
   }
 
   clearHalt(): void {
+    const before = this.store.load();
+    const wasHalted = this.store.isHalted() || before.status === 'halted';
     if (this.store.isHalted()) {
       this.store.clearHalt();
       this.logger.log('INFO', 'Cleared HALT file');
     }
+    if (wasHalted) this.emit('halt_cleared', before.iteration, currentTicket(before), before.last_error);
     // The counters that tripped the halt would trip it again on the first
     // iteration after the human has fixed the cause.
     const state = this.store.load();
