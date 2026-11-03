@@ -1,8 +1,8 @@
 {
   "id": "ui",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "A UI change is reviewable only when it can be seen: screenshots come from a command, a branch that changes UI files updates them, and accessibility and design tokens are checked.",
-  "detect": [],
+  "detect": ["dep:react", "dep:vue", "dep:svelte", "dep:next", "dep:@angular/core", "file:index.html"],
   "files": [
     {"source": "files/ui.md", "target": ".forger/opinions/ui.md"},
     {"source": "files/ui.json", "target": ".forger/ui.json"},

@@ -33,10 +33,18 @@ bun "${CLAUDE_PLUGIN_ROOT}/bin/work.ts" skills --presets --json
 For each one, offer to map it onto the skill slots; an empty list means ask
 nothing. The user can map slots by hand later in `.forger/workloop.config.json`.
 
+Then ask about packs. List the ones the repo's own facts call for:
+```
+bun "${CLAUDE_PLUGIN_ROOT}/bin/work.ts" packs --detect --json
+```
+Each entry carries the rules that matched. Recommend those packs and say why in
+the owner's terms; an empty list means ask nothing. The owner chooses, and the
+chosen ids go to `--packs` below, after `base`.
+
 ## 2. Install
 
 ```
-bun "${CLAUDE_PLUGIN_ROOT}/bin/work.ts" setup --json --gates "<gates>" --base-branch "<branch>" --tracker "<kind>" [--preset "<name>"]
+bun "${CLAUDE_PLUGIN_ROOT}/bin/work.ts" setup --json --gates "<gates>" --base-branch "<branch>" --tracker "<kind>" [--preset "<name>"] [--packs "base,<chosen>"]
 ```
 
 The tool writes the config (with `check` appended to the gates),

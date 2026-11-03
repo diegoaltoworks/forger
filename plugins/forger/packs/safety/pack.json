@@ -1,8 +1,8 @@
 {
   "id": "safety",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Nothing secret in the repo, and stored data carried forward: secrets and migrations checked by check safety.",
-  "detect": [],
+  "detect": ["dir:migrations", "dir:migrate", "file:schema.prisma", "file:alembic.ini"],
   "files": [
     {"source": "files/safety.md", "target": ".forger/opinions/safety.md"},
     {"source": "files/safety.json", "target": ".forger/safety.json"}

@@ -1,7 +1,7 @@
 import {existsSync, readFileSync} from 'fs';
 import {join} from 'path';
 
-import {LOCK_PATH, formatOpinions, formatPacks, listOpinions, listPacks, loadPacks, parseLock} from '../packs';
+import {LOCK_PATH, detectPacks, formatOpinions, formatSuggestions, readRepoFacts, formatPacks, listOpinions, listPacks, loadPacks, parseLock} from '../packs';
 import type {Command, CommandContext} from './command';
 import {forgerPath} from '../config';
 
@@ -12,6 +12,11 @@ function installed(which: 'packs' | 'opinions') {
     try {
       const lock = existsSync(lockPath) ? parseLock(readFileSync(lockPath, 'utf-8')) : {packs: []};
       const available = loadPacks(pluginRoot);
+      if (which === 'packs' && values.detect) {
+        const suggested = detectPacks(available, lock, readRepoFacts(projectRoot));
+        console.log(values.json ? JSON.stringify(suggested) : formatSuggestions(suggested));
+        return;
+      }
       out = which === 'packs' ? listPacks(available, lock) : listOpinions(available, lock);
     } catch (e) {
       console.error((e as Error).message);
@@ -26,8 +31,9 @@ function installed(which: 'packs' | 'opinions') {
 export const packs: Command = {
   name: 'packs',
   needs: 'root',
-  flags: ['json'],
-  help: '  packs [--json]   Available packs and which are installed',
+  flags: ['json', 'detect'],
+  help: `  packs [--json] [--detect]
+                   Available packs and which are installed; --detect suggests packs from repo facts`,
   run: installed('packs'),
 };
 
