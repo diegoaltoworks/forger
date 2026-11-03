@@ -58,9 +58,13 @@ The work order, engine state, playbook and logs move to a state branch or to the
 tracker. Needed for every hosting option, and it already makes the local loop
 survive restarts.
 
-## 4. Off the laptop
+## 4. A sample product, then off the laptop
 
-- **First: CI-native.** A scheduled supervisor job runs one `manage` tick; a
+- **First: a sample product repository** that the evals and the CI-native mode
+  run against, with forger installed from outside and a fixed set of owner
+  requests replayed to compare forger versions; see
+  [ADR 0012](adr/0012-a-sample-product-repository-proves-forger-off-itself.md).
+- **Then: CI-native**, targeting the sample repository first. A scheduled supervisor job runs one `manage` tick; a
   dispatched worker job builds one ticket, with a concurrency group for one
   worker at a time. Reports go where the owner reads them on a phone; a HALT
   waits for an owner action (a comment or a label).
@@ -75,7 +79,6 @@ survive restarts.
 
 - Strip what is specific to one project or one account from the commands and
   templates; everything project-specific lives in the consumer repository.
-- A sample repository the evals and the CI-native mode run against.
 - The ticket sections as a configurable set, with the defaults from
   `docs/03-tickets.md`.
 
