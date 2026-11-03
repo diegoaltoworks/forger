@@ -1,14 +1,26 @@
-import {formatSetup, loadPresets, offerPresets, parsePackList, runSetup} from '../packs';
+import {formatSetup, formatUpgrade, loadPresets, offerPresets, parsePackList, runSetup, runUpgrade} from '../packs';
 import type {Command} from './command';
 
 export const setup: Command = {
   name: 'setup',
   needs: 'none',
-  flags: ['json', 'gates', 'base-branch', 'tracker', 'preset', 'packs'],
-  help: `  setup [--json] [--gates CMD] [--base-branch B] [--tracker KIND] [--preset NAME] [--packs A,B]
+  flags: ['json', 'gates', 'base-branch', 'tracker', 'preset', 'packs', 'upgrade'],
+  help: `  setup [--json] [--gates CMD] [--base-branch B] [--tracker KIND] [--preset NAME] [--packs A,B] [--upgrade]
                    Install the chosen opinion packs (default base) into .claude/, never overwriting,
-                   and record them in .claude/forger.lock.json`,
+                   and record them in .claude/forger.lock.json.
+                   --upgrade brings installed packs to this plugin's version: untouched files take the
+                   new version, refined files are kept, files both sides changed get <file>.upstream`,
   run({values, pluginRoot, installedSkills}) {
+    if (values.upgrade) {
+      try {
+        const upgrade = runUpgrade(process.cwd(), pluginRoot);
+        console.log(values.json ? JSON.stringify(upgrade) : formatUpgrade(upgrade));
+      } catch (e) {
+        console.error((e as Error).message);
+        process.exitCode = 1;
+      }
+      return;
+    }
     let skills: Record<string, string> | undefined;
     if (values.preset) {
       const preset = loadPresets(pluginRoot).find(p => p.name === values.preset);
