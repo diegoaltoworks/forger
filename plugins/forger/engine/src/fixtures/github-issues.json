@@ -1,0 +1,478 @@
+[
+ {
+  "data": {
+   "repository": {
+    "issues": {
+     "pageInfo": {
+      "hasNextPage": false,
+      "endCursor": "Y3Vyc29yOnYyOpK0MjAyNi0xMS0wM1QwNjozMzoyNFrPAAAAAXA10fo="
+     },
+     "nodes": [
+      {
+       "number": 1,
+       "state": "CLOSED",
+       "labels": {
+        "nodes": [
+         {
+          "name": "ready-for-agent"
+         }
+        ]
+       },
+       "timelineItems": {
+        "nodes": [
+         {
+          "closer": {
+           "__typename": "PullRequest",
+           "merged": true
+          }
+         }
+        ]
+       },
+       "blockedBy": {
+        "nodes": []
+       }
+      },
+      {
+       "number": 2,
+       "state": "CLOSED",
+       "labels": {
+        "nodes": [
+         {
+          "name": "ready-for-agent"
+         }
+        ]
+       },
+       "timelineItems": {
+        "nodes": [
+         {
+          "closer": {
+           "__typename": "PullRequest",
+           "merged": true
+          }
+         }
+        ]
+       },
+       "blockedBy": {
+        "nodes": [
+         {
+          "number": 1,
+          "state": "CLOSED",
+          "labels": {
+           "nodes": [
+            {
+             "name": "ready-for-agent"
+            }
+           ]
+          },
+          "timelineItems": {
+           "nodes": [
+            {
+             "closer": {
+              "__typename": "PullRequest",
+              "merged": true
+             }
+            }
+           ]
+          }
+         }
+        ]
+       }
+      },
+      {
+       "number": 3,
+       "state": "CLOSED",
+       "labels": {
+        "nodes": [
+         {
+          "name": "ready-for-agent"
+         }
+        ]
+       },
+       "timelineItems": {
+        "nodes": [
+         {
+          "closer": {
+           "__typename": "PullRequest",
+           "merged": true
+          }
+         }
+        ]
+       },
+       "blockedBy": {
+        "nodes": [
+         {
+          "number": 2,
+          "state": "CLOSED",
+          "labels": {
+           "nodes": [
+            {
+             "name": "ready-for-agent"
+            }
+           ]
+          },
+          "timelineItems": {
+           "nodes": [
+            {
+             "closer": {
+              "__typename": "PullRequest",
+              "merged": true
+             }
+            }
+           ]
+          }
+         }
+        ]
+       }
+      },
+      {
+       "number": 4,
+       "state": "OPEN",
+       "labels": {
+        "nodes": [
+         {
+          "name": "ready-for-agent"
+         }
+        ]
+       },
+       "timelineItems": {
+        "nodes": []
+       },
+       "blockedBy": {
+        "nodes": [
+         {
+          "number": 3,
+          "state": "CLOSED",
+          "labels": {
+           "nodes": [
+            {
+             "name": "ready-for-agent"
+            }
+           ]
+          },
+          "timelineItems": {
+           "nodes": [
+            {
+             "closer": {
+              "__typename": "PullRequest",
+              "merged": true
+             }
+            }
+           ]
+          }
+         }
+        ]
+       }
+      },
+      {
+       "number": 5,
+       "state": "OPEN",
+       "labels": {
+        "nodes": [
+         {
+          "name": "ready-for-agent"
+         }
+        ]
+       },
+       "timelineItems": {
+        "nodes": []
+       },
+       "blockedBy": {
+        "nodes": [
+         {
+          "number": 2,
+          "state": "CLOSED",
+          "labels": {
+           "nodes": [
+            {
+             "name": "ready-for-agent"
+            }
+           ]
+          },
+          "timelineItems": {
+           "nodes": [
+            {
+             "closer": {
+              "__typename": "PullRequest",
+              "merged": true
+             }
+            }
+           ]
+          }
+         }
+        ]
+       }
+      },
+      {
+       "number": 6,
+       "state": "OPEN",
+       "labels": {
+        "nodes": [
+         {
+          "name": "ready-for-agent"
+         }
+        ]
+       },
+       "timelineItems": {
+        "nodes": []
+       },
+       "blockedBy": {
+        "nodes": [
+         {
+          "number": 5,
+          "state": "OPEN",
+          "labels": {
+           "nodes": [
+            {
+             "name": "ready-for-agent"
+            }
+           ]
+          },
+          "timelineItems": {
+           "nodes": []
+          }
+         }
+        ]
+       }
+      },
+      {
+       "number": 7,
+       "state": "OPEN",
+       "labels": {
+        "nodes": [
+         {
+          "name": "ready-for-agent"
+         }
+        ]
+       },
+       "timelineItems": {
+        "nodes": []
+       },
+       "blockedBy": {
+        "nodes": []
+       }
+      },
+      {
+       "number": 8,
+       "state": "OPEN",
+       "labels": {
+        "nodes": [
+         {
+          "name": "ready-for-agent"
+         }
+        ]
+       },
+       "timelineItems": {
+        "nodes": []
+       },
+       "blockedBy": {
+        "nodes": []
+       }
+      },
+      {
+       "number": 9,
+       "state": "OPEN",
+       "labels": {
+        "nodes": [
+         {
+          "name": "ready-for-agent"
+         }
+        ]
+       },
+       "timelineItems": {
+        "nodes": []
+       },
+       "blockedBy": {
+        "nodes": [
+         {
+          "number": 8,
+          "state": "OPEN",
+          "labels": {
+           "nodes": [
+            {
+             "name": "ready-for-agent"
+            }
+           ]
+          },
+          "timelineItems": {
+           "nodes": []
+          }
+         }
+        ]
+       }
+      },
+      {
+       "number": 10,
+       "state": "OPEN",
+       "labels": {
+        "nodes": [
+         {
+          "name": "ready-for-agent"
+         }
+        ]
+       },
+       "timelineItems": {
+        "nodes": []
+       },
+       "blockedBy": {
+        "nodes": [
+         {
+          "number": 8,
+          "state": "OPEN",
+          "labels": {
+           "nodes": [
+            {
+             "name": "ready-for-agent"
+            }
+           ]
+          },
+          "timelineItems": {
+           "nodes": []
+          }
+         },
+         {
+          "number": 7,
+          "state": "OPEN",
+          "labels": {
+           "nodes": [
+            {
+             "name": "ready-for-agent"
+            }
+           ]
+          },
+          "timelineItems": {
+           "nodes": []
+          }
+         }
+        ]
+       }
+      },
+      {
+       "number": 11,
+       "state": "OPEN",
+       "labels": {
+        "nodes": [
+         {
+          "name": "ready-for-agent"
+         }
+        ]
+       },
+       "timelineItems": {
+        "nodes": []
+       },
+       "blockedBy": {
+        "nodes": [
+         {
+          "number": 6,
+          "state": "OPEN",
+          "labels": {
+           "nodes": [
+            {
+             "name": "ready-for-agent"
+            }
+           ]
+          },
+          "timelineItems": {
+           "nodes": []
+          }
+         }
+        ]
+       }
+      },
+      {
+       "number": 12,
+       "state": "OPEN",
+       "labels": {
+        "nodes": [
+         {
+          "name": "ready-for-agent"
+         }
+        ]
+       },
+       "timelineItems": {
+        "nodes": []
+       },
+       "blockedBy": {
+        "nodes": [
+         {
+          "number": 10,
+          "state": "OPEN",
+          "labels": {
+           "nodes": [
+            {
+             "name": "ready-for-agent"
+            }
+           ]
+          },
+          "timelineItems": {
+           "nodes": []
+          }
+         },
+         {
+          "number": 6,
+          "state": "OPEN",
+          "labels": {
+           "nodes": [
+            {
+             "name": "ready-for-agent"
+            }
+           ]
+          },
+          "timelineItems": {
+           "nodes": []
+          }
+         }
+        ]
+       }
+      },
+      {
+       "number": 13,
+       "state": "OPEN",
+       "labels": {
+        "nodes": [
+         {
+          "name": "ready-for-agent"
+         }
+        ]
+       },
+       "timelineItems": {
+        "nodes": []
+       },
+       "blockedBy": {
+        "nodes": [
+         {
+          "number": 9,
+          "state": "OPEN",
+          "labels": {
+           "nodes": [
+            {
+             "name": "ready-for-agent"
+            }
+           ]
+          },
+          "timelineItems": {
+           "nodes": []
+          }
+         },
+         {
+          "number": 7,
+          "state": "OPEN",
+          "labels": {
+           "nodes": [
+            {
+             "name": "ready-for-agent"
+            }
+           ]
+          },
+          "timelineItems": {
+           "nodes": []
+          }
+         }
+        ]
+       }
+      }
+     ]
+    }
+   }
+  }
+ }
+]

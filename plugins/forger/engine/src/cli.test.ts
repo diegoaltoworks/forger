@@ -4,6 +4,7 @@ import {tmpdir} from 'os';
 import {join} from 'path';
 
 import {main} from './cli';
+import type {CommandRunner} from './git';
 
 const dirs: string[] = [];
 const startCwd = process.cwd();
@@ -12,21 +13,25 @@ afterEach(() => {
   for (const d of dirs.splice(0)) rmSync(d, {recursive: true, force: true});
 });
 
-function projectWith(features: Record<string, unknown>): string {
+function projectWith(
+  features: Record<string, unknown>,
+  tracker: Record<string, unknown> = {kind: 'local'}
+): string {
   const root = realpathSync(mkdtempSync(join(tmpdir(), 'forger-cli-')));
   dirs.push(root);
   mkdirSync(join(root, '.claude'));
   writeFileSync(join(root, '.claude', 'backlog.json'), JSON.stringify({features}));
+  writeFileSync(join(root, '.claude', 'workloop.config.json'), JSON.stringify({tracker}));
   return root;
 }
 
-async function capture(argv: string[]): Promise<string> {
+async function capture(argv: string[], run?: CommandRunner): Promise<string> {
   const lines: string[] = [];
   const spy = spyOn(console, 'log').mockImplementation((...args: unknown[]) => {
     lines.push(args.join(' '));
   });
   try {
-    await main(argv);
+    await main(argv, {run});
   } finally {
     spy.mockRestore();
   }
@@ -58,5 +63,48 @@ describe('backlog --json', () => {
     process.chdir(projectWith({done: {status: 'completed'}}));
     const out = JSON.parse(await capture(['backlog', '--json']));
     expect(out).toEqual({workable: [], remaining: 0, next: null});
+  });
+
+  test('with tracker.kind github, lists tickets from issues, not backlog.json', async () => {
+    process.chdir(
+      projectWith({from_file: {status: 'not_started', priority: 'P0'}}, {kind: 'github', label: 'go'})
+    );
+    const issue = (number: number, labels: string[], blockedBy: unknown[] = []) => ({
+      number,
+      state: 'OPEN',
+      labels: {nodes: labels.map(name => ({name}))},
+      timelineItems: {nodes: []},
+      blockedBy: {nodes: blockedBy},
+    });
+    const response = JSON.stringify([
+      {
+        data: {
+          repository: {
+            issues: {
+              nodes: [
+                issue(5, ['go', 'P1']),
+                issue(6, ['go', 'P0'], [issue(5, ['go'])]),
+                issue(7, ['go', 'P2']),
+              ],
+            },
+          },
+        },
+      },
+    ]);
+    const calls: string[] = [];
+    const run: CommandRunner = cmd => {
+      calls.push(cmd);
+      return response;
+    };
+    const out = JSON.parse(await capture(['backlog', '--json'], run));
+    expect(out).toEqual({
+      workable: [
+        {id: 'issue-5', priority: 'P1'},
+        {id: 'issue-7', priority: 'P2'},
+      ],
+      remaining: 3,
+      next: 'issue-5',
+    });
+    expect(calls.every(c => c.startsWith('gh api graphql'))).toBe(true);
   });
 });

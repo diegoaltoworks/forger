@@ -3,5 +3,5 @@
   "worker_command": "fyneworker:work-auto-ticket",
   "gates": "cd plugins/forger/engine && bun install --frozen-lockfile && bun run check",
   "base_branch": "main",
-  "tracker": { "kind": "github", "label": "ready-for-agent" }
+  "tracker": { "kind": "github", "label": "ready-for-agent", "ignore": ["wayfinder:*"] }
 }

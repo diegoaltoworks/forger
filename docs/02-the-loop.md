@@ -20,7 +20,7 @@ consumer repository.
 | File | In git | Owner of writes | Purpose |
 |---|---|---|---|
 | `process.md` | yes | supervisor (by PR), workers (gotchas, by PR) | the per-repo brain: what the repo is, the gates, the rules, what the gates miss, the ticket shape |
-| `backlog.json` | yes | supervisor (queueing, by PR), workers (status, in their PR) | tickets and their status; the engine's source of truth |
+| `backlog.json` | yes | supervisor (queueing, by PR), workers (status, in their PR) | the backlog when the tracker is not GitHub; on GitHub the issues are the backlog and a merged PR closing one is its completion |
 | `workloop.config.json` | yes | owner | gates command, models and budgets, limits, paths, tracker |
 | work order (`inbox/owner-work-order.md`) | no | supervisor | the owner's current priority, read by every worker first |
 | `state.json`, `work.log`, `output/` | no | engine | counters, logs, per-iteration output |
@@ -34,7 +34,7 @@ consumer repository.
 owner message
   -> supervisor investigates (code, logs, deploy)
   -> issue, by the ticket template, labelled
-  -> queued in backlog.json (PR) and placed in the work order
+  -> queued (the labelled issue on GitHub, else backlog.json by PR) and placed in the work order
   -> engine picks it, starts a worker
   -> worker: branch, build, gates, push, PR, CI, merge
   -> deploy

@@ -23,5 +23,5 @@
     "output": ".claude/output",
     "halt": ".claude/HALT"
   },
-  "tracker": { "kind": "github", "label": "ready-for-agent" }
+  "tracker": { "kind": "github", "label": "ready-for-agent", "ignore": ["wayfinder:*"] }
 }

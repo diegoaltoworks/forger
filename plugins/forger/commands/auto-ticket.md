@@ -31,35 +31,30 @@ it is the authority on tracker operations.
 3. This repo's docs (whatever `process.md` points at: architecture, domain,
    decisions; `CONTEXT.md` and ADRs if present - use their vocabulary)
 4. `.claude/backlog.md` - human summary; `.claude/inbox/*.md` - human instructions
-5. `.claude/backlog.json` - the ticket specs
+5. The backlog: with `tracker.kind` `github` the open issues carrying
+   `tracker.label` are the tickets; otherwise `.claude/backlog.json`
 
 ## Your task: one full iteration
 
-### 1. Inbox and intake
-Two channels, human instructions first:
-- `.claude/inbox/*.md`: acknowledge new items (prefix with a clock), add them to
-  `backlog.json` with a priority.
-- If `tracker.kind` is `github`: open issues carrying `tracker.label` whose
-  number is not yet any ticket's `issue`
-  (`gh issue list --label <label> --state open --json number,title,body,labels`).
-  Skip any labelled `wayfinder:*` - those are decisions, not work. Adopt each as
-  one ticket: keep its what-to-build and acceptance criteria, derive `depends_on`
-  from its `Blocked by` list or native dependencies, and add `priority`,
-  `effort`, `files`, `reuse` by reading the code. Record the number as `issue`.
-
-Then continue.
+### 1. Inbox
+Human instructions first: acknowledge new `.claude/inbox/*.md` items (prefix
+with a clock) and queue them - as an issue with the intake label on GitHub,
+otherwise in `backlog.json` with a priority. Then continue.
 
 ### 2. Select ONE ticket
-The highest-priority `not_started` ticket in `backlog.json` where:
-- every `depends_on` is `completed`, **and**
-- `repo` is absent or matches this repo's `repo` in `workloop.config.json`
-  (tickets for other repos are tracked here but implemented elsewhere).
+Take the engine's pick, `next` in the output of
+`bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts backlog --json`. Do not re-derive the
+order: it is the highest-priority `not_started` ticket whose every `depends_on`
+is `completed` and whose `repo` is absent or this repo's. On GitHub, ticket
+`issue-<n>` is issue #<n>: read it with `gh issue view <n>`; never take an
+issue whose labels match `tracker.ignore`.
 
 One ticket per iteration - no more. If the ticket names a blocker only a human
 can supply, signal `stop`.
 
 ### 3. Start it
 - Branch from the configured base branch: `git checkout -b feat/<ticket-id>`
+  (on GitHub, `feat/issue-<n>`)
 - If the ticket has an `issue`, **claim it** before any work:
   `gh issue edit <issue> --add-assignee @me`. An assigned issue is a claimed one;
   concurrent sessions skip it.
@@ -105,11 +100,13 @@ Documentation is part of Definition of Done, every iteration:
   no counts, dates, or transient specifics.
 - Update any `README.md` your change makes stale.
 - Confirm tests assert what matters, not merely that they pass.
-- Set the ticket `status: "completed"` in `backlog.json`.
+- With `local` or `none`, set the ticket `status: "completed"` in
+  `backlog.json`. On GitHub do not: the merge closing the issue is the status.
 - Update `.claude/inbox/*.md` (clock -> check) for anything you finished.
 
 ### 8. Commit + PR
-One `feat:` commit with everything (code + tests + docs + backlog.json).
+One `feat:` commit with everything (code + tests + docs, and backlog.json when
+it is the backlog).
 
 **Commit and push the moment the gates are green - before the PR, before
 anything else.** Iterations get cut off by the budget cap *after* finishing the
@@ -143,6 +140,6 @@ End your response with exactly one:
 - ONE ticket per iteration. Quality gates must pass. Small, clean commits.
 - Check the inbox and the intake first - human instructions win.
 - Claim the issue before working it; close it through the PR.
-- Never adopt or work a `wayfinder:*` issue.
+- Never adopt or work an issue whose labels match `tracker.ignore`.
 - If blocked, signal `stop` with a clear reason rather than guessing.
 - Obey the data-safety and write-scope rules in `process.md` without exception.

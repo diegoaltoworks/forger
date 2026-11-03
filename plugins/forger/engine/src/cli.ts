@@ -8,8 +8,9 @@ import {dirname, join} from 'path';
 import {parseArgs} from 'util';
 
 import {loadConfig} from './config';
+import type {CommandRunner} from './git';
 import {formatBacklogReport} from './backlog';
-import {fileBacklog} from './file-backlog';
+import {openBacklog} from './open-backlog';
 import {AutomationRunner} from './runner';
 
 /** Nearest ancestor directory containing a `.claude` folder. */
@@ -44,7 +45,11 @@ Stopping behaviour:
 Config: .claude/workloop.config.json in the consumer repo (see plugin README).
 `;
 
-export async function main(argv: string[] = process.argv.slice(2)): Promise<void> {
+/** `run` is the command runner the GitHub backlog's gh calls go through. */
+export async function main(
+  argv: string[] = process.argv.slice(2),
+  deps: {run?: CommandRunner} = {}
+): Promise<void> {
   const {values, positionals} = parseArgs({
     args: argv,
     options: {
@@ -64,7 +69,7 @@ export async function main(argv: string[] = process.argv.slice(2)): Promise<void
   const command = positionals[0] || 'status';
   const projectRoot = findProjectRoot();
   const config = loadConfig(projectRoot);
-  const backlog = fileBacklog(join(projectRoot, config.paths.backlog), config);
+  const backlog = openBacklog(projectRoot, config, deps.run);
   const runner = new AutomationRunner(projectRoot, config, backlog);
 
   switch (command) {

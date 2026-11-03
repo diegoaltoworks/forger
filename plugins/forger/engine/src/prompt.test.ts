@@ -36,4 +36,27 @@ describe('buildPrompt', () => {
     expect(buildPrompt(mergeConfig({tracker: {kind: 'local'}}), 1, [])).toContain('Tracker is LOCAL');
     expect(buildPrompt(mergeConfig({tracker: {kind: 'none'}}), 1, [])).toContain('Tracker is NONE');
   });
+
+  test('on GitHub, issues are the backlog and the merge is the status update', () => {
+    const out = buildPrompt(mergeConfig({tracker: {kind: 'github', ignore: ['wayfinder:*']}}), 1, []);
+    expect(out).toContain('## GitHub Issues are the backlog');
+    expect(out).toContain('`feat/issue-<n>`');
+    expect(out).toContain('closed by a merged PR, so do not edit backlog.json');
+    expect(out).toContain('Issues labelled `wayfinder:*` are not work');
+    expect(out).toContain('ALL changes (code, tests, docs)\n');
+    expect(out).not.toContain('source of truth');
+  });
+
+  test('names no ignored labels when none are configured', () => {
+    expect(buildPrompt(mergeConfig({tracker: {kind: 'github'}}), 1, [])).not.toContain('are not work');
+  });
+
+  test('local and none keep backlog.json as the source of truth', () => {
+    for (const kind of ['local', 'none'] as const) {
+      const out = buildPrompt(mergeConfig({tracker: {kind}}), 1, []);
+      expect(out).toContain('## backlog.json is the source of truth for status');
+      expect(out).toContain('backlog.json updates)');
+      expect(out).not.toContain('GitHub Issues are the backlog');
+    }
+  });
 });
