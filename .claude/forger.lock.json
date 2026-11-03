@@ -42,11 +42,15 @@
     },
     {
       "id": "architecture",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "files": [
         {
           "path": ".claude/opinions/architecture.md",
-          "sha256": "5ebe4ade7fa0783c153bb1e30fc2930fc896b7148d529945dfaeb260aa3a8e5b"
+          "sha256": "7eca705affa19aa285dafe0f777406cd3271fc23f12ac5d9e2c02d42ed164a35"
+        },
+        {
+          "path": ".claude/templates/adr.md",
+          "sha256": "3ad094e5febda6439164233c8b7f6d0aad66e6aa43410e93d11afc75bb4dd924"
         }
       ]
     }

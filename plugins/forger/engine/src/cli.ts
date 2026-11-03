@@ -14,6 +14,7 @@ import {formatBacklogReport} from './backlog';
 import {openBacklog} from './open-backlog';
 import {formatReport as formatCheckReport, runChecks} from './checks';
 import {runArchCheck} from './arch-check';
+import {runDecisionsCheck} from './decisions-check';
 import {runDocsCheck} from './docs-check';
 import {formatViolations} from './docs-rules';
 import {AutomationRunner} from './runner';
@@ -53,6 +54,7 @@ Usage (run from the consumer repo root):
                    --presets lists the presets whose skill collection is installed
   check [--json]   Run every check the installed packs declare, apply .claude/waivers.json,
                    exit non-zero on any unwaived violation
+  check decisions [--json] Fail on a new dependency or layer-map change with no ADR in the diff
   check arch [--json] Fail on an import that crosses a forbidden edge of .claude/architecture.json
   check docs [--json] Fail on non-ASCII punctuation, emails, home paths, denylist terms
   backlog [--json] Workable tickets in order, remaining count and next pick
@@ -194,15 +196,16 @@ export async function main(
       }
       return;
     }
-    if (positionals[1] !== 'docs' && positionals[1] !== 'arch') {
-      console.error('Usage: check [--json] | check docs [--json] | check arch [--json]');
+    if (positionals[1] !== 'docs' && positionals[1] !== 'arch' && positionals[1] !== 'decisions') {
+      console.error('Usage: check [--json] | check docs [--json] | check arch [--json] | check decisions [--json]');
       process.exitCode = 1;
       return;
     }
     let violations;
     try {
       const run = deps.run ?? execRunner(projectRoot);
-      violations = positionals[1] === 'docs' ? runDocsCheck(projectRoot, run) : runArchCheck(projectRoot, run);
+      const runOne = {docs: runDocsCheck, arch: runArchCheck, decisions: runDecisionsCheck}[positionals[1]];
+      violations = runOne(projectRoot, run);
     } catch (e) {
       console.error((e as Error).message);
       process.exitCode = 1;

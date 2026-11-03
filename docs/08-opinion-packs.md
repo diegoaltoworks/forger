@@ -71,7 +71,7 @@ Read the table as a list of ways docs rot quietly. Code spans and fences are nev
 
 ## The architecture pack
 
-The `architecture` pack holds the architecture forger is built on: pure decisions with I/O at the edges, every external system behind a port, parse at the boundary, fail loud, one source of truth per fact, and deep modules. One of its opinions is enforced, `architecture.dependency-rule`, by `check arch`.
+The `architecture` pack holds the architecture forger is built on: pure decisions with I/O at the edges, every external system behind a port, parse at the boundary, fail loud, one source of truth per fact, and deep modules. Two of its opinions are enforced: `architecture.dependency-rule` by `check arch`, and `architecture.decisions-recorded` by `check decisions`.
 
 ```mermaid
 flowchart LR
@@ -87,5 +87,9 @@ flowchart LR
 Read it left to right: the layer map names layers as path globs and says which layer may import which; the extractor lists each file's imports; any import whose edge the map forbids becomes a finding on the importing line.
 
 A layer may always import itself, and files outside every layer, packages and builtins are not constrained. Static, type-only, dynamic, `require` and re-export imports all count. TypeScript and JavaScript are read today; another language is another entry behind the import-extractor interface. A missing or malformed layer map is an error, never a pass. Forger installs the pack on itself and marks its pure modules as the core layer.
+
+### Decisions leave an ADR behind
+
+`check decisions` reads the working tree and branch against the merge-base with the configured base branch. A dependency added to a manifest (`package.json` today; another manifest is another entry behind the manifest-reader interface), or any change to `.claude/architecture.json`, needs a new or changed Markdown file under `docs/adr/` in the same diff. A version bump or a removed dependency is classified and needs no ADR. The pack ships an ADR template with context, decision, consequences and status; an accepted ADR is superseded by a new one, never edited. Like every opinion, it is waivable in `.claude/waivers.json`. A base branch that cannot be resolved is an error, never a pass.
 
 The decision to use packs is [ADR 0003](adr/0003-opinion-packs.md).

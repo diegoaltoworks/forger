@@ -1,16 +1,18 @@
 {
   "id": "architecture",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "The architecture forger is built on: pure decisions, I/O at the edges, and the dependency rule enforced by check arch.",
   "detect": [],
   "files": [
     {"source": "files/architecture.md", "target": ".claude/opinions/architecture.md"},
-    {"source": "files/architecture.json", "target": ".claude/architecture.json"}
+    {"source": "files/architecture.json", "target": ".claude/architecture.json"},
+    {"source": "files/adr.md", "target": ".claude/templates/adr.md"}
   ],
   "opinions": [
     {"id": "architecture.functional-core", "rung": "rule", "summary": "Decisions are pure functions; I/O lives at the edges.", "check": null},
     {"id": "architecture.ports-and-adapters", "rung": "rule", "summary": "Every external system sits behind an interface with one adapter and a fake for tests.", "check": null},
     {"id": "architecture.dependency-rule", "rung": "check", "summary": "The core never imports the shell; the layer map in .claude/architecture.json says which layer may import which.", "check": "arch"},
+    {"id": "architecture.decisions-recorded", "rung": "check", "summary": "A new dependency or a change to the layer map leaves an ADR under docs/adr/ in the same diff.", "check": "decisions"},
     {"id": "architecture.parse-dont-validate", "rung": "rule", "summary": "Outside input is parsed once at the boundary into types.", "check": null},
     {"id": "architecture.fail-loud", "rung": "rule", "summary": "An unreadable source is an error, never an empty result.", "check": null},
     {"id": "architecture.idempotent-commands", "rung": "rule", "summary": "Commands are idempotent and print machine-readable output.", "check": null},
@@ -19,6 +21,6 @@
     {"id": "architecture.expand-migrate-contract", "rung": "rule", "summary": "A shared shape changes by expanding, migrating its users, then contracting.", "check": null},
     {"id": "architecture.deep-modules", "rung": "rule", "summary": "A small interface over a lot of behaviour.", "check": null}
   ],
-  "checks": ["arch"],
+  "checks": ["arch", "decisions"],
   "slots": []
 }
