@@ -11,15 +11,15 @@ import {join} from 'path';
 
 import {forgerPath, type WorkloopConfig} from '../config';
 import {pick, schedule, type Backlog, type FolderMap, type Schedulable} from '../backlog';
-import {capturing, type AgentRunner, type CapturingRunner, type CommandRunner} from '../ports';
-import {type AutomationState, currentTicket, StateStore} from './state';
+import {capturing, type AgentRunner, type CapturingRunner, type CommandRunner, type StateStore} from '../ports';
+import {type AutomationState, currentTicket, LoopStore} from './state';
 import {Logger, colors} from './logger';
 import {RateLimitError, rateLimitWaitMs} from './infra';
 import {type IterationContext, type Placement, closeOrphan, runIteration} from './iteration';
 import {conflictAfterAttempt, finishWorktree, folderMapFrom, inWorktree} from './parallel';
 import {createWorktree, worktreePath} from './worktree';
 import {pidAlive, RunnerLock} from './lock';
-import {appendEvent, terminalEvent, type EventKind, type TerminalEventKind} from './events';
+import {eventLine, terminalEvent, type EventKind, type TerminalEventKind} from './events';
 import {appendSchedule} from './schedule-log';
 import {buildStatus, type StatusReport} from './status-report';
 
@@ -27,6 +27,8 @@ export interface RunnerDeps {
   /** The agent spawn; a runner built without one can report and watch, but refuses to run an iteration. */
   agent?: AgentRunner;
   gitRunner: CommandRunner;
+  /** Where state and events are kept. */
+  stateStore: StateStore;
   /** The git runner that reports failures, for worktrees; defaults to the plain runner seen as one that never fails. */
   gitCapture?: CapturingRunner;
   /** The folder map the scheduling rule reads; defaults to the architecture map of the project. */
@@ -67,14 +69,14 @@ export const WATCH_BACKLOG_EVERY = 30;
 
 export class AutomationRunner {
   private logger: Logger;
-  private store: StateStore;
+  private store: LoopStore;
+  private stateStore: StateStore;
   private outputDir: string;
   private gitRunner: CommandRunner;
   private agent: AgentRunner;
   private uuid: () => string;
   private lock: RunnerLock;
   private isAliveFn: (pid: number) => boolean;
-  private eventsFile: string;
   private scheduleFile: string;
   private now: () => number;
   private sleep: (ms: number) => Promise<void>;
@@ -90,9 +92,9 @@ export class AutomationRunner {
   ) {
     const p = (rel: string): string => join(projectRoot, rel);
     this.logger = new Logger(p(config.paths.log));
-    this.store = new StateStore(p(config.paths.state), p(config.paths.halt));
+    this.stateStore = deps.stateStore;
+    this.store = new LoopStore(this.stateStore, p(config.paths.halt));
     this.outputDir = p(config.paths.output);
-    this.eventsFile = p(config.paths.events);
     this.scheduleFile = join(p(config.paths.output), 'schedule-decisions.jsonl');
     this.isAliveFn = deps.isAlive ?? pidAlive;
     this.lock = new RunnerLock(p(config.paths.lock), deps.pid, this.isAliveFn);
@@ -154,7 +156,8 @@ export class AutomationRunner {
   }
 
   private emit(kind: EventKind, iteration: number, ticket: string | null, reason: string | null): void {
-    appendEvent(this.eventsFile, terminalEvent(kind, iteration, ticket, reason));
+    const now = new Date();
+    this.stateStore.appendEvent(eventLine(terminalEvent(kind, iteration, ticket, reason, now)), now);
   }
 
   halt(reason: string, kind: TerminalEventKind = 'halted'): void {

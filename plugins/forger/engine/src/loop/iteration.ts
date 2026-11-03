@@ -26,14 +26,14 @@ import type {Decision} from './verdict';
 import {decisionForHead, readVerdicts} from './verdict-store';
 import {buildPrompt} from './prompt';
 import {gatherFacts, takeSnapshot, ticketFromBranch} from './run-facts';
-import {type InFlightRun, endRun, type StateStore, stallUpdate, startRun, updateRun} from './state';
+import {type InFlightRun, endRun, type LoopStore, stallUpdate, startRun, updateRun} from './state';
 
 /** What an iteration reads and writes, handed in by the runner that owns it. */
 export interface IterationContext {
   projectRoot: string;
   config: WorkloopConfig;
   backlog: Backlog;
-  store: StateStore;
+  store: LoopStore;
   logger: Logger;
   outputDir: string;
   gitRunner: CommandRunner;

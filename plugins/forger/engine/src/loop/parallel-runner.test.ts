@@ -5,6 +5,7 @@ import {join} from 'path';
 
 import {type BacklogData, backlogFrom} from '../backlog';
 import type {AgentResult, AgentRunOptions, CommandResult} from '../ports';
+import {localStateFor} from '../adapters';
 import {mergeConfig} from '../config';
 import {AutomationRunner} from './runner';
 
@@ -38,7 +39,7 @@ function setup(parallelism: number, tickets: BacklogData, agent: (o: AgentRunOpt
   const calls: AgentRunOptions[] = [];
   let live = 0;
   let peak = 0;
-  const runner = new AutomationRunner(root, config, backlogFrom(() => tickets, config), {
+  const runner = new AutomationRunner(root, config, backlogFrom(() => tickets, config), {stateStore: localStateFor(root, config), 
     agent: {
       run: async o => {
         calls.push(o);
