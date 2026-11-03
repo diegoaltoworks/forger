@@ -17,7 +17,8 @@ import {formatViolations} from './docs-rules';
 import {AutomationRunner} from './runner';
 import {awaitEvent, readEvents} from './events';
 import {approvalFor, buildReport, formatReport, orient} from './supervisor';
-import {readFileSync} from 'fs';
+import {mkdirSync, readdirSync, readFileSync, writeFileSync} from 'fs';
+import {computeMeasures, draftUpstreamIssue, formatMeasures, parseBudgets, parseIterationLog, renderRule, ruleFilePath, ruleProblem, type CiRun, type IterationRecord, type RuleRecord} from './measure';
 import {formatSetup, runSetup} from './setup';
 import {formatSkills, listInstalledSkills, loadPresets, offerPresets, resolveSkills} from './skills';
 
@@ -51,6 +52,12 @@ Usage (run from the consumer repo root):
   events [--json]  Terminal events so far
   await-event [--seen N] [--timeout S]
                    Block until an event past the first N arrives (exit 2 on timeout)
+  measure [--json] [--last N]
+                   Runs, failures by cause, time, budget cap and CI rounds per ticket
+  retro rule --name S --description S --type T --rule S --owner S --date D --why S --how S [--enforced-by S]
+                   Write a rule record to .claude/rules/ (verbatim owner words)
+  retro upstream --title S --lesson S --evidence S [--evidence S ...]
+                   Print an issue draft for forger, carrying the evidence
   reset            Reset state to start fresh
   watch            Live status display
   resume           Clear HALT and resume
@@ -85,6 +92,19 @@ export async function main(
       presets: {type: 'boolean', default: false},
       seen: {type: 'string', default: '0'},
       timeout: {type: 'string', default: '3600'},
+      last: {type: 'string'},
+      name: {type: 'string'},
+      description: {type: 'string'},
+      type: {type: 'string'},
+      rule: {type: 'string'},
+      owner: {type: 'string'},
+      date: {type: 'string'},
+      why: {type: 'string'},
+      how: {type: 'string'},
+      'enforced-by': {type: 'string'},
+      title: {type: 'string'},
+      lesson: {type: 'string'},
+      evidence: {type: 'string', multiple: true},
       help: {type: 'boolean', short: 'h', default: false},
     },
     allowPositionals: true,
@@ -135,6 +155,45 @@ export async function main(
     if (violations.length > 0) process.exitCode = 1;
     return;
   }
+  if (command === 'retro') {
+    if (positionals[1] === 'upstream') {
+      try {
+        const d = draftUpstreamIssue({title: values.title ?? '', lesson: values.lesson ?? '', evidence: values.evidence ?? []});
+        console.log(values.json ? JSON.stringify(d) : `${d.title}\n\n${d.body}`);
+      } catch (e) {
+        console.error((e as Error).message);
+        process.exitCode = 1;
+      }
+      return;
+    }
+    if (positionals[1] === 'rule') {
+      const rule: RuleRecord = {
+        name: values.name ?? '',
+        description: values.description ?? '',
+        type: (values.type ?? '') as RuleRecord['type'],
+        rule: values.rule ?? '',
+        ownerWords: values.owner ?? '',
+        date: values.date ?? '',
+        why: values.why ?? '',
+        howToApply: values.how ?? '',
+        enforcedBy: values['enforced-by'] ?? '',
+      };
+      const problem = ruleProblem(rule);
+      if (problem) {
+        console.error(problem);
+        process.exitCode = 1;
+        return;
+      }
+      const path = ruleFilePath(rule.name);
+      mkdirSync(join(projectRoot, '.claude/rules'), {recursive: true});
+      writeFileSync(join(projectRoot, path), renderRule(rule));
+      console.log(values.json ? JSON.stringify({path}) : path);
+      return;
+    }
+    console.error('Usage: retro rule|upstream ...');
+    process.exitCode = 1;
+    return;
+  }
   const config = loadConfig(projectRoot);
   if (command === 'skills') {
     const installed = installedSkills();
@@ -142,6 +201,30 @@ export async function main(
     if (values.json) console.log(JSON.stringify(out));
     else if (values.presets) console.log((out as ReturnType<typeof offerPresets>).map(p => `${p.name}: ${p.description}`).join('\n') || 'no preset matches an installed skill collection');
     else console.log(formatSkills(out as ReturnType<typeof resolveSkills>));
+    return;
+  }
+  if (command === 'measure') {
+    const outDir = join(projectRoot, config.paths.output);
+    const iterations: IterationRecord[] = existsSync(outDir)
+      ? readdirSync(outDir)
+          .filter(f => /^iteration-\d+\.log$/.test(f))
+          .flatMap(f => parseIterationLog(readFileSync(join(outDir, f), 'utf-8')) ?? [])
+      : [];
+    const workLog = join(projectRoot, config.paths.log);
+    let ciRuns: CiRun[] = [];
+    try {
+      ciRuns = JSON.parse((deps.run ?? execRunner(projectRoot))('gh run list --limit 500 --json headBranch,event')) as CiRun[];
+    } catch {
+      // No CI, no gh or offline: CI rounds are reported as unknown.
+    }
+    const measures = computeMeasures({
+      iterations,
+      budgets: existsSync(workLog) ? parseBudgets(readFileSync(workLog, 'utf-8')) : [],
+      events: readEvents(join(projectRoot, config.paths.events)),
+      ciRuns,
+      last: values.last === undefined ? null : parseInt(values.last, 10),
+    });
+    console.log(values.json ? JSON.stringify(measures) : formatMeasures(measures));
     return;
   }
   const backlog = openBacklog(projectRoot, config, deps.run);

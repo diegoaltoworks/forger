@@ -32,6 +32,7 @@ typing `/fyne` in Claude Code surfaces the set.
 | Command | Role |
 |---|---|
 | `/forger:auto-ticket` | **Worker** - implements exactly one ticket end to end (claim, code, tests, gates, review, PR, merge) and signals the engine. The engine spawns a headless `claude` running this each iteration. |
+| `/forger:retro` | **Refinement** - captures a signal verbatim, finds the cause from `measure`, writes a rule record or edits the project's own process by PR, and drafts an upstream issue for a lesson that holds everywhere. |
 | `/forger:auto-plan` | **Autonomous planner** - turns a spec, phase doc, resolved wayfinder map, or `ready-for-agent` issues into tickets with no questions, so the loop can plan the next chunk unattended. |
 
 `/forger:work` never implements - it supervises. The implementing is done by
