@@ -7,7 +7,7 @@
  * loop can be driven in a test without a real agent or repo.
  */
 
-import {existsSync, mkdirSync, readFileSync} from 'fs';
+import {existsSync, mkdirSync, readFileSync, writeFileSync} from 'fs';
 import {join} from 'path';
 
 import type {WorkloopConfig} from './config';
@@ -24,6 +24,7 @@ import {buildPrompt} from './prompt';
 import {type AutomationState, StateStore, stallUpdate} from './state';
 import {Logger, colors} from './logger';
 import {type ClaudeResult, type RunClaudeOptions, runClaude} from './claude';
+import {formatIterationLog} from './iteration-log';
 
 export interface RunnerDeps {
   runClaude?: (opts: RunClaudeOptions) => Promise<ClaudeResult>;
@@ -139,24 +140,39 @@ export class AutomationRunner {
       this.logger.log('INFO', `Ticket: ${attemptedTask} [${tier.model}, $${tier.budget}]`);
     }
 
+    const {timeoutMinutes, killGraceSeconds} = this.config.limits;
     const startTime = Date.now();
     const result = await this.spawnClaude({
       prompt,
       sessionId,
-      outputFile,
       tier,
       cwd: this.projectRoot,
-      timeoutMinutes: this.config.limits.timeoutMinutes,
+      timeoutMinutes,
+      killGraceSeconds,
     });
     const duration = Math.round((Date.now() - startTime) / 1000);
+    writeFileSync(
+      outputFile,
+      formatIterationLog({
+        iteration,
+        ticket: attemptedTask,
+        elapsedSeconds: duration,
+        exitCode: result.exitCode,
+        signal: result.signal,
+        timedOut: result.timedOut,
+        timeoutMinutes,
+        output: result.output,
+      })
+    );
     this.logger.log('INFO', `Claude finished in ${duration}s (exit: ${result.exitCode})`);
 
     if (result.timedOut) {
-      this.logger.log('ERROR', `Iteration ${iteration} timed out`);
+      const by = result.signal ? `, ended by ${result.signal}` : '';
+      this.logger.log('ERROR', `Iteration ${iteration} timed out after ${duration}s${by}`);
       state.status = 'timeout';
       state.failed_iterations++;
       state.consecutive_failures++;
-      state.last_error = `Timeout after ${this.config.limits.timeoutMinutes} minutes`;
+      state.last_error = `Timeout after ${timeoutMinutes} minutes${by}`;
       this.store.save(state);
       return false;
     }

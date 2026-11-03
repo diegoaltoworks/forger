@@ -6,14 +6,12 @@ In order. Each step is useful on its own, and each makes the next one smaller.
 
 From the failure catalogue, with a test for each outcome:
 
-- Kill the worker's whole process group on timeout, escalate to SIGKILL after a
-  grace period, resolve on `exit`. (The 37-hour hang.)
 - Count `completed` only when the PR is merged; read status from the base
   branch.
 - Decide a timed-out run's outcome from facts: merged, pushed, or nothing.
 - Measure progress by merges, not by the remaining count.
 - Pass the deadline to the worker and warn before it.
-- Always write the iteration log, with what is known on a timeout.
+- Add the branch, last commits and PR state to a timed-out run's iteration log.
 - Log the ticket the worker actually took.
 - `status --json`, the runner's own process id in a file, and a terminal-event
   file for watchers.
