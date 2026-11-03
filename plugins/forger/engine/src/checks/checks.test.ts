@@ -28,7 +28,7 @@ describe('checksToRun', () => {
 describe('buildReport', () => {
   test('no findings: passed and ok', () => {
     const r = buildReport([{check: 'docs', findings: []}], []);
-    expect(r).toEqual({ok: true, waivers: [], staleWaivers: [], results: [{check: 'docs', opinions: [], status: 'passed', violations: [], waived: []}]});
+    expect(r).toEqual({ok: true, gaps: [], waivers: [], staleWaivers: [], results: [{check: 'docs', opinions: [], status: 'passed', violations: [], waived: [], gaps: []}]});
   });
   test('an open violation fails the report', () => {
     const r = buildReport([{check: 'docs', findings: [finding]}], []);
@@ -72,4 +72,32 @@ describe('formatReport', () => {
     expect(text).toContain('stale waiver: base.ascii-punctuation zzz');
   });
   test('says so when no pack declares a check', () => expect(formatReport(buildReport([], []))).toContain('no checks'));
+});
+
+describe('coverage gaps in the report', () => {
+  const gap = (modality: 'MUST' | 'SHOULD' | 'MAY') => ({file: 'spec.toml', opinion: 'spec.x', modality, detail: 'no validator'});
+  const status = (modality: 'MUST' | 'SHOULD' | 'MAY', waivers: Waiver[] = []) => buildReport([{check: 'spec', findings: [], gaps: [gap(modality)]}], waivers);
+
+  test('a MUST gap fails the report and is listed apart from violations', () => {
+    const r = status('MUST');
+    expect(r.ok).toBe(false);
+    expect(r.results[0].status).toBe('failed');
+    expect(r.results[0].violations).toEqual([]);
+    expect(r.gaps.map(g => g.severity)).toEqual(['fail']);
+  });
+  for (const m of ['SHOULD', 'MAY'] as const) {
+    test(`a ${m} gap is unmeasured, not a pass and not a failure`, () => {
+      const r = status(m);
+      expect(r.ok).toBe(true);
+      expect(r.results[0].status).toBe('unmeasured');
+    });
+  }
+  test('a waived MUST gap no longer fails', () => {
+    const r = status('MUST', [{opinion: 'spec.x', path: 'spec.toml', reason: 'r', approved_by: 'owner'}]);
+    expect(r.ok).toBe(true);
+    expect(r.results[0].status).toBe('waived');
+  });
+  test('a check without gaps reports an empty list', () => {
+    expect(buildReport([{check: 'docs', findings: []}], []).results[0].gaps).toEqual([]);
+  });
 });

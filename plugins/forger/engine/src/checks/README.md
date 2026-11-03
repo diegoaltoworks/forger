@@ -8,6 +8,8 @@ reads the tree and hands it to them.
 
 - `checks.ts` - the umbrella check and its report. Reads the lock and waivers.
 - `waivers.ts` - findings, waivers and path globs, shared by every check. Pure.
+- `gaps.ts` - coverage gaps (a check that could not measure something) and the
+  modality-to-severity mapping. Pure.
 - `files.ts` - the files a check scans: tracked, and untracked but not ignored,
   so the local gates see a new file before it is committed.
 - `ci.ts` - the CI job summary and the workflow the loop's CI runs. Pure.

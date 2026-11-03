@@ -17,8 +17,10 @@ import {runUiCheck} from './ui';
 import {listOpinions, LOCK_PATH, loadPacks, parseLock, type Lock, type LoadedPack, type Opinion} from '../packs';
 import {applyWaivers, parseWaivers, staleWaivers, WAIVERS_PATH, type Finding, type WaivedFinding, type Waiver} from './waivers';
 import {forgerPath} from '../config';
+import {classifyGaps, gapsFail, gapsOpen, type Gap, type ReportedGap} from './gaps';
 
-export type CheckStatus = 'passed' | 'failed' | 'waived';
+/** `unmeasured`: nothing failed, but something could not be measured, so it is not a pass. */
+export type CheckStatus = 'passed' | 'failed' | 'waived' | 'unmeasured';
 
 export interface CheckResult {
   check: string;
@@ -27,11 +29,15 @@ export interface CheckResult {
   status: CheckStatus;
   violations: Finding[];
   waived: WaivedFinding[];
+  /** What the check could not measure, apart from its violations. */
+  gaps: ReportedGap[];
 }
 
 export interface CheckReport {
   ok: boolean;
   results: CheckResult[];
+  /** Every gap of every check, so a reader sees what was not measured without walking the results. */
+  gaps: ReportedGap[];
   /** Every waiver in force, matched or not. */
   waivers: Waiver[];
   staleWaivers: Waiver[];
@@ -68,18 +74,21 @@ export function checksToRun(available: LoadedPack[], lock: Lock, known: string[]
 }
 
 export function buildReport(
-  findings: Array<{check: string; findings: Finding[]}>,
+  findings: Array<{check: string; findings: Finding[]; gaps?: Gap[]}>,
   waivers: Waiver[],
   opinions: Array<Pick<Opinion, 'id' | 'check'>> = []
 ): CheckReport {
-  const results = findings.map(({check, findings: fs}): CheckResult => {
+  const results = findings.map(({check, findings: fs, gaps: raw = []}): CheckResult => {
     const {violations, waived} = applyWaivers(fs, waivers);
-    const status: CheckStatus = violations.length > 0 ? 'failed' : waived.length > 0 ? 'waived' : 'passed';
-    return {check, opinions: opinions.filter(o => o.check === check).map(o => o.id), status, violations, waived};
+    const gaps = classifyGaps(raw, waivers);
+    const status: CheckStatus =
+      violations.length > 0 || gapsFail(gaps) ? 'failed' : gapsOpen(gaps) ? 'unmeasured' : waived.length > 0 || gaps.length > 0 ? 'waived' : 'passed';
+    return {check, opinions: opinions.filter(o => o.check === check).map(o => o.id), status, violations, waived, gaps};
   });
   return {
     ok: results.every(r => r.status !== 'failed'),
     results,
+    gaps: results.flatMap(r => r.gaps),
     waivers,
     staleWaivers: staleWaivers(findings.flatMap(f => f.findings), waivers),
   };
@@ -90,6 +99,7 @@ export function formatReport(report: CheckReport): string {
   for (const r of report.results) {
     lines.push(`${r.check}: ${r.status}`);
     for (const v of r.violations) lines.push(`  ${v.file}:${v.line}: ${v.opinion}: ${v.rule}: ${v.detail}`);
+    for (const g of r.gaps) lines.push(`  ${g.waiver ? 'waived gap' : `gap (${g.severity})`} ${g.file}: ${g.opinion}: ${g.modality}: ${g.detail}`);
     for (const w of r.waived) lines.push(`  waived ${w.file}:${w.line}: ${w.opinion} (${w.waiver.reason}; approved by ${w.waiver.approved_by})`);
   }
   for (const w of report.staleWaivers) lines.push(`stale waiver: ${w.opinion} ${w.path} matches nothing; delete it`);
