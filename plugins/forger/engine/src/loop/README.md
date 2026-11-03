@@ -18,6 +18,9 @@ Pure:
 - `iteration-log.ts` - the per-iteration log text.
 - `status-report.ts` - the machine-readable status a supervisor acts on.
 - `pr-checks.ts` - a PR's CI result folded from its check rollup.
+- `verdict.ts` - the verifier's verdict (ADR 0010): acceptance criteria parsed
+  from the issue, a validator that holds a verdict to them (evidence resolution
+  is injected), and the reducer to `pass`, `block` or `unclear`.
 - `merged.ts`, `run-facts.ts` - git facts, through an injected `CommandRunner`.
 - `merge.ts` - merge a PR only once every check passed; the decision is pure,
   the waiting reads the PR through an injected `CommandRunner`.
