@@ -13,6 +13,7 @@ export * from './merge';
 export * from './merged';
 export * from './outcome';
 export * from './pr-checks';
+export * from './pr-body';
 export * from './prompt';
 export * from './run-facts';
 export * from './runner';

@@ -119,6 +119,9 @@ judgement work are named **skill slots**, and each has a built-in forger step:
 | `review` | `auto-ticket` | the diff against the base, on standards and spec |
 | `diagnose` | `auto-ticket` | reproduce the red gate, one hypothesis, test it |
 | `merge_conflicts` | `auto-ticket` | resolve by hand, re-run the gates |
+| `risk` | `auto-ticket` | list what the change touches beyond the diff, run the tests for it (input to the worker, never a verdict) |
+| `pr_body` | `auto-ticket` | write the PR body by `docs/03-tickets.md`; `pr-body` keeps `Closes #<n>` and the review sections |
+| `retro` | `retro` | the retro steps as written |
 
 Map a slot to a skill in the `skills` section of `.forger/workloop.config.json`:
 

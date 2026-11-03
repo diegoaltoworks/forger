@@ -795,3 +795,19 @@ describe('handover', () => {
     }
   });
 });
+
+describe('pr-body', () => {
+  test('--fix adds the closing line a skill left out, and a missing section still fails', async () => {
+    const root = projectWith({}, {kind: 'github', label: 'ready-for-agent'});
+    process.chdir(root);
+    const file = join(root, 'body.md');
+    writeFileSync(file, 'Summary\n');
+    const ok = JSON.parse(await capture(['pr-body', '--file', file, '--issue', '9', '--fix', '--json']));
+    expect(ok).toEqual({ok: true, problems: []});
+    expect(readFileSync(file, 'utf-8')).toContain('Closes #9');
+    const bad = JSON.parse(await capture(['pr-body', '--file', file, '--issue', '9', '--section', 'Design to review', '--json']));
+    expect(bad.ok).toBe(false);
+    expect(process.exitCode).toBe(1);
+    process.exitCode = 0;
+  });
+});

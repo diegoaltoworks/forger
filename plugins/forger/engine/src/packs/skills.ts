@@ -16,6 +16,8 @@ export interface SlotDefinition {
   usedBy: string;
   /** What forger does itself when no skill is plugged in. */
   builtin: string;
+  /** The named output the slot's step must leave, for the pipeline definition to refer to. */
+  output?: string;
 }
 
 export const SLOTS: readonly SlotDefinition[] = [
@@ -26,6 +28,9 @@ export const SLOTS: readonly SlotDefinition[] = [
   {slot: 'review', usedBy: 'auto-ticket', builtin: 'Review the diff against the base on standards and spec'},
   {slot: 'diagnose', usedBy: 'auto-ticket', builtin: 'Reproduce the red gate, form one hypothesis, test it'},
   {slot: 'merge_conflicts', usedBy: 'auto-ticket', builtin: 'Resolve the conflict by hand and re-run the gates'},
+  {slot: 'risk', usedBy: 'auto-ticket', output: 'risk_report', builtin: 'List what the change touches beyond the diff and run the tests for it'},
+  {slot: 'pr_body', usedBy: 'auto-ticket', output: 'pr_body', builtin: 'Write the PR body by docs/03-tickets.md'},
+  {slot: 'retro', usedBy: 'retro', output: 'retro_proposals', builtin: 'Walk the retro steps: capture, cause, form, write, land'},
 ];
 
 /**
