@@ -48,7 +48,7 @@ flowchart LR
     C --> L[tool]
 ```
 
-Climb only as far as the rule needs. A one-off preference stays a note. A rule
+Climb only as far as the rule needs. A one-off opinion stays a note. A rule
 every worker needs goes in the process doc. A rule that has been broken once
 after being written down earns a template section or a check.
 

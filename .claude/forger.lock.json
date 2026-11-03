@@ -4,6 +4,16 @@
       "id": "base",
       "version": "1.1.0",
       "files": []
+    },
+    {
+      "id": "docs",
+      "version": "1.0.0",
+      "files": [
+        {
+          "path": ".claude/opinions/docs.md",
+          "sha256": "c93c9efcbaf68a459c5680390bc7ab09b637b18052d518877f38d1451eaebebe"
+        }
+      ]
     }
   ]
 }

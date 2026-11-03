@@ -12,8 +12,8 @@ Asked once, written down, refined later (see `05-refining-the-process.md`):
   code and logs first (yes); the default label for a spike's build tickets.
 - **Approval policy:** what needs the owner (clearing a HALT, resetting counters,
   killing processes, data in production, anything outward-facing) and what the
-  supervisor may do alone (filing, ordering, starting the runner, merging
-  supervisor PRs that touch only the queue or the process docs).
+  supervisor may do alone (filing, ordering, starting the engine, merging
+  supervisor PRs that touch only the backlog or the process docs).
 - **Budget and speed rules:** per-ticket time and money, and the rule that the
   budget is not raised.
 - **Ticket template and writing rules:** sections, punctuation, banned words,
@@ -25,7 +25,7 @@ Asked once, written down, refined later (see `05-refining-the-process.md`):
 ## 1. Orient
 
 - Read the playbook, the open owner questions and the memory notes.
-- Engine status, the HALT file, whether a runner is alive.
+- Engine status, the HALT file, whether an engine is alive.
 - What merged since the last session; what the checked-out branch really is.
 - Anything stuck: a ticket marked completed with no merged PR, a branch with
   commits and no PR.
@@ -43,7 +43,7 @@ For each owner message:
 
 ## 3. Order
 
-- Queue new tickets in the backlog by PR, with `depends_on` wherever order
+- Add new tickets to the backlog by PR, with `depends_on` wherever order
   matters.
 - Update the work order with one explicit line: which ticket is next, and what
   waits for what. Vague wording ("finish X") has been misread; name the ticket.
@@ -51,11 +51,11 @@ For each owner message:
 
 ## 4. Dispatch
 
-- Exactly one runner, started detached so it survives the session, with the
+- Exactly one engine, started detached so it survives the session, with the
   loop's identity scoped to its environment.
-- Record the runner's real process id, not its launcher's.
+- Record the engine's real process id, not its launcher's.
 - Arm a watcher on terminal events: completed, HALT, stalled, timed out, too
-  many failures, runner gone. The watcher must not match its own command line.
+  many failures, engine gone. The watcher must not match its own command line.
 
 ## 5. Watch and verify
 
@@ -84,7 +84,7 @@ In plain words, in the owner's timezone:
 - **Waiting on you**, each item with a recommendation.
 
 Interrupt at once for a halt, a timeout or anything that touches production.
-When the queue empties, stop the cadence with a final list of owner items.
+When the backlog empties, stop the cadence with a final list of owner items.
 
 ## 8. Retrospect and refine
 
@@ -107,7 +107,7 @@ improvise them:
 
 ## Read-only on the loop's checkout
 
-While a runner is alive the supervisor never checks out, switches, resets,
+While an engine is alive the supervisor never checks out, switches, resets,
 stashes, pulls, merges or commits in the loop's working tree; the worker owns
 it, and a changed HEAD can move the worker off its branch. Verification reads
 `facts --json`. A test fails if `commands/work.md` contains a state-changing git
@@ -121,10 +121,10 @@ it, and an action it does not list needs the owner.
 | Action | Supervisor alone | Owner's word |
 |---|---|---|
 | File, label, order tickets | yes | |
-| Queue tickets in the backlog by PR, merge it when checks pass | yes | |
-| Start the runner, attach a watcher | yes | |
+| Add tickets to the backlog by PR, merge it when checks pass | yes | |
+| Start the engine, attach a watcher | yes | |
 | Record a note or a process rule by PR | yes | |
-| Stop a runner that is about to build on a wrong base | yes, report at once | |
+| Stop an engine that is about to build on a wrong base | yes, report at once | |
 | Open a PR for a worker's pushed, gated branch | yes, report it | |
 | Clear a HALT, reset counters | | yes |
 | Close issues, delete branches with unmerged work | | yes |

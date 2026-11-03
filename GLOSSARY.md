@@ -8,7 +8,7 @@ process is refined from every correction and failure.
 
 **Owner**:
 The person the work is for; the only one who decides anything hard to undo.
-_Avoid_: user, human, client
+_Avoid_: user (when meaning the owner), human (when meaning the owner), client
 
 **Supervisor**:
 The interactive session that works with the owner: intake, ordering, dispatch, watching, verifying, reporting, refining.
@@ -20,13 +20,13 @@ _Avoid_: runner, loop (when meaning the process itself)
 
 **Worker**:
 A headless session that builds exactly one ticket, from branch to merged PR.
-_Avoid_: agent, coder
+_Avoid_: agent (when meaning the worker), coder
 
 ## Work
 
 **Ticket**:
 One vertical slice of work, sized to one worker, with acceptance criteria.
-_Avoid_: feature, PRD feature, task, story
+_Avoid_: feature (when meaning a ticket), PRD feature, task (when meaning a ticket), story
 
 **Backlog**:
 The set of tickets and their statuses that the engine selects from.
@@ -38,7 +38,7 @@ _Avoid_: inbox, brief
 
 **Skill slot**:
 A named point where a model does judgement work, with a built-in forger step that an installed skill can replace through the `skills` section of the config.
-_Avoid_: hook, plugin point
+_Avoid_: hook (when meaning a skill slot), plugin point
 
 **Opinion**:
 One rule forger holds about how the work is done, with an id, the why, a rung on the refinement ladder and, when it has one, the check that enforces it.

@@ -42,7 +42,7 @@ ticket's issue by assigning yourself; close it through the PR with
   text. Commands and skills call tools; prose keeps only judgement.
 - **Pure logic is split from I/O.** Follow the engine's existing pattern:
   decisions are pure functions with unit tests; side effects (git, gh, spawn,
-  files) sit behind an injectable runner, as in `engine/src/git.ts`.
+  files) sit behind an injectable `CommandRunner`, as in `engine/src/git.ts`.
 - **ASCII punctuation only**, in code, docs, commits and PRs: hyphen not dash,
   `->` not arrow glyphs, straight quotes, three periods not an ellipsis.
 - **No transient specifics in durable docs**: no counts, timings, dates or

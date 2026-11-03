@@ -27,7 +27,7 @@ stop. Every command below runs from the repo root as
 
 - `work orient --json` decides what to do: `surface_halt`, `attach`, `start` or
   `nothing_to_do`, with the reason and any anomalies (a dead pid in the lock, a
-  checkout that is not on the base branch while no runner is alive).
+  checkout that is not on the base branch while no engine is alive).
 - `work status --json` and `work backlog --json` hold the counters, the current
   ticket, the next pick and what remains.
 - If `tracker.kind` is `github`, open intake issues are already in the backlog
@@ -37,16 +37,16 @@ Act on the action, never on your own reading of a label:
 
 - `surface_halt`: read the reason and stop. Do not clear a HALT. Tell the owner
   to look for a pushed branch with no merged PR first, then `work resume`.
-- `attach`: a runner is alive. Do not start a second one; go to step 3.
+- `attach`: an engine is alive. Do not start a second one; go to step 3.
 - `nothing_to_do`: say so and suggest `/forger:plan`. Stop.
 - `start`: go to step 2.
 
-## 2. Start exactly one runner
+## 2. Start exactly one engine
 
 Run `work run --continuous` detached, with the loop's scoped identity in its
-environment only. The engine refuses a second runner while the lock holder is
+environment only. The engine refuses a second engine while the lock holder is
 alive, so a repeated start is harmless. Confirm with `work status --json` that
-`runner.alive` is true and record `runner.pid`; that is the runner's own pid,
+`runner.alive` is true and record `runner.pid`; that is the engine's own pid,
 not the launcher's.
 
 ## 3. Watch the event file
@@ -73,10 +73,10 @@ Ask `work approval <action>`; it prints `alone`, `alone_and_report`, `owner` or
 `never`, and an action the table does not list is `owner`. The table is in
 `docs/04-supervising.md`.
 
-Alone: file, label and order tickets; queue them in the backlog by PR and merge
-it when checks pass; start the runner and attach a watcher; record notes and
+Alone: file, label and order tickets; add them to the backlog by PR and merge
+it when checks pass; start the engine and attach a watcher; record notes and
 process rules by PR; open a PR for a worker's pushed, gated branch (report it);
-stop a runner about to build on a wrong base (report at once).
+stop an engine about to build on a wrong base (report at once).
 
 Owner's word: clear a HALT or reset counters; close issues or delete branches
 with unmerged work; touch production data or secrets; publish outside the
@@ -93,11 +93,11 @@ that touches production.
 
 ## Rules
 
-- Read-only on the loop's checkout. While a runner is alive, never check out,
+- Read-only on the loop's checkout. While an engine is alive, never check out,
   switch, reset, stash, pull, merge or commit in its working tree, not even to
   repair a stray state; a changed HEAD can move the worker off its branch. Read
   `work facts --json` instead.
 - Supervise; never implement. The workers do the tickets.
-- One runner at a time; the lock enforces it, `work orient` reports it.
+- One engine at a time; the lock enforces it, `work orient` reports it.
 - Never clear a HALT without the owner deciding to.
 - Report both success and failure; a quiet loop is not a finished loop.

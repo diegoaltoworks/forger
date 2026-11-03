@@ -51,7 +51,7 @@ as enforced, not advisory.
 
 - **Determinism first** (principle 0). Every decision a ticket adds or changes
   lands as a tested command with machine-readable output, not as prompt text.
-  Pure logic is split from I/O, and side effects sit behind an injectable runner.
+  Pure logic is split from I/O, and side effects sit behind an injectable `CommandRunner`.
 - **Comments say why, never narrate a change.** History belongs in the commit.
 - <e.g. "Never delete data; removal means active = 0.">
 - <e.g. "Phase 1 is read-only; no writes outside a write-scoped ticket.">

@@ -4,6 +4,8 @@
  * the violations on it; file reading and the exit code live in docs-check.ts.
  */
 
+import type {Finding} from './waivers';
+
 export type RuleName = 'non-ascii' | 'email' | 'home-path' | 'denylist' | 'third-party-skills';
 
 export interface Violation {
@@ -91,7 +93,7 @@ export function checkText(file: string, text: string, terms: string[] = []): Vio
   return out;
 }
 
-export function formatViolations(violations: Violation[]): string {
+export function formatViolations(violations: Array<Pick<Finding, 'file' | 'line' | 'rule' | 'detail'>>): string {
   if (violations.length === 0) return 'docs check: clean';
   return violations.map(v => `${v.file}:${v.line}: ${v.rule}: ${v.detail}`).join('\n');
 }

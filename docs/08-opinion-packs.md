@@ -53,7 +53,20 @@ Read it left to right: `check` takes the checks that the locked packs declare, i
 `.claude/waivers.json` is how a project switches an opinion off in the open. Each entry names the opinion, a path glob, a reason and who approved it; an entry missing the reason or the approver is an error, not a waiver. A waiver that matches no violation is reported as stale, so it gets deleted once it is no longer needed.
 
 - `check --json` runs everything and reports per check, plus the stale waivers. `/forger:retro` reads it for the waiver list.
-- `check docs` runs the writing rules alone, without waivers.
+- `check docs` runs the docs check alone, without waivers: the writing rules always, and, when the `docs` pack is installed, the content rules below.
 - `setup` appends `check` to the gates.
+
+## The docs pack
+
+The `docs` pack holds the docs habits: Markdown in the repository, a diagram and a reading sentence for every concept, a page that shows each feature, decisions as ADRs. Four of its opinions are enforced by `check docs`, each under its own opinion id so a waiver can target one:
+
+| Opinion | What the check flags |
+|---|---|
+| `docs.links-resolve` | a relative link or `#anchor` that points at no file or heading |
+| `docs.images-resolve` | an image link that points at no file in the repository |
+| `docs.diagrams-parse` | a mermaid block with an unknown type, unbalanced brackets or quotes, an arrow with a missing end, or an unclosed subgraph |
+| `docs.glossary-terms` | a word from a glossary `_Avoid_:` list, used in prose |
+
+Read the table as a list of ways docs rot quietly. Code spans and fences are never prose, so quoting an avoided word in backticks is fine. A word that is only wrong in one sense carries a parenthetical in the glossary, such as `user (when meaning the owner)`, and is not enforced because a pattern cannot tell the senses apart. Diagram parsing is structural rather than a full mermaid parse: it needs no browser or extra dependency and covers the mistakes that break a render, but it does not validate the grammar of every diagram type.
 
 The decision to use packs is [ADR 0003](adr/0003-opinion-packs.md).

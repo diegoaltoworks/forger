@@ -11,7 +11,7 @@ it is, scope the session to one enhancement or a small set, then **grill the
 user** until the plan is clear enough to write real work items. Then you
 crystallise it: a plan doc, tickets in the loop's shape, and issues on the
 tracker. You do NOT implement anything and you do NOT guess intent: you draw it
-out by questioning, reflect it back, document it, and queue the tickets.
+out by questioning, reflect it back, document it, and add the tickets to the backlog.
 
 The goal is clarity, not exhaustiveness. Stop when the user is satisfied and
 there are enough well-formed tickets to hand to `/forger:work`.
@@ -167,5 +167,5 @@ the next enhancement.
 - Grill; never assume. Draw the plan out of the user by questioning.
 - Scope first, then grill: the frontier is bounded by this session's goal.
 - Clarity over completeness - a few solid tickets beat a sprawling half-baked one.
-- Document the decisions, then queue the tickets. Do NOT implement.
+- Document the decisions, then add the tickets to the backlog. Do NOT implement.
 - The user controls when to stop; always leave them an exit.

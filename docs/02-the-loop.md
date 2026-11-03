@@ -25,8 +25,8 @@ consumer repository.
 | work order (`inbox/owner-work-order.md`) | no | supervisor | the owner's current priority, read by every worker first |
 | `state.json`, `work.log`, `output/` | no | engine | counters, logs, per-iteration output |
 | `HALT` | no | engine or worker | stops the loop until a person clears it |
-| `runner.lock` | no | engine | the pid of the one live runner; a second `run` refuses, a dead pid is taken over |
-| `events.jsonl` | no | engine | append-only terminal events (completed, halted, stalled, timed out, too many failures, runner gone), one JSON line each, for watchers |
+| `runner.lock` | no | engine | the pid of the one live engine; a second `run` refuses, a dead pid is taken over |
+| `events.jsonl` | no | engine | append-only terminal events (completed, halted, stalled, timed out, too many failures, engine gone), one JSON line each, for watchers |
 | owner notes (`human.md`) | yes | workers and supervisor | what only the owner can do: switches, checks owed, open choices |
 | memory notes | no (user profile) | supervisor | durable preferences and lessons, one fact per file |
 
@@ -117,7 +117,7 @@ and then timed out is still a success, with a warning.
 
 ## Invariants
 
-- One runner at a time, checked before every start.
+- One engine at a time, checked before every start.
 - One worker per ticket per iteration.
 - Gates green before every commit and merge.
 - The base branch is protected; every change, the supervisor's included, goes

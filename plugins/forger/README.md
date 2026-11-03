@@ -59,7 +59,7 @@ intent                         plan                       build
   then writes a plan doc, ADRs, issues and queued tickets. Vocabulary lives in
   `GLOSSARY.md`, decisions in `docs/adr/`.
 - **Intake**: anything labelled `ready-for-agent`, from a planner or a human, is
-  adopted into the backlog by the planners and by the worker's inbox step, with
+  adopted into the backlog by the planners and by the worker's work order step, with
   blocking edges mapped to `depends_on`. Issues labelled `wayfinder:*` are
   decisions, not work, and the loop never touches them.
 - **Build**: the worker implements one ticket test-first, reviews its own diff on
@@ -186,7 +186,7 @@ and gitignores the per-run state. Create the label with
 | `model_by_priority` | Model + USD budget per priority (`P0`, `default`, and any others). |
 | `effort_multiplier` | Budget multiplier by ticket `effort` (`small`/`medium`/`large`/...). |
 | `limits` | `timeoutMinutes`, `killGraceSeconds` (SIGTERM to SIGKILL on timeout), `maxConsecutiveFailures`, `pauseBetweenIterations`, `pauseAfterFailure`, `maxStallIterations`. |
-| `paths` | Where the backlog, state, log, output dir, HALT file, runner lock and terminal-event file live. |
+| `paths` | Where the backlog, state, log, output dir, HALT file, engine lock and terminal-event file live. |
 | `local_only` | Paths that stay modified in a checkout without being the worker's doing (local settings, a work order). The dirty-tree check skips them and the engine's own files (`paths`); a directory covers what is under it. Default none. |
 | `skills` | Skill slot -> installed skill name (see Bring your own skills). Default none: every slot uses its built-in step. |
 | `tracker` | `{ kind, label, ignore }`. `kind` is `github` (default: issues are the backlog), `local`, or `none` (both read `backlog.json`). `label` is the intake label, default `ready-for-agent`. `ignore` lists labels whose issues are not work, a trailing `*` matching a prefix (`["wayfinder:*"]`); default none. |
@@ -204,7 +204,7 @@ bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts skills [--json] [--presets]  # each skill 
 bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts packs [--json]        # available packs and which are installed
 bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts opinions [--json]     # installed opinions: pack, rung, enforcing check
 bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts check [--json]       # every check the installed packs declare, with .claude/waivers.json applied; non-zero on an unwaived violation
-bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts check docs [--json]  # writing rules: ASCII punctuation, no emails or home paths, no hard-coded skill calls in commands or templates, optional .forger-denylist
+bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts check docs [--json]  # writing rules: ASCII punctuation, no emails or home paths, no hard-coded skill calls in commands or templates, optional .forger-denylist; with the docs pack also links, anchors, images, mermaid blocks and avoided glossary terms
 bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts resume             # clear a HALT
 ```
 
@@ -223,13 +223,13 @@ reason and the failure counter is left alone. `resume` clears the HALT and zeroe
 the failure and stall counters, so the first run after a fix starts clean, and
 the first run after any start is never counted as a stall.
 
-One runner works a repo at a time. `run` writes its pid to the lock file and
+One engine works a repo at a time. `run` writes its pid to the lock file and
 refuses to start while that pid is alive; a lock whose pid is dead is taken
-over. If the previous runner died mid-iteration, the new one first closes that
+over. If the previous engine died mid-iteration, the new one first closes that
 iteration out, deciding its outcome from git as for any run, and only then
 picks a ticket, so a ticket is not re-run blindly. Each terminal event
-(completed, halted, stalled, timed out, too many failures, runner gone) appends
-one JSON line to the event file, and `status --json` reports the runner, halt,
+(completed, halted, stalled, timed out, too many failures, engine gone) appends
+one JSON line to the event file, and `status --json` reports the engine, halt,
 counters, current ticket and next pick, so a supervisor reads files and commands
 rather than human text.
 

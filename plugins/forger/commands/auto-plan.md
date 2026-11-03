@@ -87,7 +87,7 @@ an issue, reference it as the parent in each body and do not close or modify it.
 Record each number on its ticket as `issue`. **Check for duplicates by title
 first.** `local` or `none`: skip this step.
 
-### 4. Queue them
+### 4. Add them to the backlog
 Add every ticket to `backlog.json` `features`. Update `.claude/backlog.md` with a
 human summary grouped by priority.
 
