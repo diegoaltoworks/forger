@@ -263,7 +263,7 @@
     },
     "setup_installs_opinions": {
       "priority": "P2",
-      "status": "not_started",
+      "status": "completed",
       "type": "feature",
       "depends_on": [
         "pure_forger",

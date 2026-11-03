@@ -4,7 +4,7 @@
  */
 
 import {existsSync} from 'fs';
-import {dirname, join} from 'path';
+import {dirname, join, resolve} from 'path';
 import {parseArgs} from 'util';
 
 import {loadConfig} from './config';
@@ -14,6 +14,7 @@ import {openBacklog} from './open-backlog';
 import {runDocsCheck} from './docs-check';
 import {formatViolations} from './docs-rules';
 import {AutomationRunner} from './runner';
+import {formatSetup, runSetup} from './setup';
 
 /** Nearest ancestor directory containing a `.claude` folder. */
 export function findProjectRoot(start: string = process.cwd()): string {
@@ -32,6 +33,8 @@ Usage (run from the consumer repo root):
   run [N]          Run N iterations (default: 1)
   run --continuous Run until all tasks complete
   status [--json] Show current status, runner pid and liveness
+  setup [--json] [--gates CMD] [--base-branch B] [--tracker KIND]
+                   Install forger's default files into .claude/, never overwriting
   check docs [--json] Fail on non-ASCII punctuation, emails, home paths, denylist terms
   backlog [--json] Workable tickets in order, remaining count and next pick
   reset            Reset state to start fresh
@@ -61,6 +64,9 @@ export async function main(
       iterations: {type: 'string', short: 'n', default: '1'},
       continuous: {type: 'boolean', default: false},
       json: {type: 'boolean', default: false},
+      gates: {type: 'string'},
+      'base-branch': {type: 'string'},
+      tracker: {type: 'string'},
       help: {type: 'boolean', short: 'h', default: false},
     },
     allowPositionals: true,
@@ -72,6 +78,15 @@ export async function main(
   }
 
   const command = positionals[0] || 'status';
+  if (command === 'setup') {
+    const result = runSetup(process.cwd(), resolve(import.meta.dir, '../..'), {
+      gates: values.gates,
+      baseBranch: values['base-branch'],
+      trackerKind: values.tracker,
+    });
+    console.log(values.json ? JSON.stringify(result) : formatSetup(result));
+    return;
+  }
   const projectRoot = findProjectRoot();
   if (command === 'check') {
     if (positionals[1] !== 'docs') {

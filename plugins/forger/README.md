@@ -129,18 +129,12 @@ Then fill in `.claude/process.md` - the project's rules and **gotchas**. The
 worker treats these as enforced. Run `/forger:plan` to generate the
 first tickets, and `/forger:work` to start.
 
-By hand, the equivalent is:
-
-```
-mkdir -p .claude
-cp "$CLAUDE_PLUGIN_ROOT/templates/workloop.config.json" .claude/
-cp "$CLAUDE_PLUGIN_ROOT/templates/process.md"           .claude/
-cp "$CLAUDE_PLUGIN_ROOT/templates/backlog.json"         .claude/
-gh label create ready-for-agent
-```
-and gitignore `.claude/state.json`, `.claude/work.log`, `.claude/output/`,
-`.claude/runner.lock`, `.claude/events.jsonl`,
-`.claude/HALT`.
+The copy is a tested command: `bun "$CLAUDE_PLUGIN_ROOT/bin/work.ts" setup --json
+[--gates CMD] [--base-branch B] [--tracker KIND]`. It writes `.claude/` files
+only where they are absent, installs the default `process.md`, the ticket, PR,
+work order, report, retro and rule templates, adds the docs check to the gates
+and gitignores the per-run state. Create the label with
+`gh label create ready-for-agent`.
 
 ## Configuration
 

@@ -7,7 +7,7 @@ One ticket per iteration, quality gates green, small clean commits.
 Forger: deterministic tools and skills for an unattended, self-improving
 development loop in Claude Code. The plugin lives in `plugins/forger/` (engine in
 `plugins/forger/engine/`, commands in `plugins/forger/commands/`, the files a
-project adopts in `plugins/forger/templates/` and `templates/`). The process it
+project adopts in `plugins/forger/templates/`). The process it
 encodes lives in `docs/`. Read `README.md`, `docs/01-principles.md`,
 `GLOSSARY.md`, `docs/adr/` and `docs/plan-foundation.md` before a ticket.
 

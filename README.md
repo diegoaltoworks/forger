@@ -33,7 +33,7 @@ anyone remembering it, and the process is measured by commands, not claims.
 7. [`docs/07-roadmap.md`](docs/07-roadmap.md) - what to build next.
 
 [`GLOSSARY.md`](GLOSSARY.md) holds the vocabulary; [`docs/adr/`](docs/adr/) the
-decisions. `templates/` holds the files a repository adopts: the ticket and PR
+decisions. `plugins/forger/templates/` holds the files a repository adopts: the ticket and PR
 shapes, the work order, the report, the retro and the rule record.
 
 ## Status

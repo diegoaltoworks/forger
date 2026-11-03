@@ -23,7 +23,7 @@ const THIRD_PARTY_SKILLS =
   /matt-?\s?pocock|\bSkill tool\b|\bcall(?:s|ed)? the Skill\b|docs\/agents\/issue-tracker\.md|(?<![\w/])\/(?:to-tickets|triage)\b/gi;
 
 /** Shipped prose: what a project adopts or reads as instructions. */
-const SHIPPED = [/^plugins\/forger\/commands\//, /^plugins\/forger\/templates\//, /^templates\//, /(^|\/)README\.md$/];
+const SHIPPED = [/^plugins\/forger\/commands\//, /^plugins\/forger\/templates\//, /(^|\/)README\.md$/];
 
 export function isShipped(file: string): boolean {
   return SHIPPED.some(r => r.test(file));

@@ -44,13 +44,20 @@ on red. Describe here anything a gate does not catch that a reviewer should.
 
 ## Project gotchas
 
-List the hard constraints a worker MUST respect - the things that surprised a
-careful reader, the data-safety rules, the forbidden calls, the invariants. The
-worker treats these as enforced, not advisory. For example:
+The first two are forger's defaults; keep them. Then list the hard constraints
+a worker MUST respect - the things that surprised a careful reader, the
+data-safety rules, the forbidden calls, the invariants. The worker treats these
+as enforced, not advisory.
 
+- **Determinism first** (principle 0). Every decision a ticket adds or changes
+  lands as a tested command with machine-readable output, not as prompt text.
+  Pure logic is split from I/O, and side effects sit behind an injectable runner.
+- **Comments say why, never narrate a change.** History belongs in the commit.
 - <e.g. "Never delete data; removal means active = 0.">
-- <e.g. "Never let user input reach the raw-SQL filter path.">
 - <e.g. "Phase 1 is read-only; no writes outside a write-scoped ticket.">
+
+The retro refines this file over time: a lesson that holds for this project
+lands here by PR, and one that holds for every project goes upstream to forger.
 
 ## The ticket shape
 

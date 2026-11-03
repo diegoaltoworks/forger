@@ -16,45 +16,31 @@ file the repo already has; report what exists and what you added.
 - **`gh` auth:** !`gh auth status >/dev/null 2>&1 && echo ok || echo "not authenticated"`
 - **Bun:** !`bun --version 2>/dev/null || echo "not on PATH"`
 
-## 1. Templates
+## 1. Ask
 
-Copy each template from `${CLAUDE_PLUGIN_ROOT}/templates/` into `.claude/` only
-if the target does not exist:
-
-```
-mkdir -p .claude
-for f in workloop.config.json process.md backlog.json; do
-  [ -e ".claude/$f" ] || cp "${CLAUDE_PLUGIN_ROOT}/templates/$f" ".claude/$f"
-done
-```
-
-Then append the per-run state to `.gitignore` if the lines are missing:
-```
-.claude/state.json
-.claude/work.log
-.claude/output/
-.claude/HALT
-.claude/runner.lock
-.claude/events.jsonl
-```
-
-## 2. Minimal config
-
-Ask, with `AskUserQuestion` where a few options fit:
+Ask, with `AskUserQuestion` where a few options fit, only what the tool cannot
+know:
 - the **gates** command (propose one from `package.json` scripts or the repo's
   CI config if you can read one);
-- the **base branch** (default: the current default branch).
+- the **base branch** (default: the current default branch);
+- the **tracker** (`github` when `origin` is a GitHub remote and `gh` is
+  authenticated, else `local`; say why).
 
-Write them into `.claude/workloop.config.json`. Leave everything else at its
-default.
+## 2. Install
 
-## 3. Tracker
+```
+bun "${CLAUDE_PLUGIN_ROOT}/bin/work.ts" setup --json --gates "<gates>" --base-branch "<branch>" --tracker "<kind>"
+```
 
-Decide `tracker.kind`:
-- If `origin` is a GitHub remote and `gh` is authenticated: `github`.
-- Else: `local`, and say why.
+The tool writes the config (with the docs check appended to the gates),
+`process.md` with principle 0 and the default gotchas, a starter `backlog.json`,
+the ticket, PR, work order, report, retro and rule templates under
+`.claude/templates/`, and the per-run `.gitignore` lines. It never overwrites,
+and reports each file as `written` or `kept`; a second run writes nothing.
 
-When `github`: create the intake label if missing:
+## 3. Label
+
+When the tracker is `github`: create the intake label if missing:
 ```
 gh label create ready-for-agent --description "Fully specified, ready for the work loop" --color 0E8A16 2>/dev/null || true
 ```
@@ -69,7 +55,7 @@ careful reader would not guess.
 
 ## 5. Report
 
-List what was created, what already existed, the tracker decision and why, and
+Relay the tool's written and kept lists, the tracker decision and why, and
 the next step: `/forger:plan` to plan the first tickets, or
 `/forger:work` if the backlog already has real tickets.
 
