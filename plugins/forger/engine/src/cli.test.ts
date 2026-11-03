@@ -137,6 +137,35 @@ describe('check docs', () => {
   });
 });
 
+describe('check arch', () => {
+  const map = JSON.stringify({layers: [{name: 'core', paths: ['core/**']}, {name: 'shell', paths: ['shell/**']}], allow: {shell: ['core']}});
+
+  test('reports the forbidden import and fails; clean passes', async () => {
+    const root = projectWith({});
+    process.chdir(root);
+    mkdirSync(join(root, 'core'));
+    mkdirSync(join(root, 'shell'));
+    writeFileSync(join(root, '.claude', 'architecture.json'), map);
+    writeFileSync(join(root, 'shell/s.ts'), '');
+    writeFileSync(join(root, 'core/c.ts'), "import '../shell/s';");
+    const bad = await capture(['check', 'arch', '--json'], () => 'core/c.ts\nshell/s.ts');
+    expect(JSON.parse(bad).map((f: {file: string; opinion: string}) => [f.file, f.opinion])).toEqual([['core/c.ts', 'architecture.dependency-rule']]);
+    expect(process.exitCode).toBe(1);
+    process.exitCode = 0;
+    expect(await capture(['check', 'arch'], () => 'shell/s.ts')).toBe('arch check: clean');
+  });
+
+  test('a missing layer map fails loudly', async () => {
+    process.chdir(projectWith({}));
+    const err = spyOn(console, 'error').mockImplementation(() => {});
+    await capture(['check', 'arch'], () => '');
+    expect(err.mock.calls[0][0]).toContain('architecture.json not found');
+    err.mockRestore();
+    expect(process.exitCode).toBe(1);
+    process.exitCode = 0;
+  });
+});
+
 describe('check', () => {
   function installed(): string {
     const root = projectWith({});

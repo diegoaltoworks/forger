@@ -13,6 +13,7 @@ import {execRunner, type CommandRunner} from './git';
 import {formatBacklogReport} from './backlog';
 import {openBacklog} from './open-backlog';
 import {formatReport as formatCheckReport, runChecks} from './checks';
+import {runArchCheck} from './arch-check';
 import {runDocsCheck} from './docs-check';
 import {formatViolations} from './docs-rules';
 import {AutomationRunner} from './runner';
@@ -52,6 +53,7 @@ Usage (run from the consumer repo root):
                    --presets lists the presets whose skill collection is installed
   check [--json]   Run every check the installed packs declare, apply .claude/waivers.json,
                    exit non-zero on any unwaived violation
+  check arch [--json] Fail on an import that crosses a forbidden edge of .claude/architecture.json
   check docs [--json] Fail on non-ASCII punctuation, emails, home paths, denylist terms
   backlog [--json] Workable tickets in order, remaining count and next pick
   orient [--json]  What the supervisor should do on arrival: surface_halt, attach, start, nothing_to_do
@@ -192,13 +194,21 @@ export async function main(
       }
       return;
     }
-    if (positionals[1] !== 'docs') {
-      console.error('Usage: check [--json] | check docs [--json]');
+    if (positionals[1] !== 'docs' && positionals[1] !== 'arch') {
+      console.error('Usage: check [--json] | check docs [--json] | check arch [--json]');
       process.exitCode = 1;
       return;
     }
-    const violations = runDocsCheck(projectRoot, deps.run ?? execRunner(projectRoot));
-    console.log(values.json ? JSON.stringify(violations) : formatViolations(violations));
+    let violations;
+    try {
+      const run = deps.run ?? execRunner(projectRoot);
+      violations = positionals[1] === 'docs' ? runDocsCheck(projectRoot, run) : runArchCheck(projectRoot, run);
+    } catch (e) {
+      console.error((e as Error).message);
+      process.exitCode = 1;
+      return;
+    }
+    console.log(values.json ? JSON.stringify(violations) : formatViolations(violations, positionals[1]));
     if (violations.length > 0) process.exitCode = 1;
     return;
   }

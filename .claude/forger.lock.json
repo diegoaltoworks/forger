@@ -3,7 +3,32 @@
     {
       "id": "base",
       "version": "1.1.0",
-      "files": []
+      "files": [
+        {
+          "path": ".claude/templates/pr.md",
+          "sha256": "4cc1fbdba26617792d68984215d4c74b4ef996f6d7fac8fea7aa684623c46525"
+        },
+        {
+          "path": ".claude/templates/report.md",
+          "sha256": "b24186b4e8c718b18f1a3e94bd65905ce2844f694a3839ce414545e3ac41217f"
+        },
+        {
+          "path": ".claude/templates/retro.md",
+          "sha256": "97675f124fa6edade1c8fc03e3a7424cea227b4f8a9d7d1731a7007805548b09"
+        },
+        {
+          "path": ".claude/templates/rule.md",
+          "sha256": "e48e7d307f70e900dda85a2a0d8a9c0ef189d5d6e53b8bd0f1c1a401d3e78abf"
+        },
+        {
+          "path": ".claude/templates/ticket.md",
+          "sha256": "b3073b3bb6cfe2a18caa217702fd245082e743da6f823af31cc0932e71c7f7db"
+        },
+        {
+          "path": ".claude/templates/work-order.md",
+          "sha256": "6b9e45cecf30392e57e94972d6766a9652fe48802f66d2fef74b0eaf5d902bd8"
+        }
+      ]
     },
     {
       "id": "docs",
@@ -12,6 +37,16 @@
         {
           "path": ".claude/opinions/docs.md",
           "sha256": "c93c9efcbaf68a459c5680390bc7ab09b637b18052d518877f38d1451eaebebe"
+        }
+      ]
+    },
+    {
+      "id": "architecture",
+      "version": "1.0.0",
+      "files": [
+        {
+          "path": ".claude/opinions/architecture.md",
+          "sha256": "5ebe4ade7fa0783c153bb1e30fc2930fc896b7148d529945dfaeb260aa3a8e5b"
         }
       ]
     }
