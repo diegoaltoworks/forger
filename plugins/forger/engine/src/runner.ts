@@ -12,7 +12,6 @@ import {join} from 'path';
 
 import type {WorkloopConfig} from './config';
 import type {Backlog} from './backlog';
-import {fileBacklog} from './file-backlog';
 import {type CommandRunner, execRunner, verifyMerged} from './git';
 import {buildPrompt} from './prompt';
 import {type AutomationState, StateStore, stallUpdate} from './state';
@@ -26,7 +25,6 @@ import {gatherFacts, takeSnapshot, ticketFromBranch} from './run-facts';
 export interface RunnerDeps {
   runClaude?: (opts: RunClaudeOptions) => Promise<ClaudeResult>;
   gitRunner?: CommandRunner;
-  backlog?: Backlog;
   uuid?: () => string;
 }
 
@@ -36,12 +34,12 @@ export class AutomationRunner {
   private outputDir: string;
   private gitRunner: CommandRunner;
   private spawnClaude: (opts: RunClaudeOptions) => Promise<ClaudeResult>;
-  private backlog: Backlog;
   private uuid: () => string;
 
   constructor(
     private projectRoot: string,
     private config: WorkloopConfig,
+    private backlog: Backlog,
     deps: RunnerDeps = {}
   ) {
     const p = (rel: string): string => join(projectRoot, rel);
@@ -51,7 +49,6 @@ export class AutomationRunner {
 
     this.gitRunner = deps.gitRunner ?? execRunner(projectRoot);
     this.spawnClaude = deps.runClaude ?? runClaude;
-    this.backlog = deps.backlog ?? fileBacklog(p(config.paths.backlog), config);
     this.uuid = deps.uuid ?? (() => crypto.randomUUID());
 
     if (!existsSync(this.outputDir)) mkdirSync(this.outputDir, {recursive: true});

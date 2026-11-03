@@ -1,6 +1,6 @@
 /**
- * The Backlog read from a backlog.json file: the local fallback, and the
- * backlog for trackers that do not hold the tickets themselves.
+ * The Backlog read from a backlog.json file: the fallback when the tracker
+ * is not GitHub Issues (ADR 0001).
  */
 
 import {readFileSync} from 'fs';

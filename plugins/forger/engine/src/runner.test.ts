@@ -63,13 +63,12 @@ function runnerWith(
   dirs.push(root);
   const calls: RunClaudeOptions[] = [];
   const config = mergeConfig({limits: {timeoutMinutes: 7, killGraceSeconds: 11, maxStallIterations: 2}});
-  const runner = new AutomationRunner(root, config, {
+  const runner = new AutomationRunner(root, config, backlogFrom(() => data, config), {
     runClaude: async opts => {
       calls.push(opts);
       return result;
     },
     gitRunner: sceneRunner(scene, () => calls.length > 0),
-    backlog: backlogFrom(() => data, config),
     uuid: () => '00000000-0000-0000-0000-000000000000',
   });
   return {runner, root, calls};

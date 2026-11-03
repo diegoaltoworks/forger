@@ -4,6 +4,7 @@ import {mergeConfig} from './config';
 import type {BacklogData} from './backlog';
 import {
   backlogReport,
+  formatBacklogReport,
   hasTicket,
   isTicketCompleted,
   nextTaskName,
@@ -156,6 +157,7 @@ describe('backlogReport', () => {
       blocked: {status: 'not_started', priority: 'P0', depends_on: ['later']},
       later: {status: 'not_started', priority: 'P2'},
       unlabelled: {status: 'not_started'},
+      odd: {status: 'not_started', priority: 'P9'},
       first: {status: 'not_started', priority: 'P0'},
       done: {status: 'completed', priority: 'P0'},
     });
@@ -164,13 +166,34 @@ describe('backlogReport', () => {
         {id: 'first', priority: 'P0'},
         {id: 'later', priority: 'P2'},
         {id: 'unlabelled', priority: 'P3'},
+        {id: 'odd', priority: 'P9'},
       ],
-      remaining: 4,
+      remaining: 5,
       next: 'first',
     });
   });
 
   test('a missing backlog reports nothing to do', () => {
     expect(backlogReport(null, config)).toEqual({workable: [], remaining: 0, next: null});
+  });
+});
+
+describe('formatBacklogReport', () => {
+  test('one line per workable ticket, then remaining and next', () => {
+    const text = formatBacklogReport({
+      workable: [
+        {id: 'a', priority: 'P0'},
+        {id: 'b', priority: 'P2'},
+      ],
+      remaining: 3,
+      next: 'a',
+    });
+    expect(text).toBe('P0 a\nP2 b\nRemaining: 3  Next: a');
+  });
+
+  test('an empty backlog names no next pick', () => {
+    expect(formatBacklogReport({workable: [], remaining: 0, next: null})).toBe(
+      'Remaining: 0  Next: none'
+    );
   });
 });

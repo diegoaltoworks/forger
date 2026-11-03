@@ -57,11 +57,11 @@ function isTicket(data: unknown): data is Ticket {
 export function workableTasks(
   data: BacklogData | null,
   config: WorkloopConfig
-): Array<{priority: number; name: string}> {
+): Array<{priority: number; label: string; name: string}> {
   const all = tickets(data);
   const isCompleted = (id: string): boolean => all[id]?.status === 'completed';
 
-  const candidates: Array<{priority: number; name: string}> = [];
+  const candidates: Array<{priority: number; label: string; name: string}> = [];
   for (const [name, ticket] of Object.entries(all)) {
     if (!isTicket(ticket)) continue;
     if (ticket.status !== 'not_started') continue;
@@ -70,7 +70,8 @@ export function workableTasks(
     const deps = Array.isArray(ticket.depends_on) ? ticket.depends_on : [];
     if (!deps.every(isCompleted)) continue;
 
-    candidates.push({priority: PRIORITY_ORDER[ticket.priority || 'P3'] ?? 3, name});
+    const label = ticket.priority || 'P3';
+    candidates.push({priority: PRIORITY_ORDER[label] ?? 3, label, name});
   }
 
   candidates.sort((a, b) => a.priority - b.priority);
@@ -121,7 +122,11 @@ export function hasTicket(data: BacklogData | null, taskName: string): boolean {
   return isTicket(tickets(data)[taskName]);
 }
 
-/** What `backlog --json` prints: the workable tickets in order, what is left, and the next pick. */
+/**
+ * What `backlog --json` prints: the workable tickets in order, what is left,
+ * and the next pick. A ticket with no priority reads as P3, which is how it
+ * is ordered; any other label is shown as written.
+ */
 export interface BacklogReport {
   workable: Array<{id: string; priority: string}>;
   remaining: number;
@@ -129,8 +134,14 @@ export interface BacklogReport {
 }
 
 export function backlogReport(data: BacklogData | null, config: WorkloopConfig): BacklogReport {
-  const workable = workableTasks(data, config).map(t => ({id: t.name, priority: `P${t.priority}`}));
+  const workable = workableTasks(data, config).map(t => ({id: t.name, priority: t.label}));
   return {workable, remaining: remainingTasks(data, config), next: workable[0]?.id ?? null};
+}
+
+export function formatBacklogReport(report: BacklogReport): string {
+  const lines = report.workable.map(t => `${t.priority} ${t.id}`);
+  lines.push(`Remaining: ${report.remaining}  Next: ${report.next ?? 'none'}`);
+  return lines.join('\n');
 }
 
 /**

@@ -8,6 +8,7 @@ import {dirname, join} from 'path';
 import {parseArgs} from 'util';
 
 import {loadConfig} from './config';
+import {formatBacklogReport} from './backlog';
 import {fileBacklog} from './file-backlog';
 import {AutomationRunner} from './runner';
 
@@ -64,7 +65,7 @@ export async function main(argv: string[] = process.argv.slice(2)): Promise<void
   const projectRoot = findProjectRoot();
   const config = loadConfig(projectRoot);
   const backlog = fileBacklog(join(projectRoot, config.paths.backlog), config);
-  const runner = new AutomationRunner(projectRoot, config, {backlog});
+  const runner = new AutomationRunner(projectRoot, config, backlog);
 
   switch (command) {
     case 'run': {
@@ -77,12 +78,7 @@ export async function main(argv: string[] = process.argv.slice(2)): Promise<void
       break;
     case 'backlog': {
       const report = backlog.report();
-      if (values.json) {
-        console.log(JSON.stringify(report));
-      } else {
-        for (const t of report.workable) console.log(`${t.priority} ${t.id}`);
-        console.log(`Remaining: ${report.remaining}  Next: ${report.next ?? 'none'}`);
-      }
+      console.log(values.json ? JSON.stringify(report) : formatBacklogReport(report));
       break;
     }
     case 'reset':
