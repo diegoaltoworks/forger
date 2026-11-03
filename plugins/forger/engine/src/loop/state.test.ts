@@ -143,14 +143,26 @@ describe('LoopStore with a tracker halt', () => {
   test('writeHalt writes the file and the label; clearHalt resumes', () => {
     const {store, calls} = setup(false);
     store.writeHalt('why');
-    expect(store.haltFileExists()).toBe(true);
+    expect(store.haltFileExists()).toBe(false);
+    expect(store.isHalted()).toBe(true);
     expect(calls).toEqual(['set:why']);
     store.clearHalt();
     expect(store.isHalted()).toBe(false);
     expect(calls).toEqual(['set:why', 'clear']);
   });
 
-  test('a tracker outage does not undo the local halt', () => {
+  test('removing the label alone resumes', () => {
+    const {store} = setup(true);
+    expect(store.isHalted()).toBe(true);
+    const owner = setup(false);
+    owner.store.writeHalt('why');
+    expect(owner.store.isHalted()).toBe(true);
+    owner.calls.length = 0;
+    owner.store.clearHalt();
+    expect(owner.store.isHalted()).toBe(false);
+  });
+
+  test('a tracker outage falls back to the local file', () => {
     const broken = new LoopStore({readState: () => null, writeState: () => {}} as unknown as StateStore, join(mkdtempSync(join(tmpdir(), 'halt-')), 'HALT'), {
       read: () => ({label: false, reason: null}),
       set: () => {

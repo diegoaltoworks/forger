@@ -234,7 +234,13 @@ export class AutomationRunner {
     }
   }
 
+  /** The owner removed the halted label: the persisted halt is over, with the counters that caused it. */
+  private resumeIfLabelCleared(): void {
+    if (this.store.hasTracker() && !this.store.isHalted() && this.store.load().status === 'halted') this.clearHalt();
+  }
+
   private async loop(iterations: number, continuous: boolean): Promise<void> {
+    this.resumeIfLabelCleared();
     if (this.store.isHalted()) {
       this.logger.log('ERROR', 'Automation is HALTED. Run "resume" to continue.');
       this.showStatus();
@@ -346,6 +352,7 @@ export class AutomationRunner {
    * keeps its own timeout.
    */
   private async loopParallel(iterations: number, continuous: boolean): Promise<void> {
+    this.resumeIfLabelCleared();
     if (this.store.isHalted()) {
       this.logger.log('ERROR', 'Automation is HALTED. Run "resume" to continue.');
       this.showStatus();

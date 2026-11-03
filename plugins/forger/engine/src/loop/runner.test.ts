@@ -479,6 +479,37 @@ describe('AutomationRunner single runner', () => {
     expect(cleared).toEqual([expect.objectContaining({reason: 'by hand'})]);
   });
 
+  test('with a tracker, removing the halted label resumes the next start', async () => {
+    let label = false;
+    const tracker = {
+      read: () => ({label, reason: label ? 'x' : null}),
+      set: () => {
+        label = true;
+      },
+      clear: () => {
+        label = false;
+      },
+      writeStatus: () => {},
+    };
+    const root = mkdtempSync(join(tmpdir(), 'forger-runner-'));
+    dirs.push(root);
+    const config = fast;
+    const runner = new AutomationRunner(root, config, backlogFrom(() => backlog, config), {
+      stateStore: localStateFor(root, config),
+      agent: {run: async () => fail},
+      gitRunner: () => '',
+      haltTracker: tracker,
+    });
+    runner.halt('boom');
+    expect(label).toBe(true);
+    expect(existsSync(join(root, config.paths.halt))).toBe(false);
+    expect(readState(root).status).toBe('halted');
+    label = false;
+    await runner.run(1);
+    expect(readState(root).status).not.toBe('halted');
+    expect(allEventsOf(root).filter(e => e.event === 'halt_cleared')).toHaveLength(1);
+  });
+
   test('resume with nothing halted records nothing', () => {
     const {runner, root} = runnerWith(fail);
     runner.clearHalt();

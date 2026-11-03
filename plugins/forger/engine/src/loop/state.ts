@@ -182,12 +182,27 @@ export class LoopStore {
     return existsSync(this.haltFile);
   }
 
+  /** With a tracker the label is the halt, so the owner resumes by removing it; the file is the fallback when the tracker cannot be written. */
   writeHalt(reason: string): void {
+    if (this.tracker && this.trySet(this.tracker, reason)) return;
     writeFileSync(
       this.haltFile,
       `Halted: ${reason}\nTime: ${new Date().toISOString()}\n`
     );
-    this.bestEffort(() => this.tracker?.set(reason));
+  }
+
+  /** True when the owner can resume by removing a tracker label. */
+  hasTracker(): boolean {
+    return this.tracker !== null;
+  }
+
+  private trySet(tracker: TrackerHalt, reason: string): boolean {
+    try {
+      tracker.set(reason);
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   clearHalt(): void {
