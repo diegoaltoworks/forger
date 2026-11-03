@@ -13,6 +13,7 @@ import {forgerPath, type WorkloopConfig} from '../config';
 import {pick, schedule, type Backlog, type FolderMap, type Schedulable} from '../backlog';
 import {capturing, type AgentRunner, type CapturingRunner, type CommandRunner, type StateStore} from '../ports';
 import {type AutomationState, currentTicket, LoopStore} from './state';
+import type {TrackerHalt} from './halt-tracker';
 import {Logger, colors} from './logger';
 import {RateLimitError, rateLimitWaitMs} from './infra';
 import {type IterationContext, type Placement, closeOrphan, runIteration} from './iteration';
@@ -39,6 +40,8 @@ export interface RunnerDeps {
   pid?: number;
   /** Clock and wait, injectable so a rate-limit wait runs in a test without waiting. */
   now?: () => number;
+  /** The `halted` label on the pinned loop issue; omitted when the tracker is not GitHub. */
+  haltTracker?: TrackerHalt;
   sleep?: (ms: number) => Promise<void>;
 }
 
@@ -93,7 +96,7 @@ export class AutomationRunner {
     const p = (rel: string): string => join(projectRoot, rel);
     this.logger = new Logger(p(config.paths.log));
     this.stateStore = deps.stateStore;
-    this.store = new LoopStore(this.stateStore, p(config.paths.halt));
+    this.store = new LoopStore(this.stateStore, p(config.paths.halt), deps.haltTracker ?? null);
     this.outputDir = p(config.paths.output);
     this.scheduleFile = join(p(config.paths.output), 'schedule-decisions.jsonl');
     this.isAliveFn = deps.isAlive ?? pidAlive;
@@ -167,6 +170,7 @@ export class AutomationRunner {
     state.status = 'halted';
     state.last_error = reason;
     this.store.save(state);
+    this.store.publishStatus(state);
     this.emit(kind, state.iteration, currentTicket(state), reason);
   }
 
@@ -185,6 +189,7 @@ export class AutomationRunner {
     state.consecutive_failures = 0;
     state.stall_count = 0;
     this.store.save(state);
+    this.store.publishStatus(state);
   }
 
   resetState(): void {
