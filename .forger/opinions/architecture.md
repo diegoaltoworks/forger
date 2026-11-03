@@ -17,7 +17,7 @@ by accident and swapping a system touches one file.
 
 ## The dependency rule
 
-The core never imports the shell. The layer map in `.claude/architecture.json`
+The core never imports the shell. The layer map in `.forger/architecture.json`
 names layers as path globs and lists which layer may import which; a layer may
 always import itself. `check arch` builds the import graph and reports each
 import that crosses a forbidden edge, whether it is static, type-only, dynamic,
@@ -67,7 +67,7 @@ units that each do little push the complexity onto their callers.
 ## Decisions are recorded
 
 A new dependency or a change to the layer map is a decision. It leaves an ADR
-under `docs/adr/` in the same diff (`.claude/templates/adr.md` is the shape:
+under `docs/adr/` in the same diff (`.forger/templates/adr.md` is the shape:
 context, decision, consequences, status). An ADR is superseded by a new one,
 never edited. `check decisions` enforces this by reading the diff against the
 base branch; a version bump or a removed dependency needs no ADR.

@@ -1,12 +1,5 @@
 node_modules/
 .DS_Store
-.claude/state.json
-.claude/work.log
-.claude/output/
-.claude/HALT
-.claude/runner.lock
-.claude/events.jsonl
-.claude/declined.json
 .forger/state.json
 .forger/work.log
 .forger/output/

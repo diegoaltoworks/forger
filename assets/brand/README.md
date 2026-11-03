@@ -42,4 +42,4 @@ bun plugins/forger/bin/work.ts brand
 
 The output is deterministic; the engine tests fail when a committed raster no
 longer matches its SVG. The social preview must be uploaded by hand: see
-`.claude/human.md`.
+`.forger/human.md`.

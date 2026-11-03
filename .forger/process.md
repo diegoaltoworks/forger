@@ -17,9 +17,9 @@ commands on `main`.
 
 ## The gates
 
-The command is `gates` in `.claude/workloop.config.json`. Never proceed on red.
+The command is `gates` in `.forger/workloop.config.json`. Never proceed on red.
 The gates end with `forger check`, which runs the checks of the installed packs
-(the writing rules among them) with `.claude/waivers.json` applied.
+(the writing rules among them) with `.forger/waivers.json` applied.
 
 ## The tracker
 
@@ -67,7 +67,7 @@ ticket's issue by assigning yourself; close it through the PR with
 
 ## The ticket shape
 
-Each entry in `.claude/backlog.json` `features`:
+Each entry in `.forger/backlog.json` `features`:
 
 ```json
 "<ticket_id>": {
