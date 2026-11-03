@@ -5,7 +5,7 @@ over them, and the model roles.
 
 ## Files
 
-- `config.ts` - `mergeConfig` and the defaults are pure; `loadConfig` reads the
+- `config.ts` - `mergeConfig` and the defaults are pure (the `state` section is validated there); `loadConfig` reads the
   file and resolves its paths.
 - `layout.ts` - the only file that names forger's folder: which layout a project
   has (`.forger/`, or the legacy one until `migrate`), and the logical-to-physical

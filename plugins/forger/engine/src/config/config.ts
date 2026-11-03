@@ -85,6 +85,12 @@ export interface WorkloopConfig {
    */
   tracker: {kind: 'github' | 'local' | 'none'; label: string; ignore: string[]};
   /**
+   * Where the machine-written loop files live (ADR 0015). `local` keeps them
+   * beside the engine; `branch` keeps them on the `branch` of the remote and
+   * makes the engine hold the lease while it runs.
+   */
+  state: {home: 'local' | 'branch'; branch: string};
+  /**
    * Paths that stay modified in a checkout without being the worker's doing
    * (local settings, a work order). The dirty-tree check skips them, along
    * with the files the engine owns (`paths`). A directory covers what is under it.
@@ -122,6 +128,7 @@ export interface WorkloopConfigInput {
   limits?: Partial<WorkloopConfig['limits']>;
   paths?: Partial<WorkloopConfig['paths']>;
   tracker?: Partial<WorkloopConfig['tracker']>;
+  state?: Partial<WorkloopConfig['state']>;
   local_only?: string[];
   skills?: Record<string, SkillMapping>;
   model_names?: string[];
@@ -181,6 +188,7 @@ export const DEFAULT_CONFIG: WorkloopConfig = {
     verdicts: `${FORGER_DIR}/verdicts`,
   },
   tracker: {kind: 'github', label: 'ready-for-agent', ignore: []},
+  state: {home: 'local', branch: 'forger-state'},
   local_only: [],
   skills: {},
   model_names: ['claude', 'anthropic', 'opus', 'sonnet', 'haiku', 'gpt', 'openai', 'gemini', 'llama', 'mistral'],
@@ -189,6 +197,16 @@ export const DEFAULT_CONFIG: WorkloopConfig = {
 /** A worker count the loop can honour: a whole number of at least one. Pure. */
 export function validParallelism(n: unknown): n is number {
   return typeof n === 'number' && Number.isInteger(n) && n >= 1;
+}
+
+/** A state setting the loop can honour: a known home and a usable branch name. Throws otherwise. Pure. */
+export function validateState(state: WorkloopConfig['state']): void {
+  if (state.home !== 'local' && state.home !== 'branch') {
+    throw new Error(`state.home must be "local" or "branch", got ${JSON.stringify(state.home)}`);
+  }
+  if (typeof state.branch !== 'string' || !/^[A-Za-z0-9._\/-]+$/.test(state.branch) || state.branch.startsWith('-')) {
+    throw new Error(`state.branch must be a branch name, got ${JSON.stringify(state.branch)}`);
+  }
 }
 
 /**
@@ -203,9 +221,12 @@ export function mergeConfig(
   if (user.parallelism !== undefined && !validParallelism(user.parallelism)) {
     throw new Error(`parallelism must be a positive integer, got ${JSON.stringify(user.parallelism)}`);
   }
+  const state = {...base.state, ...(user.state ?? {})};
+  validateState(state);
   return {
     ...base,
     ...user,
+    state,
     models: {...base.models, ...(user.models ?? {})},
     model_by_priority: {
       ...base.model_by_priority,

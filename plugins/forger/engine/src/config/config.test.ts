@@ -115,3 +115,21 @@ describe('parallelism', () => {
     }
   });
 });
+
+describe('state', () => {
+  test('defaults to the local home and the forger-state branch', () => {
+    expect(mergeConfig({}).state).toEqual({home: 'local', branch: 'forger-state'});
+  });
+  test('takes the branch home and a branch name, keeping the other default', () => {
+    expect(mergeConfig({state: {home: 'branch'}}).state).toEqual({home: 'branch', branch: 'forger-state'});
+    expect(mergeConfig({state: {branch: 'loop/state'}}).state.branch).toBe('loop/state');
+  });
+  test('rejects an unknown home', () => {
+    expect(() => mergeConfig({state: {home: 'cloud' as 'local'}})).toThrow(/state.home must be/);
+  });
+  test('rejects an unusable branch name', () => {
+    for (const bad of ['', '-x', 'a b', 'a;b', 5]) {
+      expect(() => mergeConfig({state: {branch: bad as string}})).toThrow(/state.branch must be/);
+    }
+  });
+});

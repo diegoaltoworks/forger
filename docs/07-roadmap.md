@@ -64,7 +64,7 @@ survive restarts.
   run against, with forger installed from outside and a fixed set of owner
   requests replayed to compare forger versions; see
   [ADR 0012](adr/0012-a-sample-product-repository-proves-forger-off-itself.md).
-- **State off the laptop** is designed in [ADR 0015](adr/0015-loop-state-lives-on-a-state-branch-and-in-the-tracker.md).
+- **State off the laptop** is built behind the `state.home` setting and designed in [ADR 0015](adr/0015-loop-state-lives-on-a-state-branch-and-in-the-tracker.md).
 - **Then: CI-native**, targeting the sample repository first. A scheduled supervisor job runs one `manage` tick; a
   dispatched worker job builds one ticket, with a concurrency group for one
   worker at a time. Reports go where the owner reads them on a phone; a HALT

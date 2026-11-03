@@ -24,7 +24,19 @@ import {eventLine, terminalEvent, type EventKind, type TerminalEventKind} from '
 import {appendSchedule} from './schedule-log';
 import {buildStatus, type StatusReport} from './status-report';
 
+/** Who the engine is when it holds the cross-machine lease (ADR 0015). */
+export interface LeaseSettings {
+  self: string;
+  host: string;
+  ttlSeconds: number;
+}
+
+/** The lease lasts longer than the renewal timer and shorter than the run timeout. */
+export const DEFAULT_LEASE_TTL_SECONDS = 15 * 60;
+
 export interface RunnerDeps {
+  /** Set when the state lives on the state branch: the runner then holds the lease while it runs. */
+  lease?: LeaseSettings;
   /** The agent spawn; a runner built without one can report and watch, but refuses to run an iteration. */
   agent?: AgentRunner;
   gitRunner: CommandRunner;
@@ -86,6 +98,9 @@ export class AutomationRunner {
   private iteration: IterationContext;
   private gitCapture: CapturingRunner;
   private folderMap: FolderMap | undefined;
+  private leaseSettings: LeaseSettings | undefined;
+  private leaseLost = false;
+  private leaseTimer: ReturnType<typeof setInterval> | undefined;
 
   constructor(
     private projectRoot: string,
@@ -105,6 +120,7 @@ export class AutomationRunner {
     this.gitRunner = deps.gitRunner;
     this.gitCapture = deps.gitCapture ?? capturing(deps.gitRunner);
     this.folderMap = deps.folderMap;
+    this.leaseSettings = deps.lease;
     this.agent = deps.agent ?? {run: () => Promise.reject(new Error('no agent runner was given to this runner'))};
     this.uuid = deps.uuid ?? (() => crypto.randomUUID());
     this.now = deps.now ?? Date.now;
@@ -209,19 +225,56 @@ export class AutomationRunner {
     closeOrphan(this.iteration);
   }
 
+  /** Takes, renews or takes over the lease; false (and the lease marked lost) when it is not ours. */
+  private claimLease(): boolean {
+    const settings = this.leaseSettings;
+    if (!settings) return true;
+    const claim = this.stateStore.claimLease({...settings, now: new Date(this.now())});
+    if (claim.ok) {
+      if (claim.action === 'takeover') {
+        const reason = `took over the lease from ${claim.previousHolder} on ${claim.previousHost}`;
+        this.logger.log('WARN', reason);
+        this.emit('lease_takeover', this.store.load().iteration, null, reason);
+      }
+      return true;
+    }
+    this.leaseLost = true;
+    this.logger.log(
+      'ERROR',
+      claim.reason === 'held'
+        ? `The loop lease is held by ${claim.holder} until ${claim.expiresAt}. Not running.`
+        : 'Lost the loop lease: the state branch could not be written. Stopping rather than running unguarded.'
+    );
+    return false;
+  }
+
+  /** Renews the lease at the top of an iteration; false when the loop must stop. */
+  private leaseHeld(): boolean {
+    return !this.leaseLost && this.claimLease();
+  }
+
   /**
    * Runs the loop. Returns false without doing anything when a live runner
-   * already holds the lock.
+   * already holds the lock, or another engine holds the lease.
    */
   async run(iterations = 1, continuous = false): Promise<boolean> {
+    if (!this.claimLease()) return false;
     const lock = this.lock.acquire();
     if (!lock.ok) {
       const msg = `Another runner (pid ${lock.holder}) is already running. Not starting a second one.`;
       this.logger.log('ERROR', msg);
+      this.stateStore.releaseLease(this.leaseSettings?.self ?? '');
       return false;
     }
     if (lock.tookOver) {
       this.logger.log('WARN', `Took over a stale lock from dead runner (pid ${lock.tookOver})`);
+    }
+    if (this.leaseSettings) {
+      // A long iteration outlives the TTL, so the lease is renewed on a timer as well.
+      const every = Math.max(1000, (this.leaseSettings.ttlSeconds * 1000) / 3);
+      this.leaseTimer = setInterval(() => {
+        if (!this.leaseLost) this.claimLease();
+      }, every);
     }
     try {
       await this.refreshBacklog();
@@ -230,6 +283,8 @@ export class AutomationRunner {
       else await this.loop(iterations, continuous);
       return true;
     } finally {
+      clearInterval(this.leaseTimer);
+      if (this.leaseSettings && !this.leaseLost) this.stateStore.releaseLease(this.leaseSettings.self);
       this.lock.release();
     }
   }
@@ -269,6 +324,7 @@ export class AutomationRunner {
     while (true) {
       iteration++;
 
+      if (!this.leaseHeld()) break;
       if (this.store.isHalted()) {
         this.logger.log('WARN', 'HALT file detected. Stopping.');
         break;
@@ -407,7 +463,10 @@ export class AutomationRunner {
     };
 
     while (true) {
-      if (this.store.isHalted()) {
+      if (!this.leaseHeld()) {
+        if (running.size === 0) break;
+        abort.abort();
+      } else if (this.store.isHalted()) {
         if (running.size === 0) {
           this.logger.log('WARN', 'HALT file detected. Stopping.');
           break;

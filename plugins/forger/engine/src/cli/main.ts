@@ -5,14 +5,14 @@
  * runner and agent spawn are handed to the core.
  */
 
-import {homedir} from 'os';
+import {homedir, hostname} from 'os';
 import {dirname, resolve} from 'path';
 import {parseArgs} from 'util';
 
 import {agentFor, execCapture, gitStateStore, localStateFor, execRunner, findHarness} from '../adapters';
 import type {Backlog} from '../backlog';
 import {detectLayout, isProjectRoot, legacyWarning, loadConfig, type WorkloopConfig} from '../config';
-import {AutomationRunner, GhTrackerHalt} from '../loop';
+import {AutomationRunner, DEFAULT_LEASE_TTL_SECONDS, GhTrackerHalt, type LeaseSettings} from '../loop';
 import type {StateStore} from '../ports';
 import {listCollectionRoots, listInstalledSkills} from '../packs';
 import {STAGES, type CliDeps, type CommandContext, type Stage} from './command';
@@ -28,6 +28,12 @@ export function findProjectRoot(start: string = process.cwd()): string {
     dir = dirname(dir);
   }
   throw new Error('Could not find a .forger directory in this or any parent directory');
+}
+
+/** The lease identity of this engine when the state lives on the branch; none for the local store. */
+function leaseSettingsFor(config: WorkloopConfig): LeaseSettings | undefined {
+  if (config.state.home !== 'branch') return undefined;
+  return {self: `${hostname()}:${process.pid}:${crypto.randomUUID().slice(0, 8)}`, host: hostname(), ttlSeconds: DEFAULT_LEASE_TTL_SECONDS};
 }
 
 function contextFor(base: Pick<CommandContext, 'values' | 'positionals' | 'deps' | 'pluginRoot' | 'installedSkills' | 'collectionRoots'>): CommandContext {
@@ -55,12 +61,12 @@ function contextFor(base: Pick<CommandContext, 'values' | 'positionals' | 'deps'
     },
     get stateStore() {
       if (base.deps.stateStore) return base.deps.stateStore;
-      const from = base.values.from ?? 'local';
+      const from = base.values.from ?? ctx.config.state.home;
       if (from !== 'local' && from !== 'branch') throw new Error('--from must be local or branch');
-      return (store ??= from === 'branch' ? gitStateStore({repo: ctx.projectRoot}) : localStateFor(ctx.projectRoot, ctx.config));
+      return (store ??= from === 'branch' ? gitStateStore({repo: ctx.projectRoot, branch: ctx.config.state.branch}) : localStateFor(ctx.projectRoot, ctx.config));
     },
     get runner() {
-      return (runner ??= new AutomationRunner(ctx.projectRoot, ctx.config, ctx.backlog, {stateStore: ctx.stateStore, gitRunner: execRunner(ctx.projectRoot), gitCapture: execCapture(ctx.projectRoot), agent: agentFor(findHarness(ctx.config.harness)), haltTracker: ctx.config.tracker.kind === 'github' ? new GhTrackerHalt(execRunner(ctx.projectRoot)) : undefined}));
+      return (runner ??= new AutomationRunner(ctx.projectRoot, ctx.config, ctx.backlog, {stateStore: ctx.stateStore, lease: leaseSettingsFor(ctx.config), gitRunner: execRunner(ctx.projectRoot), gitCapture: execCapture(ctx.projectRoot), agent: agentFor(findHarness(ctx.config.harness)), haltTracker: ctx.config.tracker.kind === 'github' ? new GhTrackerHalt(execRunner(ctx.projectRoot)) : undefined}));
     },
   };
   return ctx;
