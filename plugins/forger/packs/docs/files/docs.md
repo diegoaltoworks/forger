@@ -13,7 +13,8 @@ skipped later.
 
 A diagram shows the shape that paragraphs hide. Put a diagram, then one
 sentence saying how to read it; a diagram with no reading hint makes the reader
-work out what you meant.
+work out what you meant. Diagrams are for processes and concepts; a screen is
+drawn as a wireframe (the ui pack's `design` slot).
 
 ## The glossary is the vocabulary
 

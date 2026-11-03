@@ -32,6 +32,20 @@ The ticket's "UI states" section says what the screen shows when it is empty,
 loading, failed and full. A state that is not named is a state nobody
 designed.
 
+## A screen is drawn before it is built (ui.wireframe, slot: design)
+
+A wireframe is cheaper to change than a screen. When a ticket changes a screen,
+`/forger:plan` runs the `design` slot first and the build ticket stays
+`needs-human` until the owner approves what was drawn.
+
+The built-in step needs no design tool. Copy `docs/design/example/` to
+`docs/design/<ticket>/` and replace the boxes: static HTML linking the shared
+`docs/design/wireframe.css`, greys and boxes, no brand. Then run
+`screenshot --wireframe <ticket>`, which serves `docs/design/` itself and writes
+`<ticket>-<viewport>-light.png` beside the page. The ticket's Design review
+section links the page and the images. Diagrams are for processes (the docs
+pack); wireframes are for screens.
+
 ## Colours come from tokens (check: ui.tokens)
 
 `check ui` also fails a raw colour literal - hex, `rgb()`, `hsl()` and their

@@ -113,6 +113,7 @@ judgement work are named **skill slots**, and each has a built-in forger step:
 |---|---|---|
 | `interview` | `plan` | numbered rounds of open decisions, each with a recommendation |
 | `glossary` | `plan` | terms into `GLOSSARY.md`, decisions into `docs/adr/` |
+| `design` | `plan` | a grey-box HTML wireframe under `docs/design/<ticket>/`, captured by `screenshot --wireframe` (with the ui pack) |
 | `test_first` | `auto-ticket` | failing test, then pass, then refactor |
 | `review` | `auto-ticket` | the diff against the base, on standards and spec |
 | `diagnose` | `auto-ticket` | reproduce the red gate, one hypothesis, test it |
@@ -134,6 +135,12 @@ step applies, and invoke whatever it resolves.
 slots it covers. `/forger:setup` offers it when the collection is installed, or
 apply it directly with `setup --preset mattpocock-skills`. A preset is a plain
 file: copy it to map another collection.
+
+**The `design` slot** (ui pack) maps like any other. Examples: a Figma MCP
+server for boards, a prototype skill from an installed collection, or artifacts
+in an interactive session. Unmapped, the built-in step needs no tool: a static
+grey-box wireframe in `docs/design/<ticket>/`, captured with
+`screenshot --wireframe <ticket>`.
 
 ## Adapters
 
@@ -235,7 +242,7 @@ bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts check coverage [--json]  # with the testin
 bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts check coverage --update  # raise the baseline to the current coverage; never lowers it
 bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts check ui [--json]  # with the ui pack: a branch that changes ui.paths must update files under docs/screenshots/, and UI files hold no raw colour literal outside ui.tokens
 bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts check a11y [--json]  # with the ui pack: serve the app and fail on serious or critical axe violations on every route, viewport and theme; exit 2 when Playwright, axe-core or the app is unavailable
-bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts screenshot [--json]  # with the ui pack: start the app, capture every route x viewport x theme into docs/screenshots/, stop it; exit 2 when Playwright or the app is unavailable
+bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts screenshot [--json] [--wireframe <ticket>]  # --wireframe serves docs/design/ and captures <ticket>/index.html next to it; with the ui pack: start the app, capture every route x viewport x theme into docs/screenshots/, stop it; exit 2 when Playwright or the app is unavailable
 bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts check docs [--json]  # writing rules: ASCII punctuation, no emails or home paths, no hard-coded skill calls in commands or templates, optional .forger-denylist; with the docs pack also links, anchors, images, mermaid blocks and avoided glossary terms
 bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts resume             # clear a HALT
 ```

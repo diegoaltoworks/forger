@@ -48,3 +48,10 @@ describe('planCaptures', () => {
     expect(captureFile('/x', 'phone', 'dark')).toBe('docs/screenshots/x-phone-dark.png');
   });
 });
+
+describe('planCaptures into another folder', () => {
+  test('lands the files in the given folder', () => {
+    const config = parseUiConfig(JSON.stringify({paths: ['a'], start: 's', routes: ['/t/'], viewports: [{name: 'phone', width: 1, height: 1}], themes: ['light']}));
+    expect(planCaptures(config, 'docs/design/t/').map(c => c.file)).toEqual(['docs/design/t/t-phone-light.png']);
+  });
+});

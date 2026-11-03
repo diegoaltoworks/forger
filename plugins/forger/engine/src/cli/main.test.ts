@@ -528,6 +528,22 @@ describe('screenshot', () => {
     }
   });
 
+  test('--wireframe without the page asks for it as a config problem', async () => {
+    const root = projectWith({});
+    process.chdir(root);
+    writeFileSync(join(root, '.claude', 'ui.json'), JSON.stringify({paths: ['a'], start: 'x'}));
+    const err = spyOn(console, 'error').mockImplementation(() => {});
+    try {
+      await capture(['screenshot', '--json', '--wireframe', 'issue-9']);
+      expect(JSON.parse(err.mock.calls[0][0])).toMatchObject({ok: false, infrastructure: false});
+      expect(JSON.parse(err.mock.calls[0][0]).error).toContain('docs/design/issue-9/index.html not found');
+      expect(process.exitCode).toBe(1);
+    } finally {
+      err.mockRestore();
+      process.exitCode = 0;
+    }
+  });
+
   test('a project without Playwright exits 2 with the command that adds it', async () => {
     const root = projectWith({});
     process.chdir(root);

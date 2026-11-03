@@ -34,6 +34,7 @@ export const FLAGS = {
   how: {type: 'string'},
   'enforced-by': {type: 'string'},
   title: {type: 'string'},
+  wireframe: {type: 'string'},
   lesson: {type: 'string'},
   evidence: {type: 'string', multiple: true},
   help: {type: 'boolean', short: 'h', default: false},

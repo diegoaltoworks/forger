@@ -27,6 +27,11 @@ describe('resolveSkills', () => {
     expect(r.slots.every(s => s.skill === null && !s.installed && s.use === 'builtin')).toBe(true);
     expect(r.slots.every(s => s.builtin !== '')).toBe(true);
   });
+  test('the design slot resolves to its built-in step when unmapped', () => {
+    const s = resolveSkills({}, []).slots.find(x => x.slot === 'design')!;
+    expect(s).toMatchObject({usedBy: 'plan', skill: null, use: 'builtin'});
+    expect(s.builtin).toContain('screenshot --wireframe');
+  });
   test('a mapped and installed skill is used', () => {
     const s = resolveSkills({review: 'coll:code-review'}, ['coll:code-review']).slots.find(x => x.slot === 'review')!;
     expect(s).toMatchObject({skill: 'coll:code-review', installed: true, use: 'skill'});
