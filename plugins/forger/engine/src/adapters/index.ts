@@ -7,6 +7,8 @@ export * from './harnesses';
 export * from './opencode';
 export * from './playwright';
 export * from './skill-package';
+export * from './slcr';
+export * from './slcr-report';
 export * from './static-server';
 export * from './supervise';
 export * from './svg-raster';

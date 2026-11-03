@@ -10,6 +10,7 @@ provider produced it.
   the head report and the base report. Pure.
 - `spec-check.ts` - finds the branch's issue and asks the provider for the
   reports. Touches the world.
+  A provider whose output is unreadable becomes a gap carrying the reason.
 
 ## Entry point
 

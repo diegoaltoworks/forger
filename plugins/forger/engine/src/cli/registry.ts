@@ -20,6 +20,7 @@ import {retro} from './retro';
 import {screenshot} from './screenshot';
 import {setup} from './setup';
 import {skills} from './skills';
+import {slice} from './slice';
 import {orient, report} from './supervisor';
 
 export const COMMANDS: Command[] = [
@@ -31,6 +32,7 @@ export const COMMANDS: Command[] = [
   opinions,
   skills,
   check,
+  slice,
   screenshot,
   brand,
   backlog,

@@ -1,6 +1,6 @@
 import {describe, expect, test} from 'bun:test';
 
-import type {RequirementModality, RequirementState, SpecProvider, SpecReport} from '../../ports';
+import {SpecOutputError, type RequirementModality, type RequirementState, type SpecProvider, type SpecReport} from '../../ports';
 import {absentSpecProvider, decideSpec, issueFromBranch, parseSatisfies, summarize} from './spec';
 import {runSpecDecision} from './spec-check';
 
@@ -74,7 +74,7 @@ describe('decideSpec', () => {
 });
 
 describe('runSpecDecision', () => {
-  const provider: SpecProvider = {report: side => (side === 'head' ? rep(['a', 'MUST', 'satisfied']) : rep(['a', 'MUST', 'satisfied']))};
+  const provider: SpecProvider = {report: () => rep(['a', 'MUST', 'satisfied']), slice: () => null};
   const gh = (branch: string, body: string) => (cmd: string) => (cmd.startsWith('git branch') ? branch : body);
   test('reads the issue named by the branch', () => {
     const d = runSpecDecision(gh('feat/issue-7', 'Satisfies: a'), provider);
@@ -90,5 +90,18 @@ describe('runSpecDecision', () => {
     };
     expect(runSpecDecision(boom, provider).gaps[0].opinion).toBe('spec.ticket-names-requirements');
     expect(runSpecDecision(gh('main', ''), provider).gaps[0].opinion).toBe('spec.ticket-names-requirements');
+  });
+});
+
+describe('runSpecDecision with a provider whose output is malformed', () => {
+  test('is a MUST gap that keeps the reason, never a pass or a crash', () => {
+    const provider: SpecProvider = {
+      report: () => {
+        throw new SpecOutputError('specs[0].file is missing or not a string');
+      },
+      slice: () => null,
+    };
+    const d = runSpecDecision(() => '', provider);
+    expect(d.gaps.some(g => g.modality === 'MUST' && g.detail.includes('specs[0].file'))).toBe(true);
   });
 });

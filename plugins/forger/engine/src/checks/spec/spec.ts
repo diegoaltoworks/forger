@@ -17,7 +17,7 @@ const SATISFIED = 'spec.named-requirements-satisfied';
 const NO_REGRESS = 'spec.must-never-regresses';
 
 /** The provider of a project with none installed: every report is unavailable. */
-export const absentSpecProvider: SpecProvider = {report: () => null};
+export const absentSpecProvider: SpecProvider = {report: () => null, slice: () => null};
 
 /** The IDs on `Satisfies:` lines of an issue body, in order, each once. */
 export function parseSatisfies(body: string): string[] {

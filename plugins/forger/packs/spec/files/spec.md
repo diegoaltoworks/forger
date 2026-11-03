@@ -22,6 +22,15 @@ SHOULD warns, an unsatisfied MAY informs. A named ID that is unknown (no
 validator reports it, or it is not in the spec) is a coverage gap at the same
 severity, never a pass. With no report provider the check says so as a gap.
 
+## The provider
+
+`check spec` reads requirements through a provider. The first is the `slcr`
+binary, which must be on the PATH: the pack runs `slcr check --format json` and
+`slcr query` for the report (the base side from the base branch exported to a
+scratch folder) and `slcr slice` for the context. Without the binary, or without
+a spec on a side, the check reports a gap, never a pass. The worker reads the
+slice of each ID the ticket names with `slice <ID...>`.
+
 ## A MUST never regresses (check: spec.must-never-regresses)
 
 Any MUST satisfied on the base branch must still be satisfied on the branch,
