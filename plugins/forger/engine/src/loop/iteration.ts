@@ -65,7 +65,7 @@ export async function runIteration(ctx: IterationContext, iteration: number, cou
   state.current_task = attemptedTask;
   ctx.store.save(state);
 
-  const prompt = buildPrompt(ctx.config, iteration, state.completed_tasks);
+  const prompt = buildPrompt(ctx.config, iteration, state.completed_tasks, attemptedTask);
   const tier = ctx.backlog.tier(attemptedTask);
   ctx.logger.log('INFO', `Running the agent (session: ${sessionId.slice(0, 8)}...)`);
   if (attemptedTask) {

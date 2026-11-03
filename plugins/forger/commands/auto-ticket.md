@@ -53,16 +53,15 @@ Human instructions first: acknowledge new `.forger/inbox/*.md` items (prefix
 with a clock) and add them to the backlog - as an issue with the intake label on GitHub,
 otherwise in `backlog.json` with a priority. Then continue.
 
-### 2. Select ONE ticket
-Take the engine's pick, `next` in the output of
-`bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts backlog --json`. Do not re-derive the
-order: it is the highest-priority `not_started` ticket whose every `depends_on`
-is `completed` and whose `repo` is absent or this repo's. On GitHub, ticket
-`issue-<n>` is issue #<n>: read it with `gh issue view <n>`; never take an
-issue whose labels match `tracker.ignore`.
+### 2. Read the ticket named in the prompt
+The prompt names the ticket to build: the engine's pick. Do not choose another
+and do not re-derive the order. On GitHub, ticket `issue-<n>` is issue #<n>:
+read it with `gh issue view <n>`; otherwise read it in `backlog.json`. When the
+prompt says there is no workable ticket, signal `stop`.
 
-One ticket per iteration - no more. If the ticket names a blocker only a human
-can supply, signal `stop`.
+Build it or decline it. If the ticket is blocked on something only a human can
+supply, is too large for one iteration, or is unclear, signal `stop` and say
+which and why.
 
 ### 3. Start it
 - Branch from the configured base branch: `git checkout -b feat/<ticket-id>`

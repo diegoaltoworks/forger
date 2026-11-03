@@ -122,7 +122,7 @@ flowchart TD
     P -- no --> FN[failed: nothing happened]
 ```
 
-The engine's pick is the contract. A branch for any other ticket is `off-pick`,
+The engine's pick is the contract, and the worker's prompt names it: the worker builds that ticket or declines it, and is never asked to choose. A run with no workable ticket gets a prompt that says so. A branch for any other ticket is `off-pick`,
 a failure, even when its own PR merged: the work is real but is never counted as
 the pick's completion. A decline record for the pick, with nothing built, is
 `declined`, the one sanctioned exit. A record for a different ticket is a
