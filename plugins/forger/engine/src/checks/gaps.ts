@@ -5,9 +5,10 @@
  * Pure; waivers match a gap by opinion id and path, as they match a finding.
  */
 
+import type {RequirementModality} from '../ports';
 import {applyWaivers, type Finding, type Waiver} from './waivers';
 
-export type Modality = 'MUST' | 'SHOULD' | 'MAY';
+export type Modality = RequirementModality;
 export type GapSeverity = 'fail' | 'warn' | 'inform';
 
 export interface Gap {

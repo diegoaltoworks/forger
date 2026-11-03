@@ -135,3 +135,29 @@ The `ui` pack makes a UI change reviewable by showing it. Evidence, colour token
 | `ui.states` | template | the ticket's UI states section says what the screen shows when empty, loading, failed and full |
 
 `.forger/ui.json` holds `paths`, the `start` command that serves the app, its `url`, the `routes`, the `viewports` (a phone and a desktop by default) and the `themes` (light and dark). `screenshot` starts the app, waits for it, captures every route x viewport x theme with the project's own Playwright into `docs/screenshots/<route>-<viewport>-<theme>.png`, stops the app and reports the files. The matrix and the names are computed from the config, so a re-run overwrites the same files. When Playwright or the app is unavailable the command says so and exits 2, an environment problem apart from a bad config (exit 1). Feature docs can embed the images, so they stay current with each UI change. The pack adds the `design` skill slot: its built-in step is a static grey-box wireframe in `docs/design/<ticket>/index.html` linking the shipped `wireframe.css`, captured by `screenshot --wireframe <ticket>`, which serves `docs/design/` itself and writes the images beside the page. Wireframes are for screens and diagrams for processes (the docs pack). `check a11y` serves the app the same way and audits each page with the project's own Playwright and `axe-core`; it needs a browser, so it runs on its own rather than inside the umbrella `check`, and exits 2 when the environment lacks either library. Violations are mapped from axe's output by a pure function. Like `check decisions`, `check ui` reads the working tree and branch against the merge-base with the configured base branch.
+
+## The spec pack
+
+The `spec` pack keeps requirements checked after merge ([ADR 0007](adr/0007-spec-pack-requirements-that-stay-checked.md)). The spec holds the current state and the issue is the unit of change: a ticket carries a `Satisfies:` line naming requirement IDs, and the spec never names an issue. `check spec` joins the IDs the branch's issue names (`feat/issue-<n>`), the requirement report and the base branch's report, and decides purely from them.
+
+```mermaid
+flowchart LR
+    I[issue Satisfies line] --> D{decide}
+    H[head report] --> D
+    B[base report] --> D
+    P[spec provider port] --> H
+    P --> B
+    D --> V[violations]
+    D --> G[gaps by modality]
+```
+
+Read it left to right: a provider behind a port yields the head and base reports in one normalized shape, and the pure decision turns them with the named IDs into violations and gaps. Any provider yields the same shape, so the check does not care which tool read the spec.
+
+| Opinion | Rung | What the check does |
+|---|---|---|
+| `spec.ticket-names-requirements` | check | flags an issue with no `Satisfies:` line; an unreadable issue is a gap |
+| `spec.named-requirements-satisfied` | check | an unsatisfied named MUST is a violation; an unsatisfied SHOULD warns and a MAY informs; an unknown or missing named ID is a gap at its modality |
+| `spec.must-never-regresses` | check | a MUST satisfied on the base and not satisfied now is a violation, named or not |
+| `spec.validator-not-requirement` | rule | a failing validator never loosens a requirement; it changes only through intake |
+
+A missing provider, or a missing base report, is a coverage gap, never a pass. `check spec --json` also reports the requirement counts by state, so the share still unknown is read from the report. No provider ships with the pack yet; the umbrella `check` and `check spec` use the absent provider until one is wired in.

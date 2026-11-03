@@ -102,7 +102,7 @@ the docs habits with checks for links, images, diagrams and glossary terms, and 
 the functional-core habits with the dependency rule enforced by `check arch` and decisions recorded as ADRs by `check decisions`, the `safety` pack carries
 the never-commit-a-secret and carry-stored-data-forward habits enforced by `check safety`, and the `testing` pack carries
 the tables, fixtures, fix-with-a-test and coverage-ratchet habits enforced by `check tests` and `check coverage`, and the `ui` pack carries
-the screenshots-from-a-command habit, with `check ui` requiring them when UI files change, `check ui` also keeping colour literals out of components, and `check a11y` running axe-core.
+the screenshots-from-a-command habit, with `check ui` requiring them when UI files change, `check ui` also keeping colour literals out of components, and `check a11y` running axe-core. The `spec` pack keeps requirements checked after merge with `check spec`.
 
 ## Status
 

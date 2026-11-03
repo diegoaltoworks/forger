@@ -10,8 +10,9 @@ import {join} from 'path';
 import {runArchCheck} from './arch';
 import {runDecisionsCheck} from './decisions';
 import {runDocsCheck} from './docs';
-import type {CommandRunner} from '../ports';
+import type {CommandRunner, SpecProvider} from '../ports';
 import {runSafetyCheck} from './safety';
+import {runSpecDecision} from './spec';
 import {runCoverageCheck, runTestsCheck} from './testing';
 import {runUiCheck} from './ui';
 import {listOpinions, LOCK_PATH, loadPacks, parseLock, type Lock, type LoadedPack, type Opinion} from '../packs';
@@ -46,10 +47,18 @@ export interface CheckReport {
 export interface CheckContext {
   projectRoot: string;
   run: CommandRunner;
+  /** Where requirement reports come from; absent means none installed. */
+  spec?: SpecProvider;
+}
+
+/** A check's output: findings, and what it could not measure. */
+export interface CheckOutput {
+  findings: Finding[];
+  gaps: Gap[];
 }
 
 /** Every check forger can run; a pack's manifest names these by id. */
-export const CHECKS: Record<string, (ctx: CheckContext) => Finding[]> = {
+export const CHECKS: Record<string, (ctx: CheckContext) => Finding[] | CheckOutput> = {
   docs: ctx => runDocsCheck(ctx.projectRoot, ctx.run),
   arch: ctx => runArchCheck(ctx.projectRoot, ctx.run),
   decisions: ctx => runDecisionsCheck(ctx.projectRoot, ctx.run),
@@ -57,6 +66,10 @@ export const CHECKS: Record<string, (ctx: CheckContext) => Finding[]> = {
   tests: ctx => runTestsCheck(ctx.projectRoot, ctx.run),
   coverage: ctx => runCoverageCheck(ctx.projectRoot, ctx.run),
   ui: ctx => runUiCheck(ctx.projectRoot, ctx.run),
+  spec: ctx => {
+    const {findings, gaps} = runSpecDecision(ctx.run, ctx.spec);
+    return {findings, gaps};
+  },
 };
 
 /** The check ids of the installed packs, in lock order, each once. An installed pack that cannot be found is an error. */
@@ -107,7 +120,7 @@ export function formatReport(report: CheckReport): string {
   return lines.join('\n');
 }
 
-export function runChecks(projectRoot: string, pluginRoot: string, run: CommandRunner): CheckReport {
+export function runChecks(projectRoot: string, pluginRoot: string, run: CommandRunner, spec?: SpecProvider): CheckReport {
   const lockPath = forgerPath(projectRoot, LOCK_PATH);
   if (!existsSync(lockPath)) throw new Error(`${LOCK_PATH} not found; run setup to install packs`);
   const lock = parseLock(readFileSync(lockPath, 'utf-8'));
@@ -115,6 +128,10 @@ export function runChecks(projectRoot: string, pluginRoot: string, run: CommandR
   const ids = checksToRun(available, lock);
   const waiversPath = forgerPath(projectRoot, WAIVERS_PATH);
   const waivers = existsSync(waiversPath) ? parseWaivers(readFileSync(waiversPath, 'utf-8')) : [];
-  const ctx: CheckContext = {projectRoot, run};
-  return buildReport(ids.map(check => ({check, findings: CHECKS[check](ctx)})), waivers, listOpinions(available, lock));
+  const ctx: CheckContext = {projectRoot, run, spec};
+  const outputs = ids.map(check => {
+    const out = CHECKS[check](ctx);
+    return {check, ...(Array.isArray(out) ? {findings: out} : out)};
+  });
+  return buildReport(outputs, waivers, listOpinions(available, lock));
 }
