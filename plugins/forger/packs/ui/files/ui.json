@@ -1,0 +1,12 @@
+{
+  "paths": ["src/**/*.tsx", "src/**/*.css", "src/**/*.vue", "src/**/*.svelte", "public/**"],
+  "start": "bun run dev",
+  "url": "http://localhost:3000",
+  "routes": ["/"],
+  "viewports": [
+    {"name": "phone", "width": 390, "height": 844},
+    {"name": "desktop", "width": 1280, "height": 800}
+  ],
+  "themes": ["light", "dark"],
+  "ready_timeout": 60
+}

@@ -497,3 +497,53 @@ describe('packs and opinions', () => {
     }
   });
 });
+
+describe('check ui', () => {
+  const ui = JSON.stringify({paths: ['src/**/*.tsx'], start: 's'});
+  const run = (status: string): CommandRunner => cmd => (cmd.startsWith('git merge-base') ? 'abc' : cmd.startsWith('git diff') ? status : '');
+
+  test('fails a UI change with no screenshot; a screenshot in the diff passes', async () => {
+    const root = projectWith({});
+    process.chdir(root);
+    writeFileSync(join(root, '.claude', 'ui.json'), ui);
+    const bad = await capture(['check', 'ui', '--json'], run('M\tsrc/App.tsx'));
+    expect(JSON.parse(bad).map((f: {opinion: string}) => f.opinion)).toEqual(['ui.evidence']);
+    expect(process.exitCode).toBe(1);
+    process.exitCode = 0;
+    expect(await capture(['check', 'ui'], run('M\tsrc/App.tsx\nA\tdocs/screenshots/index-phone-light.png'))).toBe('ui check: clean');
+  });
+});
+
+describe('screenshot', () => {
+  test('without the ui config it fails as a config problem, not an infrastructure one', async () => {
+    process.chdir(projectWith({}));
+    const err = spyOn(console, 'error').mockImplementation(() => {});
+    try {
+      await capture(['screenshot', '--json']);
+      expect(JSON.parse(err.mock.calls[0][0])).toMatchObject({ok: false, infrastructure: false});
+      expect(process.exitCode).toBe(1);
+    } finally {
+      err.mockRestore();
+      process.exitCode = 0;
+    }
+  });
+
+  test('a project without Playwright exits 2 with the command that adds it', async () => {
+    const root = projectWith({});
+    process.chdir(root);
+    const s = Bun.serve({port: 0, fetch: () => new Response('ok')});
+    writeFileSync(join(root, '.claude', 'ui.json'), JSON.stringify({paths: ['a'], start: 'sleep 30', url: `http://127.0.0.1:${s.port}`, ready_timeout: 10}));
+    const err = spyOn(console, 'error').mockImplementation(() => {});
+    try {
+      await capture(['screenshot', '--json']);
+      const out = JSON.parse(err.mock.calls[0][0]);
+      expect(out).toMatchObject({ok: false, infrastructure: true});
+      expect(out.error).toContain('playwright');
+      expect(process.exitCode).toBe(2);
+    } finally {
+      err.mockRestore();
+      s.stop(true);
+      process.exitCode = 0;
+    }
+  });
+});

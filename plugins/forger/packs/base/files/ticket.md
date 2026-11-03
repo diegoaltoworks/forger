@@ -17,6 +17,10 @@
 - [ ] <a testable outcome>
 - [ ] <stored records from before carry forward unchanged, where a stored shape changes>
 
+## UI states
+
+<What the screen shows when empty, loading, failed and full, or "none" when no screen changes.>
+
 ## Knock-on
 
 - Tests: <specs and unit tests that assert on what changes>

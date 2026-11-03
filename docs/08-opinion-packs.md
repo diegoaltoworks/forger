@@ -116,3 +116,15 @@ The `testing` pack holds the testing habits the engine itself relies on. Three o
 | `testing.coverage-ratchet` | `check coverage` | line coverage below the generated baseline, or no baseline yet |
 
 The globs and library list live in `.claude/testing.json`, with the path of the lcov report the project's test command writes and the path of the baseline. The baseline is a generated file: `check coverage --update` creates it or raises it, and never lowers it, so the number lives only there and a deliberate drop is a recorded waiver. A missing or empty coverage report is an error, never a pass. The other opinions (tables for the pure core, fixtures for adapters, tests named for behaviour) are rules kept by judgement. Like `check decisions`, `check tests` reads commits and the working tree against the merge-base with the configured base branch.
+
+## The ui pack
+
+The `ui` pack makes a UI change reviewable by showing it. One opinion is enforced, and two are templates:
+
+| Opinion | Rung | What it asks |
+|---|---|---|
+| `ui.evidence` | check (`check ui`) | a branch that changes a file matching `paths` also adds or updates a file under `docs/screenshots/` |
+| `ui.screenshots-in-pr` | template | the PR body's Screenshots section links the updated files at the head commit |
+| `ui.states` | template | the ticket's UI states section says what the screen shows when empty, loading, failed and full |
+
+`.claude/ui.json` holds `paths`, the `start` command that serves the app, its `url`, the `routes`, the `viewports` (a phone and a desktop by default) and the `themes` (light and dark). `screenshot` starts the app, waits for it, captures every route x viewport x theme with the project's own Playwright into `docs/screenshots/<route>-<viewport>-<theme>.png`, stops the app and reports the files. The matrix and the names are computed from the config, so a re-run overwrites the same files. When Playwright or the app is unavailable the command says so and exits 2, an environment problem apart from a bad config (exit 1). Feature docs can embed the images, so they stay current with each UI change. Like `check decisions`, `check ui` reads the working tree and branch against the merge-base with the configured base branch.

@@ -13,6 +13,7 @@ import {runDocsCheck} from './docs';
 import type {CommandRunner} from '../ports';
 import {runSafetyCheck} from './safety';
 import {runCoverageCheck, runTestsCheck} from './testing';
+import {runUiCheck} from './ui';
 import {listOpinions, LOCK_PATH, loadPacks, parseLock, type Lock, type LoadedPack, type Opinion} from '../packs';
 import {applyWaivers, parseWaivers, staleWaivers, WAIVERS_PATH, type Finding, type WaivedFinding, type Waiver} from './waivers';
 
@@ -48,6 +49,7 @@ export const CHECKS: Record<string, (ctx: CheckContext) => Finding[]> = {
   safety: ctx => runSafetyCheck(ctx.projectRoot, ctx.run),
   tests: ctx => runTestsCheck(ctx.projectRoot, ctx.run),
   coverage: ctx => runCoverageCheck(ctx.projectRoot, ctx.run),
+  ui: ctx => runUiCheck(ctx.projectRoot, ctx.run),
 };
 
 /** The check ids of the installed packs, in lock order, each once. An installed pack that cannot be found is an error. */
