@@ -4,6 +4,7 @@
  * inputs.
  */
 
+import {declinedTickets, type DeclineReason} from './decline';
 import type {AutomationState} from './state';
 
 export interface StatusInputs {
@@ -38,6 +39,8 @@ export interface StatusReport {
   workable: number;
   last_error: string | null;
   completed_tasks: string[];
+  /** Tickets the worker declined, each with its latest reason. */
+  declined: Array<{ticket: string; reason: DeclineReason}>;
 }
 
 export function buildStatus(i: StatusInputs): StatusReport {
@@ -61,5 +64,6 @@ export function buildStatus(i: StatusInputs): StatusReport {
     workable: i.workable,
     last_error: s.last_error,
     completed_tasks: s.completed_tasks,
+    declined: declinedTickets(s.declined_tasks ?? []),
   };
 }

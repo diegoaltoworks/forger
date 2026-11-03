@@ -37,6 +37,8 @@ export interface WorkloopConfig {
     pauseBetweenIterations: number;
     pauseAfterFailure: number;
     maxStallIterations: number;
+    /** Declined picks in a row that halt the loop. */
+    maxConsecutiveDeclines: number;
   };
   /** The harness that runs the worker: `claude` (default), `opencode`, `codex` or `copilot`. */
   harness: string;
@@ -50,6 +52,8 @@ export interface WorkloopConfig {
     lock: string;
     /** Append-only JSON lines, one per terminal event. */
     events: string;
+    /** The worker's decline of the engine's pick, read once by the iteration that asked for it. */
+    declined: string;
     /** The project's rules and gotchas, which the worker is told to follow. */
     process: string;
   };
@@ -137,6 +141,7 @@ export const DEFAULT_CONFIG: WorkloopConfig = {
     pauseBetweenIterations: 5000,
     pauseAfterFailure: 10000,
     maxStallIterations: 5,
+    maxConsecutiveDeclines: 3,
   },
   paths: {
     backlog: `${FORGER_DIR}/backlog.json`,
@@ -146,6 +151,7 @@ export const DEFAULT_CONFIG: WorkloopConfig = {
     halt: `${FORGER_DIR}/HALT`,
     lock: `${FORGER_DIR}/runner.lock`,
     events: `${FORGER_DIR}/events.jsonl`,
+    declined: `${FORGER_DIR}/declined.json`,
     process: `${FORGER_DIR}/process.md`,
   },
   tracker: {kind: 'github', label: 'ready-for-agent', ignore: []},

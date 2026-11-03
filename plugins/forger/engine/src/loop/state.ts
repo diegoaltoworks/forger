@@ -6,6 +6,7 @@
 
 import {existsSync, readFileSync, unlinkSync, writeFileSync} from 'fs';
 
+import type {DeclineEntry} from './decline';
 import type {RunSnapshot} from './run-facts';
 
 export type AutomationStatus =
@@ -34,6 +35,10 @@ export interface AutomationState {
   last_error: string | null;
   session_id: string | null;
   stall_count: number;
+  /** Recent runs the worker declined, oldest first. */
+  declined_tasks: DeclineEntry[];
+  /** Declined runs in a row; any other outcome ends the run. */
+  consecutive_declines: number;
   /** Git position when the open iteration began; closes out an orphan from facts. */
   snapshot: RunSnapshot | null;
 }
@@ -52,6 +57,8 @@ export function defaultState(): AutomationState {
     last_error: null,
     session_id: null,
     stall_count: 0,
+    declined_tasks: [],
+    consecutive_declines: 0,
     snapshot: null,
   };
 }
@@ -82,7 +89,7 @@ export class StateStore {
   load(): AutomationState {
     if (existsSync(this.stateFile)) {
       try {
-        return JSON.parse(readFileSync(this.stateFile, 'utf-8')) as AutomationState;
+        return {...defaultState(), ...(JSON.parse(readFileSync(this.stateFile, 'utf-8')) as Partial<AutomationState>)};
       } catch {
         return defaultState();
       }

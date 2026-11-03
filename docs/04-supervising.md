@@ -108,7 +108,8 @@ improvise them:
   own): whether it merged and its CI conclusion, `success`, `failure`,
   `pending` or `none` when the repo has no CI, read without touching the
   working tree.
-- `report`: the four report sections from the same facts.
+- `report`: the report sections from the same facts, including the tickets the
+  worker declined.
 - `approval <action>`: who may do an action, from the table below.
 
 ## Read-only on the loop's checkout

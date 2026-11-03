@@ -32,6 +32,7 @@ chosen by the `harness` config key (ADR 0009).
 | `state.json`, `work.log`, `output/` | no | engine | counters, logs, per-iteration output |
 | `HALT` | no | engine or worker | stops the loop until a person clears it |
 | `runner.lock` | no | engine | the pid of the one live engine; a second `run` refuses, a dead pid is taken over |
+| `declined.json` | no | worker (`decline`), engine | the worker's decline of the pick; the next run of that iteration reads it once and deletes it |
 | `events.jsonl` | no | engine | append-only terminal events (completed, halted, stalled, timed out, too many failures, engine gone), one JSON line each, for watchers |
 | owner notes (`human.md`) | yes | workers and supervisor | what only the owner can do: switches, checks owed, open choices |
 | memory notes | no (user profile) | supervisor | durable preferences and lessons, one fact per file |
@@ -125,8 +126,14 @@ flowchart TD
 The engine's pick is the contract, and the worker's prompt names it: the worker builds that ticket or declines it, and is never asked to choose. A run with no workable ticket gets a prompt that says so. A branch for any other ticket is `off-pick`,
 a failure, even when its own PR merged: the work is real but is never counted as
 the pick's completion. A decline record for the pick, with nothing built, is
-`declined`, the one sanctioned exit. A record for a different ticket is a
-failure. The iteration log header always prints the engine's pick next to the
+`declined`, the one sanctioned exit, and it is made with
+`decline --ticket <id> --reason blocked|too-large|unclear --detail <text>`: the
+command writes the record and takes the ticket out of the backlog (on GitHub the
+intake label becomes `needs-info` and the detail is commented on the issue), so
+the same ticket is not picked again. A decline counts toward the stall counter,
+and `limits.maxConsecutiveDeclines` declines in a row halt the loop with a line
+naming each ticket and reason; `report` lists the declined tickets. A record for
+a different ticket is a failure. The iteration log header always prints the engine's pick next to the
 ticket the run was held to. The full table is in ADR 0008.
 
 A green merge is the only progress. Failures count toward a halt; a run that

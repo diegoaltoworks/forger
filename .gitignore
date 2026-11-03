@@ -6,12 +6,14 @@ node_modules/
 .claude/HALT
 .claude/runner.lock
 .claude/events.jsonl
+.claude/declined.json
 .forger/state.json
 .forger/work.log
 .forger/output/
 .forger/HALT
 .forger/runner.lock
 .forger/events.jsonl
+.forger/declined.json
 .claude/settings.local.json
 .forger-denylist
 coverage/

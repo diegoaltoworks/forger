@@ -23,7 +23,8 @@
     "output": ".forger/output",
     "halt": ".forger/HALT",
     "lock": ".forger/runner.lock",
-    "events": ".forger/events.jsonl"
+    "events": ".forger/events.jsonl",
+    "declined": ".forger/declined.json"
   },
   "skills": {},
   "tracker": { "kind": "github", "label": "ready-for-agent", "ignore": ["wayfinder:*"] }

@@ -14,6 +14,8 @@ import {resolveModel, type WorkloopConfig} from '../config';
 import type {AgentRunner, CommandRunner} from '../ports';
 import {parseClaim} from './claim';
 import type {TerminalEventKind} from './events';
+import {declineUpdate, type DeclineEntry} from './decline';
+import {clearDeclineRecord, readDeclineRecord} from './decline-io';
 import {classifyExit} from './infra';
 import {formatIterationLog} from './iteration-log';
 import type {Logger} from './logger';
@@ -41,7 +43,7 @@ export interface IterationContext {
 
 function verify(ctx: IterationContext): string | null {
   const {state, log, output, halt, lock, events} = ctx.config.paths;
-  const ignore = [state, log, output, halt, lock, events, ...ctx.config.local_only];
+  const ignore = [state, log, output, halt, lock, events, ctx.config.paths.declined, ...ctx.config.local_only];
   return verifyMerged(ctx.gitRunner, ctx.config.base_branch, ignore);
 }
 
@@ -77,6 +79,9 @@ export async function runIteration(ctx: IterationContext, iteration: number, cou
   const snapshot = takeSnapshot(ctx.gitRunner, base);
   state.snapshot = snapshot;
   ctx.store.save(state);
+  // A record left by an earlier run must not speak for this one.
+  const declinedFile = join(ctx.projectRoot, ctx.config.paths.declined);
+  clearDeclineRecord(declinedFile);
   const startTime = Date.now();
   const result = await ctx.agent.run({
     prompt,
@@ -121,13 +126,15 @@ export async function runIteration(ctx: IterationContext, iteration: number, cou
 
   const claim = parseClaim(result.output);
   const backlogCompleted = ticket !== null && ctx.backlog.isCompleted(ticket);
+  const record = readDeclineRecord(declinedFile);
+  clearDeclineRecord(declinedFile);
   const exit = classifyExit(result.exitCode, result.output, result.timedOut);
   const outcome = decideOutcome({
     ...gitFacts,
     infraError: exit.kind === 'infrastructure' ? exit.reason : null,
     ticket,
     enginePick: attemptedTask,
-    declined: null,
+    declined: record?.ticket ?? null,
     claim: claim.claim,
     stopReason: claim.stopReason,
     exitCode: result.exitCode,
@@ -139,7 +146,9 @@ export async function runIteration(ctx: IterationContext, iteration: number, cou
     unclean: gitFacts.merged ? verify(ctx) : null,
   });
 
-  return settle(ctx, state, iteration, ticket, backlogCompleted, outcome, countStall);
+  const declined: DeclineEntry | null =
+    outcome.status === 'declined' && record ? {ticket: record.ticket, reason: record.reason, iteration} : null;
+  return settle(ctx, state, iteration, ticket, backlogCompleted, outcome, countStall, declined);
 }
 
 /**
@@ -154,9 +163,10 @@ function settle(
   ticket: string | null,
   backlogCompleted: boolean,
   outcome: Outcome,
-  countStall: boolean
+  countStall: boolean,
+  declined: DeclineEntry | null = null
 ): boolean {
-  const {maxStallIterations} = ctx.config.limits;
+  const {maxStallIterations, maxConsecutiveDeclines} = ctx.config.limits;
   state.snapshot = null;
   state.status = outcome.status;
   if (outcome.result === 'success') {
@@ -187,6 +197,9 @@ function settle(
     ? stallUpdate(state.stall_count, outcome.merged, maxStallIterations)
     : {stall_count: state.stall_count, stalled: false};
   state.stall_count = stall.stall_count;
+  const declines = declineUpdate(state.declined_tasks, state.consecutive_declines, declined, maxConsecutiveDeclines);
+  state.declined_tasks = declines.declined_tasks;
+  state.consecutive_declines = declines.consecutive_declines;
   ctx.store.save(state);
 
   if (outcome.status === 'timeout') {
@@ -195,6 +208,9 @@ function settle(
 
   if (outcome.halt) {
     ctx.halt(outcome.halt, outcome.haltKind);
+  } else if (declines.halt) {
+    ctx.logger.log('ERROR', declines.halt);
+    ctx.halt(declines.halt);
   } else if (stall.stalled) {
     const reason = `Stalled: nothing merged in ${maxStallIterations} iterations`;
     ctx.logger.log('ERROR', reason);

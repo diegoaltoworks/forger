@@ -7,6 +7,7 @@ import {approval} from './approval';
 import {backlog} from './backlog';
 import {brand} from './brand';
 import {check} from './check';
+import {decline} from './decline';
 import type {Command} from './command';
 import {awaitEventCommand, events} from './events';
 import {facts} from './facts';
@@ -37,6 +38,7 @@ export const COMMANDS: Command[] = [
   report,
   facts,
   merge,
+  decline,
   approval,
   events,
   awaitEventCommand,

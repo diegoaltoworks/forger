@@ -597,3 +597,43 @@ describe('screenshot', () => {
     }
   });
 });
+
+describe('decline', () => {
+  test('writes the record, relabels the issue through the runner and exits 0', async () => {
+    const root = projectWith({}, {kind: 'github', label: 'ready-for-agent'});
+    process.chdir(root);
+    const calls: string[] = [];
+    const run: CommandRunner = cmd => (calls.push(cmd), '');
+    const out = JSON.parse(await capture(['decline', '--ticket', 'issue-5', '--reason', 'unclear', '--detail', 'which API?', '--json'], run));
+    expect(out.declined).toMatchObject({ticket: 'issue-5', reason: 'unclear', detail: 'which API?'});
+    expect(calls[0]).toContain('gh issue edit 5 --remove-label');
+    expect(JSON.parse(readFileSync(join(root, '.forger', 'declined.json'), 'utf-8')).ticket).toBe('issue-5');
+  });
+
+  test('rejects an unknown reason and an empty detail without touching the tracker', async () => {
+    const root = projectWith({}, {kind: 'github', label: 'ready-for-agent'});
+    process.chdir(root);
+    const calls: string[] = [];
+    const run: CommandRunner = cmd => (calls.push(cmd), '');
+    const err = spyOn(console, 'error').mockImplementation(() => {});
+    try {
+      await capture(['decline', '--ticket', 'issue-5', '--reason', 'bored', '--detail', 'x'], run);
+      expect(process.exitCode).toBe(1);
+      process.exitCode = 0;
+      await capture(['decline', '--ticket', 'issue-5', '--reason', 'blocked', '--detail', ' '], run);
+      expect(process.exitCode).toBe(1);
+    } finally {
+      process.exitCode = 0;
+      err.mockRestore();
+    }
+    expect(calls).toEqual([]);
+  });
+
+  test('a declined ticket leaves backlog next', async () => {
+    const root = projectWith({a: {status: 'not_started', priority: 'P0'}, b: {status: 'not_started', priority: 'P1'}});
+    process.chdir(root);
+    expect(JSON.parse(await capture(['backlog', '--json'])).next).toBe('a');
+    await capture(['decline', '--ticket', 'a', '--reason', 'too-large', '--detail', 'split it']);
+    expect(JSON.parse(await capture(['backlog', '--json'])).next).toBe('b');
+  });
+});
