@@ -36,6 +36,8 @@ Then append the per-run state to `.gitignore` if the lines are missing:
 .claude/work.log
 .claude/output/
 .claude/HALT
+.claude/runner.lock
+.claude/events.jsonl
 ```
 
 ## 2. Minimal config

@@ -6,6 +6,8 @@
 
 import {existsSync, readFileSync, unlinkSync, writeFileSync} from 'fs';
 
+import type {RunSnapshot} from './run-facts';
+
 export type AutomationStatus =
   | 'ready'
   | 'running'
@@ -29,6 +31,8 @@ export interface AutomationState {
   last_error: string | null;
   session_id: string | null;
   stall_count: number;
+  /** Git position when the open iteration began; closes out an orphan from facts. */
+  snapshot: RunSnapshot | null;
 }
 
 export function defaultState(): AutomationState {
@@ -45,6 +49,7 @@ export function defaultState(): AutomationState {
     last_error: null,
     session_id: null,
     stall_count: 0,
+    snapshot: null,
   };
 }
 

@@ -177,6 +177,7 @@ cp "$CLAUDE_PLUGIN_ROOT/templates/backlog.json"         .claude/
 gh label create ready-for-agent
 ```
 and gitignore `.claude/state.json`, `.claude/work.log`, `.claude/output/`,
+`.claude/runner.lock`, `.claude/events.jsonl`,
 `.claude/HALT`.
 
 ## Configuration
@@ -192,7 +193,7 @@ and gitignore `.claude/state.json`, `.claude/work.log`, `.claude/output/`,
 | `model_by_priority` | Model + USD budget per priority (`P0`, `default`, and any others). |
 | `effort_multiplier` | Budget multiplier by ticket `effort` (`small`/`medium`/`large`/...). |
 | `limits` | `timeoutMinutes`, `killGraceSeconds` (SIGTERM to SIGKILL on timeout), `maxConsecutiveFailures`, `pauseBetweenIterations`, `pauseAfterFailure`, `maxStallIterations`. |
-| `paths` | Where the backlog, state, log, output dir, and HALT file live. |
+| `paths` | Where the backlog, state, log, output dir, HALT file, runner lock and terminal-event file live. |
 | `local_only` | Paths that stay modified in a checkout without being the worker's doing (local settings, a work order). The dirty-tree check skips them and the engine's own files (`paths`); a directory covers what is under it. Default none. |
 | `tracker` | `{ kind, label, ignore }`. `kind` is `github` (default: issues are the backlog), `local`, or `none` (both read `backlog.json`). `label` is the intake label, default `ready-for-agent`. `ignore` lists labels whose issues are not work, a trailing `*` matching a prefix (`["wayfinder:*"]`); default none. When `docs/agents/issue-tracker.md` exists it is the authority on how to talk to the tracker. |
 
@@ -203,7 +204,7 @@ from the consumer repo root so it finds `.claude/`:
 
 ```
 bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts run --continuous   # the loop
-bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts status             # where it's at
+bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts status [--json]      # where it's at: runner pid and liveness, halt, counters, current ticket, next pick
 bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts backlog --json     # workable tickets, remaining, next pick
 bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts check docs [--json]  # writing rules: ASCII punctuation, no emails or home paths, optional .forger-denylist
 bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts resume             # clear a HALT
@@ -223,6 +224,16 @@ an infrastructure error, not a worker failure: the loop halts at once with the
 reason and the failure counter is left alone. `resume` clears the HALT and zeroes
 the failure and stall counters, so the first run after a fix starts clean, and
 the first run after any start is never counted as a stall.
+
+One runner works a repo at a time. `run` writes its pid to the lock file and
+refuses to start while that pid is alive; a lock whose pid is dead is taken
+over. If the previous runner died mid-iteration, the new one first closes that
+iteration out, deciding its outcome from git as for any run, and only then
+picks a ticket, so a ticket is not re-run blindly. Each terminal event
+(completed, halted, stalled, timed out, too many failures, runner gone) appends
+one JSON line to the event file, and `status --json` reports the runner, halt,
+counters, current ticket and next pick, so a supervisor reads files and commands
+rather than human text.
 
 The loop stops when the backlog empties, a HALT file appears, it stalls (nothing
 merged for `maxStallIterations` runs in a row), or it hits

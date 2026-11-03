@@ -38,6 +38,19 @@ async function capture(argv: string[], run?: CommandRunner): Promise<string> {
   return lines.join('\n');
 }
 
+describe('status --json', () => {
+  test('reports the runner, halt, counters, current ticket and next pick', async () => {
+    process.chdir(projectWith({a: {status: 'not_started', priority: 'P0'}}));
+    const out = JSON.parse(await capture(['status', '--json']));
+    expect(out.runner).toEqual({pid: null, alive: false});
+    expect(out.halted).toBe(false);
+    expect(out.next_pick).toBe('a');
+    expect(out.current_ticket).toBeNull();
+    expect(out.counters.max_stall_iterations).toBe(5);
+    expect(out.remaining).toBe(1);
+  });
+});
+
 describe('backlog --json', () => {
   test('prints the workable tickets in order, the remaining count and the next pick', async () => {
     process.chdir(

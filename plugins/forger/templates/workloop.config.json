@@ -21,7 +21,9 @@
     "state": ".claude/state.json",
     "log": ".claude/work.log",
     "output": ".claude/output",
-    "halt": ".claude/HALT"
+    "halt": ".claude/HALT",
+    "lock": ".claude/runner.lock",
+    "events": ".claude/events.jsonl"
   },
   "tracker": { "kind": "github", "label": "ready-for-agent", "ignore": ["wayfinder:*"] }
 }
