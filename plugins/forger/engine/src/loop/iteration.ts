@@ -112,6 +112,7 @@ export async function runIteration(
   const declinedFile = join(root, ctx.config.paths.declined);
   clearDeclineRecord(declinedFile);
   const startTime = Date.now();
+  const startedAt = new Date(startTime).toISOString();
   const result = await ctx.agent.run({
     prompt,
     sessionId,
@@ -148,6 +149,8 @@ export async function runIteration(
     timedOut: result.timedOut,
     timeoutMinutes,
     output: result.output,
+    startedAt,
+    parallelism: ctx.config.parallelism,
   };
   writeFileSync(outputFile, formatIterationLog(logFacts));
   ctx.logger.log('INFO', `Claude finished in ${duration}s (exit: ${result.exitCode})`);

@@ -16,6 +16,10 @@ export interface IterationLogFacts {
   output: string;
   /** The decided outcome status; absent while the run is still being judged. */
   status?: string;
+  /** When the run started (ISO), so overlapping runs can be told apart. */
+  startedAt?: string;
+  /** The parallelism setting in force when the run started. */
+  parallelism?: number;
 }
 
 function outcome(f: IterationLogFacts): string {
@@ -33,6 +37,8 @@ export function formatIterationLog(f: IterationLogFacts): string {
     `=== forger iteration ${f.iteration} ===`,
     `ticket: ${f.ticket ?? 'none picked'}`,
     ...(f.enginePick !== undefined ? [`engine pick: ${f.enginePick ?? 'none'}`] : []),
+    ...(f.startedAt !== undefined ? [`started: ${f.startedAt}`] : []),
+    ...(f.parallelism !== undefined ? [`parallelism: ${f.parallelism}`] : []),
     `elapsed: ${f.elapsedSeconds}s`,
     `outcome: ${outcome(f)}`,
     ...(f.status !== undefined ? [`status: ${f.status}`] : []),

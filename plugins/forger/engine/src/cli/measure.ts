@@ -1,7 +1,7 @@
 import {existsSync, readdirSync, readFileSync} from 'fs';
 import {join} from 'path';
 
-import {readAllVerdicts, readEvents} from '../loop';
+import {readAllVerdicts, readEvents, readSchedule} from '../loop';
 import {computeMeasures, formatMeasures, parseBudgets, parseIterationLog, type CiRun, type IterationRecord} from '../supervisor';
 import type {Command} from './command';
 
@@ -10,7 +10,7 @@ export const measure: Command = {
   needs: 'config',
   flags: ['json', 'last'],
   help: `  measure [--json] [--last N]
-                   Runs, failures by cause, time, budget cap and CI rounds per ticket`,
+                   Runs, failures by cause, time, budget cap and CI rounds per ticket; merges per hour by parallelism, conflicts, rework`,
   run(ctx) {
     const {values, projectRoot, config} = ctx;
     const outDir = join(projectRoot, config.paths.output);
@@ -30,6 +30,7 @@ export const measure: Command = {
       iterations,
       budgets: existsSync(workLog) ? parseBudgets(readFileSync(workLog, 'utf-8')) : [],
       verdicts: readAllVerdicts(join(projectRoot, config.paths.verdicts)),
+      schedule: readSchedule(join(outDir, 'schedule-decisions.jsonl')),
       events: readEvents(join(projectRoot, config.paths.events)),
       ciRuns,
       last: values.last === undefined ? null : parseInt(values.last, 10),

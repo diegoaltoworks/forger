@@ -4,7 +4,8 @@
  * events and CI's run list. Pure; the CLI gathers the inputs.
  */
 
-import type {TerminalEvent, VerdictRecord} from '../loop';
+import type {ScheduleRecord, TerminalEvent, VerdictRecord} from '../loop';
+import {computeParallelMeasures, type ParallelMeasures} from './parallel-measures';
 
 export type Cause = 'ok' | 'timeout' | 'signal' | 'nonzero_exit' | 'unreadable';
 
@@ -15,6 +16,8 @@ export interface IterationRecord {
   cause: Cause;
   /** The decided outcome status; null in a log written before it was recorded. */
   status: string | null;
+  startedAt?: string | null;
+  parallelism?: number | null;
 }
 
 export interface BudgetRecord {
@@ -50,6 +53,8 @@ export interface Measures {
     passed_then_failed: number;
     passed_then_failed_share: number;
   };
+  /** What workers side by side bought and cost (ADR 0011). */
+  parallel: ParallelMeasures;
   events: Record<string, number>;
   tickets: TicketMeasure[];
   ci_rounds_unmatched: Record<string, number>;
@@ -76,6 +81,8 @@ export function parseIterationLog(text: string): IterationRecord | null {
     elapsedSeconds: elapsed === null ? 0 : parseInt(elapsed, 10) || 0,
     cause,
     status: field('status'),
+    startedAt: field('started'),
+    parallelism: field('parallelism') === null ? null : parseInt(field('parallelism') as string, 10) || null,
   };
 }
 
@@ -110,6 +117,8 @@ export interface MeasureInputs {
   ciRuns: CiRun[];
   /** The verdict records `verify` left; absent reads as none. */
   verdicts?: VerdictRecord[];
+  /** The scheduling decisions the parallel loop left; absent reads as none. */
+  schedule?: ScheduleRecord[];
   /** Only the most recent N iterations; null = all. */
   last: number | null;
 }
@@ -155,6 +164,9 @@ export function computeMeasures(inputs: MeasureInputs): Measures {
   const sorted = [...inputs.iterations].sort((a, b) => a.iteration - b.iteration);
   const windowed = inputs.last === null ? sorted : sorted.slice(-Math.max(inputs.last, 0));
   const first = windowed[0]?.iteration ?? null;
+  const decisions = inputs.schedule ?? [];
+  const starts = windowed.flatMap(it => (it.startedAt == null ? [] : [it.startedAt])).sort();
+  const windowStart = inputs.last === null || starts.length === 0 ? null : starts[0];
 
   const byCause: Record<string, number> = {};
   for (const it of windowed) if (it.cause !== 'ok') byCause[it.cause] = (byCause[it.cause] ?? 0) + 1;
@@ -200,6 +212,7 @@ export function computeMeasures(inputs: MeasureInputs): Measures {
     runs: {total: windowed.length, ok: windowed.length - failed, failed, by_cause: byCause},
     pick: {off_pick: offPick, off_pick_share: share(offPick), declined: declinedRuns, declined_share: share(declinedRuns)},
     verification: verificationMeasures(inputs.verdicts ?? [], windowed),
+    parallel: computeParallelMeasures(windowed.map(it => ({...it, startedAt: it.startedAt ?? null, parallelism: it.parallelism ?? null})), windowStart === null ? decisions : decisions.filter(d => d.at >= windowStart)),
     events,
     tickets: [...perTicket.values()],
     ci_rounds_unmatched: unmatched,
@@ -210,12 +223,23 @@ function pct(share: number): string {
   return `${Math.round(share * 100)}%`;
 }
 
+function formatParallel(p: Measures['parallel']): string[] {
+  const rates = p.by_parallelism.map(r => `parallelism ${r.parallelism}: ${r.merges_per_hour.toFixed(2)}/h (${r.merges} merged)`).join(', ');
+  const reasons = Object.entries(p.verdicts.by_reason).map(([k, v]) => `${k} ${v}`).join(', ');
+  return [
+    `merges per hour: ${rates || 'none'}`,
+    `conflicts: ${p.conflicts.conflicted} (${pct(p.conflicts.rate)}), pairs ${p.conflicts.pairs.map(x => x.join('+')).join(', ') || 'none'}, re-run after conflict ${p.rework.rerun_after_conflict}`,
+    `scheduling rule: serial ${pct(p.verdicts.serial_share)} (${p.verdicts.serial} of ${p.verdicts.parallel + p.verdicts.serial})${reasons ? `: ${reasons}` : ''}`,
+  ];
+}
+
 export function formatMeasures(m: Measures): string {
   const causes = Object.entries(m.runs.by_cause).map(([k, v]) => `${k} ${v}`).join(', ');
   const lines = [
     `runs: ${m.runs.total} (ok ${m.runs.ok}, failed ${m.runs.failed}${causes ? `: ${causes}` : ''})`,
     `pick: off-pick ${pct(m.pick.off_pick_share)} (${m.pick.off_pick}), declined ${pct(m.pick.declined_share)} (${m.pick.declined})`,
     `verification: blocked ${pct(m.verification.blocked_share)} (${m.verification.blocked} of ${m.verification.verified}), passed then failed ${pct(m.verification.passed_then_failed_share)} (${m.verification.passed_then_failed} of ${m.verification.passed})`,
+    ...formatParallel(m.parallel),
     `events: ${Object.entries(m.events).map(([k, v]) => `${k} ${v}`).join(', ') || 'none'}`,
     'tickets:',
     ...m.tickets.map(

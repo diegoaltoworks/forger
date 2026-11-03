@@ -10,7 +10,7 @@ import {existsSync, mkdirSync, readdirSync, readFileSync} from 'fs';
 import {join} from 'path';
 
 import {forgerPath, type WorkloopConfig} from '../config';
-import {pick, type Backlog, type FolderMap, type Schedulable} from '../backlog';
+import {pick, schedule, type Backlog, type FolderMap, type Schedulable} from '../backlog';
 import {capturing, type AgentRunner, type CapturingRunner, type CommandRunner} from '../ports';
 import {type AutomationState, currentTicket, StateStore} from './state';
 import {Logger, colors} from './logger';
@@ -20,6 +20,7 @@ import {conflictAfterAttempt, finishWorktree, folderMapFrom, inWorktree} from '.
 import {createWorktree, worktreePath} from './worktree';
 import {pidAlive, RunnerLock} from './lock';
 import {appendEvent, terminalEvent, type TerminalEventKind} from './events';
+import {appendSchedule} from './schedule-log';
 import {buildStatus, type StatusReport} from './status-report';
 
 export interface RunnerDeps {
@@ -74,6 +75,7 @@ export class AutomationRunner {
   private lock: RunnerLock;
   private isAliveFn: (pid: number) => boolean;
   private eventsFile: string;
+  private scheduleFile: string;
   private now: () => number;
   private sleep: (ms: number) => Promise<void>;
   private iteration: IterationContext;
@@ -91,6 +93,7 @@ export class AutomationRunner {
     this.store = new StateStore(p(config.paths.state), p(config.paths.halt));
     this.outputDir = p(config.paths.output);
     this.eventsFile = p(config.paths.events);
+    this.scheduleFile = join(p(config.paths.output), 'schedule-decisions.jsonl');
     this.isAliveFn = deps.isAlive ?? pidAlive;
     this.lock = new RunnerLock(p(config.paths.lock), deps.pid, this.isAliveFn);
 
@@ -292,6 +295,19 @@ export class AutomationRunner {
     this.showStatus();
   }
 
+  /** Appends each candidate/running pair the rule judges, once, for the measures. */
+  private recordVerdicts(candidates: Schedulable[], running: Schedulable[], map: FolderMap, judged: Set<string>): void {
+    for (const c of candidates) {
+      for (const r of running) {
+        const key = `${c.id}|${r.id}`;
+        if (judged.has(key)) continue;
+        judged.add(key);
+        const v = schedule(c, r, map, {graph: this.backlog.graph()});
+        appendSchedule(this.scheduleFile, {at: new Date(this.now()).toISOString(), ticket: c.id, other: r.id, verdict: v.verdict, reason: v.reason});
+      }
+    }
+  }
+
   /** The worktree, git runner and clean-up for one worker started on `ticket`. */
   private placeWorker(ticket: string, abort: AbortSignal): Placement | string {
     const stateDir = join(this.projectRoot, this.config.paths.state, '..');
@@ -339,6 +355,7 @@ export class AutomationRunner {
     this.logger.log('INFO', `Starting automation (${continuous ? 'continuous' : `${iterations} iterations`}, up to ${parallelism} workers)`);
 
     const abort = new AbortController();
+    const judged = new Set<string>();
     const running = new Map<string, {done: Promise<void>; scheduled: Schedulable}>();
     let iteration = initial.iteration;
     let started = 0;
@@ -396,6 +413,7 @@ export class AutomationRunner {
         if (continuous || started < iterations) {
           const candidates = this.backlog.candidates().filter(c => !running.has(c.id));
           const together = [...running.values()].map(r => r.scheduled);
+          this.recordVerdicts(candidates, together, map, judged);
           const chosen = pick(candidates, together, parallelism, map, {graph: this.backlog.graph()});
           for (const c of chosen.slice(0, continuous ? chosen.length : iterations - started)) start(c);
         }

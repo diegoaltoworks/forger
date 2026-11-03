@@ -33,7 +33,7 @@ function log(over: Partial<Parameters<typeof formatIterationLog>[0]> = {}): stri
 
 describe('parseIterationLog', () => {
   test('reads the log the engine writes', () => {
-    expect(parseIterationLog(log())).toEqual({iteration: 3, ticket: 'alpha_ticket', elapsedSeconds: 120, cause: 'ok', status: null});
+    expect(parseIterationLog(log())).toEqual({iteration: 3, ticket: 'alpha_ticket', elapsedSeconds: 120, cause: 'ok', status: null, startedAt: null, parallelism: null});
   });
   test('classifies each way a run ends', () => {
     expect(parseIterationLog(log({timedOut: true, exitCode: 1}))?.cause).toBe('timeout');

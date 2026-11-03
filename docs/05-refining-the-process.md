@@ -149,7 +149,23 @@ from a number written in a doc. `measure --json` reports runs and failures by
 cause, the share of runs that were off-pick or declined, how often the verifier
 blocked a PR and how often a PR it passed later failed, the terminal events,
 and the time, budget cap and CI rounds per ticket,
-over all runs or the last N. `/forger:retro` runs it to find a cause, writes a
+over all runs or the last N.
+
+With workers side by side (ADR 0011) the same command reports what that bought
+and cost, from the iteration logs and the scheduling decisions the parallel loop
+records, never from a worker's account:
+
+- merges per hour of wall time, split by the parallelism setting in force, with
+  overlapping workers counted once;
+- the conflict rate (conflicted runs over merged-or-conflicted runs) and the
+  pairs of tickets that overlapped a conflicted run, which is evidence the rule
+  paired tickets it should not have;
+- rework: tickets re-run after a conflict;
+- the rule's verdict mix, by reason, so a rule that answers `serial` almost
+  always is seen as one that buys nothing.
+
+Keep parallelism above 1 while merges per hour rise and the conflict rate stays
+low; otherwise set it back to 1 in the config. `/forger:retro` runs it to find a cause, writes a
 rule record with `retro rule`, and drafts an upstream issue with the evidence
 using `retro upstream`.
 

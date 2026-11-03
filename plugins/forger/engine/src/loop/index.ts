@@ -16,6 +16,7 @@ export * from './pr-checks';
 export * from './prompt';
 export * from './run-facts';
 export * from './runner';
+export * from './schedule-log';
 export * from './state';
 export * from './status-report';
 export * from './mechanical';

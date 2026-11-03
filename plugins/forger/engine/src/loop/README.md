@@ -46,8 +46,9 @@ Touch the world (their own files, the terminal, the clock):
   missing ones, and checking a decline's relabel from the issue's labels read back.
 - `decline-io.ts` - the decline record file and the tracker calls that take a
   declined ticket out of the backlog, through the command port.
-- `state.ts`, `lock.ts`, `events.ts`, `logger.ts` - the state file and HALT, the
-  single-engine lock, the event file, the work log.
+- `state.ts`, `lock.ts`, `events.ts`, `schedule-log.ts`, `logger.ts` - the state
+  file and HALT, the single-engine lock, the event file, the file of scheduling
+  decisions, the work log.
 
 ## Entry point
 
