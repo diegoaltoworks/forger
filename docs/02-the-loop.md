@@ -32,16 +32,26 @@ consumer repository.
 
 ## The lifecycle of a request
 
+```mermaid
+sequenceDiagram
+    actor Owner
+    participant Sup as Supervisor
+    participant Eng as Engine
+    participant Wrk as Worker
+    participant Repo as Repository
+    Owner->>Sup: request
+    Sup->>Sup: investigate code, logs, deploy
+    Sup->>Repo: labelled issue, by the ticket template
+    Sup->>Repo: work order
+    Eng->>Repo: pick the next ticket
+    Eng->>Wrk: start one worker
+    Wrk->>Repo: branch, build, gates, push, PR, CI, merge
+    Eng->>Repo: decide the outcome from facts
+    Sup->>Repo: verify the merge and the deploy
+    Sup->>Owner: report in plain words
 ```
-owner message
-  -> supervisor investigates (code, logs, deploy)
-  -> issue, by the ticket template, labelled
-  -> queued (the labelled issue on GitHub, else backlog.json by PR) and placed in the work order
-  -> engine picks it, starts a worker
-  -> worker: branch, build, gates, push, PR, CI, merge
-  -> deploy
-  -> supervisor verifies the merge and the deploy, reports in plain words
-```
+
+The ticket is queued as the labelled issue on GitHub, else in `backlog.json` by PR.
 
 A spike follows the same path but produces a design (a doc, decision rows,
 boards) and build tickets, which wait for the owner's review unless the owner
@@ -56,8 +66,54 @@ said to build straight after.
 | `deferred` | parked on purpose |
 | `needs_human` | only a person can do it; dependents wait |
 
+```mermaid
+stateDiagram-v2
+    [*] --> not_started
+    not_started --> completed: PR merged
+    not_started --> deferred: parked on purpose
+    not_started --> needs_human: only a person can do it
+    deferred --> not_started: owner un-parks it
+    needs_human --> not_started: person has done it
+    not_started --> closed: issue closed without a merge
+    completed --> [*]
+    closed --> [*]
+```
+
+`closed` exists only with the GitHub tracker: the issue was closed some other
+way than by a merged PR, so it is neither done nor work to start.
+
 `completed` must mean merged. A worker that marks a ticket completed before its
 PR merges can mislead the engine (see the failure catalogue).
+
+## One engine iteration
+
+The engine does not take the worker's word. It gathers facts about the
+repository after the worker ends and `decideOutcome` (a pure function, with a
+test per branch) turns them into a status.
+
+```mermaid
+flowchart TD
+    S[pick the next ticket] --> W[run one worker under a deadline]
+    W --> F[gather facts: base moved, branch pushed, backlog status, timeout, claim]
+    F --> M{base branch moved?}
+    M -- yes --> OK[completed: success, failures reset]
+    M -- no --> I{platform error?}
+    I -- yes --> E[error: neutral, halt]
+    I -- no --> D{backlog says completed?}
+    D -- yes --> X[failed: diverged, halt]
+    D -- no --> H{worker signalled stop?}
+    H -- yes --> HL[halted: neutral, halt]
+    H -- no --> T{timed out?}
+    T -- yes --> TO[timeout: failure]
+    T -- no --> C{claimed complete?}
+    C -- yes --> FC[failed: claim without a merge]
+    C -- no --> P{branch pushed?}
+    P -- yes --> PA[partial: failure]
+    P -- no --> FN[failed: nothing happened]
+```
+
+A merge is the only progress. Failures count toward a halt; a run that merged
+and then timed out is still a success, with a warning.
 
 ## Invariants
 

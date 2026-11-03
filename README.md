@@ -10,6 +10,19 @@ same every time is a tested command; models reason only where judgement is
 needed, between hard boundaries the tools enforce. See
 [`docs/01-principles.md`](docs/01-principles.md), principle 0.
 
+```mermaid
+flowchart LR
+    A[owner request] --> B[model: what it means]
+    B --> C{{tool: ticket, order, status --json}}
+    C --> D[model: how to build the slice]
+    D --> E{{tool: gates, check docs, outcome}}
+    E --> F[model: which rule a lesson becomes]
+    F --> G{{tool: PR, merge, measure --json}}
+```
+
+Hexagons are tools: tested commands with machine-readable output that the model
+calls and cannot talk its way around. Rectangles are judgement.
+
 The goal is a loop that heals itself, learns and adapts: each lesson climbs from
 a note to a rule, a template, a check and finally a tool, until it holds without
 anyone remembering it, and the process is measured by commands, not claims.
@@ -39,6 +52,7 @@ installed. The slots, the config and the preset are described in
 
 ## Read in this order
 
+0. [`plugins/forger/README.md`](plugins/forger/README.md) - the plugin: commands, tracker, skill slots, install.
 1. [`docs/01-principles.md`](docs/01-principles.md) - the few ideas everything else follows from.
 2. [`docs/02-the-loop.md`](docs/02-the-loop.md) - roles, files, states and invariants.
 3. [`docs/03-tickets.md`](docs/03-tickets.md) - what a good ticket and a good PR carry.
@@ -48,7 +62,8 @@ installed. The slots, the config and the preset are described in
 7. [`docs/07-roadmap.md`](docs/07-roadmap.md) - what to build next.
 
 [`GLOSSARY.md`](GLOSSARY.md) holds the vocabulary; [`docs/adr/`](docs/adr/) the
-decisions. `plugins/forger/templates/` holds the files a repository adopts: the ticket and PR
+decisions; [`docs/plan-foundation.md`](docs/plan-foundation.md) the plan the
+foundation was built from. `plugins/forger/templates/` holds the files a repository adopts: the ticket and PR
 shapes, the work order, the report, the retro and the rule record.
 
 ## Status

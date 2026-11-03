@@ -17,6 +17,19 @@ When a model gets something wrong that a tool could have decided, the fix is the
 tool, not a better prompt. A rule that matters climbs until it is a tool (see
 principle 7). See [ADR 0002](adr/0002-determinism-first.md).
 
+```mermaid
+flowchart LR
+    A[owner request] --> B[model: what it means]
+    B --> C{{tool: ticket, order, status --json}}
+    C --> D[model: how to build the slice]
+    D --> E{{tool: gates, check docs, outcome}}
+    E --> F[model: which rule a lesson becomes]
+    F --> G{{tool: PR, merge, measure --json}}
+```
+
+Hexagons are tools: tested commands with machine-readable output that the model
+calls and cannot talk its way around. Rectangles are judgement.
+
 ## 1. One ticket, one worker, one PR
 
 A worker starts cold, builds one vertical slice, proves it with the gates, opens
