@@ -82,6 +82,9 @@ survive restarts.
   templates; everything project-specific lives in the consumer repository.
 - The ticket sections as a configurable set, with the defaults from
   `docs/03-tickets.md`.
+- **The pipeline as data:** declared stages, an output contract per skill slot,
+  forger's own skills as the built-ins and flavours that pick a skill per stage,
+  designed in [ADR 0016](adr/0016-the-pipeline-is-data-resolved-per-ticket-from-a-flavour.md).
 
 ## Settled
 
