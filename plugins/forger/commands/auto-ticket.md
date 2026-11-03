@@ -17,9 +17,8 @@ and `.claude/workloop.config.json`. Read them; do not assume another repo's rule
 - **Git status:** !`git status --short`
 - **Branch:** !`git branch --show-current`
 - **Recent commits:** !`git log --oneline -5`
-- **Tracker doc (`docs/agents/issue-tracker.md`):** !`test -f docs/agents/issue-tracker.md && echo present || echo absent`
 
-If the tracker doc is present, it is the authority on tracker operations.
+The tracker settings are in `.claude/workloop.config.json`; its conventions are in `.claude/process.md`.
 
 ## Read first (in order)
 1. `.claude/process.md` - the workflow rules and the **project gotchas** (REQUIRED)

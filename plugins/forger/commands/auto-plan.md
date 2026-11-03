@@ -15,10 +15,9 @@ implement.
 
 ## Environment
 
-- **Tracker doc (`docs/agents/issue-tracker.md`):** !`test -f docs/agents/issue-tracker.md && echo present || echo absent`
 
-If the tracker doc is present it is the authority on tracker operations; follow
-it over the generic `gh` commands below.
+The tracker settings are in `.claude/workloop.config.json`; its conventions are in
+`.claude/process.md`.
 
 ## Read first
 1. `.claude/process.md` - the ticket shape, the gotchas, the tracker rules
@@ -45,7 +44,7 @@ The user names it as the argument, or you take the first that applies:
   route is not clear yet; the human resolves it with `/wayfinder`.
 - **Adopt mode** (no doc at all): open issues carrying `tracker.label` that are
   not yet in the backlog (no ticket has their number as `issue`). Anything
-  `/to-tickets`, `/triage`, or a human published as agent-ready. Each such issue
+  a human or another tool published as agent-ready. Each such issue
   becomes one ticket; its `Blocked by` list or native blocked-by dependencies
   become `depends_on`. **Never adopt an issue labelled `wayfinder:*`**: those are
   decisions, not work.

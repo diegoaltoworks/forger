@@ -13,7 +13,6 @@ file the repo already has; report what exists and what you added.
 
 - **Git remote:** !`git remote get-url origin 2>/dev/null || echo "no origin"`
 - **Existing `.claude/` files:** !`ls .claude 2>/dev/null || echo "none"`
-- **Tracker doc (`docs/agents/issue-tracker.md`):** !`test -f docs/agents/issue-tracker.md && echo present || echo absent`
 - **`gh` auth:** !`gh auth status >/dev/null 2>&1 && echo ok || echo "not authenticated"`
 - **Bun:** !`bun --version 2>/dev/null || echo "not on PATH"`
 
@@ -52,10 +51,7 @@ default.
 ## 3. Tracker
 
 Decide `tracker.kind`:
-- If `docs/agents/issue-tracker.md` exists, it already says where issues live.
-  Set `tracker.kind` to match: GitHub -> `github`, local markdown -> `local`, anything else -> `none`, and
-  tell the user the tracker doc is the authority the commands will follow.
-- Else if `origin` is a GitHub remote and `gh` is authenticated: `github`.
+- If `origin` is a GitHub remote and `gh` is authenticated: `github`.
 - Else: `local`, and say why.
 
 When `github`: create the intake label if missing:

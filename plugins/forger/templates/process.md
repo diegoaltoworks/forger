@@ -32,9 +32,6 @@ on red. Describe here anything a gate does not catch that a reviewer should.
 - `local`: `backlog.json` is the only record.
 - `none`: `backlog.json`, and never touch an issue tracker.
 
-If `docs/agents/issue-tracker.md` exists,
-it is the authority on how this repo talks to its tracker; follow it.
-
 ## Rules
 
 1. One ticket per iteration.

@@ -18,14 +18,8 @@ there are enough well-formed tickets to hand to `/forger:work`.
 
 ## Environment
 
-- **Tracker doc (`docs/agents/issue-tracker.md`):** !`test -f docs/agents/issue-tracker.md && echo present || echo absent`
 - **Domain glossary (`GLOSSARY.md`):** !`test -f GLOSSARY.md && echo present || echo absent`
 - **Wayfinder maps on the tracker:** !`gh issue list --label wayfinder:map --state all --json number,title,state --jq '.[] | "#\(.number) \(.title) (\(.state))"' 2>/dev/null || echo "none, or gh unavailable"`
-
-How to use this:
-
-- **Tracker doc present:** it is the authority on how this repo talks to its
-  tracker. Follow it over the generic `gh` commands below.
 
 ## 1. Ground yourself (before asking anything)
 
@@ -127,8 +121,7 @@ anything.
 Read `tracker.kind` from `workloop.config.json`.
 
 **`github`:** one issue per ticket, in dependency order (blockers first) so edges
-can reference real numbers. Follow `docs/agents/issue-tracker.md` if present;
-otherwise:
+can reference real numbers. Then:
 - `gh issue create --title "<ticket title>" --label <tracker.label> --body "<body>"`
   with a body of: what to build (end-to-end behaviour), acceptance criteria as
   checkboxes, and a `Blocked by` list.
