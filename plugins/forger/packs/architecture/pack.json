@@ -4,15 +4,15 @@
   "description": "The architecture forger is built on: pure decisions, I/O at the edges, and the dependency rule enforced by check arch.",
   "detect": [],
   "files": [
-    {"source": "files/architecture.md", "target": ".claude/opinions/architecture.md"},
-    {"source": "files/architecture.json", "target": ".claude/architecture.json"},
-    {"source": "files/adr.md", "target": ".claude/templates/adr.md"}
+    {"source": "files/architecture.md", "target": ".forger/opinions/architecture.md"},
+    {"source": "files/architecture.json", "target": ".forger/architecture.json"},
+    {"source": "files/adr.md", "target": ".forger/templates/adr.md"}
   ],
   "opinions": [
     {"id": "architecture.functional-core", "rung": "rule", "summary": "Decisions are pure functions; I/O lives at the edges.", "check": null},
     {"id": "architecture.ports-and-adapters", "rung": "rule", "summary": "Every external system sits behind an interface with one adapter and a fake for tests.", "check": null},
-    {"id": "architecture.dependency-rule", "rung": "check", "summary": "The core never imports the shell; the layer map in .claude/architecture.json says which layer may import which.", "check": "arch"},
-    {"id": "architecture.module-readme", "rung": "check", "summary": "Every folder declared as a module in .claude/architecture.json has a README.md.", "check": "arch"},
+    {"id": "architecture.dependency-rule", "rung": "check", "summary": "The core never imports the shell; the layer map in .forger/architecture.json says which layer may import which.", "check": "arch"},
+    {"id": "architecture.module-readme", "rung": "check", "summary": "Every folder declared as a module in .forger/architecture.json has a README.md.", "check": "arch"},
     {"id": "architecture.public-entry", "rung": "check", "summary": "Code outside a module imports it through its entry file, never an internal file.", "check": "arch"},
     {"id": "architecture.decisions-recorded", "rung": "check", "summary": "A new dependency or a change to the layer map leaves an ADR under docs/adr/ in the same diff.", "check": "decisions"},
     {"id": "architecture.parse-dont-validate", "rung": "rule", "summary": "Outside input is parsed once at the boundary into types.", "check": null},

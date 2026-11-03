@@ -26,9 +26,10 @@ import {
   type TestingConfig,
 } from './testing';
 import {globToRegExp, type Finding} from '../waivers';
+import {forgerPath} from '../../config';
 
 function readConfig(projectRoot: string): TestingConfig {
-  const path = join(projectRoot, TESTING_PATH);
+  const path = forgerPath(projectRoot, TESTING_PATH);
   if (!existsSync(path)) throw new Error(`${TESTING_PATH} not found; the testing pack's config is required`);
   return parseTestingConfig(readFileSync(path, 'utf-8'));
 }
@@ -59,7 +60,7 @@ export function runTestsCheck(projectRoot: string, run: CommandRunner): Finding[
 }
 
 function readBaseline(projectRoot: string, config: TestingConfig): Baseline | null {
-  const path = join(projectRoot, config.coverage_baseline);
+  const path = forgerPath(projectRoot, config.coverage_baseline);
   return existsSync(path) ? parseBaseline(readFileSync(path, 'utf-8'), config.coverage_baseline) : null;
 }
 
@@ -78,6 +79,6 @@ export function runCoverageCheck(projectRoot: string, _run: CommandRunner): Find
 export function updateCoverageBaseline(projectRoot: string): number | null {
   const config = readConfig(projectRoot);
   const next = nextBaseline(currentCoverage(projectRoot, config), readBaseline(projectRoot, config));
-  if (next !== null) writeFileSync(join(projectRoot, config.coverage_baseline), renderBaseline(next));
+  if (next !== null) writeFileSync(forgerPath(projectRoot, config.coverage_baseline), renderBaseline(next));
   return next;
 }

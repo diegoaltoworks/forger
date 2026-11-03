@@ -16,7 +16,7 @@ const CONFIG = JSON.stringify({migration_paths: ['db/migrations/**'], data_test_
 function repo(files: Record<string, string>, config: string | null = CONFIG): string {
   const root = mkdtempSync(join(tmpdir(), 'forger-safety-'));
   dirs.push(root);
-  const all = config === null ? files : {'.claude/safety.json': config, ...files};
+  const all = config === null ? files : {'.forger/safety.json': config, ...files};
   for (const [name, body] of Object.entries(all)) {
     mkdirSync(join(root, name, '..'), {recursive: true});
     writeFileSync(join(root, name), body);
@@ -74,7 +74,7 @@ describe('runSafetyCheck', () => {
   });
 
   test('a missing config is an error, not a pass', () => {
-    expect(() => runSafetyCheck(repo({}, null), git({}))).toThrow('.claude/safety.json not found');
+    expect(() => runSafetyCheck(repo({}, null), git({}))).toThrow('.forger/safety.json not found');
   });
 
   test('an unresolvable base is an error, not a pass', () => {

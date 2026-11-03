@@ -6,7 +6,7 @@ finding.
 ## Files
 
 - `safety.ts` - the rules over a parsed diff. Pure.
-- `safety-check.ts` - reads the diff and `.claude/safety.json`. Touches the
+- `safety-check.ts` - reads the diff and `.forger/safety.json`. Touches the
   world.
 
 ## Entry point

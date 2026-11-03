@@ -2,6 +2,7 @@ import {describe, expect, test} from 'bun:test';
 import {readdirSync, readFileSync, statSync} from 'fs';
 import {join} from 'path';
 
+import {loadConfig} from '../config';
 import {buildReport} from './checks';
 import {formatSummary, gatesDrift, unwaitedMerges, WORKFLOW_PATH, workflowRuns} from './ci';
 import type {Finding, Waiver} from './waivers';
@@ -90,7 +91,7 @@ describe('gatesDrift', () => {
   test('reports missing gates', () => expect(gatesDrift(yaml, '')).toContain('no gates'));
 
   test("this repo's workflow runs exactly the configured gates", () => {
-    const gates = JSON.parse(readFileSync(join(REPO, '.claude/workloop.config.json'), 'utf-8')).gates as string;
+    const gates = loadConfig(REPO).gates;
     expect(gatesDrift(readFileSync(join(REPO, WORKFLOW_PATH), 'utf-8'), gates)).toBeNull();
   });
 });

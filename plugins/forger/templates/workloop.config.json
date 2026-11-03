@@ -17,13 +17,13 @@
     "maxStallIterations": 5
   },
   "paths": {
-    "backlog": ".claude/backlog.json",
-    "state": ".claude/state.json",
-    "log": ".claude/work.log",
-    "output": ".claude/output",
-    "halt": ".claude/HALT",
-    "lock": ".claude/runner.lock",
-    "events": ".claude/events.jsonl"
+    "backlog": ".forger/backlog.json",
+    "state": ".forger/state.json",
+    "log": ".forger/work.log",
+    "output": ".forger/output",
+    "halt": ".forger/HALT",
+    "lock": ".forger/runner.lock",
+    "events": ".forger/events.jsonl"
   },
   "skills": {},
   "tracker": { "kind": "github", "label": "ready-for-agent", "ignore": ["wayfinder:*"] }

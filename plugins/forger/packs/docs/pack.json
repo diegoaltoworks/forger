@@ -4,7 +4,7 @@
   "description": "Docs as Markdown in the repo: every concept drawn, the glossary as the vocabulary, links and diagrams that cannot quietly rot.",
   "detect": [],
   "files": [
-    {"source": "files/docs.md", "target": ".claude/opinions/docs.md"}
+    {"source": "files/docs.md", "target": ".forger/opinions/docs.md"}
   ],
   "opinions": [
     {"id": "docs.markdown-in-repo", "rung": "rule", "summary": "Docs are Markdown in the repository, reviewed and versioned with the code they describe.", "check": null},

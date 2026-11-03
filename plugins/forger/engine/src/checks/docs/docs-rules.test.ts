@@ -107,7 +107,7 @@ describe('model-agnostic', () => {
   ])('flags %s', (line, found) => {
     expect(modelNames(names)(line)).toEqual(found);
   });
-  test.each(['see .claude/process.md', 'a worker on the deep tier', 'the opus-like path', 'src/claude/x.ts', 'opuscule'])(
+  test.each(['see .forger/process.md', 'a worker on the deep tier', 'the opus-like path', 'src/claude/x.ts', 'opuscule'])(
     'does not flag %s',
     line => {
       expect(modelNames(names)(line)).toEqual([]);

@@ -49,5 +49,5 @@ A named, versioned set of opinions with the files and checks that carry them, in
 _Avoid_: bundle, module
 
 **Lock**:
-`.claude/forger.lock.json`: each installed pack's id and version and the hash of every file as it was installed. Written by `setup`, never by hand.
+`.forger/forger.lock.json`: each installed pack's id and version and the hash of every file as it was installed. Written by `setup`, never by hand.
 _Avoid_: manifest (that is the pack's own file)

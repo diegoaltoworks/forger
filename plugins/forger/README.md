@@ -2,7 +2,8 @@
 
 A plugin that implements backlog tickets one at a time, unattended,
 with a human-facing supervisor and an interactive planner. The engine is generic;
-everything project-specific lives in the consumer repo's `.claude/`.
+everything project-specific lives in the consumer repo's `.forger/`, a folder forger owns,
+so no harness's own settings are mixed with it.
 
 Forger carries its own steps for planning, test-first implementation, review and
 diagnosis; it depends on no other skill collection, and any installed skill can
@@ -23,7 +24,7 @@ typing `/forger` in the harness surfaces the set.
 
 | Command | Role |
 |---|---|
-| `/forger:setup` | **Onboarding** - scaffold `.claude/`, pick the tracker, and create the intake label. Idempotent; never overwrites. |
+| `/forger:setup` | **Onboarding** - scaffold `.forger/`, pick the tracker, and create the intake label. Idempotent; never overwrites. |
 | `/forger:plan` | **Interactive planner** - grounds itself in the repo, scopes the session, interviews you in rounds, then crystallises a plan doc, tracker issues and queued tickets. Needs a human to answer. |
 | `/forger:work` | **Supervisor** - start (or attach to) the loop, watch it, report on completion or halt. Idempotent: "start it, or show me where it's at." Never implements. |
 
@@ -119,7 +120,7 @@ judgement work are named **skill slots**, and each has a built-in forger step:
 | `diagnose` | `auto-ticket` | reproduce the red gate, one hypothesis, test it |
 | `merge_conflicts` | `auto-ticket` | resolve by hand, re-run the gates |
 
-Map a slot to a skill in the `skills` section of `.claude/workloop.config.json`:
+Map a slot to a skill in the `skills` section of `.forger/workloop.config.json`:
 
 ```json
 { "skills": { "review": "some-collection:code-review" } }
@@ -146,14 +147,18 @@ grey-box wireframe in `docs/design/<ticket>/`, captured with
 
 Forger's decisions live in tools, so the model and the harness are adapters (see
 principle 0a in [`docs/01-principles.md`](../../docs/01-principles.md)). Today
-there is one of each, named here and nowhere else in the prose:
+there is one model mapping and two harnesses, named here and nowhere else in the prose:
 
 - **Agent adapter.** The engine spawns workers through the `AgentRunner`
-  interface. The shipped adapter runs Claude Code's headless `claude` CLI, mapping
+  interface, built from a `Harness`. The default harness runs Claude Code's headless `claude` CLI, mapping
   the role a ticket is given (`fast`, `standard`, `deep`) to the model id set
   under `models` in the config.
-- **Command format.** The commands and the plugin manifest use Claude Code's
-  plugin format. Another harness needs its own packaging of the same steps.
+- **Harness.** What differs between agent tools sits behind the `Harness` seam: how the worker is spawned
+  headless, where its commands are installed, and the variable that holds the plugin root. Set `harness`
+  in the config (`claude`, the default, or `opencode`). `setup --harness opencode` writes the packaged
+  commands to `.opencode/commands/`. The steps exist once, in `commands/`; an adapter repackages them
+  (frontmatter, plugin root) and never copies their text per harness. OpenCode takes a model as
+  `provider/model` and has no spend cap, so map the roles under `models` to such ids.
 
 ## Install and update
 
@@ -172,7 +177,8 @@ claude plugin marketplace update forger
 claude plugin update forger@forger
 ```
 
-Already-onboarded repos keep their `.claude/` files. An old config without a
+Already-onboarded repos keep working with their files in `.claude/` (the legacy layout):
+every command prints one warning naming `migrate`, which moves them to `.forger/`. An old config without a
 `tracker` section gets the GitHub default on merge; set `tracker.kind` to
 `local` or `none` in repos that should stay off GitHub Issues, and run
 `gh label create ready-for-agent` in repos that opt in.
@@ -185,17 +191,17 @@ Already-onboarded repos keep their `.claude/` files. An old config without a
 
 ## Onboard a repo
 
-Run `/forger:setup`. It copies the templates into `.claude/` (never
+Run `/forger:setup`. It copies the templates into `.forger/` (never
 overwriting), asks for the gates command and base branch, decides the tracker,
 creates the `ready-for-agent` label, and gitignores the per-run state.
 
-Then fill in `.claude/process.md` - the project's rules and **gotchas**. The
+Then fill in `.forger/process.md` - the project's rules and **gotchas**. The
 worker treats these as enforced. Run `/forger:plan` to generate the
 first tickets, and `/forger:work` to start.
 
 The copy is a tested command: `bun "$CLAUDE_PLUGIN_ROOT/bin/work.ts" setup --json
-[--gates CMD] [--base-branch B] [--tracker KIND] [--preset NAME] [--packs A,B]`. It installs the
-chosen opinion packs (default `base`), records them in `.claude/forger.lock.json`, and writes `.claude/` files
+[--gates CMD] [--base-branch B] [--tracker KIND] [--preset NAME] [--packs A,B] [--harness H]`. It installs the
+chosen opinion packs (default `base`), records them in `.forger/forger.lock.json`, and writes `.forger/` files
 only where they are absent, installs the default `process.md`, the ticket, PR,
 work order, report, retro and rule templates, adds the docs check to the gates
 and gitignores the per-run state. Create the label with
@@ -203,11 +209,12 @@ and gitignores the per-run state. Create the label with
 
 ## Configuration
 
-`.claude/workloop.config.json` (any field omitted falls back to the default):
+`.forger/workloop.config.json` (any field omitted falls back to the default):
 
 | Field | Meaning |
 |---|---|
 | `repo` | If set, only tickets with this `repo` (or none) are worked here. `null` = no filter. |
+| `harness` | The harness that runs the worker: `claude` (default) or `opencode`. |
 | `worker_command` | Slash command the engine invokes per iteration. Default `forger:auto-ticket`. |
 | `gates` | The quality-gate command; surfaced to the worker. |
 | `base_branch` | Branch an iteration must land on. Merge verification checks HEAD against it. |
@@ -215,7 +222,7 @@ and gitignores the per-run state. Create the label with
 | `model_by_priority` | Role + USD budget per priority (`P0`, `default`, and any others). A tier naming something that is not a role is taken as a literal model id, so an older config keeps working. |
 | `effort_multiplier` | Budget multiplier by ticket `effort` (`small`/`medium`/`large`/...). |
 | `limits` | `timeoutMinutes`, `killGraceSeconds` (SIGTERM to SIGKILL on timeout), `maxConsecutiveFailures`, `pauseBetweenIterations`, `pauseAfterFailure`, `maxStallIterations`. |
-| `paths` | Where the backlog, state, log, output dir, HALT file, engine lock and terminal-event file live. |
+| `paths` | Where the backlog, state, log, output dir, HALT file, engine lock, terminal-event file and `process.md` live. Default under `.forger/`. |
 | `local_only` | Paths that stay modified in a checkout without being the worker's doing (local settings, a work order). The dirty-tree check skips them and the engine's own files (`paths`); a directory covers what is under it. Default none. |
 | `model_names` | Model and vendor names `check docs` flags in prose, as whole words, case-insensitively. Default a list of common ones. |
 | `skills` | Skill slot -> installed skill name (see Bring your own skills). Default none: every slot uses its built-in step. |
@@ -224,17 +231,18 @@ and gitignores the per-run state. Create the label with
 ## How the engine runs
 
 The commands invoke the engine at `${CLAUDE_PLUGIN_ROOT}/bin/work.ts`, always
-from the consumer repo root so it finds `.claude/`:
+from the consumer repo root so it finds `.forger/`:
 
 ```
 bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts run --continuous   # the loop
 bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts status [--json]      # where it's at: runner pid and liveness, halt, counters, current ticket, next pick
 bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts backlog --json     # workable tickets, remaining, next pick
 bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts skills [--json] [--presets]  # each skill slot's configured skill, whether installed, and the built-in fallback; --presets lists offered presets
+bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts migrate [--json]      # move a legacy .claude/ layout to .forger/ (git mv where tracked; refuses while an engine holds the lock; safe to repeat)
 bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts packs [--json]        # available packs and which are installed
 bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts opinions [--json]     # installed opinions: pack, rung, enforcing check
-bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts check [--json]       # every check the installed packs declare, with .claude/waivers.json applied; non-zero on an unwaived violation
-bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts check arch [--json]  # with the architecture pack: imports that cross a forbidden edge of .claude/architecture.json
+bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts check [--json]       # every check the installed packs declare, with .forger/waivers.json applied; non-zero on an unwaived violation
+bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts check arch [--json]  # with the architecture pack: imports that cross a forbidden edge of .forger/architecture.json
 bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts check decisions [--json]  # with the architecture pack: a new dependency or layer-map change needs an ADR in the diff
 bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts check safety [--json]  # with the safety pack: added secrets and env files, and stored-shape changes with no test
 bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts check tests [--json]  # with the testing pack: a fix: commit needs a test change; unit tests may not import network or process modules
@@ -297,7 +305,7 @@ bun run typecheck # tsc --noEmit
 Layout - the source is one folder per domain, and the layer is in the path:
 the pure core, `adapters/` for the side effects the core is handed, and `cli/`
 which wires them together. `check arch` enforces the dependency rule through
-`.claude/architecture.json`. Start at [`engine/src/README.md`](engine/src/README.md)
+`.forger/architecture.json`. Start at [`engine/src/README.md`](engine/src/README.md)
 for the folder map; each folder's README says what it owns, which files are
 pure, and what it may import. `bin/work.ts` is the stable entry the plugin
 commands call.
@@ -305,5 +313,5 @@ commands call.
 ## Safety
 
 The worker runs headless with `--dangerously-skip-permissions`. Keep the repo's
-data-safety and write-scope rules in `.claude/process.md` explicit and enforced
+data-safety and write-scope rules in `.forger/process.md` explicit and enforced
 by tests, not convention - the loop will do exactly what the backlog tells it to.

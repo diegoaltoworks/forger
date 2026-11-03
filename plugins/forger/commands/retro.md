@@ -23,7 +23,7 @@ words, or the failure, with its date and where it was seen. Do not paraphrase.
 - `work measure --json [--last N]`: runs and failures by cause, terminal events,
   and time, budget cap and CI rounds per ticket. Compare the ticket in question
   with the rest before blaming it.
-- For a failure, build the timeline in `.claude/templates/retro.md` from the
+- For a failure, build the timeline in `.forger/templates/retro.md` from the
   worker's session transcript and CI's logs. Name each layer (worker, skill,
   engine, platform) and do not stop at the first plausible cause.
 - For friction, list every place it recurred.
@@ -31,13 +31,13 @@ words, or the failure, with its date and where it was seen. Do not paraphrase.
 ## 3. Choose the form
 
 Pick the cheapest rung on the ladder in `docs/05-refining-the-process.md` that
-will actually be followed. Search for an existing rule first (`.claude/rules/`,
-`.claude/process.md`); update it rather than adding a second.
+will actually be followed. Search for an existing rule first (`.forger/rules/`,
+`.forger/process.md`); update it rather than adding a second.
 
 ## 4. Write it
 
 - A rule record: `work retro rule --name <slug> --description <line> --type <feedback|project|user|reference> --rule <text> --owner "<verbatim words>" --date <YYYY-MM-DD> --why <text> --how <text> [--enforced-by <what>]`.
-  It writes `.claude/rules/<slug>.md` in the shape of `.claude/templates/rule.md`.
+  It writes `.forger/rules/<slug>.md` in the shape of `.forger/templates/rule.md`.
 - A process rule, template section or check: edit the project's own installed
   files. A check is a ticket, not prose.
 - Never write a measure into a durable doc; name the command.

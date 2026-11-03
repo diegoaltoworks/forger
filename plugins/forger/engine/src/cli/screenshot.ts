@@ -5,6 +5,7 @@ import {playwrightScreenshotter, shellAppServer, staticAppServer} from '../adapt
 import {UiInfrastructureError} from '../ports';
 import {UI_PATH, UiConfigError, WireframeError, parseUiConfig, runScreenshots, wireframePlan} from '../ui';
 import type {Command} from './command';
+import {forgerPath} from '../config';
 
 async function freePort(): Promise<number> {
   const probe = Bun.serve({port: 0, hostname: '127.0.0.1', fetch: () => new Response('')});
@@ -27,7 +28,7 @@ export const screenshot: Command = {
       console.error(values.json ? JSON.stringify({ok: false, infrastructure, error: message}) : message);
       process.exitCode = code;
     };
-    const path = join(projectRoot, UI_PATH);
+    const path = forgerPath(projectRoot, UI_PATH);
     if (!existsSync(path)) return fail(`${UI_PATH} not found; install the ui pack with setup`, 1, false);
     try {
       const config = parseUiConfig(readFileSync(path, 'utf-8'));

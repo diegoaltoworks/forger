@@ -18,7 +18,7 @@ show me where it's already at."
 
 ## 0. Locate the config
 
-Read `.claude/workloop.config.json` in the current repo. If it is missing, tell
+Read `.forger/workloop.config.json` in the current repo. If it is missing, tell
 the user this repo is not set up yet and point them at `/forger:setup` - then
 stop. Every command below runs from the repo root as
 `bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts <command>`; call it `work` here.

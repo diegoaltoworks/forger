@@ -16,16 +16,16 @@ implement.
 ## Environment
 
 
-The tracker settings are in `.claude/workloop.config.json`; its conventions are in
-`.claude/process.md`.
+The tracker settings are in `.forger/workloop.config.json`; its conventions are in
+`.forger/process.md`.
 
 ## Read first
-1. `.claude/process.md` - the ticket shape, the gotchas, the tracker rules
-2. `.claude/workloop.config.json` - `repo`, `tracker`, paths
+1. `.forger/process.md` - the ticket shape, the gotchas, the tracker rules
+2. `.forger/workloop.config.json` - `repo`, `tracker`, paths
 3. `GLOSSARY.md` and `docs/adr/` if present - write tickets in the glossary's
    vocabulary and respect the ADRs in the area you touch
-4. `.claude/backlog.json` - what already exists, so you do not duplicate it
-5. `.claude/human.md` - known blockers
+4. `.forger/backlog.json` - what already exists, so you do not duplicate it
+5. `.forger/human.md` - known blockers
 6. The source (next section)
 
 ## The source
@@ -88,13 +88,13 @@ Record each number on its ticket as `issue`. **Check for duplicates by title
 first.** `local` or `none`: skip this step.
 
 ### 4. Add them to the backlog
-Add every ticket to `backlog.json` `features`. Update `.claude/backlog.md` with a
+Add every ticket to `backlog.json` `features`. Update `.forger/backlog.md` with a
 human summary grouped by priority.
 
 ### 5. Commit
 One commit touching only the backlog and docs:
 ```
-git add .claude/backlog.json .claude/backlog.md docs/
+git add .forger/backlog.json .forger/backlog.md docs/
 git commit -m "Queue <theme>: <short list of items>"
 git push
 ```

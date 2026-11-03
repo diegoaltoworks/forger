@@ -1,18 +1,17 @@
 /**
- * CLI entry. Finds the consumer repo root (nearest ancestor with a .claude
- * directory), loads its config, and dispatches to the command named on the
+ * CLI entry. Finds the consumer repo root (nearest ancestor holding forger's
+ * folder), loads its config, and dispatches to the command named on the
  * command line. This is the composition root: the only place the real command
  * runner and agent spawn are handed to the core.
  */
 
-import {existsSync} from 'fs';
 import {homedir} from 'os';
-import {dirname, join, resolve} from 'path';
+import {dirname, resolve} from 'path';
 import {parseArgs} from 'util';
 
-import {execRunner, claudeAgent} from '../adapters';
+import {agentFor, execRunner, findHarness} from '../adapters';
 import type {Backlog} from '../backlog';
-import {loadConfig, type WorkloopConfig} from '../config';
+import {detectLayout, isProjectRoot, legacyWarning, loadConfig, type WorkloopConfig} from '../config';
 import {AutomationRunner} from '../loop';
 import {listInstalledSkills} from '../packs';
 import {STAGES, type CliDeps, type CommandContext, type Stage} from './command';
@@ -20,14 +19,14 @@ import {FLAGS} from './flags';
 import {openBacklog} from './open-backlog';
 import {findCommand, renderHelp} from './registry';
 
-/** Nearest ancestor directory containing a `.claude` folder. */
+/** Nearest ancestor directory holding forger's folder (or the legacy one). */
 export function findProjectRoot(start: string = process.cwd()): string {
   let dir = start;
   while (dir !== dirname(dir)) {
-    if (existsSync(join(dir, '.claude'))) return dir;
+    if (isProjectRoot(dir)) return dir;
     dir = dirname(dir);
   }
-  throw new Error('Could not find a .claude directory in this or any parent directory');
+  throw new Error('Could not find a .forger directory in this or any parent directory');
 }
 
 function contextFor(base: Pick<CommandContext, 'values' | 'positionals' | 'deps' | 'pluginRoot' | 'installedSkills'>): CommandContext {
@@ -42,13 +41,18 @@ function contextFor(base: Pick<CommandContext, 'values' | 'positionals' | 'deps'
       return (root ??= findProjectRoot());
     },
     get config() {
-      return (config ??= loadConfig(ctx.projectRoot));
+      if (!config) {
+        const warning = legacyWarning(detectLayout(ctx.projectRoot));
+        if (warning) console.error(warning);
+        config = loadConfig(ctx.projectRoot);
+      }
+      return config;
     },
     get backlog() {
       return (backlog ??= openBacklog(ctx.projectRoot, ctx.config, base.deps.run));
     },
     get runner() {
-      return (runner ??= new AutomationRunner(ctx.projectRoot, ctx.config, ctx.backlog, {gitRunner: execRunner(ctx.projectRoot), agent: claudeAgent}));
+      return (runner ??= new AutomationRunner(ctx.projectRoot, ctx.config, ctx.backlog, {gitRunner: execRunner(ctx.projectRoot), agent: agentFor(findHarness(ctx.config.harness))}));
     },
   };
   return ctx;

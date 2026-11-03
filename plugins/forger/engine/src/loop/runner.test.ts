@@ -85,7 +85,7 @@ function runnerWith(
 }
 
 function readState(root: string) {
-  return JSON.parse(readFileSync(join(root, '.claude', 'state.json'), 'utf-8'));
+  return JSON.parse(readFileSync(join(root, '.forger', 'state.json'), 'utf-8'));
 }
 
 const done: BacklogData = {
@@ -96,7 +96,7 @@ const done: BacklogData = {
 };
 
 function iterationLog(root: string, n: number): string {
-  return readFileSync(join(root, '.claude', 'output', `iteration-${n}.log`), 'utf-8');
+  return readFileSync(join(root, '.forger', 'output', `iteration-${n}.log`), 'utf-8');
 }
 
 describe('AutomationRunner iteration log', () => {
@@ -166,7 +166,7 @@ describe('AutomationRunner outcome from facts', () => {
   test('a timed-out run whose PR merged is a success and resets the failure counter', async () => {
     const {runner, root} = runnerWith(timedOut, {merge: true, branch: 'feat/the_ticket'}, done);
     writeFileSync(
-      join(root, '.claude', 'state.json'),
+      join(root, '.forger', 'state.json'),
       JSON.stringify({...defaultState(), consecutive_failures: 2, stall_count: 1})
     );
 
@@ -201,7 +201,7 @@ describe('AutomationRunner outcome from facts', () => {
     expect(state.completed_tasks).toEqual([]);
     expect(state.stall_count).toBe(1);
     expect(state.last_error).toContain('"the_ticket" reads completed in the backlog but nothing merged');
-    expect(existsSync(join(root, '.claude', 'HALT'))).toBe(true);
+    expect(existsSync(join(root, '.forger', 'HALT'))).toBe(true);
   });
 
   test('a merge on failing checks halts as merged_red and never counts as completed', async () => {
@@ -215,8 +215,8 @@ describe('AutomationRunner outcome from facts', () => {
     expect(state.status).toBe('halted');
     expect(state.completed_tasks).toEqual([]);
     expect(state.last_error).toBe('PR #75 merged into main with failing check: gates. main may be red; fix it before more work lands.');
-    expect(existsSync(join(root, '.claude', 'HALT'))).toBe(true);
-    const events = readFileSync(join(root, '.claude', 'events.jsonl'), 'utf-8').trim().split('\n').map(l => JSON.parse(l));
+    expect(existsSync(join(root, '.forger', 'HALT'))).toBe(true);
+    const events = readFileSync(join(root, '.forger', 'events.jsonl'), 'utf-8').trim().split('\n').map(l => JSON.parse(l));
     expect(events.map(e => e.event)).toEqual(['merged_red']);
   });
 
@@ -233,10 +233,10 @@ describe('AutomationRunner outcome from facts', () => {
   test('stalls by merges: runs without a merge halt the loop', async () => {
     const {runner, root} = runnerWith({exitCode: 1, signal: null, output: '', timedOut: false});
     await runner.runIteration(1);
-    expect(existsSync(join(root, '.claude', 'HALT'))).toBe(false);
+    expect(existsSync(join(root, '.forger', 'HALT'))).toBe(false);
     await runner.runIteration(2);
     expect(readState(root).last_error).toBe('Stalled: nothing merged in 2 iterations');
-    expect(existsSync(join(root, '.claude', 'HALT'))).toBe(true);
+    expect(existsSync(join(root, '.forger', 'HALT'))).toBe(true);
   });
 
   test('a branch naming no backlog ticket leaves the run held to the engine pick', async () => {
@@ -258,7 +258,7 @@ describe('AutomationRunner outcome from facts', () => {
     expect(await runner.runIteration(1)).toBe(true);
     const log = iterationLog(root, 1);
     expect(log).toContain('ticket: other\nengine pick: the_ticket\n');
-    expect(readFileSync(join(root, '.claude', 'work.log'), 'utf-8')).toContain(
+    expect(readFileSync(join(root, '.forger', 'work.log'), 'utf-8')).toContain(
       'Worker took other (engine picked the_ticket)'
     );
     expect(readState(root).completed_tasks).toEqual(['other']);
@@ -279,7 +279,7 @@ describe('AutomationRunner infrastructure errors and resume', () => {
     expect(state.consecutive_failures).toBe(0);
     expect(state.failed_iterations).toBe(0);
     expect(state.last_error).toContain('billing');
-    expect(existsSync(join(root, '.claude', 'HALT'))).toBe(true);
+    expect(existsSync(join(root, '.forger', 'HALT'))).toBe(true);
   });
 
   test('resume zeroes the failure and stall counters', async () => {
@@ -292,14 +292,14 @@ describe('AutomationRunner infrastructure errors and resume', () => {
     expect(state.consecutive_failures).toBe(0);
     expect(state.stall_count).toBe(0);
     expect(state.status).toBe('ready');
-    expect(existsSync(join(root, '.claude', 'HALT'))).toBe(false);
+    expect(existsSync(join(root, '.forger', 'HALT'))).toBe(false);
   });
 
   test('resume clears counters even when no HALT file was left', () => {
     const {runner, root} = runnerWith({exitCode: 1, signal: null, output: '', timedOut: false});
-    mkdirSync(join(root, '.claude'), {recursive: true});
+    mkdirSync(join(root, '.forger'), {recursive: true});
     writeFileSync(
-      join(root, '.claude', 'state.json'),
+      join(root, '.forger', 'state.json'),
       JSON.stringify({...defaultState(), consecutive_failures: 3, stall_count: 4})
     );
     runner.clearHalt();
@@ -318,7 +318,7 @@ describe('AutomationRunner infrastructure errors and resume', () => {
   test('a stale stall count does not survive a fresh start', async () => {
     const {root} = runnerWith({exitCode: 1, signal: null, output: '', timedOut: false});
     writeFileSync(
-      join(root, '.claude', 'state.json'),
+      join(root, '.forger', 'state.json'),
       JSON.stringify({...defaultState(), stall_count: 4})
     );
     const config = mergeConfig({
@@ -330,12 +330,12 @@ describe('AutomationRunner infrastructure errors and resume', () => {
     });
     await runner.run(1);
     expect(readState(root).stall_count).toBe(0);
-    expect(existsSync(join(root, '.claude', 'HALT'))).toBe(false);
+    expect(existsSync(join(root, '.forger', 'HALT'))).toBe(false);
   });
 });
 
 function eventsOf(root: string): {event: string; reason: string | null; ticket: string | null}[] {
-  const f = join(root, '.claude', 'events.jsonl');
+  const f = join(root, '.forger', 'events.jsonl');
   if (!existsSync(f)) return [];
   return readFileSync(f, 'utf-8').trimEnd().split('\n').map(l => JSON.parse(l));
 }
@@ -356,7 +356,7 @@ describe('AutomationRunner single runner', () => {
 
   test('refuses while a live runner holds the lock, and starts nothing', async () => {
     const {root} = runnerWith(fail);
-    writeFileSync(join(root, '.claude', 'runner.lock'), '4242');
+    writeFileSync(join(root, '.forger', 'runner.lock'), '4242');
     let spawned = 0;
     const runner = runnerIn(root, {
       isAlive: (p: number) => p === 4242,
@@ -367,21 +367,21 @@ describe('AutomationRunner single runner', () => {
     });
     expect(await runner.run(1)).toBe(false);
     expect(spawned).toBe(0);
-    expect(readFileSync(join(root, '.claude', 'runner.lock'), 'utf-8')).toBe('4242');
+    expect(readFileSync(join(root, '.forger', 'runner.lock'), 'utf-8')).toBe('4242');
   });
 
   test('takes over a lock with a dead pid, and releases its own when done', async () => {
     const {root} = runnerWith(fail);
-    writeFileSync(join(root, '.claude', 'runner.lock'), '4242');
+    writeFileSync(join(root, '.forger', 'runner.lock'), '4242');
     const runner = runnerIn(root, {isAlive: () => false, pid: 17});
     expect(await runner.run(1)).toBe(true);
-    expect(existsSync(join(root, '.claude', 'runner.lock'))).toBe(false);
+    expect(existsSync(join(root, '.forger', 'runner.lock'))).toBe(false);
   });
 
   test('closes out an iteration a dead runner left open from git facts', async () => {
     const {root} = runnerWith(fail);
     writeFileSync(
-      join(root, '.claude', 'state.json'),
+      join(root, '.forger', 'state.json'),
       JSON.stringify({
         ...defaultState(),
         iteration: 4,
@@ -419,7 +419,7 @@ describe('AutomationRunner single runner', () => {
   test('an orphan with nothing merged counts as a failure, not as progress', async () => {
     const {root} = runnerWith(fail);
     writeFileSync(
-      join(root, '.claude', 'state.json'),
+      join(root, '.forger', 'state.json'),
       JSON.stringify({...defaultState(), iteration: 4, status: 'running', current_task: 'the_ticket'})
     );
     const runner = runnerIn(root, {});
@@ -457,7 +457,7 @@ describe('AutomationRunner single runner', () => {
 
     const c = runnerWith(fail);
     writeFileSync(
-      join(c.root, '.claude', 'state.json'),
+      join(c.root, '.forger', 'state.json'),
       JSON.stringify({...defaultState(), consecutive_failures: 3})
     );
     await runnerIn(c.root, {}).run(1);
@@ -470,7 +470,7 @@ describe('AutomationRunner single runner', () => {
 
   test('statusReport carries the lock holder, current ticket and next pick', () => {
     const {root} = runnerWith(fail);
-    writeFileSync(join(root, '.claude', 'runner.lock'), '4242');
+    writeFileSync(join(root, '.forger', 'runner.lock'), '4242');
     const runner = runnerIn(root, {isAlive: (p: number) => p === 4242});
     const r = runner.statusReport();
     expect(r.runner).toEqual({pid: 4242, alive: true});

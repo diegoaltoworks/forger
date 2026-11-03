@@ -7,7 +7,7 @@
 
 import {globToRegExp, type Finding} from '../waivers';
 
-export const TESTING_PATH = '.claude/testing.json';
+export const TESTING_PATH = '.forger/testing.json';
 export const FIX_OPINION = 'testing.fix-with-test';
 export const NO_NETWORK_OPINION = 'testing.no-network';
 export const COVERAGE_OPINION = 'testing.coverage-ratchet';

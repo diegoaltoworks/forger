@@ -8,7 +8,7 @@
 
 import {globToRegExp, type Finding} from '../waivers';
 
-export const SAFETY_PATH = '.claude/safety.json';
+export const SAFETY_PATH = '.forger/safety.json';
 export const SECRETS_OPINION = 'safety.secrets';
 export const DATA_FORWARD_OPINION = 'safety.data-forward';
 

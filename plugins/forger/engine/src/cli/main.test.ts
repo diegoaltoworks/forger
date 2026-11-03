@@ -19,9 +19,9 @@ function projectWith(
 ): string {
   const root = realpathSync(mkdtempSync(join(tmpdir(), 'forger-cli-')));
   dirs.push(root);
-  mkdirSync(join(root, '.claude'));
-  writeFileSync(join(root, '.claude', 'backlog.json'), JSON.stringify({features}));
-  writeFileSync(join(root, '.claude', 'workloop.config.json'), JSON.stringify({tracker}));
+  mkdirSync(join(root, '.forger'));
+  writeFileSync(join(root, '.forger', 'backlog.json'), JSON.stringify({features}));
+  writeFileSync(join(root, '.forger', 'workloop.config.json'), JSON.stringify({tracker}));
   return root;
 }
 
@@ -140,7 +140,7 @@ describe('check docs', () => {
 describe('check decisions', () => {
   test('fails on a layer map change with no ADR; an ADR in the diff passes', async () => {
     process.chdir(projectWith({}));
-    const run = (extra: string): CommandRunner => cmd => (cmd.startsWith('git merge-base') ? 'abc' : cmd.startsWith('git diff') ? `M\t.claude/architecture.json${extra}` : '');
+    const run = (extra: string): CommandRunner => cmd => (cmd.startsWith('git merge-base') ? 'abc' : cmd.startsWith('git diff') ? `M\t.forger/architecture.json${extra}` : '');
     const bad = await capture(['check', 'decisions', '--json'], run(''));
     expect(JSON.parse(bad).map((f: {rule: string}) => f.rule)).toEqual(['layer-map-without-adr']);
     expect(process.exitCode).toBe(1);
@@ -153,7 +153,7 @@ describe('check safety', () => {
   test('fails on an added env file and passes on a clean branch', async () => {
     const root = projectWith({});
     process.chdir(root);
-    writeFileSync(join(root, '.claude', 'safety.json'), '{"migration_paths":["db/**"],"data_test_paths":["tests/**"]}');
+    writeFileSync(join(root, '.forger', 'safety.json'), '{"migration_paths":["db/**"],"data_test_paths":["tests/**"]}');
     writeFileSync(join(root, '.env'), 'A=1\n');
     const run = (untracked: string): CommandRunner => cmd => (cmd.startsWith('git merge-base') ? 'abc' : cmd.startsWith('git ls-files') ? untracked : '');
     const bad = await capture(['check', 'safety', '--json'], run('.env'));
@@ -168,7 +168,7 @@ describe('check coverage', () => {
   const setup = () => {
     const root = projectWith({});
     process.chdir(root);
-    writeFileSync(join(root, '.claude', 'testing.json'), JSON.stringify({test_paths: ['**/*.test.ts'], integration_paths: ['e2e/**'], network_modules: ['http'], coverage_report: 'lcov.info', coverage_baseline: 'base.json'}));
+    writeFileSync(join(root, '.forger', 'testing.json'), JSON.stringify({test_paths: ['**/*.test.ts'], integration_paths: ['e2e/**'], network_modules: ['http'], coverage_report: 'lcov.info', coverage_baseline: 'base.json'}));
     writeFileSync(join(root, 'lcov.info'), 'LF:10\nLH:9\n');
     return root;
   };
@@ -190,7 +190,7 @@ describe('check tests', () => {
   test('fails a fix commit with no test change', async () => {
     const root = projectWith({});
     process.chdir(root);
-    writeFileSync(join(root, '.claude', 'testing.json'), JSON.stringify({test_paths: ['**/*.test.ts'], integration_paths: ['e2e/**'], network_modules: ['http'], coverage_report: 'lcov.info', coverage_baseline: 'base.json'}));
+    writeFileSync(join(root, '.forger', 'testing.json'), JSON.stringify({test_paths: ['**/*.test.ts'], integration_paths: ['e2e/**'], network_modules: ['http'], coverage_report: 'lcov.info', coverage_baseline: 'base.json'}));
     const run: CommandRunner = cmd => (cmd.startsWith('git merge-base') ? 'abc' : cmd.startsWith('git log') ? 'fix: a' : '');
     const out = JSON.parse(await capture(['check', 'tests', '--json'], run));
     expect(out.map((f: {rule: string}) => f.rule)).toEqual(['fix-without-test']);
@@ -207,7 +207,7 @@ describe('check arch', () => {
     process.chdir(root);
     mkdirSync(join(root, 'core'));
     mkdirSync(join(root, 'shell'));
-    writeFileSync(join(root, '.claude', 'architecture.json'), map);
+    writeFileSync(join(root, '.forger', 'architecture.json'), map);
     writeFileSync(join(root, 'shell/s.ts'), '');
     writeFileSync(join(root, 'core/c.ts'), "import '../shell/s';");
     const bad = await capture(['check', 'arch', '--json'], () => 'core/c.ts\nshell/s.ts');
@@ -231,7 +231,7 @@ describe('check arch', () => {
 describe('check', () => {
   function installed(): string {
     const root = projectWith({});
-    writeFileSync(join(root, '.claude', 'forger.lock.json'), JSON.stringify({packs: [{id: 'base', version: '1.1.0', files: []}]}));
+    writeFileSync(join(root, '.forger', 'forger.lock.json'), JSON.stringify({packs: [{id: 'base', version: '1.1.0', files: []}]}));
     writeFileSync(join(root, 'a.md'), 'clean');
     process.chdir(root);
     return root;
@@ -271,7 +271,7 @@ describe('check', () => {
     const root = installed();
     writeFileSync(join(root, 'a.md'), 'bad \u2014');
     const waiver = {opinion: 'base.ascii-punctuation', path: 'a.md', reason: 'quoted source', approved_by: 'the owner'};
-    writeFileSync(join(root, '.claude', 'waivers.json'), JSON.stringify({waivers: [waiver]}));
+    writeFileSync(join(root, '.forger', 'waivers.json'), JSON.stringify({waivers: [waiver]}));
     const report = JSON.parse(await capture(['check', '--json'], () => 'a.md'));
     expect(report.ok).toBe(true);
     expect(report.results[0].status).toBe('waived');
@@ -281,7 +281,7 @@ describe('check', () => {
 
   test('a malformed waiver file is an error, not a waiver', async () => {
     const root = installed();
-    writeFileSync(join(root, '.claude', 'waivers.json'), JSON.stringify({waivers: [{opinion: 'x.y', path: 'a.md'}]}));
+    writeFileSync(join(root, '.forger', 'waivers.json'), JSON.stringify({waivers: [{opinion: 'x.y', path: 'a.md'}]}));
     const err = spyOn(console, 'error').mockImplementation(() => {});
     await capture(['check', '--json'], () => 'a.md');
     expect(err.mock.calls.join(' ')).toContain('reason');
@@ -307,7 +307,7 @@ describe('setup --json', () => {
     process.chdir(root);
     const first = JSON.parse(await capture(['setup', '--json', '--gates', 'make test', '--tracker', 'local']));
     expect(first.files.map((f: {action: string}) => f.action)).not.toContain('kept');
-    const config = JSON.parse(readFileSync(join(root, '.claude', 'workloop.config.json'), 'utf-8'));
+    const config = JSON.parse(readFileSync(join(root, '.forger', 'workloop.config.json'), 'utf-8'));
     expect(config.tracker.kind).toBe('local');
     const second = JSON.parse(await capture(['setup', '--json']));
     expect(second.files.map((f: {action: string}) => f.action)).not.toContain('written');
@@ -318,7 +318,7 @@ describe('skills --json', () => {
   test('resolves each slot from the config against the installed skills', async () => {
     const root = projectWith({});
     writeFileSync(
-      join(root, '.claude', 'workloop.config.json'),
+      join(root, '.forger', 'workloop.config.json'),
       JSON.stringify({tracker: {kind: 'local'}, skills: {review: 'c:review', diagnose: 'c:gone'}})
     );
     process.chdir(root);
@@ -340,11 +340,11 @@ describe('setup --preset', () => {
   test('writes the preset into the new config and offers it when installed', async () => {
     const root = realpathSync(mkdtempSync(join(tmpdir(), 'forger-cli-')));
     dirs.push(root);
-    mkdirSync(join(root, '.claude'));
+    mkdirSync(join(root, '.forger'));
     process.chdir(root);
     const out = JSON.parse(await capture(['setup', '--json', '--preset', 'mattpocock-skills'], undefined, () => ['mattpocock-skills:tdd']));
     expect(out.presets).toEqual(['mattpocock-skills']);
-    const config = JSON.parse(readFileSync(join(root, '.claude', 'workloop.config.json'), 'utf-8'));
+    const config = JSON.parse(readFileSync(join(root, '.forger', 'workloop.config.json'), 'utf-8'));
     expect(config.skills.review).toBe('mattpocock-skills:code-review');
   });
   test('an unknown preset fails without writing', async () => {
@@ -400,7 +400,7 @@ describe('supervisor commands', () => {
 
   test('orient surfaces a halt with the reason from the HALT file', async () => {
     const root = projectWith({a: {status: 'not_started'}});
-    writeFileSync(join(root, '.claude', 'HALT'), 'cut off before merge');
+    writeFileSync(join(root, '.forger', 'HALT'), 'cut off before merge');
     process.chdir(root);
     const out = JSON.parse(await capture(['orient', '--json'], () => 'main'));
     expect(out.action).toBe('surface_halt');
@@ -423,7 +423,7 @@ describe('supervisor commands', () => {
   test('events lists what the runner wrote', async () => {
     const root = projectWith({});
     writeFileSync(
-      join(root, '.claude', 'events.jsonl'),
+      join(root, '.forger', 'events.jsonl'),
       '{"event":"completed","at":"2000-01-01T00:00:00.000Z","iteration":1,"ticket":null,"reason":null}\n'
     );
     process.chdir(root);
@@ -435,12 +435,12 @@ describe('supervisor commands', () => {
 describe('measure and retro', () => {
   test('measure reads the logs, the work log and CI runs', async () => {
     const root = projectWith({});
-    mkdirSync(join(root, '.claude/output'));
+    mkdirSync(join(root, '.forger/output'));
     writeFileSync(
-      join(root, '.claude/output/iteration-1.log'),
+      join(root, '.forger/output/iteration-1.log'),
       '=== forger iteration 1 ===\nticket: alpha_ticket\nelapsed: 90s\noutcome: exited with code 0\n=== output ===\nok\n'
     );
-    writeFileSync(join(root, '.claude/work.log'), '[t] [INFO] Ticket: alpha_ticket [opus, $20]\n');
+    writeFileSync(join(root, '.forger/work.log'), '[t] [INFO] Ticket: alpha_ticket [opus, $20]\n');
     process.chdir(root);
     const run: CommandRunner = () => JSON.stringify([{headBranch: 'feat/alpha-ticket', event: 'pull_request'}]);
     const out = JSON.parse(await capture(['measure', '--json'], run));
@@ -456,14 +456,14 @@ describe('measure and retro', () => {
     expect(JSON.parse(await capture(['measure', '--json'], run)).runs.total).toBe(0);
   });
 
-  test('retro rule writes the record into .claude/rules', async () => {
+  test('retro rule writes the record into .forger/rules', async () => {
     const root = projectWith({});
     process.chdir(root);
     const out = await capture([
       'retro', 'rule', '--name', 'a-rule', '--description', 'd', '--type', 'feedback', '--rule', 'Do it.',
       '--owner', 'their words', '--date', '2026-11-03', '--why', 'because', '--how', 'always',
     ]);
-    expect(out).toBe('.claude/rules/a-rule.md');
+    expect(out).toBe('.forger/rules/a-rule.md');
     expect(readFileSync(join(root, out), 'utf-8')).toContain('Owner (2026-11-03): "their words"');
   });
 
@@ -524,7 +524,7 @@ describe('check ui', () => {
   test('fails a UI change with no screenshot; a screenshot in the diff passes', async () => {
     const root = projectWith({});
     process.chdir(root);
-    writeFileSync(join(root, '.claude', 'ui.json'), ui);
+    writeFileSync(join(root, '.forger', 'ui.json'), ui);
     const bad = await capture(['check', 'ui', '--json'], run('M\tsrc/App.tsx'));
     expect(JSON.parse(bad).map((f: {opinion: string}) => f.opinion)).toEqual(['ui.evidence']);
     expect(process.exitCode).toBe(1);
@@ -550,7 +550,7 @@ describe('screenshot', () => {
   test('--wireframe without the page asks for it as a config problem', async () => {
     const root = projectWith({});
     process.chdir(root);
-    writeFileSync(join(root, '.claude', 'ui.json'), JSON.stringify({paths: ['a'], start: 'x'}));
+    writeFileSync(join(root, '.forger', 'ui.json'), JSON.stringify({paths: ['a'], start: 'x'}));
     const err = spyOn(console, 'error').mockImplementation(() => {});
     try {
       await capture(['screenshot', '--json', '--wireframe', 'issue-9']);
@@ -567,7 +567,7 @@ describe('screenshot', () => {
     const root = projectWith({});
     process.chdir(root);
     const s = Bun.serve({port: 0, fetch: () => new Response('ok')});
-    writeFileSync(join(root, '.claude', 'ui.json'), JSON.stringify({paths: ['a'], start: 'sleep 30', url: `http://127.0.0.1:${s.port}`, ready_timeout: 10}));
+    writeFileSync(join(root, '.forger', 'ui.json'), JSON.stringify({paths: ['a'], start: 'sleep 30', url: `http://127.0.0.1:${s.port}`, ready_timeout: 10}));
     const err = spyOn(console, 'error').mockImplementation(() => {});
     try {
       await capture(['screenshot', '--json']);

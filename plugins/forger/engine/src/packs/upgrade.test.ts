@@ -43,7 +43,7 @@ function tmp(): string {
 
 const MANIFEST = (version: string, targets: string[]) => ({
   id: 'demo', version, description: 'd', detect: [], slots: [], checks: [], opinions: [],
-  files: targets.map(t => ({source: `files/${t}`, target: `.claude/${t}`})),
+  files: targets.map(t => ({source: `files/${t}`, target: `.forger/${t}`})),
 });
 
 function plugin(version: string, files: Record<string, string>): string {
@@ -59,13 +59,13 @@ describe('runUpgrade on a fixture repo', () => {
   test('one file of each kind produces exactly the expected writes', () => {
     const project = tmp();
     const old = {'take.md': 'old', 'keep.md': 'old', 'both.md': 'old', 'gone.md': 'old'};
-    mkdirSync(join(project, '.claude'), {recursive: true});
-    for (const [n, c] of Object.entries(old)) writeFileSync(join(project, '.claude', n), c);
-    writeFileSync(join(project, '.claude/keep.md'), 'mine');
-    writeFileSync(join(project, '.claude/both.md'), 'mine');
+    mkdirSync(join(project, '.forger'), {recursive: true});
+    for (const [n, c] of Object.entries(old)) writeFileSync(join(project, '.forger', n), c);
+    writeFileSync(join(project, '.forger/keep.md'), 'mine');
+    writeFileSync(join(project, '.forger/both.md'), 'mine');
     writeFileSync(
       join(project, LOCK_PATH),
-      JSON.stringify({packs: [{id: 'demo', version: '1.0.0', files: Object.entries(old).map(([n, c]) => ({path: `.claude/${n}`, sha256: sha256(c)}))}]})
+      JSON.stringify({packs: [{id: 'demo', version: '1.0.0', files: Object.entries(old).map(([n, c]) => ({path: `.forger/${n}`, sha256: sha256(c)}))}]})
     );
 
     const upgraded = plugin('1.1.0', {'take.md': 'new', 'keep.md': 'old', 'both.md': 'theirs', 'fresh.md': 'fresh'});
@@ -73,37 +73,37 @@ describe('runUpgrade on a fixture repo', () => {
 
     const actions = Object.fromEntries(result.files.map(f => [f.path, f.action]));
     expect(actions).toEqual({
-      '.claude/take.md': 'take-upstream',
-      '.claude/keep.md': 'keep',
-      '.claude/both.md': 'conflict',
-      '.claude/fresh.md': 'install',
-      '.claude/gone.md': 'removed',
+      '.forger/take.md': 'take-upstream',
+      '.forger/keep.md': 'keep',
+      '.forger/both.md': 'conflict',
+      '.forger/fresh.md': 'install',
+      '.forger/gone.md': 'removed',
     });
-    const read = (n: string) => readFileSync(join(project, '.claude', n), 'utf-8');
+    const read = (n: string) => readFileSync(join(project, '.forger', n), 'utf-8');
     expect(read('take.md')).toBe('new');
     expect(read('keep.md')).toBe('mine');
     expect(read('both.md')).toBe('mine');
     expect(read('both.md.upstream')).toBe('theirs');
     expect(read('fresh.md')).toBe('fresh');
     expect(read('gone.md')).toBe('old');
-    expect(existsSync(join(project, '.claude/keep.md.upstream'))).toBe(false);
-    expect(result.review.sort()).toEqual(['.claude/both.md', '.claude/gone.md']);
+    expect(existsSync(join(project, '.forger/keep.md.upstream'))).toBe(false);
+    expect(result.review.sort()).toEqual(['.forger/both.md', '.forger/gone.md']);
 
     const lock = JSON.parse(readFileSync(join(project, LOCK_PATH), 'utf-8'));
     expect(lock.packs[0].version).toBe('1.1.0');
     const hashes = Object.fromEntries(lock.packs[0].files.map((f: {path: string; sha256: string}) => [f.path, f.sha256]));
-    expect(hashes['.claude/take.md']).toBe(sha256('new'));
-    expect(hashes['.claude/fresh.md']).toBe(sha256('fresh'));
-    expect(hashes['.claude/keep.md']).toBe(sha256('old'));
-    expect(hashes['.claude/both.md']).toBe(sha256('old'));
-    expect(hashes['.claude/gone.md']).toBe(sha256('old'));
+    expect(hashes['.forger/take.md']).toBe(sha256('new'));
+    expect(hashes['.forger/fresh.md']).toBe(sha256('fresh'));
+    expect(hashes['.forger/keep.md']).toBe(sha256('old'));
+    expect(hashes['.forger/both.md']).toBe(sha256('old'));
+    expect(hashes['.forger/gone.md']).toBe(sha256('old'));
   });
 
   test('a second upgrade changes nothing', () => {
     const project = tmp();
-    mkdirSync(join(project, '.claude'), {recursive: true});
-    writeFileSync(join(project, '.claude/a.md'), 'old');
-    writeFileSync(join(project, LOCK_PATH), JSON.stringify({packs: [{id: 'demo', version: '1.0.0', files: [{path: '.claude/a.md', sha256: sha256('old')}]}]}));
+    mkdirSync(join(project, '.forger'), {recursive: true});
+    writeFileSync(join(project, '.forger/a.md'), 'old');
+    writeFileSync(join(project, LOCK_PATH), JSON.stringify({packs: [{id: 'demo', version: '1.0.0', files: [{path: '.forger/a.md', sha256: sha256('old')}]}]}));
     const p = plugin('1.1.0', {'a.md': 'new'});
     runUpgrade(project, p);
     const lockAfter = readFileSync(join(project, LOCK_PATH), 'utf-8');

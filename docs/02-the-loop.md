@@ -17,6 +17,12 @@ fix code itself, the fix belongs in a ticket.
 All per-repo. The engine is generic; everything project-specific lives in the
 consumer repository.
 
+They live in `.forger/`, a folder forger owns, so any harness can run the loop
+without its own settings being mixed with forger's. A repo set up when these
+lived in `.claude/` keeps working: each command prints one warning, and
+`migrate` moves the files. The harness that runs the worker is an adapter
+chosen by the `harness` config key (ADR 0009).
+
 | File | In git | Owner of writes | Purpose |
 |---|---|---|---|
 | `process.md` | yes | supervisor (by PR), workers (gotchas, by PR) | the per-repo brain: what the repo is, the gates, the rules, what the gates miss, the ticket shape |

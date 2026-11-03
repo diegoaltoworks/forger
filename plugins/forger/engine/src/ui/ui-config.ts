@@ -3,7 +3,7 @@
  * never a quiet default. Pure.
  */
 
-export const UI_PATH = '.claude/ui.json';
+export const UI_PATH = '.forger/ui.json';
 export const SCREENSHOT_DIR = 'docs/screenshots/';
 
 export interface Viewport {

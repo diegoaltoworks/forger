@@ -34,7 +34,7 @@ anyone remembering it, and the process is measured by commands, not claims.
 
 The gates a worker runs before it pushes are the gates CI runs on every push and
 pull request: the workflow's step is the `gates` command from
-`.claude/workloop.config.json`, verbatim, and a test fails if the two drift
+`.forger/workloop.config.json`, verbatim, and a test fails if the two drift
 apart. The job summary lists each check with the opinion ids it enforces,
 whether it passed, failed or was waived, and the waivers in force, so a reader
 sees which opinions hold, not just a green tick. The worker merges only through
@@ -66,7 +66,7 @@ Forger depends on no skill collection, and it incorporates any you install. The
 points where a model does judgement work (interview, glossary, test-first,
 review, diagnosis, merge conflicts) are named **skill slots**. Each has a
 built-in forger step, and you map an installed skill onto a slot in the `skills`
-section of `.claude/workloop.config.json`. The commands never name a skill: they
+section of `.forger/workloop.config.json`. The commands never name a skill: they
 ask `skills --json` what each slot resolves to, and fall back to the built-in
 step when a slot is unmapped or its skill is missing.
 

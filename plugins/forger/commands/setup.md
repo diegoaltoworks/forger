@@ -12,7 +12,7 @@ file the repo already has; report what exists and what you added.
 ## Environment
 
 - **Git remote:** !`git remote get-url origin 2>/dev/null || echo "no origin"`
-- **Existing `.claude/` files:** !`ls .claude 2>/dev/null || echo "none"`
+- **Existing `.forger/` files:** !`ls .forger 2>/dev/null || ls .claude 2>/dev/null || echo "none"`
 - **`gh` auth:** !`gh auth status >/dev/null 2>&1 && echo ok || echo "not authenticated"`
 - **Bun:** !`bun --version 2>/dev/null || echo "not on PATH"`
 
@@ -31,7 +31,7 @@ Then ask about skills. List the presets whose skill collection is installed:
 bun "${CLAUDE_PLUGIN_ROOT}/bin/work.ts" skills --presets --json
 ```
 For each one, offer to map it onto the skill slots; an empty list means ask
-nothing. The user can map slots by hand later in `.claude/workloop.config.json`.
+nothing. The user can map slots by hand later in `.forger/workloop.config.json`.
 
 ## 2. Install
 
@@ -42,14 +42,14 @@ bun "${CLAUDE_PLUGIN_ROOT}/bin/work.ts" setup --json --gates "<gates>" --base-br
 The tool writes the config (with `check` appended to the gates),
 `process.md` with principle 0 and the default gotchas, a starter `backlog.json`,
 the ticket, PR, work order, report, retro and rule templates under
-`.claude/templates/`, and the per-run `.gitignore` lines. It never overwrites,
+`.forger/templates/`, and the per-run `.gitignore` lines. It never overwrites,
 and reports each file as `written` or `kept`; a second run writes nothing. The files
-come from opinion packs (`--packs`, default `base`), and `.claude/forger.lock.json`
+come from opinion packs (`--packs`, default `base`), and `.forger/forger.lock.json`
 records what was installed.
 
 ## Upgrading
 
-When `.claude/forger.lock.json` already exists, the repo is set up and the job is
+When `.forger/forger.lock.json` already exists, the repo is set up and the job is
 an upgrade, not an install:
 ```
 bun "${CLAUDE_PLUGIN_ROOT}/bin/work.ts" setup --upgrade --json
@@ -72,7 +72,7 @@ Only this label is the loop's concern.
 
 ## 4. process.md
 
-Tell the user `.claude/process.md` still needs its project-specific sections
+Tell the user `.forger/process.md` still needs its project-specific sections
 filled in (what the repo is, the gotchas). Offer to draft "What this repo is"
 from the README now; leave the gotchas to them, since those are the things a
 careful reader would not guess.

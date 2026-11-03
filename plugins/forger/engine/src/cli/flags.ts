@@ -19,6 +19,7 @@ export const FLAGS = {
   summary: {type: 'boolean', default: false},
   preset: {type: 'string'},
   packs: {type: 'string'},
+  harness: {type: 'string'},
   upgrade: {type: 'boolean'},
   presets: {type: 'boolean', default: false},
   seen: {type: 'string', default: '0'},

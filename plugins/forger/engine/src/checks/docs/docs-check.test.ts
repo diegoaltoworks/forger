@@ -33,7 +33,7 @@ describe('runDocsCheck', () => {
   test('the configured list replaces the default', () => {
     const root = repo({
       'a.md': 'ask the Sonnet model\nask the Mixtral model\n',
-      '.claude/workloop.config.json': JSON.stringify({model_names: ['mixtral']}),
+      '.forger/workloop.config.json': JSON.stringify({model_names: ['mixtral']}),
     });
     expect(runDocsCheck(root, lister(['a.md'])).map(v => v.line)).toEqual([2]);
   });
@@ -56,11 +56,11 @@ describe('runDocsCheck', () => {
 
   test('fails a raw gh pr merge in a command file, and only there', () => {
     const merge = 'gh pr merge --squash --delete-branch\n';
-    const root = repo({'commands/ship.md': merge, '.claude/commands/ship.md': merge, 'docs/notes.md': merge});
-    const v = runDocsCheck(root, lister(['commands/ship.md', '.claude/commands/ship.md', 'docs/notes.md']));
+    const root = repo({'commands/ship.md': merge, '.forger/commands/ship.md': merge, 'docs/notes.md': merge});
+    const v = runDocsCheck(root, lister(['commands/ship.md', '.forger/commands/ship.md', 'docs/notes.md']));
     expect(v.map(x => `${x.file}:${x.line}:${x.rule}:${x.opinion}`)).toEqual([
       'commands/ship.md:1:raw-merge:base.merge-through-tool',
-      '.claude/commands/ship.md:1:raw-merge:base.merge-through-tool',
+      '.forger/commands/ship.md:1:raw-merge:base.merge-through-tool',
     ]);
   });
 
@@ -127,7 +127,7 @@ describe('docs pack content rules', () => {
 
 describe('installedPackIds', () => {
   test('reads the ids from the lock', () => {
-    const root = repo({'.claude/forger.lock.json': JSON.stringify({packs: [{id: 'base', version: '1.0.0', files: []}]})});
+    const root = repo({'.forger/forger.lock.json': JSON.stringify({packs: [{id: 'base', version: '1.0.0', files: []}]})});
     expect(installedPackIds(root)).toEqual(['base']);
   });
   test('no lock means no packs', () => expect(installedPackIds(repo({}))).toEqual([]));

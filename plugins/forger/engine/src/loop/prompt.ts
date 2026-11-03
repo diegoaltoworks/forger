@@ -49,7 +49,7 @@ export function buildPrompt(
 ## Context
 - Previous completed tasks: ${completed}
 - Check ${config.paths.state} for full iteration history
-- Follow .claude/process.md workflow strictly
+- Follow ${config.paths.process} workflow strictly
 
 ## Requirements
 1. Read the inbox for human instructions FIRST

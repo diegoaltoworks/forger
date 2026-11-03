@@ -21,7 +21,7 @@ const config: TestingConfig = {
   integration_paths: ['**/integration/**'],
   network_modules: ['http', 'https', 'child_process', 'axios'],
   coverage_report: 'coverage/lcov.info',
-  coverage_baseline: '.claude/coverage-baseline.json',
+  coverage_baseline: '.forger/coverage-baseline.json',
 };
 
 describe('parseTestingConfig', () => {

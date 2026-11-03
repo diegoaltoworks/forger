@@ -16,6 +16,7 @@ import {runCoverageCheck, runTestsCheck} from './testing';
 import {runUiCheck} from './ui';
 import {listOpinions, LOCK_PATH, loadPacks, parseLock, type Lock, type LoadedPack, type Opinion} from '../packs';
 import {applyWaivers, parseWaivers, staleWaivers, WAIVERS_PATH, type Finding, type WaivedFinding, type Waiver} from './waivers';
+import {forgerPath} from '../config';
 
 export type CheckStatus = 'passed' | 'failed' | 'waived';
 
@@ -97,12 +98,12 @@ export function formatReport(report: CheckReport): string {
 }
 
 export function runChecks(projectRoot: string, pluginRoot: string, run: CommandRunner): CheckReport {
-  const lockPath = join(projectRoot, LOCK_PATH);
+  const lockPath = forgerPath(projectRoot, LOCK_PATH);
   if (!existsSync(lockPath)) throw new Error(`${LOCK_PATH} not found; run setup to install packs`);
   const lock = parseLock(readFileSync(lockPath, 'utf-8'));
   const available = loadPacks(pluginRoot);
   const ids = checksToRun(available, lock);
-  const waiversPath = join(projectRoot, WAIVERS_PATH);
+  const waiversPath = forgerPath(projectRoot, WAIVERS_PATH);
   const waivers = existsSync(waiversPath) ? parseWaivers(readFileSync(waiversPath, 'utf-8')) : [];
   const ctx: CheckContext = {projectRoot, run};
   return buildReport(ids.map(check => ({check, findings: CHECKS[check](ctx)})), waivers, listOpinions(available, lock));

@@ -1,31 +1,20 @@
 /**
- * The shipped agent adapter: the headless Claude Code CLI. The process
- * supervision lives in `supervise.ts`; this module only knows how to invoke
- * `claude`.
+ * The Claude Code harness: the headless `claude` CLI, with commands installed
+ * by its plugin system, so setup writes none of them.
  */
 
-import type {AgentResult, AgentRunner, AgentRunOptions} from '../ports';
-import {runSupervised} from './supervise';
+import type {Harness} from '../ports';
 
-export const claudeAgent: AgentRunner = {
-  run(opts: AgentRunOptions): Promise<AgentResult> {
-    const {prompt, sessionId, tier, model, cwd, timeoutMinutes, killGraceSeconds} = opts;
-    return runSupervised({
+export const claudeHarness: Harness = {
+  id: 'claude',
+  spawn({prompt, sessionId, tier, model}) {
+    return {
       command: 'claude',
-      args: [
-        '--print',
-        '--model',
-        model,
-        '--max-budget-usd',
-        tier.budget.toString(),
-        '--session-id',
-        sessionId,
-        '--dangerously-skip-permissions',
-      ],
-      cwd,
+      args: ['--print', '--model', model, '--max-budget-usd', tier.budget.toString(), '--session-id', sessionId, '--dangerously-skip-permissions'],
       input: prompt,
-      timeoutMs: timeoutMinutes * 60 * 1000,
-      graceMs: killGraceSeconds * 1000,
-    });
+    };
   },
+  commandPath: () => null,
+  pluginRootVar: 'CLAUDE_PLUGIN_ROOT',
+  packageCommand: source => source,
 };

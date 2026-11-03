@@ -4,8 +4,8 @@
   "description": "A UI change is reviewable only when it can be seen: screenshots come from a command, a branch that changes UI files updates them, and accessibility and design tokens are checked.",
   "detect": [],
   "files": [
-    {"source": "files/ui.md", "target": ".claude/opinions/ui.md"},
-    {"source": "files/ui.json", "target": ".claude/ui.json"},
+    {"source": "files/ui.md", "target": ".forger/opinions/ui.md"},
+    {"source": "files/ui.json", "target": ".forger/ui.json"},
     {"source": "files/wireframe.css", "target": "docs/design/wireframe.css"},
     {"source": "files/example.html", "target": "docs/design/example/index.html"}
   ],

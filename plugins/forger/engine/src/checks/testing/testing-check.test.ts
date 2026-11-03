@@ -22,7 +22,7 @@ const CONFIG = JSON.stringify({
 function repo(files: Record<string, string>, config: string | null = CONFIG): string {
   const root = mkdtempSync(join(tmpdir(), 'forger-testing-'));
   dirs.push(root);
-  const all = config === null ? files : {'.claude/testing.json': config, ...files};
+  const all = config === null ? files : {'.forger/testing.json': config, ...files};
   for (const [name, body] of Object.entries(all)) {
     mkdirSync(join(root, name, '..'), {recursive: true});
     writeFileSync(join(root, name), body);
@@ -90,7 +90,7 @@ describe('runTestsCheck', () => {
   });
 
   test('a missing config is an error', () => {
-    expect(() => runTestsCheck(repo(files, null), git({}))).toThrow('.claude/testing.json not found');
+    expect(() => runTestsCheck(repo(files, null), git({}))).toThrow('.forger/testing.json not found');
   });
 });
 

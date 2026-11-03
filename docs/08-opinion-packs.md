@@ -50,7 +50,7 @@ flowchart LR
 
 Read it left to right: `check` takes the checks that the locked packs declare, in lock order, runs each, and matches every violation against the waivers by opinion id and path glob. A check is `passed` with no violations, `waived` when every violation is covered, and `failed` otherwise; any failed check makes the exit code non-zero.
 
-`.claude/waivers.json` is how a project switches an opinion off in the open. Each entry names the opinion, a path glob, a reason and who approved it; an entry missing the reason or the approver is an error, not a waiver. A waiver that matches no violation is reported as stale, so it gets deleted once it is no longer needed.
+`.forger/waivers.json` is how a project switches an opinion off in the open. Each entry names the opinion, a path glob, a reason and who approved it; an entry missing the reason or the approver is an error, not a waiver. A waiver that matches no violation is reported as stale, so it gets deleted once it is no longer needed.
 
 - `check --json` runs everything and reports per check, plus the stale waivers. `/forger:retro` reads it for the waiver list.
 - `check docs` runs the docs check alone, without waivers: the writing rules always, and, when the `docs` pack is installed, the content rules below.
@@ -75,7 +75,7 @@ The `architecture` pack holds the architecture forger is built on: pure decision
 
 ```mermaid
 flowchart LR
-    M[.claude/architecture.json] --> G[layer map]
+    M[.forger/architecture.json] --> G[layer map]
     F[tracked source files] --> X[import extractor]
     X --> E[imports with line numbers]
     G --> K{edge allowed?}
@@ -90,7 +90,7 @@ A layer may always import itself, and files outside every layer, packages and bu
 
 ### Decisions leave an ADR behind
 
-`check decisions` reads the working tree and branch against the merge-base with the configured base branch. A dependency added to a manifest (`package.json` today; another manifest is another entry behind the manifest-reader interface), or any change to `.claude/architecture.json`, needs a new or changed Markdown file under `docs/adr/` in the same diff. A version bump or a removed dependency is classified and needs no ADR. The pack ships an ADR template with context, decision, consequences and status; an accepted ADR is superseded by a new one, never edited. Like every opinion, it is waivable in `.claude/waivers.json`. A base branch that cannot be resolved is an error, never a pass.
+`check decisions` reads the working tree and branch against the merge-base with the configured base branch. A dependency added to a manifest (`package.json` today; another manifest is another entry behind the manifest-reader interface), or any change to `.forger/architecture.json`, needs a new or changed Markdown file under `docs/adr/` in the same diff. A version bump or a removed dependency is classified and needs no ADR. The pack ships an ADR template with context, decision, consequences and status; an accepted ADR is superseded by a new one, never edited. Like every opinion, it is waivable in `.forger/waivers.json`. A base branch that cannot be resolved is an error, never a pass.
 
 The decision to use packs is [ADR 0003](adr/0003-opinion-packs.md).
 
@@ -103,7 +103,7 @@ The `safety` pack holds principle 9 (data in production is sacred) and the never
 | `safety.secrets` | an added line, in the diff or an untracked file, that matches a known credential pattern, or an added `.env` file |
 | `safety.data-forward` | a diff that touches `migration_paths` without adding or changing a test under `data_test_paths` |
 
-Both lists live in `.claude/safety.json`. A finding names the file, line and pattern and never prints the match, so a report does not spread the secret it found. The other two opinions, frozen lockfiles in the gates and destructive commands listed in the process gotchas, are rules kept by judgement. Like `check decisions`, the check reads the working tree and branch against the merge-base with the configured base branch, and an unresolvable base is an error, never a pass.
+Both lists live in `.forger/safety.json`. A finding names the file, line and pattern and never prints the match, so a report does not spread the secret it found. The other two opinions, frozen lockfiles in the gates and destructive commands listed in the process gotchas, are rules kept by judgement. Like `check decisions`, the check reads the working tree and branch against the merge-base with the configured base branch, and an unresolvable base is an error, never a pass.
 
 ## The testing pack
 
@@ -115,7 +115,7 @@ The `testing` pack holds the testing habits the engine itself relies on. Three o
 | `testing.no-network` | `check tests` | a unit test file that imports a library named in `network_modules`; files under `integration_paths` are exempt |
 | `testing.coverage-ratchet` | `check coverage` | line coverage below the generated baseline, or no baseline yet |
 
-The globs and library list live in `.claude/testing.json`, with the path of the lcov report the project's test command writes and the path of the baseline. The baseline is a generated file: `check coverage --update` creates it or raises it, and never lowers it, so the number lives only there and a deliberate drop is a recorded waiver. A missing or empty coverage report is an error, never a pass. The other opinions (tables for the pure core, fixtures for adapters, tests named for behaviour) are rules kept by judgement. Like `check decisions`, `check tests` reads commits and the working tree against the merge-base with the configured base branch.
+The globs and library list live in `.forger/testing.json`, with the path of the lcov report the project's test command writes and the path of the baseline. The baseline is a generated file: `check coverage --update` creates it or raises it, and never lowers it, so the number lives only there and a deliberate drop is a recorded waiver. A missing or empty coverage report is an error, never a pass. The other opinions (tables for the pure core, fixtures for adapters, tests named for behaviour) are rules kept by judgement. Like `check decisions`, `check tests` reads commits and the working tree against the merge-base with the configured base branch.
 
 ## The ui pack
 
@@ -131,4 +131,4 @@ The `ui` pack makes a UI change reviewable by showing it. Evidence, colour token
 | `ui.screenshots-in-pr` | template | the PR body's Screenshots section links the updated files at the head commit |
 | `ui.states` | template | the ticket's UI states section says what the screen shows when empty, loading, failed and full |
 
-`.claude/ui.json` holds `paths`, the `start` command that serves the app, its `url`, the `routes`, the `viewports` (a phone and a desktop by default) and the `themes` (light and dark). `screenshot` starts the app, waits for it, captures every route x viewport x theme with the project's own Playwright into `docs/screenshots/<route>-<viewport>-<theme>.png`, stops the app and reports the files. The matrix and the names are computed from the config, so a re-run overwrites the same files. When Playwright or the app is unavailable the command says so and exits 2, an environment problem apart from a bad config (exit 1). Feature docs can embed the images, so they stay current with each UI change. The pack adds the `design` skill slot: its built-in step is a static grey-box wireframe in `docs/design/<ticket>/index.html` linking the shipped `wireframe.css`, captured by `screenshot --wireframe <ticket>`, which serves `docs/design/` itself and writes the images beside the page. Wireframes are for screens and diagrams for processes (the docs pack). `check a11y` serves the app the same way and audits each page with the project's own Playwright and `axe-core`; it needs a browser, so it runs on its own rather than inside the umbrella `check`, and exits 2 when the environment lacks either library. Violations are mapped from axe's output by a pure function. Like `check decisions`, `check ui` reads the working tree and branch against the merge-base with the configured base branch.
+`.forger/ui.json` holds `paths`, the `start` command that serves the app, its `url`, the `routes`, the `viewports` (a phone and a desktop by default) and the `themes` (light and dark). `screenshot` starts the app, waits for it, captures every route x viewport x theme with the project's own Playwright into `docs/screenshots/<route>-<viewport>-<theme>.png`, stops the app and reports the files. The matrix and the names are computed from the config, so a re-run overwrites the same files. When Playwright or the app is unavailable the command says so and exits 2, an environment problem apart from a bad config (exit 1). Feature docs can embed the images, so they stay current with each UI change. The pack adds the `design` skill slot: its built-in step is a static grey-box wireframe in `docs/design/<ticket>/index.html` linking the shipped `wireframe.css`, captured by `screenshot --wireframe <ticket>`, which serves `docs/design/` itself and writes the images beside the page. Wireframes are for screens and diagrams for processes (the docs pack). `check a11y` serves the app the same way and audits each page with the project's own Playwright and `axe-core`; it needs a browser, so it runs on its own rather than inside the umbrella `check`, and exits 2 when the environment lacks either library. Violations are mapped from axe's output by a pure function. Like `check decisions`, `check ui` reads the working tree and branch against the merge-base with the configured base branch.

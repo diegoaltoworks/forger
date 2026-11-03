@@ -1,5 +1,7 @@
 import {mkdirSync, writeFileSync} from 'fs';
-import {join} from 'path';
+import {dirname} from 'path';
+
+import {forgerPath} from '../config';
 
 import {draftUpstreamIssue, renderRule, ruleFilePath, ruleProblem, type RuleRecord} from '../supervisor';
 import type {Command} from './command';
@@ -9,7 +11,7 @@ export const retro: Command = {
   needs: 'root',
   flags: ['json', 'name', 'description', 'type', 'rule', 'owner', 'date', 'why', 'how', 'enforced-by', 'title', 'lesson', 'evidence'],
   help: `  retro rule --name S --description S --type T --rule S --owner S --date D --why S --how S [--enforced-by S]
-                   Write a rule record to .claude/rules/ (verbatim owner words)
+                   Write a rule record to .forger/rules/ (verbatim owner words)
   retro upstream --title S --lesson S --evidence S [--evidence S ...]
                    Print an issue draft for forger, carrying the evidence`,
   run({values, positionals, projectRoot}) {
@@ -42,8 +44,9 @@ export const retro: Command = {
         return;
       }
       const path = ruleFilePath(rule.name);
-      mkdirSync(join(projectRoot, '.claude/rules'), {recursive: true});
-      writeFileSync(join(projectRoot, path), renderRule(rule));
+      const file = forgerPath(projectRoot, path);
+      mkdirSync(dirname(file), {recursive: true});
+      writeFileSync(file, renderRule(rule));
       console.log(values.json ? JSON.stringify({path}) : path);
       return;
     }

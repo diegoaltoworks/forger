@@ -31,14 +31,14 @@ describe('gatherLoopFacts', () => {
   const answers = {
     'git branch --show-current': 'feat/issue-5',
     'git rev-parse origin/main': 'abc123',
-    'git status --porcelain': ' M .claude/state.json',
+    'git status --porcelain': ' M .forger/state.json',
     'gh issue view 5 --json state,closedByPullRequestsReferences': '{"state":"CLOSED","closedByPullRequestsReferences":[{"number":7}]}',
     'git ls-tree -r --name-only origin/main -- .github/workflows': '.github/workflows/ci.yml',
     'gh pr view 7 --json number,state,mergedAt,statusCheckRollup': readFileSync(join(import.meta.dir, 'gh-pr-checks-success.json'), 'utf-8'),
   };
 
   test('reports branch, clean (ignoring engine files), origin head and issue -> PR -> merged', () => {
-    const f = gatherLoopFacts(stub(answers), {baseBranch: 'main', ignore: ['.claude/state.json'], issue: 5});
+    const f = gatherLoopFacts(stub(answers), {baseBranch: 'main', ignore: ['.forger/state.json'], issue: 5});
     expect(f).toEqual({
       branch: 'feat/issue-5',
       clean: true,
