@@ -69,13 +69,14 @@ describe('backlog --json', () => {
       ],
       remaining: 3,
       next: 'a',
+      anomalies: [],
     });
   });
 
   test('an empty backlog reports nothing to do', async () => {
     process.chdir(projectWith({done: {status: 'completed'}}));
     const out = JSON.parse(await capture(['backlog', '--json']));
-    expect(out).toEqual({workable: [], remaining: 0, next: null});
+    expect(out).toEqual({workable: [], remaining: 0, next: null, anomalies: []});
   });
 
   test('with tracker.kind github, lists tickets from issues, not backlog.json', async () => {
@@ -117,8 +118,26 @@ describe('backlog --json', () => {
       ],
       remaining: 3,
       next: 'issue-5',
+      anomalies: [],
     });
     expect(calls.every(c => c.startsWith('gh api graphql'))).toBe(true);
+  });
+});
+
+describe('link-blockers', () => {
+  test('links the blockers the body names, through the runner', async () => {
+    process.chdir(projectWith({a: {status: 'not_started'}}));
+    const calls: string[] = [];
+    const run: CommandRunner = cmd => {
+      calls.push(cmd);
+      const n = cmd.match(/-F number=(\d+)/)?.[1];
+      if (n === '7') return JSON.stringify({data: {repository: {issue: {id: 'I7', body: '## Blocked by\n\n- #5', blockedBy: {nodes: []}}}}});
+      if (n === '5') return JSON.stringify({data: {repository: {issue: {id: 'I5', body: '', blockedBy: {nodes: []}}}}});
+      return '{}';
+    };
+    const out = JSON.parse(await capture(['link-blockers', '--issue', '7', '--json'], run));
+    expect(out).toEqual({issue: 7, linked: [5], already: []});
+    expect(calls.filter(c => c.includes('addBlockedBy'))).toHaveLength(1);
   });
 });
 

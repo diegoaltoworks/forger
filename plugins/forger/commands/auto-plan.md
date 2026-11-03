@@ -81,8 +81,8 @@ rewrite it.
 ### 3. Publish to the tracker (`tracker.kind` = `github`)
 For each ticket that does not already have an `issue`, create one in dependency
 order (blockers first): `gh issue create --title "<title>" --label <tracker.label> --body "<what to build, acceptance criteria as checkboxes, Blocked by list>"`.
-Wire `depends_on` as native blocked-by dependencies where available (see the
-tracker doc or `process.md`), else the `Blocked by: #n` line. If the source was
+Then run `link-blockers --issue <n>` for each issue created, which links every
+issue under its `Blocked by` heading as a native blocked-by. If the source was
 an issue, reference it as the parent in each body and do not close or modify it.
 Record each number on its ticket as `issue`. **Check for duplicates by title
 first.** `local` or `none`: skip this step.

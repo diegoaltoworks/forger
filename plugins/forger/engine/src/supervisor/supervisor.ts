@@ -17,6 +17,8 @@ export interface OrientInputs {
   baseBranch: string;
   /** Loop labels the repository lacks; undefined when not checked. */
   missingLabels?: string[];
+  /** Dependencies the tickets' text and the tracker disagree on; undefined when not read. */
+  backlogAnomalies?: string[];
 }
 
 export interface OrientPlan {
@@ -44,6 +46,7 @@ export function orient(i: OrientInputs): OrientPlan {
   for (const label of i.missingLabels ?? []) {
     anomalies.push(`the label "${label}" the loop relies on does not exist on GitHub; run setup to create it`);
   }
+  anomalies.push(...(i.backlogAnomalies ?? []));
   if (s.halted) {
     return {action: 'surface_halt', reason: i.haltReason?.trim() || s.last_error || 'halted, no reason recorded', anomalies};
   }

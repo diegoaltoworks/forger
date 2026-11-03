@@ -31,6 +31,8 @@ export interface Ticket {
 /** The tickets as loaded, keyed by ticket id. The file keeps the `features` key. */
 export interface BacklogData {
   features: Record<string, Ticket | unknown>;
+  /** Facts that look wrong in the tickets, such as a dependency only the text declares. */
+  anomalies?: string[];
   [key: string]: unknown;
 }
 
@@ -154,15 +156,18 @@ export interface BacklogReport {
   workable: Array<{id: string; priority: string}>;
   remaining: number;
   next: string | null;
+  /** Dependencies the text and the tracker disagree on; reconcile them. */
+  anomalies: string[];
 }
 
 export function backlogReport(data: BacklogData | null, config: WorkloopConfig): BacklogReport {
   const workable = workableTasks(data, config).map(t => ({id: t.name, priority: t.label}));
-  return {workable, remaining: remainingTasks(data, config), next: workable[0]?.id ?? null};
+  return {workable, remaining: remainingTasks(data, config), next: workable[0]?.id ?? null, anomalies: data?.anomalies ?? []};
 }
 
 export function formatBacklogReport(report: BacklogReport): string {
   const lines = report.workable.map(t => `${t.priority} ${t.id}`);
+  for (const a of report.anomalies) lines.push(`! ${a}`);
   lines.push(`Remaining: ${report.remaining}  Next: ${report.next ?? 'none'}`);
   return lines.join('\n');
 }

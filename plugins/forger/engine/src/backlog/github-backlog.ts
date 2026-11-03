@@ -8,6 +8,7 @@
  * recorded responses; the gh call goes through an injectable runner.
  */
 
+import {dependencyAnomalies, parseBlockedBy} from './blocked-by';
 import {type Backlog, type BacklogData, type Ticket, backlogFrom} from './backlog';
 import type {WorkloopConfig} from '../config';
 import type {CapturingRunner} from '../ports';
@@ -141,7 +142,23 @@ export function backlogFromIssues(issues: TrackedIssue[], tracker: TrackerSettin
       if (!features[id]) features[id] = {status: issueStatus(blocker, tracker), issue: blocker.number};
     }
   }
-  return {features};
+  const anomalies: string[] = [];
+  for (const issue of sorted) {
+    const id = ticketId(issue.number);
+    const ticket = features[id] as Ticket;
+    // No body means the text was not read, so there is nothing to compare the links with.
+    if (isIgnored(labelsOf(issue), tracker) || issue.body === undefined) continue;
+    const native = (issue.blockedBy?.nodes ?? []).map(b => b.number);
+    const declared = parseBlockedBy(issue.body);
+    // A blocker outside the fetched set cannot be judged finished or not, so only known ones count.
+    const known = declared.filter(n => n !== issue.number && features[ticketId(n)]);
+    const added = known.filter(n => !native.includes(n)).map(ticketId);
+    if (added.length > 0) ticket.depends_on = [...(ticket.depends_on ?? []), ...added];
+    anomalies.push(
+      ...dependencyAnomalies({number: issue.number, declared: known, native}, n => features[ticketId(n)]?.status !== 'completed')
+    );
+  }
+  return {features, anomalies};
 }
 
 /**

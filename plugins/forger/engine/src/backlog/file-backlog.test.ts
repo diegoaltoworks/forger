@@ -55,7 +55,7 @@ describe('fileBacklog', () => {
       const backlog = fileBacklog(file, config);
       expect(backlog.remaining()).toBe(0);
       expect(backlog.next()).toBeNull();
-      expect(backlog.report()).toEqual({workable: [], remaining: 0, next: null});
+      expect(backlog.report()).toEqual({workable: [], remaining: 0, next: null, anomalies: []});
     }
   });
 });

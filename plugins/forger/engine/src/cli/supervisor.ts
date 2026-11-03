@@ -20,6 +20,7 @@ function supervise(which: 'orient' | 'report') {
       }
     }
     const plan = orientPlan({
+      backlogAnomalies: ctx.backlog.report().anomalies,
       missingLabels: missing,
       status,
       haltReason: existsSync(haltFile) ? readFileSync(haltFile, 'utf-8') : null,

@@ -41,6 +41,7 @@ function issue(
     labels?: string[];
     closer?: {__typename: string; merged?: boolean} | null;
     blockedBy?: IssueNode[];
+    body?: string;
   } = {}
 ): TrackedIssue {
   return {
@@ -49,6 +50,7 @@ function issue(
     labels: {nodes: (opts.labels ?? ['ready-for-agent']).map(name => ({name}))},
     timelineItems: {nodes: opts.closer === undefined ? [] : [{closer: opts.closer}]},
     blockedBy: {nodes: opts.blockedBy ?? []},
+    ...(opts.body === undefined ? {} : {body: opts.body}),
   };
 }
 
@@ -160,6 +162,7 @@ describe('backlogFromIssues', () => {
       ],
       remaining: 4,
       next: 'issue-4',
+      anomalies: [],
     });
   });
 
@@ -182,6 +185,7 @@ describe('backlogFromIssues', () => {
       workable: [{id: 'issue-3', priority: 'P3'}],
       remaining: 2,
       next: 'issue-3',
+      anomalies: [],
     });
   });
 
@@ -306,5 +310,36 @@ describe('parseIssuesResponse with recently closed issues', () => {
 describe('issuesCommand', () => {
   test('quotes a label containing a single quote', () => {
     expect(issuesCommand({...tracker, label: "it's ready"})).toContain(`-f label='it'\\''s ready'`);
+  });
+});
+
+describe('a blocker written only in the body', () => {
+  const blocked = '## What\n\nx\n\n## Blocked by\n\n- #81\n';
+
+  test('is a dependency: the ticket is not workable, and the mismatch is reported', () => {
+    const data = backlogFromIssues([issue(81), issue(82, {body: blocked})], tracker);
+    const report = backlogReport(data, config);
+    expect(report.workable.map(w => w.id)).toEqual(['issue-81']);
+    expect(report.anomalies).toEqual(['#82 lists #81 under Blocked by but it is not linked as blocked-by']);
+  });
+
+  test('a closed blocker no longer blocks and is not reported', () => {
+    const data = backlogFromIssues([issue(81, {state: 'CLOSED', closer: mergedPr}), issue(82, {body: blocked})], tracker);
+    const report = backlogReport(data, config);
+    expect(report.workable.map(w => w.id)).toEqual(['issue-82']);
+    expect(report.anomalies).toEqual([]);
+  });
+
+  test('a native blocker the body omits is reported but still blocks', () => {
+    const data = backlogFromIssues([issue(81), issue(82, {blockedBy: [issue(81)], body: '## Blocked by\n\nNone'})], tracker);
+    const report = backlogReport(data, config);
+    expect(report.workable.map(w => w.id)).toEqual(['issue-81']);
+    expect(report.anomalies).toEqual(['#82 is linked as blocked by #81 but its Blocked by section does not list it']);
+  });
+
+  test('both agreeing report nothing, and the blocker is listed once', () => {
+    const data = backlogFromIssues([issue(81), issue(82, {blockedBy: [issue(81)], body: blocked})], tracker);
+    expect(backlogReport(data, config).anomalies).toEqual([]);
+    expect((data.features['issue-82'] as {depends_on: string[]}).depends_on).toEqual(['issue-81']);
   });
 });
