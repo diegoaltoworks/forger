@@ -85,7 +85,15 @@ one `gh api graphql` query and maps them to tickets:
 
 A blocker that is not itself a ticket (no intake label, or ignored, such as a
 decision) is satisfied once it is closed. A `gh` failure stops the engine
-rather than reading as an empty backlog.
+rather than reading as an empty backlog, and its error quotes what `gh` printed.
+
+The query reads the open intake issues and only the most recently closed ones;
+a dependency's status comes with the blocker itself, so the closed history is
+never scanned. Its page sizes are kept small, and a test holds the query's
+worst-case rate-limit cost, computed from the query text, to a stated budget. A
+list longer than its page fails the read rather than dropping a blocker. The
+engine reads the backlog once per iteration (after the worker runs) and reuses
+it; one `status` or `backlog` call is one read.
 
 - **Planners** create one issue per ticket (intake label, blocking edges as
   GitHub's native blocked-by dependencies).
@@ -225,7 +233,10 @@ pick.
 
 A run that exits non-zero with an authentication, billing or network error is
 an infrastructure error, not a worker failure: the loop halts at once with the
-reason and the failure counter is left alone. `resume` clears the HALT and zeroes
+reason and the failure counter is left alone. A tracker read refused by
+GitHub's rate limit is one too, naming the limit and its reset time (from
+`gh api rate_limit`); the engine waits for the reset and carries on, never
+charging the wait to a ticket. `resume` clears the HALT and zeroes
 the failure and stall counters, so the first run after a fix starts clean, and
 the first run after any start is never counted as a stall.
 
@@ -266,6 +277,7 @@ engine/src/
   file-backlog.ts the Backlog read from backlog.json
   github-backlog.ts the Backlog read from GitHub Issues: the query, and the
                issue-to-ticket mapping (pure) behind an injectable runner
+  graphql-cost.ts a GraphQL query's worst-case rate-limit cost (pure)
   open-backlog.ts which Backlog the tracker kind selects
   prompt.ts    per-iteration prompt (pure): worker command, gates, tracker
   git.ts       merge verification against an injectable command runner (pure)

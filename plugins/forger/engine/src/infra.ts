@@ -49,3 +49,66 @@ export function classifyExit(exitCode: number, output: string, timedOut: boolean
   }
   return {kind: 'worker'};
 }
+
+/**
+ * GitHub refusing a call for its rate limit, primary or secondary. Waiting is
+ * the only fix, so it is told apart from every other gh failure.
+ */
+const RATE_LIMITED = /\b(?:secondary )?rate limit (?:already )?exceeded\b|\bAPI rate limit\b/i;
+
+export function isRateLimited(stderr: string): boolean {
+  return RATE_LIMITED.test(stderr);
+}
+
+/** One resource's budget from `gh api rate_limit`; `resetAt` is epoch milliseconds. */
+export interface RateLimitWindow {
+  resource: string;
+  limit: number;
+  remaining: number;
+  resetAt: number;
+}
+
+/** The named resource from `gh api rate_limit` output, or null when unreadable. */
+export function parseRateLimit(raw: string, resource: string): RateLimitWindow | null {
+  try {
+    const r = (JSON.parse(raw) as {resources?: Record<string, {limit?: unknown; remaining?: unknown; reset?: unknown}>})
+      ?.resources?.[resource];
+    if (!r || typeof r.limit !== 'number' || typeof r.remaining !== 'number' || typeof r.reset !== 'number') {
+      return null;
+    }
+    return {resource, limit: r.limit, remaining: r.remaining, resetAt: r.reset * 1000};
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * A rate-limited tracker read: an infrastructure error, not a worker failure
+ * and never an empty backlog. Carries the reset so the runner can wait it out.
+ */
+export class RateLimitError extends Error {
+  readonly category = 'rate_limit';
+  constructor(
+    readonly resource: string,
+    readonly window: RateLimitWindow | null,
+    readonly stderr: string
+  ) {
+    super(rateLimitReason(resource, window, stderr));
+    this.name = 'RateLimitError';
+  }
+}
+
+export function rateLimitReason(resource: string, window: RateLimitWindow | null, stderr: string): string {
+  const limit = window ? `GitHub ${resource} rate limit (${window.limit} an hour)` : `GitHub ${resource} rate limit`;
+  const reset = window ? `resets at ${new Date(window.resetAt).toISOString()}` : 'reset time unknown';
+  return `Infrastructure error (rate_limit): ${limit} exhausted, ${reset}: ${stderr.trim()}`;
+}
+
+/** Past the reset by a margin for clock skew; an unknown reset waits the fallback. */
+export const RATE_LIMIT_MARGIN_MS = 30_000;
+export const RATE_LIMIT_FALLBACK_MS = 15 * 60_000;
+
+export function rateLimitWaitMs(window: RateLimitWindow | null, now: number): number {
+  if (!window) return RATE_LIMIT_FALLBACK_MS;
+  return Math.max(0, window.resetAt - now) + RATE_LIMIT_MARGIN_MS;
+}

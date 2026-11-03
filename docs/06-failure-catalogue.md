@@ -95,6 +95,21 @@ recovered, and where the lasting fix belongs: **E** the engine, **S** a skill
   provider outage, a pull request waiting on an approval only a person can give)
   files a ticket and stops. It does not retry, and the halt is correct.
 
+### The tracker's rate limit reads as a dead tracker
+
+- **Seen:** the loop stopped with "gh returned nothing (not authenticated, or
+  offline?)". The login was fine; GitHub's hourly GraphQL budget was spent.
+- **Cause:** the backlog query asked for large pages nested two deep and paged
+  through every closed issue, and the engine, each worker and the supervisor
+  read it several times an iteration. The engine dropped `gh`'s stderr and
+  guessed at the cause.
+- **Fix:** E (in place): the query's worst-case cost is computed from its text
+  and held to a budget by a test; closed issues are read only as far as the
+  most recent; the engine reads the backlog once per iteration. A rate-limited
+  read is an infrastructure error that names the limit and its reset; the
+  engine waits for the reset and does not count it against the ticket. Any
+  other empty read quotes `gh`'s stderr.
+
 ### Clearing a HALT does not stick
 
 - **Seen:** the owner cleared the HALT file; seconds later the engine wrote it

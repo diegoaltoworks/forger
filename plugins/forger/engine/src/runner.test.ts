@@ -6,7 +6,8 @@ import {join} from 'path';
 import {type BacklogData, backlogFrom} from './backlog';
 import type {ClaudeResult, RunClaudeOptions} from './claude';
 import {mergeConfig} from './config';
-import {AutomationRunner} from './runner';
+import {RATE_LIMIT_MARGIN_MS, RateLimitError} from './infra';
+import {AutomationRunner, WATCH_BACKLOG_EVERY} from './runner';
 import {defaultState} from './state';
 
 const dirs: string[] = [];
@@ -433,5 +434,121 @@ describe('AutomationRunner single runner', () => {
     expect(r.runner).toEqual({pid: 4242, alive: true});
     expect(r.next_pick).toBe('the_ticket');
     expect(r.remaining).toBe(1);
+  });
+});
+
+describe('AutomationRunner and a rate-limited backlog', () => {
+  const fast = mergeConfig({
+    limits: {pauseBetweenIterations: 0, pauseAfterFailure: 0, maxStallIterations: 9},
+  });
+  const fail: ClaudeResult = {exitCode: 1, signal: null, output: '', timedOut: false};
+
+  /** A backlog whose first `limited` reads hit the rate limit, on a fake clock. */
+  function limitedBacklog(limited: number, data: () => BacklogData) {
+    const clock = {now: 1_000_000, slept: [] as number[], reads: 0};
+    const load = (): BacklogData => {
+      clock.reads++;
+      if (limited-- > 0) {
+        const window = {resource: 'graphql', limit: 5000, remaining: 0, resetAt: clock.now + 600_000};
+        throw new RateLimitError('graphql', window, 'API rate limit already exceeded');
+      }
+      return data();
+    };
+    const deps = {
+      now: () => clock.now,
+      sleep: async (ms: number) => {
+        clock.slept.push(ms);
+        clock.now += ms;
+      },
+    };
+    return {clock, backlog: backlogFrom(load, fast), deps};
+  }
+
+  test('waits out a rate limit after the worker run and does not charge the ticket', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'forger-runner-'));
+    dirs.push(root);
+    let spawned = false;
+    let throwsAfterRun = 0;
+    const {clock, backlog: limited, deps} = limitedBacklog(0, () => {
+      if (spawned && throwsAfterRun++ === 0) {
+        throw new RateLimitError('graphql', {resource: 'graphql', limit: 5000, remaining: 0, resetAt: clock.now + 600_000}, 'limited');
+      }
+      return spawned ? done : backlog;
+    });
+    const runner = new AutomationRunner(root, fast, limited, {
+      ...deps,
+      runClaude: async () => {
+        spawned = true;
+        return {exitCode: 0, signal: null, output: '<process>complete</process>', timedOut: false};
+      },
+      gitRunner: sceneRunner({merge: true, branch: 'feat/the_ticket'}, () => spawned),
+    });
+    expect(await runner.runIteration(1)).toBe(true);
+    expect(clock.slept).toEqual([600_000 + RATE_LIMIT_MARGIN_MS]);
+    const state = readState(root);
+    expect(state.status).toBe('completed');
+    expect(state.consecutive_failures).toBe(0);
+    expect(state.failed_iterations).toBe(0);
+    expect(state.completed_tasks).toEqual(['the_ticket']);
+  });
+
+  test('waits out a rate limit at start, then counts only the worker failure', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'forger-runner-'));
+    dirs.push(root);
+    const {clock, backlog: limited, deps} = limitedBacklog(2, () => backlog);
+    const runner = new AutomationRunner(root, fast, limited, {...deps, runClaude: async () => fail, gitRunner: () => ''});
+    await runner.run(1);
+    expect(clock.slept.filter(ms => ms > 0)).toEqual([600_000 + RATE_LIMIT_MARGIN_MS, 600_000 + RATE_LIMIT_MARGIN_MS]);
+    const state = readState(root);
+    expect(state.consecutive_failures).toBe(1);
+    expect(state.last_error).not.toContain('rate_limit');
+  });
+
+  test('reads the backlog once at start and once per iteration', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'forger-runner-'));
+    dirs.push(root);
+    const {clock, backlog: counted, deps} = limitedBacklog(0, () => backlog);
+    const runner = new AutomationRunner(root, fast, counted, {...deps, runClaude: async () => fail, gitRunner: () => ''});
+    await runner.run(2);
+    expect(clock.reads).toBe(1 + 2);
+  });
+
+  test('an error that is not a rate limit is not waited out', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'forger-runner-'));
+    dirs.push(root);
+    const runner = new AutomationRunner(
+      root,
+      fast,
+      backlogFrom(() => {
+        throw new Error('GitHub backlog: gh exited 1 with no output, nothing on stderr');
+      }, fast),
+      {runClaude: async () => fail, gitRunner: () => '', sleep: async () => {
+        throw new Error('must not wait');
+      }}
+    );
+    await expect(runner.refreshBacklog()).rejects.toThrow(/GitHub backlog/);
+  });
+
+  test('watch re-reads the backlog only every so many redraws, and reports a failed read', () => {
+    const root = mkdtempSync(join(tmpdir(), 'forger-runner-'));
+    dirs.push(root);
+    let reads = 0;
+    let failing = false;
+    const runner = new AutomationRunner(
+      root,
+      fast,
+      backlogFrom(() => {
+        reads++;
+        if (failing) throw new Error('offline');
+        return backlog;
+      }, fast),
+      {gitRunner: () => ''}
+    );
+    for (let redraw = 1; redraw < WATCH_BACKLOG_EVERY; redraw++) expect(runner.watchRefresh(redraw)).toBeNull();
+    expect(reads).toBe(0);
+    expect(runner.watchRefresh(WATCH_BACKLOG_EVERY)).toBeNull();
+    expect(reads).toBe(1);
+    failing = true;
+    expect(runner.watchRefresh(2 * WATCH_BACKLOG_EVERY)).toBe('offline');
   });
 });

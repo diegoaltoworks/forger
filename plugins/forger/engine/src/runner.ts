@@ -19,7 +19,7 @@ import {Logger, colors} from './logger';
 import {type ClaudeResult, type RunClaudeOptions, runClaude} from './claude';
 import {formatIterationLog} from './iteration-log';
 import {decideOutcome, type Outcome} from './outcome';
-import {classifyExit} from './infra';
+import {RateLimitError, classifyExit, rateLimitWaitMs} from './infra';
 import {parseClaim} from './claim';
 import {gatherFacts, takeSnapshot, ticketFromBranch} from './run-facts';
 import {RunnerLock} from './lock';
@@ -33,7 +33,13 @@ export interface RunnerDeps {
   /** Liveness probe for the lock holder; defaults to a signal-0 check. */
   isAlive?: (pid: number) => boolean;
   pid?: number;
+  /** Clock and wait, injectable so a rate-limit wait runs in a test without waiting. */
+  now?: () => number;
+  sleep?: (ms: number) => Promise<void>;
 }
+
+/** Watch redraws often; the backlog behind it is re-read only every this many redraws. */
+export const WATCH_BACKLOG_EVERY = 30;
 
 export class AutomationRunner {
   private logger: Logger;
@@ -44,6 +50,8 @@ export class AutomationRunner {
   private uuid: () => string;
   private lock: RunnerLock;
   private eventsFile: string;
+  private now: () => number;
+  private sleep: (ms: number) => Promise<void>;
 
   constructor(
     private projectRoot: string,
@@ -61,6 +69,8 @@ export class AutomationRunner {
     this.gitRunner = deps.gitRunner ?? execRunner(projectRoot);
     this.spawnClaude = deps.runClaude ?? runClaude;
     this.uuid = deps.uuid ?? (() => crypto.randomUUID());
+    this.now = deps.now ?? Date.now;
+    this.sleep = deps.sleep ?? (ms => new Promise(resolve => setTimeout(resolve, ms)));
 
     if (!existsSync(this.outputDir)) mkdirSync(this.outputDir, {recursive: true});
   }
@@ -75,6 +85,24 @@ export class AutomationRunner {
 
   getNextTaskName(): string | null {
     return this.backlog.next();
+  }
+
+  /**
+   * Re-read the backlog, waiting out a tracker rate limit instead of failing:
+   * the limit is the platform's, so it is never charged to a ticket.
+   */
+  async refreshBacklog(): Promise<void> {
+    while (true) {
+      try {
+        this.backlog.refresh();
+        return;
+      } catch (e) {
+        if (!(e instanceof RateLimitError)) throw e;
+        const wait = rateLimitWaitMs(e.window, this.now());
+        this.logger.log('WARN', `${e.message}; waiting ${Math.ceil(wait / 1000)}s`);
+        await this.sleep(wait);
+      }
+    }
   }
 
   private verify(): string | null {
@@ -158,6 +186,9 @@ export class AutomationRunner {
       killGraceSeconds,
     });
     const duration = Math.round((Date.now() - startTime) / 1000);
+    // The worker changes ticket statuses while it runs; this read also serves
+    // the loop's next remaining-work check.
+    await this.refreshBacklog();
 
     const gitFacts = gatherFacts(this.gitRunner, base, snapshot);
     // A branch that names no backlog ticket (a typo fix, a recovery branch)
@@ -284,6 +315,7 @@ export class AutomationRunner {
       this.logger.log('WARN', `Took over a stale lock from dead runner (pid ${lock.tookOver})`);
     }
     try {
+      await this.refreshBacklog();
       this.closeOrphan();
       await this.loop(iterations, continuous);
       return true;
@@ -402,6 +434,17 @@ export class AutomationRunner {
     this.showStatus();
   }
 
+  /** Re-reads the backlog on every WATCH_BACKLOG_EVERY-th redraw; the error, if the read failed. */
+  watchRefresh(redraw: number): string | null {
+    if (redraw % WATCH_BACKLOG_EVERY !== 0) return null;
+    try {
+      this.backlog.refresh();
+      return null;
+    } catch (e) {
+      return (e as Error).message;
+    }
+  }
+
   async watch(): Promise<void> {
     this.logger.log('INFO', 'Starting watch mode (Ctrl+C to stop)');
 
@@ -434,8 +477,15 @@ export class AutomationRunner {
       console.log('\nPress Ctrl+C to exit');
     };
 
+    let redraws = 0;
+    const tick = () => {
+      const unread = this.watchRefresh(++redraws);
+      refresh();
+      if (unread) console.log(`${colors.yellow}Backlog not refreshed: ${unread}${colors.reset}`);
+    };
+
     refresh();
-    const interval = setInterval(refresh, 2000);
+    const interval = setInterval(tick, 2000);
     process.on('SIGINT', () => {
       clearInterval(interval);
       console.log('\nExiting watch mode');
@@ -487,9 +537,5 @@ export class AutomationRunner {
     if (halted) {
       console.log(`\n${colors.yellow}To resume: run the runner with "resume"${colors.reset}`);
     }
-  }
-
-  private sleep(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
   }
 }
