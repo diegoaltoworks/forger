@@ -69,4 +69,23 @@ The `docs` pack holds the docs habits: Markdown in the repository, a diagram and
 
 Read the table as a list of ways docs rot quietly. Code spans and fences are never prose, so quoting an avoided word in backticks is fine. A word that is only wrong in one sense carries a parenthetical in the glossary, such as `user (when meaning the owner)`, and is not enforced because a pattern cannot tell the senses apart. Diagram parsing is structural rather than a full mermaid parse: it needs no browser or extra dependency and covers the mistakes that break a render, but it does not validate the grammar of every diagram type.
 
+## The architecture pack
+
+The `architecture` pack holds the architecture forger is built on: pure decisions with I/O at the edges, every external system behind a port, parse at the boundary, fail loud, one source of truth per fact, and deep modules. One of its opinions is enforced, `architecture.dependency-rule`, by `check arch`.
+
+```mermaid
+flowchart LR
+    M[.claude/architecture.json] --> G[layer map]
+    F[tracked source files] --> X[import extractor]
+    X --> E[imports with line numbers]
+    G --> K{edge allowed?}
+    E --> K
+    K -->|no| V[finding: architecture.dependency-rule]
+    K -->|yes| O[nothing reported]
+```
+
+Read it left to right: the layer map names layers as path globs and says which layer may import which; the extractor lists each file's imports; any import whose edge the map forbids becomes a finding on the importing line.
+
+A layer may always import itself, and files outside every layer, packages and builtins are not constrained. Static, type-only, dynamic, `require` and re-export imports all count. TypeScript and JavaScript are read today; another language is another entry behind the import-extractor interface. A missing or malformed layer map is an error, never a pass. Forger installs the pack on itself and marks its pure modules as the core layer.
+
 The decision to use packs is [ADR 0003](adr/0003-opinion-packs.md).
