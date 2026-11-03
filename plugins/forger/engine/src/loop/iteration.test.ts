@@ -4,7 +4,7 @@ import {tmpdir} from 'os';
 import {join} from 'path';
 
 import {type BacklogData, backlogFrom} from '../backlog';
-import {localStateFor} from '../adapters';
+import {memoryStateStore} from '../adapters';
 import {mergeConfig} from '../config';
 import {AutomationRunner} from './runner';
 
@@ -20,7 +20,7 @@ describe('runIteration', () => {
     const root = mkdtempSync(join(tmpdir(), 'forger-iteration-'));
     dirs.push(root);
     const config = mergeConfig({});
-    const runner = new AutomationRunner(root, config, backlogFrom(() => data, config), {stateStore: localStateFor(root, config), gitRunner: () => ''});
+    const runner = new AutomationRunner(root, config, backlogFrom(() => data, config), {stateStore: memoryStateStore(), gitRunner: () => ''});
     await expect(runner.runIteration(1)).rejects.toThrow('no agent runner was given to this runner');
   });
 });

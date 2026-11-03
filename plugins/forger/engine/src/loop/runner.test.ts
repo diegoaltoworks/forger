@@ -5,7 +5,7 @@ import {join} from 'path';
 
 import {type BacklogData, backlogFrom} from '../backlog';
 import type {AgentResult, AgentRunOptions} from '../ports';
-import {localStateFor} from '../adapters';
+import {localStateFor, memoryStateStore} from '../adapters';
 import {mergeConfig} from '../config';
 import {RATE_LIMIT_MARGIN_MS, RateLimitError} from './infra';
 import {AutomationRunner, WATCH_BACKLOG_EVERY} from './runner';
@@ -618,7 +618,7 @@ describe('AutomationRunner and a rate-limited backlog', () => {
       backlogFrom(() => {
         throw new Error('GitHub backlog: gh exited 1 with no output, nothing on stderr');
       }, fast),
-      {stateStore: localStateFor(root, fast), agent: {run: async () => fail}, gitRunner: () => '', sleep: async () => {
+      {stateStore: memoryStateStore(), agent: {run: async () => fail}, gitRunner: () => '', sleep: async () => {
         throw new Error('must not wait');
       }}
     );
@@ -638,7 +638,7 @@ describe('AutomationRunner and a rate-limited backlog', () => {
         if (failing) throw new Error('offline');
         return backlog;
       }, fast),
-      {stateStore: localStateFor(root, fast), gitRunner: () => ''}
+      {stateStore: memoryStateStore(), gitRunner: () => ''}
     );
     for (let redraw = 1; redraw < WATCH_BACKLOG_EVERY; redraw++) expect(runner.watchRefresh(redraw)).toBeNull();
     expect(reads).toBe(0);
