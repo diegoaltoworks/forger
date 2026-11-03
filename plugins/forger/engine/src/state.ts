@@ -28,7 +28,6 @@ export interface AutomationState {
   current_task: string | null;
   last_error: string | null;
   session_id: string | null;
-  last_remaining_count: number | null;
   stall_count: number;
 }
 
@@ -45,29 +44,24 @@ export function defaultState(): AutomationState {
     current_task: null,
     last_error: null,
     session_id: null,
-    last_remaining_count: null,
     stall_count: 0,
   };
 }
 
 /**
- * Given the previous remaining count and stall counter, decide the next stall
- * counter and whether the loop has stalled. Stalled means the remaining count
- * has not moved for `maxStall` consecutive checks - a linear dependency chain
- * makes progress without the workable count changing, so this keys off the
- * remaining total, and resets the moment it moves.
+ * Decide the next stall counter and whether the loop has stalled. Progress is
+ * a merge: counting the remaining tickets instead reads an iteration that
+ * finished one ticket and adopted another as no progress. The counter resets
+ * on any merge and stalls after `maxStall` runs in a row without one.
  */
 export function stallUpdate(
-  lastRemaining: number | null,
   stallCount: number,
-  remaining: number,
+  merged: boolean,
   maxStall: number
 ): {stall_count: number; stalled: boolean} {
-  if (lastRemaining !== null && remaining === lastRemaining) {
-    const next = (stallCount || 0) + 1;
-    return {stall_count: next, stalled: next >= maxStall};
-  }
-  return {stall_count: 0, stalled: false};
+  if (merged) return {stall_count: 0, stalled: false};
+  const next = (stallCount || 0) + 1;
+  return {stall_count: next, stalled: next >= maxStall};
 }
 
 /** Reads and writes the state file and the HALT file. */

@@ -13,6 +13,7 @@ import {join} from 'path';
 import type {WorkloopConfig} from './config';
 import {
   type PRD,
+  hasTicket,
   isTicketCompleted,
   nextTaskName,
   remainingTasks,
@@ -25,6 +26,9 @@ import {type AutomationState, StateStore, stallUpdate} from './state';
 import {Logger, colors} from './logger';
 import {type ClaudeResult, type RunClaudeOptions, runClaude} from './claude';
 import {formatIterationLog} from './iteration-log';
+import {decideOutcome} from './outcome';
+import {parseClaim} from './claim';
+import {gatherFacts, takeSnapshot, ticketFromBranch} from './run-facts';
 
 export interface RunnerDeps {
   runClaude?: (opts: RunClaudeOptions) => Promise<ClaudeResult>;
@@ -140,7 +144,9 @@ export class AutomationRunner {
       this.logger.log('INFO', `Ticket: ${attemptedTask} [${tier.model}, $${tier.budget}]`);
     }
 
-    const {timeoutMinutes, killGraceSeconds} = this.config.limits;
+    const {timeoutMinutes, killGraceSeconds, maxStallIterations} = this.config.limits;
+    const base = this.config.base_branch;
+    const snapshot = takeSnapshot(this.gitRunner, base);
     const startTime = Date.now();
     const result = await this.spawnClaude({
       prompt,
@@ -151,11 +157,23 @@ export class AutomationRunner {
       killGraceSeconds,
     });
     const duration = Math.round((Date.now() - startTime) / 1000);
+
+    const gitFacts = gatherFacts(this.gitRunner, base, snapshot);
+    // A branch that names no backlog ticket (a typo fix, a recovery branch)
+    // leaves the run held to the engine's pick.
+    const branchTicket = ticketFromBranch(gitFacts.branch);
+    const taken = branchTicket && hasTicket(this.loadPRDImpl(), branchTicket) ? branchTicket : null;
+    const ticket = taken ?? attemptedTask;
+    if (taken && taken !== attemptedTask) {
+      this.logger.log('INFO', `Worker took ${taken} (engine picked ${attemptedTask ?? 'none'})`);
+    }
+
     writeFileSync(
       outputFile,
       formatIterationLog({
         iteration,
-        ticket: attemptedTask,
+        ticket,
+        enginePick: attemptedTask,
         elapsedSeconds: duration,
         exitCode: result.exitCode,
         signal: result.signal,
@@ -166,102 +184,60 @@ export class AutomationRunner {
     );
     this.logger.log('INFO', `Claude finished in ${duration}s (exit: ${result.exitCode})`);
 
-    if (result.timedOut) {
-      const by = result.signal ? `, ended by ${result.signal}` : '';
-      this.logger.log('ERROR', `Iteration ${iteration} timed out after ${duration}s${by}`);
-      state.status = 'timeout';
-      state.failed_iterations++;
-      state.consecutive_failures++;
-      state.last_error = `Timeout after ${timeoutMinutes} minutes${by}`;
-      this.store.save(state);
-      return false;
-    }
+    const claim = parseClaim(result.output);
+    const backlogCompleted = ticket !== null && isTicketCompleted(this.loadPRDImpl(), ticket);
+    const outcome = decideOutcome({
+      ...gitFacts,
+      ticket,
+      claim: claim.claim,
+      stopReason: claim.stopReason,
+      exitCode: result.exitCode,
+      signal: result.signal,
+      timedOut: result.timedOut,
+      timeoutMinutes,
+      baseBranch: base,
+      backlogCompleted,
+      unclean: gitFacts.merged ? this.verify() : null,
+    });
 
-    if (result.output.includes('<process>stop</process>')) {
-      this.logger.log('WARN', `Iteration ${iteration} signaled STOP`);
-      const match = result.output.match(
-        /<process>stop<\/process>[\s\S]*?(?:blocked|reason|because)[:\s]*([^\n]+)/i
-      );
-      this.halt(match ? match[1].trim() : 'Agent signaled stop - blocked or no actionable work');
-      return false;
-    }
-
-    if (result.output.includes('<process>complete</process>')) {
-      // The signal is the agent's account of itself; check it against the repo.
-      const unmerged = this.verify();
-      if (unmerged) {
-        this.logger.log('ERROR', `Iteration ${iteration} claimed complete but ${unmerged}`);
-        state.status = 'failed';
-        state.failed_iterations++;
-        state.consecutive_failures++;
-        state.last_error = `Claimed complete but ${unmerged}`;
-        this.store.save(state);
-        return false;
-      }
-
-      this.logger.log('SUCCESS', `Iteration ${iteration} completed`);
-      state.status = 'completed';
+    state.status = outcome.status;
+    if (outcome.result === 'success') {
+      this.logger.log('SUCCESS', `Iteration ${iteration} merged ${ticket ?? 'a change'}`);
       state.last_completed_at = new Date().toISOString();
       state.completed_iterations++;
       state.consecutive_failures = 0;
       state.current_task = null;
-
-      // Record the attempted ticket only if the backlog agrees it is done. An
-      // agent may legitimately work something else (recovering a prior
-      // iteration's unfinished merge), and recording the wrong name would feed
-      // the next prompt a false history.
-      if (
-        attemptedTask &&
-        isTicketCompleted(this.loadPRDImpl(), attemptedTask) &&
-        !state.completed_tasks.includes(attemptedTask)
-      ) {
-        state.completed_tasks.push(attemptedTask);
+      state.last_error = null;
+      // Merged is the fact; the backlog naming the ticket completed is what
+      // makes the name safe to feed the next prompt as history.
+      if (ticket && backlogCompleted && !state.completed_tasks.includes(ticket)) {
+        state.completed_tasks.push(ticket);
       }
-
-      this.store.save(state);
-      return true;
+    } else if (outcome.result === 'failure') {
+      this.logger.log('ERROR', `Iteration ${iteration}: ${outcome.error}`);
+      state.failed_iterations++;
+      state.consecutive_failures++;
+      state.last_error = outcome.error;
+    } else {
+      this.logger.log('WARN', `Iteration ${iteration} signaled STOP`);
     }
+    if (outcome.warning) this.logger.log('WARN', `Iteration ${iteration}: ${outcome.warning}`);
 
-    const progressIndicators = ['commit', 'merged', 'completed', 'PR created'];
-    const hasProgress = progressIndicators.some(ind =>
-      result.output.toLowerCase().includes(ind.toLowerCase())
-    );
-    if (hasProgress) {
-      this.logger.log('INFO', 'Partial progress detected');
-      state.status = 'partial';
-      state.consecutive_failures = 0;
-      this.store.save(state);
-      return true;
-    }
-
-    this.logger.log('WARN', `Iteration ${iteration} did not complete cleanly`);
-    state.status = 'failed';
-    state.failed_iterations++;
-    state.consecutive_failures++;
-    state.last_error = `No completion signal, exit code: ${result.exitCode}`;
+    const stall = stallUpdate(state.stall_count, outcome.merged, maxStallIterations);
+    state.stall_count = stall.stall_count;
     this.store.save(state);
-    this.haltOnDivergence(attemptedTask);
-    return false;
-  }
 
-  /**
-   * A failed iteration can still have written `completed` into the backlog
-   * before it died - the agent finishes the work, commits to its branch,
-   * updates the ticket, then hits the budget cap. The backlog then claims work
-   * that is not on the base branch, and ticket selection would march past it
-   * onto an unmerged dependency. Stop and let a human recover the intact branch
-   * rather than reverting the ticket and discarding the record of the work.
-   */
-  private haltOnDivergence(attemptedTask: string | null): void {
-    if (!attemptedTask) return;
-    if (!isTicketCompleted(this.loadPRDImpl(), attemptedTask)) return;
-    const unmerged = this.verify();
-    if (!unmerged) return;
-    this.halt(
-      `"${attemptedTask}" reads completed in the backlog but ${unmerged}. ` +
-        `The work is most likely finished on its branch and was cut off before ` +
-        `it could be pushed or merged - recover it rather than re-running the ticket.`
-    );
+    if (outcome.halt) {
+      this.halt(outcome.halt);
+    } else if (stall.stalled) {
+      const reason = `Stalled: nothing merged in ${maxStallIterations} iterations`;
+      this.logger.log('ERROR', reason);
+      this.halt(reason);
+    } else if (!outcome.merged) {
+      this.logger.log('WARN', `Nothing merged (stall ${stall.stall_count}/${maxStallIterations})`);
+    }
+
+    return outcome.result === 'success';
   }
 
   async run(iterations = 1, continuous = false): Promise<void> {
@@ -285,8 +261,7 @@ export class AutomationRunner {
     );
 
     let completed = 0;
-    const {maxStallIterations, maxConsecutiveFailures, pauseAfterFailure, pauseBetweenIterations} =
-      this.config.limits;
+    const {maxConsecutiveFailures, pauseAfterFailure, pauseBetweenIterations} = this.config.limits;
 
     while (true) {
       iteration++;
@@ -305,31 +280,6 @@ export class AutomationRunner {
       const remaining = this.getRemainingTasks();
 
       const currentState = this.store.load();
-      const stall = stallUpdate(
-        currentState.last_remaining_count,
-        currentState.stall_count,
-        remaining,
-        maxStallIterations
-      );
-      currentState.stall_count = stall.stall_count;
-      if (stall.stalled) {
-        const reason = `Stalled: ${remaining} tasks remain but no progress for ${maxStallIterations} iterations`;
-        this.store.save(currentState);
-        this.halt(reason);
-        this.logger.log('ERROR', reason);
-        break;
-      }
-      if (
-        currentState.last_remaining_count !== null &&
-        remaining === currentState.last_remaining_count
-      ) {
-        this.logger.log(
-          'WARN',
-          `No progress: ${remaining} tasks (stall ${stall.stall_count}/${maxStallIterations})`
-        );
-      }
-      currentState.last_remaining_count = remaining;
-      this.store.save(currentState);
 
       if (remaining === 0) {
         this.logger.log('SUCCESS', 'All tasks completed!');

@@ -114,3 +114,7 @@ export function tierFor(
 export function isTicketCompleted(prd: PRD | null, taskName: string): boolean {
   return features(prd)[taskName]?.status === 'completed';
 }
+
+export function hasTicket(prd: PRD | null, taskName: string): boolean {
+  return isObjectFeature(features(prd)[taskName]);
+}
