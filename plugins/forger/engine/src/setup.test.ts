@@ -1,8 +1,9 @@
 import {afterEach, describe, expect, test} from 'bun:test';
-import {existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync} from 'fs';
+import {existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync} from 'fs';
 import {tmpdir} from 'os';
 import {join, resolve} from 'path';
 
+import {sha256} from './packs';
 import {GITIGNORE_LINES, mergeGitignore, renderConfig, runSetup, withDocsCheck} from './setup';
 
 const PLUGIN_ROOT = resolve(import.meta.dir, '../..');
@@ -110,5 +111,36 @@ describe('runSetup', () => {
     for (const n of ['ticket', 'pr', 'work-order', 'report', 'retro', 'rule']) {
       expect(existsSync(join(root, `.claude/templates/${n}.md`))).toBe(true);
     }
+  });
+
+  test('writes a lock whose hashes match the installed files, and leaves it alone on a second run', () => {
+    const root = emptyProject();
+    runSetup(root, PLUGIN_ROOT, {});
+    const lockPath = join(root, '.claude/forger.lock.json');
+    const lock = JSON.parse(readFileSync(lockPath, 'utf-8'));
+    expect(lock.packs.map((p: {id: string}) => p.id)).toEqual(['base']);
+    expect(lock.packs[0].files.length).toBeGreaterThan(0);
+    for (const f of lock.packs[0].files) {
+      expect(sha256(readFileSync(join(root, f.path)))).toBe(f.sha256);
+    }
+    const before = readFileSync(lockPath, 'utf-8');
+    const second = runSetup(root, PLUGIN_ROOT, {});
+    expect(second.files.every(f => f.action === 'kept')).toBe(true);
+    expect(readFileSync(lockPath, 'utf-8')).toBe(before);
+  });
+
+  test('a file the project already had is not recorded in the lock', () => {
+    const root = emptyProject();
+    mkdirSync(join(root, '.claude'));
+    writeFileSync(join(root, '.claude/process.md'), 'mine');
+    runSetup(root, PLUGIN_ROOT, {});
+    const lock = JSON.parse(readFileSync(join(root, '.claude/forger.lock.json'), 'utf-8'));
+    expect(lock.packs[0].files.map((f: {path: string}) => f.path)).not.toContain('.claude/process.md');
+  });
+
+  test('an unknown pack is an error and writes nothing', () => {
+    const root = emptyProject();
+    expect(() => runSetup(root, PLUGIN_ROOT, {packs: ['nope']})).toThrow('Unknown pack: nope');
+    expect(existsSync(join(root, '.claude'))).toBe(false);
   });
 });

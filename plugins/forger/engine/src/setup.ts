@@ -6,12 +6,16 @@
 import {existsSync, mkdirSync, readFileSync, writeFileSync} from 'fs';
 import {dirname, join} from 'path';
 
+import {LOCK_PATH, loadPacks, mergeLock, parseLock, renderLock, selectPacks, sha256, type Lock, type LockedFile} from './packs';
+
 export interface SetupOptions {
   gates?: string;
   baseBranch?: string;
   trackerKind?: string;
   /** Skill slots to map, from a preset. */
   skills?: Record<string, string>;
+  /** Pack ids to install; defaults to `base`. */
+  packs?: string[];
 }
 
 export interface SetupEntry {
@@ -34,17 +38,6 @@ export const GITIGNORE_LINES = [
   '.claude/HALT',
   '.claude/runner.lock',
   '.claude/events.jsonl',
-];
-
-const COPIED: ReadonlyArray<[source: string, target: string]> = [
-  ['process.md', '.claude/process.md'],
-  ['backlog.json', '.claude/backlog.json'],
-  ['ticket.md', '.claude/templates/ticket.md'],
-  ['pr.md', '.claude/templates/pr.md'],
-  ['work-order.md', '.claude/templates/work-order.md'],
-  ['report.md', '.claude/templates/report.md'],
-  ['retro.md', '.claude/templates/retro.md'],
-  ['rule.md', '.claude/templates/rule.md'],
 ];
 
 /** The gates always end with the docs check, run from the plugin that is installed now. */
@@ -87,6 +80,9 @@ export function runSetup(projectRoot: string, pluginRoot: string, opts: SetupOpt
   const read = (name: string) => readFileSync(join(templates, name), 'utf-8');
   const docsCheck = `bun ${join(pluginRoot, 'bin', 'work.ts')} check docs`;
 
+  const {packs, unknown} = selectPacks(loadPacks(pluginRoot), opts.packs ?? ['base']);
+  if (unknown.length > 0) throw new Error(`Unknown pack: ${unknown.join(', ')}`);
+
   const files: SetupEntry[] = [
     {
       path: '.claude/workloop.config.json',
@@ -95,9 +91,27 @@ export function runSetup(projectRoot: string, pluginRoot: string, opts: SetupOpt
       ),
     },
   ];
-  for (const [source, target] of COPIED) {
-    files.push({path: target, action: writeIfAbsent(join(projectRoot, target), () => read(source))});
+  const installs = packs.map(({manifest, dir}) => {
+    const written: LockedFile[] = [];
+    for (const f of manifest.files) {
+      const content = readFileSync(join(dir, f.source), 'utf-8');
+      const action = writeIfAbsent(join(projectRoot, f.target), () => content);
+      files.push({path: f.target, action});
+      if (action === 'written') written.push({path: f.target, sha256: sha256(content)});
+    }
+    return {manifest, written};
+  });
+
+  const lockPath = join(projectRoot, LOCK_PATH);
+  const before: Lock = existsSync(lockPath) ? parseLock(readFileSync(lockPath, 'utf-8')) : {packs: []};
+  const lockText = renderLock(mergeLock(before, installs));
+  const lockExists = existsSync(lockPath);
+  const lockChanged = !lockExists || readFileSync(lockPath, 'utf-8') !== lockText;
+  if (lockChanged) {
+    mkdirSync(dirname(lockPath), {recursive: true});
+    writeFileSync(lockPath, lockText);
   }
+  files.push({path: LOCK_PATH, action: lockChanged ? 'written' : 'kept'});
 
   const ignorePath = join(projectRoot, '.gitignore');
   const merged = mergeGitignore(existsSync(ignorePath) ? readFileSync(ignorePath, 'utf-8') : '', GITIGNORE_LINES);
