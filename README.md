@@ -31,7 +31,7 @@ anyone remembering it, and the process is measured by commands, not claims.
 
 | Layer | Who runs it | What it does | Where it lives here |
 |---|---|---|---|
-| **Engine and worker** | a detached runner, headless sessions | picks the next ticket, runs one worker per ticket under a budget, counts outcomes, halts on trouble | `plugins/forger/` |
+| **Engine and worker** | a detached engine, headless sessions | picks the next ticket, runs one worker per ticket under a budget, counts outcomes, halts on trouble | `plugins/forger/` |
 | **Supervisor** | an interactive session with the owner | intake, ordering, dispatch, watching, verifying, reporting | `docs/04-supervising.md` |
 | **Refinement** | the supervisor, within the owner's approval policy | turns corrections, failures and friction into rules, templates, checks and tools | `docs/05-refining-the-process.md` |
 
@@ -65,7 +65,8 @@ installed. The slots, the config and the preset are described in
 [`GLOSSARY.md`](GLOSSARY.md) holds the vocabulary; [`docs/adr/`](docs/adr/) the
 decisions; [`docs/plan-foundation.md`](docs/plan-foundation.md) the plan the
 foundation was built from. `plugins/forger/packs/` holds the opinion packs a repository adopts: the `base` pack carries
-the ticket and PR shapes, the work order, the report, the retro and the rule record.
+the ticket and PR shapes, the work order, the report, the retro and the rule record, and the `docs` pack carries
+the docs habits with checks for links, images, diagrams and glossary terms.
 
 ## Status
 

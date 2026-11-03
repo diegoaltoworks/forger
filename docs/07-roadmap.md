@@ -10,12 +10,12 @@ From the failure catalogue, with a test for each outcome:
   branch.
 - Pass the deadline to the worker and warn before it.
 - Add the branch, last commits and PR state to a timed-out run's iteration log.
-- `status --json`, the runner's own process id in a file, and a terminal-event
+- `status --json`, the engine's own process id in a file, and a terminal-event
   file for watchers.
 - Adopt labelled issues from the tracker, with `depends_on`.
-- Refuse to start a runner whose tracker access is not a scoped token, so a
+- Refuse to start an engine whose tracker access is not a scoped token, so a
   loop never acts as the machine's global account.
-- Start the runner detached from the session that launched it, and write its
+- Start the engine detached from the session that launched it, and write its
   own process id for `status`.
 - Run the cheap checks (commit message, docs) before the long gates, so a
   rejection comes in seconds.
@@ -23,7 +23,7 @@ From the failure catalogue, with a test for each outcome:
 Already in place, with a test each: killing the worker's whole process group on
 timeout, deciding an outcome from facts, telling infrastructure errors from
 worker failures, clearing a HALT together with its counters, ignoring local-only
-paths when checking the tree, one runner at a time with orphan close-out, and
+paths when checking the tree, one engine at a time with orphan close-out, and
 progress measured by merges.
 
 ## 2. A `manage` skill for the supervisor
@@ -49,7 +49,7 @@ skill, so every session walks the same layers instead of improvising.
   and runs only the affected tests (`retro_and_measures` measures the CI rounds
   per ticket that show when this is missing).
 - **Evals:** setup, intake of a bug, a feature and a spike, ordering, an anomaly
-  (a dead runner, a misleading ticket label, a ticket completed but unmerged), a
+  (a dead engine, a misleading ticket label, a ticket completed but unmerged), a
   report, a retro.
 
 ## 3. State that does not live on one laptop
@@ -65,7 +65,7 @@ survive restarts.
   worker at a time. Reports go where the owner reads them on a phone; a HALT
   waits for an owner action (a comment or a label).
 - **If cold starts are too slow:** a persistent machine per repository running the
-  runner as today. Measure first.
+  engine as today. Measure first.
 - **Later:** a hosted app over the same playbook, state and commands: sign in,
   pick a repository, the first-run interview in the browser, a dashboard with the
   report and the owner's open questions, approvals as buttons, per-repository

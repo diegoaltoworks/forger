@@ -1,0 +1,21 @@
+{
+  "id": "docs",
+  "version": "1.0.0",
+  "description": "Docs as Markdown in the repo: every concept drawn, the glossary as the vocabulary, links and diagrams that cannot quietly rot.",
+  "detect": [],
+  "files": [
+    {"source": "files/docs.md", "target": ".claude/opinions/docs.md"}
+  ],
+  "opinions": [
+    {"id": "docs.markdown-in-repo", "rung": "rule", "summary": "Docs are Markdown in the repository, reviewed and versioned with the code they describe.", "check": null},
+    {"id": "docs.diagram-per-concept", "rung": "rule", "summary": "Every concept and process gets a diagram, followed by a sentence saying how to read it.", "check": null},
+    {"id": "docs.feature-page", "rung": "rule", "summary": "Each user-facing feature has a page that shows it, with a screenshot when the ui pack is installed.", "check": null},
+    {"id": "docs.decisions-are-adrs", "rung": "rule", "summary": "A decision that shapes the project is recorded as an ADR, not buried in a chat or a commit.", "check": null},
+    {"id": "docs.links-resolve", "rung": "check", "summary": "Relative links and #anchors in Markdown point at a file and a heading that exist.", "check": "docs"},
+    {"id": "docs.images-resolve", "rung": "check", "summary": "Image links point at files in the repository.", "check": "docs"},
+    {"id": "docs.diagrams-parse", "rung": "check", "summary": "Every mermaid block is a well-formed diagram.", "check": "docs"},
+    {"id": "docs.glossary-terms", "rung": "check", "summary": "Terms the glossary says to avoid stay out of prose; code spans and fences are exempt.", "check": "docs"}
+  ],
+  "checks": ["docs"],
+  "slots": []
+}

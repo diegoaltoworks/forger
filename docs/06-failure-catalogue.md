@@ -21,7 +21,7 @@ recovered, and where the lasting fix belongs: **E** the engine, **S** a skill
   timeout and nobody noticed: the run's log was empty, so nothing showed it was
   stuck or what it was doing. See "A timed-out run leaves an empty log" and
   "The worker gets no warning before the deadline".
-- **Recovered by:** stopping the runner and the worker by hand, then opening
+- **Recovered by:** stopping the engine and the worker by hand, then opening
   the PR for the branch the worker had already pushed.
 - **Fix:** E (in place): the worker is spawned as the leader of its own process
   group; on timeout the engine sends SIGTERM to the group, then SIGKILL after
@@ -128,15 +128,15 @@ recovered, and where the lasting fix belongs: **E** the engine, **S** a skill
   same ticket again, on top of a branch the first run had already pushed.
 - **Cause:** the open iteration was never closed out; the new run started from
   the ticket list alone.
-- **Fix:** E (in place): a runner takes a lock, so only one runs at a time; on
-  start an iteration left open by a dead runner is closed out from git facts
+- **Fix:** E (in place): an engine takes a lock, so only one runs at a time; on
+  start an iteration left open by a dead engine is closed out from git facts
   (merged, pushed, nothing) before anything new begins.
 
 ### The engine exits "all tasks completed" while work remains
 
 - **Seen:** the engine reported everything done while the owner's work order
   still listed work.
-- **Cause:** "done" was read from the engine's own queue, which did not hold
+- **Cause:** "done" was read from the engine's own backlog, which did not hold
   what the work order held (new issues not yet adopted, tickets the filter
   hid).
 - **Fix:** E (in place): the exit keys off the count of tickets not completed,
@@ -146,9 +146,9 @@ recovered, and where the lasting fix belongs: **E** the engine, **S** a skill
 
 ## Running the loop
 
-### The runner dies with the session
+### The engine dies with the session
 
-- **Seen:** a runner started with `setsid nohup` died when the supervising
+- **Seen:** an engine started with `setsid nohup` died when the supervising
   session restarted.
 - **Fix:** E: a documented detached start (a service unit, or a supervisor
   outside the session). Toward the cloud roadmap item, state that does not live
@@ -157,9 +157,9 @@ recovered, and where the lasting fix belongs: **E** the engine, **S** a skill
 ### A watcher on the wrong process
 
 - **Seen:** the supervisor watched the launcher's process id, which exits as
-  soon as the runner starts, and reported the runner gone while it was working.
-- **Fix:** S: find the runner's own process id after the start. E: write the
-  runner's id to a file and expose it in `status`.
+  soon as the engine starts, and reported the engine gone while it was working.
+- **Fix:** S: find the engine's own process id after the start. E: write the
+  engine's id to a file and expose it in `status`.
 
 ### A watcher that matches its own command
 
@@ -174,7 +174,7 @@ recovered, and where the lasting fix belongs: **E** the engine, **S** a skill
   command line, and killed its own shell. The same self-match hung a worker's
   wait (see the first entry).
 - **Fix:** S: never `pkill -f` or `pgrep -f` on a pattern that can match the
-  command that carries it; act on a process id taken from the runner's pid
+  command that carries it; act on a process id taken from the engine's pid
   file. E: `status --json` reports that id.
 
 ### Background work reports done before its files exist
@@ -189,7 +189,7 @@ recovered, and where the lasting fix belongs: **E** the engine, **S** a skill
 ### The engine finds no work while issues wait
 
 - **Seen:** the engine reads only the backlog file. Issues labelled for the loop
-  but not yet queued were not picked up, and the runner exited at once.
+  but not yet queued were not picked up, and the engine exited at once.
 - **Fix:** P: the supervisor queues new issues in the backlog by PR as part of
   intake. E: adopt labelled issues itself, with their dependencies.
 
@@ -222,12 +222,12 @@ recovered, and where the lasting fix belongs: **E** the engine, **S** a skill
   run only the affected tests locally before pushing. The time budget is not
   raised to absorb a slow loop.
 
-### CI's default runner image moved
+### CI's default `runs-on` image moved
 
 - **Seen:** after a repository move, CI jobs landed on a newer default Ubuntu
   image where the browser test tool could not install its browser. Every end to
   end job failed on work that was fine.
-- **Fix:** P: pin runner images; a worker that hits an outside failure files a
+- **Fix:** P: pin the `runs-on` images; a worker that hits an outside failure files a
   ticket and halts rather than retrying.
 
 ### The loop acted as the wrong account
@@ -235,7 +235,7 @@ recovered, and where the lasting fix belongs: **E** the engine, **S** a skill
 - **Seen:** the CLI was signed in as a personal account, so the loop's merges and
   previews were attributed to it after the repository moved to an organisation.
 - **Seen again:** other loops on the same machine shared the global account, so
-  a runner started without a scoped token acted as the wrong one.
+  an engine started without a scoped token acted as the wrong one.
 - **Fix:** P: the loop's token is scoped to its own processes
   (`GH_TOKEN=$(gh auth token --user <account>)`); never switch the global
   account.

@@ -17,7 +17,7 @@ for every project go upstream into forger's own defaults and tools. See
 
 - **Engine fixes** from the failure catalogue: timeouts that really end the
   worker, outcomes decided from facts, infrastructure errors told apart from
-  worker failures, HALT and counter hygiene, one runner at a time, a
+  worker failures, HALT and counter hygiene, one engine at a time, a
   machine-readable status.
 - **GitHub Issues as the backlog**, with the file backlog as the fallback
   ([ADR 0001](adr/0001-github-issues-are-the-backlog.md)), and the engine's
@@ -50,7 +50,7 @@ The backlog's `depends_on` is the order; in outline:
 
 1. Engine timeouts, then outcomes from facts.
 2. The Backlog interface, then the GitHub backlog.
-3. Infrastructure errors and HALT hygiene; one runner and machine-readable status.
+3. Infrastructure errors and HALT hygiene; one engine and machine-readable status.
 4. Pure forger; the docs check; then the catalogue and roadmap import.
 5. Setup installs the opinions; the supervisor; the retro and its measures.
 

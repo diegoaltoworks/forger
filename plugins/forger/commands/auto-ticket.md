@@ -47,9 +47,9 @@ and `merge_conflicts` (step 8).
 
 ## Your task: one full iteration
 
-### 1. Inbox
+### 1. Work order
 Human instructions first: acknowledge new `.claude/inbox/*.md` items (prefix
-with a clock) and queue them - as an issue with the intake label on GitHub,
+with a clock) and add them to the backlog - as an issue with the intake label on GitHub,
 otherwise in `backlog.json` with a priority. Then continue.
 
 ### 2. Select ONE ticket
@@ -145,7 +145,7 @@ End your response with exactly one:
 
 ## Rules
 - ONE ticket per iteration. Quality gates must pass. Small, clean commits.
-- Check the inbox first - human instructions win.
+- Check the work order first - human instructions win.
 - Claim the issue before working it; close it through the PR.
 - Never adopt or work an issue whose labels match `tracker.ignore`.
 - If blocked, signal `stop` with a clear reason rather than guessing.
