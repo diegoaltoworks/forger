@@ -59,7 +59,15 @@ not a fork of the code.
 A shape that other code depends on changes in three steps: add the new shape
 beside the old, move the users over, remove the old. No step breaks a user.
 
-## Deep modules
+## Deep interfaces
 
-A module offers a small interface over a lot of behaviour. Many shallow
-modules that each do little push the complexity onto their callers.
+A unit of code offers a small interface over a lot of behaviour. Many shallow
+units that each do little push the complexity onto their callers.
+
+## Decisions are recorded
+
+A new dependency or a change to the layer map is a decision. It leaves an ADR
+under `docs/adr/` in the same diff (`.claude/templates/adr.md` is the shape:
+context, decision, consequences, status). An ADR is superseded by a new one,
+never edited. `check decisions` enforces this by reading the diff against the
+base branch; a version bump or a removed dependency needs no ADR.

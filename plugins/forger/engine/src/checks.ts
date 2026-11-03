@@ -8,6 +8,7 @@ import {existsSync, readFileSync} from 'fs';
 import {join} from 'path';
 
 import {runArchCheck} from './arch-check';
+import {runDecisionsCheck} from './decisions-check';
 import {runDocsCheck} from './docs-check';
 import type {CommandRunner} from './git';
 import {LOCK_PATH, loadPacks, parseLock, type Lock, type LoadedPack} from './packs';
@@ -37,6 +38,7 @@ export interface CheckContext {
 export const CHECKS: Record<string, (ctx: CheckContext) => Finding[]> = {
   docs: ctx => runDocsCheck(ctx.projectRoot, ctx.run),
   arch: ctx => runArchCheck(ctx.projectRoot, ctx.run),
+  decisions: ctx => runDecisionsCheck(ctx.projectRoot, ctx.run),
 };
 
 /** The check ids of the installed packs, in lock order, each once. An installed pack that cannot be found is an error. */
