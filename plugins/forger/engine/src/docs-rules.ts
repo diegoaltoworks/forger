@@ -19,7 +19,8 @@ const NON_ASCII = /[^\x00-\x7F]/g;
 const EMAIL = /[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,}/g;
 const HOME_PATH = /(?:\/home\/|\/Users\/)[A-Za-z0-9._-]+/g;
 
-const THIRD_PARTY_SKILLS = /matt-?\s?pocock|\bSkill tool\b|\bcall(?:s|ed)? the Skill\b/gi;
+const THIRD_PARTY_SKILLS =
+  /matt-?\s?pocock|\bSkill tool\b|\bcall(?:s|ed)? the Skill\b|docs\/agents\/issue-tracker\.md|(?<![\w/])\/(?:to-tickets|triage)\b/gi;
 
 /** Shipped prose: what a project adopts or reads as instructions. */
 const SHIPPED = [/^plugins\/forger\/commands\//, /^plugins\/forger\/templates\//, /^templates\//, /(^|\/)README\.md$/];

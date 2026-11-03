@@ -67,6 +67,18 @@ describe('thirdPartySkills', () => {
     expect(thirdPartySkills('call the Skill tool with "tdd"')).toHaveLength(1);
     expect(thirdPartySkills('use the matt pocock skills')).toHaveLength(1);
   });
+  test('flags the collection tracker doc', () => {
+    expect(thirdPartySkills('see docs/agents/issue-tracker.md')).toEqual(['docs/agents/issue-tracker.md']);
+  });
+  test('flags /to-tickets', () => {
+    expect(thirdPartySkills('published by `/to-tickets`')).toEqual(['/to-tickets']);
+  });
+  test('flags /triage', () => {
+    expect(thirdPartySkills('run /triage first')).toEqual(['/triage']);
+  });
+  test('does not flag paths that merely contain triage', () => {
+    expect(thirdPartySkills('src/triage/index.ts')).toEqual([]);
+  });
   test('plain prose is clean', () => {
     expect(thirdPartySkills('write the failing test first')).toEqual([]);
   });

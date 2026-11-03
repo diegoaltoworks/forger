@@ -379,6 +379,28 @@
         "docs/05-refining-the-process.md ladder",
         "docs/02-the-loop.md lifecycle"
       ]
+    },
+    "finish_pure_forger": {
+      "priority": "P1",
+      "status": "completed",
+      "type": "feature",
+      "depends_on": [],
+      "effort": "small",
+      "issue": 22,
+      "title": "Finish pure forger: drop the leftover third-party tracker doc and skill references",
+      "description": "Remove references to the third-party tracker doc, /to-tickets and /triage from commands, templates and READMEs, and widen the docs rule so they fail check docs.",
+      "acceptance_criteria": [
+        "No command, template or README refers to the third-party tracker doc, /to-tickets, /triage",
+        "The docs rule rejects those references, with a test per pattern",
+        "Gates green"
+      ],
+      "files": [
+        "plugins/forger/engine/src/docs-rules.ts",
+        "plugins/forger/commands/"
+      ],
+      "reuse": [
+        "thirdPartySkills rule"
+      ]
     }
   }
 }
