@@ -131,8 +131,68 @@ describe('check docs', () => {
     expect(out).toBe('docs check: clean');
     writeFileSync(join(root, 'a.md'), 'bad \u2014');
     const bad = await capture(['check', 'docs', '--json'], () => 'a.md');
-    expect(JSON.parse(bad)).toEqual([{file: 'a.md', line: 1, rule: 'non-ascii', detail: 'U+2014'}]);
+    expect(JSON.parse(bad)).toEqual([{file: 'a.md', line: 1, rule: 'non-ascii', opinion: 'base.ascii-punctuation', detail: 'U+2014'}]);
     expect(process.exitCode).toBe(1);
+    process.exitCode = 0;
+  });
+});
+
+describe('check', () => {
+  function installed(): string {
+    const root = projectWith({});
+    writeFileSync(join(root, '.claude', 'forger.lock.json'), JSON.stringify({packs: [{id: 'base', version: '1.1.0', files: []}]}));
+    writeFileSync(join(root, 'a.md'), 'clean');
+    process.chdir(root);
+    return root;
+  }
+
+  test('all clean: every check passed, exit 0', async () => {
+    installed();
+    const report = JSON.parse(await capture(['check', '--json'], () => 'a.md'));
+    expect(report).toEqual({ok: true, results: [{check: 'docs', status: 'passed', violations: [], waived: []}], staleWaivers: []});
+    expect(process.exitCode).not.toBe(1);
+  });
+
+  test('one violation: failed, carries the opinion id, exit 1', async () => {
+    const root = installed();
+    writeFileSync(join(root, 'a.md'), 'bad \u2014');
+    const report = JSON.parse(await capture(['check', '--json'], () => 'a.md'));
+    expect(report.ok).toBe(false);
+    expect(report.results[0].status).toBe('failed');
+    expect(report.results[0].violations[0]).toMatchObject({file: 'a.md', opinion: 'base.ascii-punctuation'});
+    expect(process.exitCode).toBe(1);
+    process.exitCode = 0;
+  });
+
+  test('a waived violation passes the gate and is reported with its approver', async () => {
+    const root = installed();
+    writeFileSync(join(root, 'a.md'), 'bad \u2014');
+    const waiver = {opinion: 'base.ascii-punctuation', path: 'a.md', reason: 'quoted source', approved_by: 'the owner'};
+    writeFileSync(join(root, '.claude', 'waivers.json'), JSON.stringify({waivers: [waiver]}));
+    const report = JSON.parse(await capture(['check', '--json'], () => 'a.md'));
+    expect(report.ok).toBe(true);
+    expect(report.results[0].status).toBe('waived');
+    expect(report.results[0].waived[0].waiver).toEqual(waiver);
+    expect(process.exitCode).not.toBe(1);
+  });
+
+  test('a malformed waiver file is an error, not a waiver', async () => {
+    const root = installed();
+    writeFileSync(join(root, '.claude', 'waivers.json'), JSON.stringify({waivers: [{opinion: 'x.y', path: 'a.md'}]}));
+    const err = spyOn(console, 'error').mockImplementation(() => {});
+    await capture(['check', '--json'], () => 'a.md');
+    expect(err.mock.calls.join(' ')).toContain('reason');
+    err.mockRestore();
+    expect(process.exitCode).toBe(1);
+    process.exitCode = 0;
+  });
+
+  test('without a lock there is nothing to run and it says so', async () => {
+    process.chdir(projectWith({}));
+    const err = spyOn(console, 'error').mockImplementation(() => {});
+    await capture(['check'], () => '');
+    expect(err.mock.calls.join(' ')).toContain('forger.lock.json');
+    err.mockRestore();
     process.exitCode = 0;
   });
 });

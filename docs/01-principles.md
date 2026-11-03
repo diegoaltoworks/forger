@@ -22,7 +22,7 @@ flowchart LR
     A[owner request] --> B[model: what it means]
     B --> C{{tool: ticket, order, status --json}}
     C --> D[model: how to build the slice]
-    D --> E{{tool: gates, check docs, outcome}}
+    D --> E{{tool: gates, check, outcome}}
     E --> F[model: which rule a lesson becomes]
     F --> G{{tool: PR, merge, measure --json}}
 ```

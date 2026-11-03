@@ -203,6 +203,7 @@ bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts backlog --json     # workable tickets, rem
 bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts skills [--json] [--presets]  # each skill slot's configured skill, whether installed, and the built-in fallback; --presets lists offered presets
 bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts packs [--json]        # available packs and which are installed
 bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts opinions [--json]     # installed opinions: pack, rung, enforcing check
+bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts check [--json]       # every check the installed packs declare, with .claude/waivers.json applied; non-zero on an unwaived violation
 bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts check docs [--json]  # writing rules: ASCII punctuation, no emails or home paths, no hard-coded skill calls in commands or templates, optional .forger-denylist
 bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts resume             # clear a HALT
 ```

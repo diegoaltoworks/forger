@@ -1,7 +1,7 @@
 {
   "repo": null,
   "worker_command": "fyneworker:work-auto-ticket",
-  "gates": "cd plugins/forger/engine && bun install --frozen-lockfile && bun run check && cd ../../.. && bun plugins/forger/bin/work.ts check docs",
+  "gates": "cd plugins/forger/engine && bun install --frozen-lockfile && bun run check && cd ../../.. && bun plugins/forger/bin/work.ts check",
   "base_branch": "main",
   "tracker": {
     "kind": "github",
