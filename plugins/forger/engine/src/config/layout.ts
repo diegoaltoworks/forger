@@ -7,7 +7,7 @@
  */
 
 import {existsSync} from 'fs';
-import {join} from 'path';
+import {dirname, join} from 'path';
 
 export const FORGER_DIR = '.forger';
 export const LEGACY_DIR = '.claude';
@@ -52,16 +52,50 @@ export function chooseLayout(has: {forger: boolean; legacyConfig: boolean}): Lay
   return {dir: FORGER_DIR, legacy: false};
 }
 
-export function detectLayout(projectRoot: string): Layout {
-  return chooseLayout({
-    forger: existsSync(join(projectRoot, FORGER_DIR)),
-    legacyConfig: existsSync(join(projectRoot, LEGACY_DIR, CONFIG_FILE)),
-  });
+/** The marker facts of a directory: whether it holds `.forger/`, or a legacy `.claude/` with a forger config. */
+export function readMarkers(dir: string): {forger: boolean; legacyConfig: boolean} {
+  return {
+    forger: existsSync(join(dir, FORGER_DIR)),
+    legacyConfig: existsSync(join(dir, LEGACY_DIR, CONFIG_FILE)),
+  };
 }
 
-/** Whether a directory is a project root for forger: it holds either folder. */
+export function detectLayout(projectRoot: string): Layout {
+  return chooseLayout(readMarkers(projectRoot));
+}
+
+/** Whether a directory is a project root for forger: it holds `.forger/`, or a legacy `.claude/` with a forger config. */
 export function isProjectRoot(dir: string): boolean {
-  return existsSync(join(dir, FORGER_DIR)) || existsSync(join(dir, LEGACY_DIR));
+  const {forger, legacyConfig} = readMarkers(dir);
+  return forger || legacyConfig;
+}
+
+/**
+ * Pure: the root forger acts on, from the facts of the directories between the
+ * working directory and the git top-level. The nearest one holding `.forger/`
+ * or a legacy `.claude/` with a forger config wins; the git top-level answers
+ * when none does, so setup and the packs commands run there before any
+ * `.forger/` exists. Outside a repository the climb runs on, and the working
+ * directory answers when no directory holds a marker. The home directory is
+ * never a root: every user's home holds a harness folder, and acting there
+ * would read files far from the project.
+ */
+export function chooseProjectRoot(
+  cwd: string,
+  gitTop: string | null,
+  markersOf: (dir: string) => {forger: boolean; legacyConfig: boolean},
+  home: string
+): string {
+  let dir = cwd;
+  for (;;) {
+    if (dir !== home) {
+      const {forger, legacyConfig} = markersOf(dir);
+      if (forger || legacyConfig) return dir;
+    }
+    if (dir === (gitTop ?? dirname(dir))) break;
+    dir = dirname(dir);
+  }
+  return gitTop ?? cwd;
 }
 
 /** Pure: a logical `.forger/x` path as the layout stores it. Other paths are returned as they are. */

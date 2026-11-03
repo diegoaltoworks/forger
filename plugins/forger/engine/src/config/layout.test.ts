@@ -4,7 +4,7 @@ import {tmpdir} from 'os';
 import {join} from 'path';
 
 import {loadConfig} from './config';
-import {chooseLayout, detectLayout, forgerPath, legacyWarning, rewriteReferences, toLogical, toPhysical} from './layout';
+import {chooseLayout, chooseProjectRoot, detectLayout, forgerPath, legacyWarning, rewriteReferences, toLogical, toPhysical} from './layout';
 
 const dirs: string[] = [];
 afterEach(() => {
@@ -81,5 +81,50 @@ describe('the folder name has one owner', () => {
     };
     walk(src);
     expect(offenders).toEqual([]);
+  });
+});
+
+describe('chooseProjectRoot', () => {
+  const fake = (marks: Record<string, {forger?: boolean; legacyConfig?: boolean}>) => (dir: string) => ({
+    forger: marks[dir]?.forger === true,
+    legacyConfig: marks[dir]?.legacyConfig === true,
+  });
+
+  test('the git top-level answers when nothing in the repository holds a marker', () => {
+    const repo = project({});
+    expect(chooseProjectRoot(repo, repo, fake({}), '/home/u')).toBe(repo);
+  });
+
+  test('the nearest marker between the working directory and the git top-level wins', () => {
+    const repo = project({'.forger/workloop.config.json': '{}'});
+    const sub = join(repo, 'sub');
+    mkdirSync(sub);
+    expect(chooseProjectRoot(sub, repo, fake({[repo]: {forger: true}}), '/home/u')).toBe(repo);
+  });
+
+  test('a marker above the git top-level is not a candidate, however legacy it looks', () => {
+    const above = project({'.claude/workloop.config.json': '{}'});
+    const repo = join(above, 'repo');
+    mkdirSync(repo);
+    expect(chooseProjectRoot(repo, repo, fake({[above]: {legacyConfig: true}}), '/home/u')).toBe(repo);
+  });
+
+  test('a .claude without a forger config is not a legacy root', () => {
+    const repo = project({'.claude/settings.json': '{}'});
+    expect(chooseProjectRoot(repo, repo, fake({[repo]: {legacyConfig: false}}), '/home/u')).toBe(repo);
+  });
+
+  test('the home directory is never a root, whatever it holds', () => {
+    const home = project({'.forger/workloop.config.json': '{}'});
+    const notes = join(home, 'notes');
+    mkdirSync(notes);
+    expect(chooseProjectRoot(notes, null, fake({[home]: {forger: true}}), home)).toBe(notes);
+  });
+
+  test('outside a repository the nearest marker above the working directory still answers', () => {
+    const parent = project({'.forger/workloop.config.json': '{}'});
+    const cwd = join(parent, 'notes');
+    mkdirSync(cwd);
+    expect(chooseProjectRoot(cwd, null, fake({[parent]: {forger: true}}), '/home/u')).toBe(parent);
   });
 });

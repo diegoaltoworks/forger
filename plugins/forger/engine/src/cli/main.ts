@@ -6,12 +6,13 @@
  */
 
 import {homedir, hostname} from 'os';
-import {dirname, resolve} from 'path';
+import {resolve} from 'path';
 import {parseArgs} from 'util';
 
 import {agentFor, execCapture, gitStateStore, localStateFor, execRunner, findHarness} from '../adapters';
+import type {CapturingRunner} from '../ports';
 import type {Backlog} from '../backlog';
-import {detectLayout, isProjectRoot, legacyWarning, loadConfig, type WorkloopConfig} from '../config';
+import {chooseProjectRoot, detectLayout, legacyWarning, loadConfig, readMarkers, type WorkloopConfig} from '../config';
 import {AutomationRunner, DEFAULT_LEASE_TTL_SECONDS, GhTrackerHalt, type LeaseSettings} from '../loop';
 import type {StateStore} from '../ports';
 import {listCollectionRoots, listInstalledSkills} from '../packs';
@@ -20,14 +21,16 @@ import {FLAGS} from './flags';
 import {openBacklog} from './open-backlog';
 import {findCommand, renderHelp} from './registry';
 
-/** Nearest ancestor directory holding forger's folder (or the legacy one). */
+/** The git top-level of the working directory, or null outside a repository. */
+function gitTopLevel(start: string, run: CapturingRunner): string | null {
+  const r = run('git rev-parse --show-toplevel');
+  return r.exitCode === 0 && r.stdout ? resolve(r.stdout) : null;
+}
+
+/** The root forger acts on: the nearest marker at or above the working directory, or the git top-level. */
 export function findProjectRoot(start: string = process.cwd()): string {
-  let dir = start;
-  while (dir !== dirname(dir)) {
-    if (isProjectRoot(dir)) return dir;
-    dir = dirname(dir);
-  }
-  throw new Error('Could not find a .forger directory in this or any parent directory');
+  const top = gitTopLevel(start, execCapture(start));
+  return chooseProjectRoot(start, top, readMarkers, homedir());
 }
 
 /** The lease identity of this engine when the state lives on the branch; none for the local store. */

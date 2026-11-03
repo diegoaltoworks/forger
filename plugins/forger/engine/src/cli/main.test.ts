@@ -4,7 +4,7 @@ import {tmpdir} from 'os';
 import {join} from 'path';
 
 import {execRunner, gitStateStore} from '../adapters';
-import {main} from './main';
+import {findProjectRoot, main} from './main';
 import type {CommandRunner} from '../ports';
 
 const dirs: string[] = [];
@@ -408,6 +408,27 @@ describe('packs --detect', () => {
   test('says so when nothing is suggested', async () => {
     process.chdir(projectWith({}));
     expect(await capture(['packs', '--detect'])).toContain('no packs suggested');
+  });
+  test('in a repository that is not set up yet, reads that repository and not a parent holding .claude', async () => {
+    const parent = realpathSync(mkdtempSync(join(tmpdir(), 'forger-root-parent-')));
+    dirs.push(parent);
+    const repo = join(parent, 'repo');
+    mkdirSync(repo);
+    mkdirSync(join(parent, '.claude'));
+    // The bait: the parent's react dependency would suggest the ui pack if the detection climbed there.
+    writeFileSync(join(parent, 'package.json'), JSON.stringify({dependencies: {react: '1'}}));
+    execRunner(repo)('git init -q');
+    process.chdir(repo);
+    expect(findProjectRoot()).toBe(repo);
+    expect(JSON.parse(await capture(['packs', '--detect', '--json']))).toEqual([]);
+  });
+  test('a repository whose .claude holds no forger config is still the root', async () => {
+    const repo = realpathSync(mkdtempSync(join(tmpdir(), 'forger-root-harness-')));
+    dirs.push(repo);
+    mkdirSync(join(repo, '.claude'));
+    execRunner(repo)('git init -q');
+    process.chdir(repo);
+    expect(findProjectRoot()).toBe(repo);
   });
 });
 
