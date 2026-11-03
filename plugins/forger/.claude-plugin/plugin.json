@@ -1,6 +1,6 @@
 {
   "name": "forger",
-  "description": "Unattended development loop, GitHub Issues first. Human entry points: `/forger:setup` onboards a repo; `/forger:plan` grounds in the repo then grills you (via mattpocock-skills when installed) into a plan, tracker issues and queued tickets; `/forger:work` starts and supervises a continuous runner that implements one ticket per iteration. Machine commands (the `auto` infix): the runner invokes `/forger:auto-ticket` per ticket, and `/forger:auto-plan` turns a spec, phase doc, resolved wayfinder map or ready-for-agent issues into tickets unattended.",
+  "description": "Unattended development loop, GitHub Issues first. Human entry points: `/forger:setup` onboards a repo; `/forger:plan` grounds in the repo then interviews you into a plan, tracker issues and queued tickets; `/forger:work` starts and supervises a continuous runner that implements one ticket per iteration. Machine commands (the `auto` infix): the runner invokes `/forger:auto-ticket` per ticket, and `/forger:auto-plan` turns a spec, phase doc, resolved wayfinder map or ready-for-agent issues into tickets unattended.",
   "version": "0.1.0",
   "author": {
     "name": "Diego"

@@ -1,7 +1,7 @@
 ---
 description: Grill the user to turn intent into a documented plan, tracker issues and backlog tickets
 disable-model-invocation: true
-allowed-tools: Bash(*), Read, Write, Edit, Glob, Grep, Skill, AskUserQuestion, Task, TodoWrite, WebSearch, WebFetch
+allowed-tools: Bash(*), Read, Write, Edit, Glob, Grep, AskUserQuestion, Task, TodoWrite, WebSearch, WebFetch
 ---
 
 # Plan - ground, scope, grill, crystallise
@@ -18,22 +18,12 @@ there are enough well-formed tickets to hand to `/forger:work`.
 
 ## Environment
 
-- **mattpocock-skills plugin:** !`grep -q '"mattpocock-skills@' ~/.claude/plugins/installed_plugins.json 2>/dev/null && echo installed || echo "not installed"`
 - **Tracker doc (`docs/agents/issue-tracker.md`):** !`test -f docs/agents/issue-tracker.md && echo present || echo absent`
-- **Domain glossary (`CONTEXT.md`):** !`test -f CONTEXT.md && echo present || echo absent`
+- **Domain glossary (`GLOSSARY.md`):** !`test -f GLOSSARY.md && echo present || echo absent`
 - **Wayfinder maps on the tracker:** !`gh issue list --label wayfinder:map --state all --json number,title,state --jq '.[] | "#\(.number) \(.title) (\(.state))"' 2>/dev/null || echo "none, or gh unavailable"`
 
 How to use this:
 
-- **Plugin not installed:** say so once, up front, and suggest it. This command
-  works without it, but the interview is sharper with it.
-  ```
-  claude plugins install mattpocock-skills
-  ```
-- **Plugin installed, tracker doc absent:** suggest the user runs
-  `/setup-matt-pocock-skills` once for this repo. It seeds the tracker doc,
-  `CONTEXT.md` and the ADR layout that the skills below write into. Do not
-  block on it.
 - **Tracker doc present:** it is the authority on how this repo talks to its
   tracker. Follow it over the generic `gh` commands below.
 
@@ -43,7 +33,7 @@ Read enough to hold an intelligent conversation - do not interrogate the user fo
 what the repo already tells you:
 - `.claude/process.md` (the rules and gotchas), `.claude/workloop.config.json`
 - `.claude/backlog.json` and `.claude/backlog.md` - what is already queued or done
-- `CONTEXT.md` and `docs/adr/` if present - the vocabulary and the decisions
+- `GLOSSARY.md` and `docs/adr/` if present - the vocabulary and the decisions
   already made; use the glossary's terms from here on
 - The repo's docs (architecture / domain / decisions / any phase docs) and README
 - A quick structural pass over the code (top-level dirs, entry points) so you can
@@ -76,16 +66,7 @@ This scope bounds step 3: "nothing left to decide" means nothing left to decide
 
 ## 3. Grill until the plan is clear
 
-**If mattpocock-skills is installed: call the Skill tool twice, for "grilling"
-and "domain-modeling".** Grilling runs the interview as rounds over a design
-tree: the whole frontier per round, each question numbered with your recommended
-answer, facts fetched by sub-agents rather than asked of the user. Domain-modeling
-runs alongside it: challenge terms against the glossary, stress-test with edge
-cases, record notable decisions as ADRs and update `CONTEXT.md` inline. Do not
-move on until the frontier is empty for this goal and the user confirms a shared
-understanding.
-
-**If it is not installed**, run the interview yourself in the same shape:
+Run the interview yourself, in this shape:
 
 - Map the decisions as a tree. The **frontier** is every question whose
   prerequisites are settled. Ask the whole frontier in one round, numbered, each
@@ -93,10 +74,14 @@ understanding.
   and ask the next round. A question that depends on another still open in this
   round belongs to a later round.
 - Facts are your job, never the user's: look up anything the filesystem or tools
-  can answer.
-- Record decisions worth keeping in the repo's decisions log if it has one.
+  can answer, with sub-agents where it helps.
+- Challenge terms against `GLOSSARY.md` and stress-test with edge cases. Write
+  new terms into `GLOSSARY.md` and notable decisions into `docs/adr/` as they
+  settle.
+- Do not move on until the frontier is empty for this goal and the user confirms
+  a shared understanding.
 
-Either way, cover as far as the goal needs (not more):
+Cover as far as the goal needs (not more):
 - **Scope & boundaries** - what is explicitly in, and what is out of scope.
 - **Problem & why** - the underlying need, so tickets solve the right thing.
 - **Constraints** - compatibility, data-safety, performance, deadlines, and the
@@ -119,7 +104,7 @@ When the user is ready, **write it down** - clarity is the deliverable, not just
 tickets. Create or update a short planning doc (e.g. `docs/plan-<slug>.md`)
 capturing: the goal, what is in and out of scope, the build order, and any open
 questions/blockers. Keep it durable and qualitative - no counts, dates, or
-transient specifics. Decisions that domain-modeling recorded as ADRs are linked
+transient specifics. Decisions recorded as ADRs are linked
 from the plan, not restated in it; a decision lives in one place.
 
 ## 5. Draft the tickets
@@ -160,9 +145,9 @@ otherwise:
 
 Write the tickets to `.claude/backlog.json`, update `.claude/backlog.md` with the
 human summary grouped by priority, then one commit touching only the plan and
-the backlog (ADRs and `CONTEXT.md` edits ride in the same commit):
+the backlog (ADRs and `GLOSSARY.md` edits ride in the same commit):
 ```
-git add .claude/backlog.json .claude/backlog.md docs/ CONTEXT.md
+git add .claude/backlog.json .claude/backlog.md docs/ GLOSSARY.md
 git commit -m "Plan <theme>: <short list of items>"
 ```
 Then report: the goal, the tickets created (ids, issue numbers, priority, build

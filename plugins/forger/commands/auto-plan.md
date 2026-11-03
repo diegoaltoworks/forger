@@ -1,6 +1,6 @@
 ---
 description: Unattended - turn a spec, phase doc, resolved wayfinder map, or ready-for-agent issues into queued backlog tickets
-allowed-tools: Bash(*), Read, Write, Edit, Glob, Grep, Skill, Task, TodoWrite, WebSearch, WebFetch
+allowed-tools: Bash(*), Read, Write, Edit, Glob, Grep, Task, TodoWrite, WebSearch, WebFetch
 ---
 
 # Auto-plan - autonomous ticket generation
@@ -15,7 +15,6 @@ implement.
 
 ## Environment
 
-- **mattpocock-skills plugin:** !`grep -q '"mattpocock-skills@' ~/.claude/plugins/installed_plugins.json 2>/dev/null && echo installed || echo "not installed"`
 - **Tracker doc (`docs/agents/issue-tracker.md`):** !`test -f docs/agents/issue-tracker.md && echo present || echo absent`
 
 If the tracker doc is present it is the authority on tracker operations; follow
@@ -24,7 +23,7 @@ it over the generic `gh` commands below.
 ## Read first
 1. `.claude/process.md` - the ticket shape, the gotchas, the tracker rules
 2. `.claude/workloop.config.json` - `repo`, `tracker`, paths
-3. `CONTEXT.md` and `docs/adr/` if present - write tickets in the glossary's
+3. `GLOSSARY.md` and `docs/adr/` if present - write tickets in the glossary's
    vocabulary and respect the ADRs in the area you touch
 4. `.claude/backlog.json` - what already exists, so you do not duplicate it
 5. `.claude/human.md` - known blockers
