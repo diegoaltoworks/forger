@@ -16,6 +16,7 @@ import {runDocsCheck} from './docs-check';
 import {formatViolations} from './docs-rules';
 import {AutomationRunner} from './runner';
 import {awaitEvent, readEvents} from './events';
+import {formatFacts, gatherLoopFacts} from './facts';
 import {approvalFor, buildReport, formatReport, orient} from './supervisor';
 import {mkdirSync, readdirSync, readFileSync, writeFileSync} from 'fs';
 import {computeMeasures, draftUpstreamIssue, formatMeasures, parseBudgets, parseIterationLog, renderRule, ruleFilePath, ruleProblem, type CiRun, type IterationRecord, type RuleRecord} from './measure';
@@ -48,6 +49,8 @@ Usage (run from the consumer repo root):
   backlog [--json] Workable tickets in order, remaining count and next pick
   orient [--json]  What the supervisor should do on arrival: surface_halt, attach, start, nothing_to_do
   report [--json]  Merged, in progress (real branch), next, waiting on the owner
+  facts [--json] [--issue N]
+                   Read-only: branch, clean, origin base head, and issue -> closing PR -> merged
   approval ACTION  Who may do ACTION: alone, alone_and_report, owner or never
   events [--json]  Terminal events so far
   await-event [--seen N] [--timeout S]
@@ -88,6 +91,7 @@ export async function main(
       gates: {type: 'string'},
       'base-branch': {type: 'string'},
       tracker: {type: 'string'},
+      issue: {type: 'string'},
       preset: {type: 'string'},
       presets: {type: 'boolean', default: false},
       seen: {type: 'string', default: '0'},
@@ -264,6 +268,17 @@ export async function main(
       if (values.json) console.log(JSON.stringify(out));
       else if (command === 'report') console.log(formatReport(out as ReturnType<typeof buildReport>));
       else console.log([`${plan.action}: ${plan.reason}`, ...plan.anomalies.map(a => `! ${a}`)].join('\n'));
+      break;
+    }
+    case 'facts': {
+      const {state, log, output, halt, lock, events} = config.paths;
+      const issue = values.issue === undefined ? undefined : parseInt(values.issue, 10);
+      const facts = gatherLoopFacts(deps.run ?? execRunner(projectRoot), {
+        baseBranch: config.base_branch,
+        ignore: [state, log, output, halt, lock, events, ...config.local_only],
+        issue: Number.isNaN(issue) ? undefined : issue,
+      });
+      console.log(values.json ? JSON.stringify(facts) : formatFacts(facts));
       break;
     }
     case 'events': {

@@ -60,9 +60,10 @@ or match a process name.
   and exits 2 on its timeout. Run it in the background; it reads a file, so
   there is no command-line pattern for it to match.
 
-On each event, and on each tick, verify from facts: `git branch --show-current`
-and `git log` for the real branch and its commits, `gh pr list` and CI logs for
-the PR, and `work report --json` for the rest. A ticket marked completed with
+On each event, and on each tick, verify from facts: `work facts --json` gives
+the checkout's branch, whether it is clean, the base head on `origin`, and with
+`--issue <n>` the PR that closed that issue and whether it merged; `work report
+--json` gives the rest. A ticket marked completed with
 nothing merged is not done. A worker that timed out after pushing has made
 progress.
 
@@ -92,6 +93,10 @@ that touches production.
 
 ## Rules
 
+- Read-only on the loop's checkout. While a runner is alive, never check out,
+  switch, reset, stash, pull, merge or commit in its working tree, not even to
+  repair a stray state; a changed HEAD can move the worker off its branch. Read
+  `work facts --json` instead.
 - Supervise; never implement. The workers do the tickets.
 - One runner at a time; the lock enforces it, `work orient` reports it.
 - Never clear a HALT without the owner deciding to.

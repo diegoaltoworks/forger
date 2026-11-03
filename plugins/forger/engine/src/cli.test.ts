@@ -207,6 +207,15 @@ describe('supervisor commands', () => {
     expect(out.anomalies).toEqual([]);
   });
 
+  test('facts reports the checkout and the issue without a network', async () => {
+    process.chdir(projectWith({a: {status: 'not_started'}}));
+    const run: CommandRunner = cmd =>
+      cmd === 'git branch --show-current' ? 'main' : cmd.startsWith('gh issue view') ? '{"state":"OPEN","closedByPullRequestsReferences":[]}' : '';
+    const out = JSON.parse(await capture(['facts', '--json', '--issue', '4'], run));
+    expect(out.branch).toBe('main');
+    expect(out.issue).toEqual({number: 4, state: 'OPEN', closing_pr: null});
+  });
+
   test('orient surfaces a halt with the reason from the HALT file', async () => {
     const root = projectWith({a: {status: 'not_started'}});
     writeFileSync(join(root, '.claude', 'HALT'), 'cut off before merge');
