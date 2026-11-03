@@ -75,7 +75,7 @@ export function evidenceResolves(run: CommandRunner, root: string, e: Evidence):
 }
 
 export async function verifyPr(run: CommandRunner, agent: AgentRunner, opts: VerifyOptions): Promise<VerdictRecord> {
-  const view = JSON.parse(run(`gh pr view ${opts.pr} --json ${PR_FIELDS},headRefOid,headRefName`)) as {headRefOid?: string; headRefName?: string};
+  const view = JSON.parse(run(`gh pr view ${opts.pr} --json ${PR_FIELDS},headRefName`)) as {headRefOid?: string; headRefName?: string};
   const pr = parsePr(JSON.stringify(view));
   if (!pr || !view.headRefOid) throw new Error(`cannot read PR #${opts.pr}`);
   const head = view.headRefOid;

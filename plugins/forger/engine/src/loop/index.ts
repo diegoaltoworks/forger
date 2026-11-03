@@ -17,5 +17,6 @@ export * from './runner';
 export * from './state';
 export * from './status-report';
 export * from './verdict';
+export * from './verdict-store';
 export * from './verify';
 export * from './verify-input';

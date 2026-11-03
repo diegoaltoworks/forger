@@ -21,6 +21,9 @@ import {formatIterationLog} from './iteration-log';
 import type {Logger} from './logger';
 import {verifyMerged} from './merged';
 import {decideOutcome, type Outcome} from './outcome';
+import type {PrFact} from './pr-checks';
+import type {Decision} from './verdict';
+import {decisionForHead, readVerdicts} from './verdict-store';
 import {buildPrompt} from './prompt';
 import {gatherFacts, takeSnapshot, ticketFromBranch} from './run-facts';
 import {type AutomationState, type StateStore, stallUpdate} from './state';
@@ -142,6 +145,7 @@ export async function runIteration(ctx: IterationContext, iteration: number, cou
     baseBranch: base,
     backlogCompleted,
     unclean: gitFacts.merged ? verify(ctx) : null,
+    verdict: verdictOf(ctx, gitFacts.pr),
   });
 
   // Rewritten with the decided status so measures can read it back from the file.
@@ -258,7 +262,14 @@ export function closeOrphan(ctx: IterationContext): void {
     baseBranch: base,
     backlogCompleted,
     unclean: gitFacts.merged ? verify(ctx) : null,
+    verdict: verdictOf(ctx, gitFacts.pr),
   });
   ctx.emit('runner_gone', iteration, held, outcome.error ?? outcome.warning);
   settle(ctx, state, iteration, held, backlogCompleted, outcome, false);
+}
+
+/** The decision recorded for the head of the run's PR; null when there is no PR or no record for its head. */
+function verdictOf(ctx: IterationContext, pr: PrFact | null): Decision | null {
+  if (!pr) return null;
+  return decisionForHead(readVerdicts(join(ctx.projectRoot, ctx.config.paths.verdicts), pr.number), pr.head);
 }

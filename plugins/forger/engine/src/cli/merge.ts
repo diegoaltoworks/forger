@@ -1,3 +1,5 @@
+import {join} from 'path';
+
 import {mergePr} from '../loop';
 import type {Command} from './command';
 
@@ -7,7 +9,8 @@ export const merge: Command = {
   flags: ['json', 'pr', 'timeout'],
   help: `  merge --pr N [--json] [--timeout S]
                    Wait for every check on the PR to finish, squash-merge only if all passed
-                   (exit 1 when it refuses: a failed check, still pending at the timeout)`,
+                   (exit 1 when it refuses: a failed check, still pending at the timeout,
+                   or no passing verify verdict for the PR head)`,
   async run(ctx) {
     const {values, config} = ctx;
     const pr = parseInt((values.pr as string | undefined) ?? '', 10);
@@ -19,6 +22,7 @@ export const merge: Command = {
     const r = await mergePr(ctx.run(), {
       pr,
       baseBranch: config.base_branch,
+      verdictsDir: join(ctx.projectRoot, config.paths.verdicts),
       timeoutMs: parseInt(values.timeout as string, 10) * 1000,
     });
     if (!r.merged) process.exitCode = 1;

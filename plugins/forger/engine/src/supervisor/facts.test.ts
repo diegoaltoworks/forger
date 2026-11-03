@@ -34,7 +34,7 @@ describe('gatherLoopFacts', () => {
     'git status --porcelain': ' M .forger/state.json',
     'gh issue view 5 --json state,closedByPullRequestsReferences': '{"state":"CLOSED","closedByPullRequestsReferences":[{"number":7}]}',
     'git ls-tree -r --name-only origin/main -- .github/workflows': '.github/workflows/ci.yml',
-    'gh pr view 7 --json number,state,mergedAt,statusCheckRollup': readFileSync(join(import.meta.dir, 'gh-pr-checks-success.json'), 'utf-8'),
+    'gh pr view 7 --json number,state,mergedAt,statusCheckRollup,headRefOid': readFileSync(join(import.meta.dir, 'gh-pr-checks-success.json'), 'utf-8'),
   };
 
   test('reports branch, clean (ignoring engine files), origin head and issue -> PR -> merged', () => {
@@ -44,7 +44,7 @@ describe('gatherLoopFacts', () => {
       clean: true,
       base_branch: 'main',
       origin_base_head: 'abc123',
-      issue: {number: 5, state: 'CLOSED', closing_pr: {number: 7, state: 'MERGED', merged: true, checks: 'success', checks_ok: true, failing_checks: []}},
+      issue: {number: 5, state: 'CLOSED', closing_pr: {number: 7, state: 'MERGED', merged: true, checks: 'success', checks_ok: true, failing_checks: [], head: null}},
     });
     expect(formatFacts(f)).toContain('PR #7 merged, checks success');
   });
@@ -94,15 +94,15 @@ describe('checksConclusion', () => {
 
 describe('gatherLoopFacts --pr', () => {
   test('reports a PR on its own, and no CI configured means none', () => {
-    const f = gatherLoopFacts(stub({'gh pr view 8 --json number,state,mergedAt,statusCheckRollup': '{"number":8,"state":"OPEN","statusCheckRollup":[]}'}), {baseBranch: 'main', ignore: [], pr: 8});
-    expect(f.pr).toEqual({number: 8, state: 'OPEN', merged: false, checks: 'none', checks_ok: true, failing_checks: []});
+    const f = gatherLoopFacts(stub({'gh pr view 8 --json number,state,mergedAt,statusCheckRollup,headRefOid': '{"number":8,"state":"OPEN","statusCheckRollup":[]}'}), {baseBranch: 'main', ignore: [], pr: 8});
+    expect(f.pr).toEqual({number: 8, state: 'OPEN', merged: false, checks: 'none', checks_ok: true, failing_checks: [], head: null});
     expect(f.issue).toBeUndefined();
     expect(formatFacts(f)).toContain('PR #8 open, checks none');
   });
   test('a workflow only on HEAD still counts as CI configured', () => {
     const f = gatherLoopFacts(stub({
       'git ls-tree -r --name-only HEAD -- .github/workflows': '.github/workflows/ci.yml',
-      'gh pr view 8 --json number,state,mergedAt,statusCheckRollup': '{"number":8,"state":"OPEN","statusCheckRollup":[]}',
+      'gh pr view 8 --json number,state,mergedAt,statusCheckRollup,headRefOid': '{"number":8,"state":"OPEN","statusCheckRollup":[]}',
     }), {baseBranch: 'main', ignore: [], pr: 8});
     expect(f.pr).toMatchObject({checks: 'pending', checks_ok: false});
   });

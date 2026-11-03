@@ -71,7 +71,7 @@ has made progress; a ticket marked completed with nothing merged is not done.
 Verify each merge against its PR's CI result: `facts --json --issue <n>` gives
 the closing PR's `checks`. A merge whose checks are anything but `success`, on a
 repo with CI, is an anomaly: the worker merged red or did not wait. The engine
-makes the same check after every run and halts with `merged_red`.
+makes the same check after every run and halts with `merged_red`, or `unverified` when the PR head has no passing verdict.
 
 ## 6. Sync
 

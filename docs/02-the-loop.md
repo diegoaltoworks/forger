@@ -106,7 +106,9 @@ flowchart TD
     F --> M{base branch moved?}
     M -- yes --> R{PR checks failing or pending?}
     R -- yes --> MR[merged-red: failure, halt naming the PR and check]
-    R -- no --> OK[completed: success, failures reset]
+    R -- no --> V{passing verdict for the PR head?}
+    V -- no --> UV[unverified: failure, halt naming the PR]
+    V -- yes --> OK[completed: success, failures reset]
     M -- no --> I{platform error?}
     I -- yes --> E[error: neutral, halt]
     I -- no --> DC{declined the pick on the record?}
