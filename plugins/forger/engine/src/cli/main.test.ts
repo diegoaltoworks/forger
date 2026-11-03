@@ -336,6 +336,21 @@ describe('skills --json', () => {
   });
 });
 
+describe('packs --detect', () => {
+  test('suggests the packs a repository calls for, with the facts', async () => {
+    const root = projectWith({});
+    writeFileSync(join(root, 'package.json'), JSON.stringify({dependencies: {react: '1'}}));
+    process.chdir(root);
+    const out = JSON.parse(await capture(['packs', '--detect', '--json']));
+    expect(out.map((s: {id: string}) => [s.id])).toEqual([['ui']]);
+    expect(out[0].reasons).toEqual(['dep:react']);
+  });
+  test('says so when nothing is suggested', async () => {
+    process.chdir(projectWith({}));
+    expect(await capture(['packs', '--detect'])).toContain('no packs suggested');
+  });
+});
+
 describe('setup --preset', () => {
   test('writes the preset into the new config and offers it when installed', async () => {
     const root = realpathSync(mkdtempSync(join(tmpdir(), 'forger-cli-')));

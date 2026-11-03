@@ -1,8 +1,8 @@
 {
   "id": "testing",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "The testing habits forger's engine relies on: tables for the pure core, fixtures for adapters, fixes with tests, coverage that never drops.",
-  "detect": [],
+  "detect": ["dep:vitest", "dep:jest", "dep:mocha", "file:pytest.ini"],
   "files": [
     {"source": "files/testing.md", "target": ".forger/opinions/testing.md"},
     {"source": "files/testing.json", "target": ".forger/testing.json"}

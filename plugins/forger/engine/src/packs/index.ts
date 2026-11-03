@@ -1,3 +1,4 @@
+export * from './detect';
 export * from './packs';
 export * from './setup';
 export * from './skills';

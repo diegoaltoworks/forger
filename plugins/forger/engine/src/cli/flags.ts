@@ -21,6 +21,7 @@ export const FLAGS = {
   packs: {type: 'string'},
   harness: {type: 'string'},
   upgrade: {type: 'boolean'},
+  detect: {type: 'boolean', default: false},
   presets: {type: 'boolean', default: false},
   seen: {type: 'string', default: '0'},
   timeout: {type: 'string', default: '3600'},

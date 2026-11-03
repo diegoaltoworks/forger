@@ -55,6 +55,8 @@ describe('parseManifest', () => {
     ['version not semver', withChange(['version'], '1.0'), 'version'],
     ['missing description', withChange(['description'], ''), 'description'],
     ['detect not a list', withChange(['detect'], 'x'), 'detect'],
+    ['detect rule not a rule', withChange(['detect'], ['react']), 'detect[0]'],
+    ['detect rule of unknown kind', withChange(['detect'], ['tool:react']), 'detect[0]'],
     ['slots entry not a string', withChange(['slots'], [1]), 'slots[0]'],
     ['checks missing', withChange(['checks'], undefined), 'checks'],
     ['files not a list', withChange(['files'], {}), 'files'],

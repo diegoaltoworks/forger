@@ -10,6 +10,7 @@ import {existsSync, readdirSync, readFileSync} from 'fs';
 import {join} from 'path';
 
 import {toLogical} from '../config';
+import {parseRule} from './detect';
 
 /** Where an opinion sits on the refinement ladder, weakest to strongest. */
 export const RUNGS = ['note', 'rule', 'template', 'check', 'tool'] as const;
@@ -84,6 +85,9 @@ export function parseManifest(raw: unknown): Manifest {
   if (!SEMVER.test(version)) throw new ManifestError('version', 'must look like 1.2.3', id);
   const description = str(raw.description, 'description');
   const detect = strList(raw.detect, 'detect');
+  detect.forEach((rule, i) => {
+    if (!parseRule(rule)) throw new ManifestError(`detect[${i}]`, 'must look like file:<path>, dir:<path> or dep:<name>', id);
+  });
   const slots = strList(raw.slots, 'slots');
   const checks = strList(raw.checks, 'checks');
 
