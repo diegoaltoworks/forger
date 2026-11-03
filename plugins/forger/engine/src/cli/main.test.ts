@@ -673,3 +673,70 @@ describe('decline', () => {
     expect(JSON.parse(await capture(['backlog', '--json'])).next).toBe('b');
   });
 });
+
+describe('handover', () => {
+  function seed(root: string, rounds: Array<'met' | 'not_met'>): void {
+    const dir = join(root, '.forger', 'verdicts');
+    mkdirSync(dir, {recursive: true});
+    rounds.forEach((v, i) => {
+      const record = {
+        pr: 7, head: `h${i}`, ticket: 'issue-5', verifier: 'm', decision: v === 'met' ? 'pass' : 'block',
+        entries: [{criterion: 'c1', verdict: v, evidence: []}], problems: [], at: `2026-01-0${i + 1}T00:00:00Z`,
+      };
+      writeFileSync(join(dir, `pr-7-h${i}.json`), JSON.stringify(record));
+    });
+  }
+
+  test('says fix while rounds remain and touches nothing', async () => {
+    const root = projectWith({}, {kind: 'github', label: 'ready-for-agent'});
+    process.chdir(root);
+    seed(root, ['not_met']);
+    const calls: string[] = [];
+    const out = JSON.parse(await capture(['handover', '--pr', '7', '--json'], cmd => (calls.push(cmd), '')));
+    expect(out).toMatchObject({move: 'fix', round: 2, handed_over: null});
+    expect(calls).toEqual([]);
+  });
+
+  test('hands the issue over when rounds are spent, exits 1, and --list reports it', async () => {
+    const root = projectWith({}, {kind: 'github', label: 'ready-for-agent'});
+    process.chdir(root);
+    seed(root, ['not_met', 'not_met']);
+    const calls: string[] = [];
+    const run: CommandRunner = cmd => {
+      calls.push(cmd);
+      if (cmd.includes('--json body')) return '## Acceptance\n- [ ] it works\n';
+      return cmd.includes('--json labels') ? 'needs-human' : '';
+    };
+    try {
+      const out = JSON.parse(await capture(['handover', '--pr', '7', '--json'], run));
+      expect(out).toMatchObject({move: 'hand_over', rounds: 2});
+      expect(process.exitCode).toBe(1);
+    } finally {
+      process.exitCode = 0;
+    }
+    expect(calls.some(c => c.includes('--add-label needs-human'))).toBe(true);
+    expect(calls.find(c => c.includes('issue comment'))).toContain('it works');
+    const list = JSON.parse(await capture(['handover', '--list', '--json']));
+    expect(list).toHaveLength(1);
+    expect(list[0]).toMatchObject({ticket: 'issue-5', pr: 7});
+    expect(await capture(['handover', '--list'])).toContain('issue-5');
+  });
+
+  test('reports a failed label and requires --pr', async () => {
+    const root = projectWith({}, {kind: 'github', label: 'ready-for-agent'});
+    process.chdir(root);
+    seed(root, ['not_met', 'not_met']);
+    const err = spyOn(console, 'error').mockImplementation(() => {});
+    try {
+      await capture(['handover', '--pr', '7'], () => '');
+      expect(process.exitCode).toBe(1);
+      expect(err.mock.calls.flat().join(' ')).toContain('not labelled');
+      process.exitCode = 0;
+      await capture(['handover']);
+      expect(process.exitCode).toBe(1);
+    } finally {
+      process.exitCode = 0;
+      err.mockRestore();
+    }
+  });
+});

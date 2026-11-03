@@ -48,3 +48,14 @@ export function verdictRefusal(records: VerdictRecord[], head: string | null): s
   const why = record.decision === 'block' ? 'the verdict blocks the merge' : 'the verdict is unclear and blocks the merge';
   return `${why}; criteria not met: ${named}`;
 }
+
+/** Every readable record for every PR. */
+export function readAllVerdicts(dir: string): VerdictRecord[] {
+  if (!existsSync(dir)) return [];
+  const prs = new Set<number>();
+  for (const name of readdirSync(dir)) {
+    const m = /^pr-(\d+)-.+\.json$/.exec(name);
+    if (m) prs.add(parseInt(m[1], 10));
+  }
+  return [...prs].flatMap(pr => readVerdicts(dir, pr));
+}

@@ -4,7 +4,7 @@
  * (`commands/work.md`) calls these through the CLI and keeps only judgement.
  */
 
-import type {StatusReport} from '../loop';
+import type {HandedOver, StatusReport} from '../loop';
 
 export type OrientAction = 'surface_halt' | 'attach' | 'start' | 'nothing_to_do';
 
@@ -97,12 +97,15 @@ export interface ReportInputs {
   plan: OrientPlan;
   branch: string;
   baseBranch: string;
+  /** Tickets whose verification ran out of rounds. */
+  handedOver?: HandedOver[];
 }
 
 export interface Report {
   merged: string[];
   in_progress: Array<{ticket: string; branch: string}>;
   declined: Array<{ticket: string; reason: string}>;
+  handed_over: Array<{ticket: string; pr: number; criteria: string[]}>;
   next: string[];
   waiting_on_owner: OwnerItem[];
 }
@@ -129,6 +132,11 @@ export function buildReport(i: ReportInputs): Report {
     merged: s.completed_tasks,
     in_progress: inProgress,
     declined: s.declined,
+    handed_over: (i.handedOver ?? []).map(h => ({
+      ticket: h.ticket,
+      pr: h.pr,
+      criteria: h.open.map(o => `${o.criterion} ${o.verdict}`),
+    })),
     next: s.next_pick ? [s.next_pick] : [],
     waiting_on_owner: waiting,
   };
@@ -145,6 +153,9 @@ export function formatReport(r: Report): string {
     '',
     '**Declined**',
     ...list(r.declined.map(d => `${d.ticket} (${d.reason})`)),
+    '',
+    '**Handed over**',
+    ...list(r.handed_over.map(h => `${h.ticket} (PR #${h.pr}): ${h.criteria.join(', ')}`)),
     '',
     '**Next**',
     ...list(r.next),

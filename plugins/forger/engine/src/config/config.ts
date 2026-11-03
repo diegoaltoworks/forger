@@ -45,6 +45,8 @@ export interface WorkloopConfig {
     maxStallIterations: number;
     /** Declined picks in a row that halt the loop. */
     maxConsecutiveDeclines: number;
+    /** Verifier rounds per PR before the ticket is handed to the owner (ADR 0010). */
+    maxVerifyRounds: number;
   };
   /** The harness that runs the worker: `claude` (default), `opencode`, `codex` or `copilot`. */
   harness: string;
@@ -152,6 +154,7 @@ export const DEFAULT_CONFIG: WorkloopConfig = {
     pauseAfterFailure: 10000,
     maxStallIterations: 5,
     maxConsecutiveDeclines: 3,
+    maxVerifyRounds: 2,
   },
   paths: {
     backlog: `${FORGER_DIR}/backlog.json`,

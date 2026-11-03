@@ -1,7 +1,7 @@
 import {existsSync, readFileSync} from 'fs';
 import {join} from 'path';
 
-import {listRepoLabels, loopLabels, missingLabels} from '../loop';
+import {handedOver, listRepoLabels, loopLabels, missingLabels, readAllVerdicts} from '../loop';
 import {buildReport, formatReport, orient as orientPlan} from '../supervisor';
 import type {Command, CommandContext} from './command';
 
@@ -26,7 +26,13 @@ function supervise(which: 'orient' | 'report') {
       branch,
       baseBranch: config.base_branch,
     });
-    const out = which === 'orient' ? plan : buildReport({status, plan, branch, baseBranch: config.base_branch});
+    const out = which === 'orient' ? plan : buildReport({
+          status,
+          plan,
+          branch,
+          baseBranch: config.base_branch,
+          handedOver: handedOver(readAllVerdicts(join(projectRoot, config.paths.verdicts)), config.limits.maxVerifyRounds),
+        });
     if (values.json) console.log(JSON.stringify(out));
     else if (which === 'report') console.log(formatReport(out as ReturnType<typeof buildReport>));
     else console.log([`${plan.action}: ${plan.reason}`, ...plan.anomalies.map(a => `! ${a}`)].join('\n'));

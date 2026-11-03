@@ -145,7 +145,11 @@ git checkout <base-branch> && git pull
 finish, squash-merges only when all passed and `verify` recorded a passing
 verdict for the PR's current head (a later push makes it stale; `block` and
 `unclear` both refuse and name the criteria), and confirms the merge from the
-PR's state; it exits 1 when it refuses. Act on its JSON, not on your reading of
+PR's state; it exits 1 when it refuses. When `verify` does not pass, run
+`handover --pr <pr> --json`: `move: "fix"` means make the open criteria decidable
+(a test, a command, a clearer assertion), push, and `verify` again;
+`move: "hand_over"` means the rounds are spent, the issue is now `needs-human`
+with the criteria commented, and you signal `stop`. Act on its JSON, not on your reading of
 CI:
 - `merged: true` - done. `checks: "none"` means the repo has no CI workflow; say
   so in the PR, the local gates were the only assertion.
