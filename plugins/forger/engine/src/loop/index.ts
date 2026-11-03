@@ -27,3 +27,4 @@ export * from './verify';
 export * from './verify-input';
 export * from './worktree';
 export * from './parallel';
+export * from './lease';
