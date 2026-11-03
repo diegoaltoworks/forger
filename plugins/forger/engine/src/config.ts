@@ -39,6 +39,10 @@ export interface WorkloopConfig {
     log: string;
     output: string;
     halt: string;
+    /** Holds the pid of the one live runner. */
+    lock: string;
+    /** Append-only JSON lines, one per terminal event. */
+    events: string;
   };
   /**
    * Where the backlog lives. `github`: issues carrying the intake `label`
@@ -110,6 +114,8 @@ export const DEFAULT_CONFIG: WorkloopConfig = {
     log: '.claude/work.log',
     output: '.claude/output',
     halt: '.claude/HALT',
+    lock: '.claude/runner.lock',
+    events: '.claude/events.jsonl',
   },
   tracker: {kind: 'github', label: 'ready-for-agent', ignore: []},
   local_only: [],

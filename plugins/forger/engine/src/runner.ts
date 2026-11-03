@@ -18,15 +18,21 @@ import {type AutomationState, StateStore, stallUpdate} from './state';
 import {Logger, colors} from './logger';
 import {type ClaudeResult, type RunClaudeOptions, runClaude} from './claude';
 import {formatIterationLog} from './iteration-log';
-import {decideOutcome} from './outcome';
+import {decideOutcome, type Outcome} from './outcome';
 import {classifyExit} from './infra';
 import {parseClaim} from './claim';
 import {gatherFacts, takeSnapshot, ticketFromBranch} from './run-facts';
+import {RunnerLock} from './lock';
+import {appendEvent, terminalEvent, type TerminalEventKind} from './events';
+import {buildStatus, type StatusReport} from './status-report';
 
 export interface RunnerDeps {
   runClaude?: (opts: RunClaudeOptions) => Promise<ClaudeResult>;
   gitRunner?: CommandRunner;
   uuid?: () => string;
+  /** Liveness probe for the lock holder; defaults to a signal-0 check. */
+  isAlive?: (pid: number) => boolean;
+  pid?: number;
 }
 
 export class AutomationRunner {
@@ -36,6 +42,8 @@ export class AutomationRunner {
   private gitRunner: CommandRunner;
   private spawnClaude: (opts: RunClaudeOptions) => Promise<ClaudeResult>;
   private uuid: () => string;
+  private lock: RunnerLock;
+  private eventsFile: string;
 
   constructor(
     private projectRoot: string,
@@ -47,6 +55,8 @@ export class AutomationRunner {
     this.logger = new Logger(p(config.paths.log));
     this.store = new StateStore(p(config.paths.state), p(config.paths.halt));
     this.outputDir = p(config.paths.output);
+    this.eventsFile = p(config.paths.events);
+    this.lock = new RunnerLock(p(config.paths.lock), deps.pid, deps.isAlive);
 
     this.gitRunner = deps.gitRunner ?? execRunner(projectRoot);
     this.spawnClaude = deps.runClaude ?? runClaude;
@@ -68,18 +78,23 @@ export class AutomationRunner {
   }
 
   private verify(): string | null {
-    const {state, log, output, halt} = this.config.paths;
-    const ignore = [state, log, output, halt, ...this.config.local_only];
+    const {state, log, output, halt, lock, events} = this.config.paths;
+    const ignore = [state, log, output, halt, lock, events, ...this.config.local_only];
     return verifyMerged(this.gitRunner, this.config.base_branch, ignore);
   }
 
-  halt(reason: string): void {
+  private emit(kind: TerminalEventKind, iteration: number, ticket: string | null, reason: string | null): void {
+    appendEvent(this.eventsFile, terminalEvent(kind, iteration, ticket, reason));
+  }
+
+  halt(reason: string, kind: TerminalEventKind = 'halted'): void {
     this.store.writeHalt(reason);
     this.logger.log('WARN', `Created HALT file: ${reason}`);
     const state = this.store.load();
     state.status = 'halted';
     state.last_error = reason;
     this.store.save(state);
+    this.emit(kind, state.iteration, state.current_task, reason);
   }
 
   clearHalt(): void {
@@ -128,9 +143,11 @@ export class AutomationRunner {
       this.logger.log('INFO', `Ticket: ${attemptedTask} [${tier.model}, $${tier.budget}]`);
     }
 
-    const {timeoutMinutes, killGraceSeconds, maxStallIterations} = this.config.limits;
+    const {timeoutMinutes, killGraceSeconds} = this.config.limits;
     const base = this.config.base_branch;
     const snapshot = takeSnapshot(this.gitRunner, base);
+    state.snapshot = snapshot;
+    this.store.save(state);
     const startTime = Date.now();
     const result = await this.spawnClaude({
       prompt,
@@ -186,6 +203,24 @@ export class AutomationRunner {
       unclean: gitFacts.merged ? this.verify() : null,
     });
 
+    return this.settle(state, iteration, ticket, backlogCompleted, outcome, countStall);
+  }
+
+  /**
+   * Applies a decided outcome to the state, the log and the event file. Shared
+   * by a finished run and by the close-out of an iteration a dead runner left
+   * open.
+   */
+  private settle(
+    state: AutomationState,
+    iteration: number,
+    ticket: string | null,
+    backlogCompleted: boolean,
+    outcome: Outcome,
+    countStall: boolean
+  ): boolean {
+    const {maxStallIterations} = this.config.limits;
+    state.snapshot = null;
     state.status = outcome.status;
     if (outcome.result === 'success') {
       this.logger.log('SUCCESS', `Iteration ${iteration} merged ${ticket ?? 'a change'}`);
@@ -217,12 +252,16 @@ export class AutomationRunner {
     state.stall_count = stall.stall_count;
     this.store.save(state);
 
+    if (outcome.status === 'timeout') {
+      this.emit('timed_out', iteration, ticket, outcome.error);
+    }
+
     if (outcome.halt) {
       this.halt(outcome.halt);
     } else if (stall.stalled) {
       const reason = `Stalled: nothing merged in ${maxStallIterations} iterations`;
       this.logger.log('ERROR', reason);
-      this.halt(reason);
+      this.halt(reason, 'stalled');
     } else if (!outcome.merged && countStall) {
       this.logger.log('WARN', `Nothing merged (stall ${stall.stall_count}/${maxStallIterations})`);
     }
@@ -230,7 +269,68 @@ export class AutomationRunner {
     return outcome.result === 'success';
   }
 
-  async run(iterations = 1, continuous = false): Promise<void> {
+  /**
+   * Runs the loop. Returns false without doing anything when a live runner
+   * already holds the lock.
+   */
+  async run(iterations = 1, continuous = false): Promise<boolean> {
+    const lock = this.lock.acquire();
+    if (!lock.ok) {
+      const msg = `Another runner (pid ${lock.holder}) is already running. Not starting a second one.`;
+      this.logger.log('ERROR', msg);
+      return false;
+    }
+    if (lock.tookOver) {
+      this.logger.log('WARN', `Took over a stale lock from dead runner (pid ${lock.tookOver})`);
+    }
+    try {
+      this.closeOrphan();
+      await this.loop(iterations, continuous);
+      return true;
+    } finally {
+      this.lock.release();
+    }
+  }
+
+  /**
+   * An iteration still marked running when no live runner holds the lock was
+   * left open by a runner that died. Its outcome is decided from git, as a
+   * finished run's is, instead of re-running its ticket blindly.
+   */
+  closeOrphan(): void {
+    const state = this.store.load();
+    if (state.status !== 'running') return;
+    const iteration = state.iteration;
+    const ticket = state.current_task;
+    const base = this.config.base_branch;
+    this.logger.log('WARN', `Iteration ${iteration} was left open by a dead runner; closing it out`);
+
+    // Without a snapshot nothing is known about the run's start, so only the
+    // current branch and its PR can speak.
+    const snapshot = state.snapshot ?? {baseSha: '', reflogLength: Number.MAX_SAFE_INTEGER};
+    const gitFacts = gatherFacts(this.gitRunner, base, snapshot);
+    const taken = ticketFromBranch(gitFacts.branch);
+    const held = taken && this.backlog.has(taken) ? taken : ticket;
+    const backlogCompleted = held !== null && this.backlog.isCompleted(held);
+    const outcome = decideOutcome({
+      ...gitFacts,
+      infraError: null,
+      ticket: held,
+      claim: null,
+      stopReason: null,
+      exitCode: -1,
+      signal: null,
+      timedOut: false,
+      timeoutMinutes: this.config.limits.timeoutMinutes,
+      baseBranch: base,
+      backlogCompleted,
+      unclean: gitFacts.merged ? this.verify() : null,
+    });
+    this.emit('runner_gone', iteration, held, outcome.error ?? outcome.warning);
+    this.settle(state, iteration, held, backlogCompleted, outcome, false);
+  }
+
+  private async loop(iterations: number, continuous: boolean): Promise<void> {
     if (this.store.isHalted()) {
       this.logger.log('ERROR', 'Automation is HALTED. Run "resume" to continue.');
       this.showStatus();
@@ -276,11 +376,12 @@ export class AutomationRunner {
 
       if (remaining === 0) {
         this.logger.log('SUCCESS', 'All tasks completed!');
+        this.emit('completed', currentState.iteration, null, null);
         break;
       }
 
       if (currentState.consecutive_failures >= maxConsecutiveFailures) {
-        this.halt(`Too many consecutive failures (${maxConsecutiveFailures})`);
+        this.halt(`Too many consecutive failures (${maxConsecutiveFailures})`, 'too_many_failures');
         break;
       }
 
@@ -343,6 +444,21 @@ export class AutomationRunner {
     await new Promise(() => {});
   }
 
+  statusReport(): StatusReport {
+    const pid = this.lock.holder();
+    return buildStatus({
+      state: this.store.load(),
+      runnerPid: pid,
+      runnerAlive: this.lock.liveHolder() !== null,
+      halted: this.store.isHalted(),
+      remaining: this.getRemainingTasks(),
+      workable: this.getWorkableCount(),
+      next: this.getNextTaskName(),
+      maxStallIterations: this.config.limits.maxStallIterations,
+      maxConsecutiveFailures: this.config.limits.maxConsecutiveFailures,
+    });
+  }
+
   showStatus(): void {
     const state = this.store.load();
     const remaining = this.getRemainingTasks();
@@ -351,6 +467,9 @@ export class AutomationRunner {
 
     console.log('\n=== Automation Status ===');
     if (halted) console.log(`${colors.red}*** HALTED ***${colors.reset}`);
+    const holder = this.lock.holder();
+    const live = this.lock.liveHolder() !== null;
+    console.log(`Runner: ${holder === null ? 'none' : `pid ${holder} (${live ? 'alive' : 'dead'})`}`);
     console.log(`Status: ${state.status}`);
     console.log(`Iteration: ${state.iteration}`);
     console.log(`Completed: ${state.completed_iterations}`);

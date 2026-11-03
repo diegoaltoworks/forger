@@ -31,13 +31,16 @@ work loop runner
 Usage (run from the consumer repo root):
   run [N]          Run N iterations (default: 1)
   run --continuous Run until all tasks complete
-  status           Show current status
+  status [--json] Show current status, runner pid and liveness
   check docs [--json] Fail on non-ASCII punctuation, emails, home paths, denylist terms
   backlog [--json] Workable tickets in order, remaining count and next pick
   reset            Reset state to start fresh
   watch            Live status display
   resume           Clear HALT and resume
   halt [reason]    Manually halt automation
+
+Only one runner works a repo at a time: a second run refuses while the
+runner named in the lock file is alive.
 
 Stopping behaviour:
   - Stops after N iterations (enforced per session)
@@ -88,11 +91,16 @@ export async function main(
   switch (command) {
     case 'run': {
       const iterationArg = positionals[1] || (values.iterations as string);
-      await runner.run(parseInt(iterationArg, 10), values.continuous as boolean);
+      const started = await runner.run(parseInt(iterationArg, 10), values.continuous as boolean);
+      if (!started) {
+        console.error('Another runner is already running; not starting a second one.');
+        process.exitCode = 1;
+      }
       break;
     }
     case 'status':
-      runner.showStatus();
+      if (values.json) console.log(JSON.stringify(runner.statusReport()));
+      else runner.showStatus();
       break;
     case 'backlog': {
       const report = backlog.report();

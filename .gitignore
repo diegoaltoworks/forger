@@ -4,5 +4,7 @@ node_modules/
 .claude/work.log
 .claude/output/
 .claude/HALT
+.claude/runner.lock
+.claude/events.jsonl
 .claude/settings.local.json
 .forger-denylist

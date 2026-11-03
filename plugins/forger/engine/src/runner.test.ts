@@ -290,3 +290,148 @@ describe('AutomationRunner infrastructure errors and resume', () => {
     expect(existsSync(join(root, '.claude', 'HALT'))).toBe(false);
   });
 });
+
+function eventsOf(root: string): {event: string; reason: string | null; ticket: string | null}[] {
+  const f = join(root, '.claude', 'events.jsonl');
+  if (!existsSync(f)) return [];
+  return readFileSync(f, 'utf-8').trimEnd().split('\n').map(l => JSON.parse(l));
+}
+
+describe('AutomationRunner single runner', () => {
+  const fail: ClaudeResult = {exitCode: 1, signal: null, output: '', timedOut: false};
+  const fast = mergeConfig({
+    limits: {pauseBetweenIterations: 0, pauseAfterFailure: 0, maxStallIterations: 9},
+  });
+
+  function runnerIn(root: string, deps: Record<string, unknown>, data: BacklogData = backlog) {
+    return new AutomationRunner(root, fast, backlogFrom(() => data, fast), {
+      runClaude: async () => fail,
+      gitRunner: () => '',
+      ...deps,
+    });
+  }
+
+  test('refuses while a live runner holds the lock, and starts nothing', async () => {
+    const {root} = runnerWith(fail);
+    writeFileSync(join(root, '.claude', 'runner.lock'), '4242');
+    let spawned = 0;
+    const runner = runnerIn(root, {
+      isAlive: (p: number) => p === 4242,
+      runClaude: async () => {
+        spawned++;
+        return fail;
+      },
+    });
+    expect(await runner.run(1)).toBe(false);
+    expect(spawned).toBe(0);
+    expect(readFileSync(join(root, '.claude', 'runner.lock'), 'utf-8')).toBe('4242');
+  });
+
+  test('takes over a lock with a dead pid, and releases its own when done', async () => {
+    const {root} = runnerWith(fail);
+    writeFileSync(join(root, '.claude', 'runner.lock'), '4242');
+    const runner = runnerIn(root, {isAlive: () => false, pid: 17});
+    expect(await runner.run(1)).toBe(true);
+    expect(existsSync(join(root, '.claude', 'runner.lock'))).toBe(false);
+  });
+
+  test('closes out an iteration a dead runner left open from git facts', async () => {
+    const {root} = runnerWith(fail);
+    writeFileSync(
+      join(root, '.claude', 'state.json'),
+      JSON.stringify({
+        ...defaultState(),
+        iteration: 4,
+        status: 'running',
+        current_task: 'the_ticket',
+        snapshot: {baseSha: 'aaa', reflogLength: 1},
+      })
+    );
+    let spawned = 0;
+    const git = (cmd: string): string => {
+      if (cmd === 'git rev-parse origin/main') return 'bbb';
+      if (cmd === 'git merge-base --is-ancestor aaa bbb && echo yes') return 'yes';
+      if (cmd === 'git reflog --format=%gs') return 'checkout: moving from main to feat/the_ticket\nold';
+      if (cmd === 'git branch --show-current') return 'main';
+      if (cmd.startsWith('gh pr view')) return 'MERGED';
+      return '';
+    };
+    const runner = runnerIn(root, {
+      gitRunner: git,
+      runClaude: async () => {
+        spawned++;
+        return fail;
+      },
+    }, done);
+    runner.closeOrphan();
+    const state = readState(root);
+    expect(state.status).toBe('completed');
+    expect(state.completed_iterations).toBe(1);
+    expect(state.completed_tasks).toEqual(['the_ticket']);
+    expect(state.snapshot).toBeNull();
+    expect(spawned).toBe(0);
+    expect(eventsOf(root).map(e => e.event)).toEqual(['runner_gone']);
+  });
+
+  test('an orphan with nothing merged counts as a failure, not as progress', async () => {
+    const {root} = runnerWith(fail);
+    writeFileSync(
+      join(root, '.claude', 'state.json'),
+      JSON.stringify({...defaultState(), iteration: 4, status: 'running', current_task: 'the_ticket'})
+    );
+    const runner = runnerIn(root, {});
+    runner.closeOrphan();
+    const state = readState(root);
+    expect(state.status).toBe('failed');
+    expect(state.failed_iterations).toBe(1);
+    expect(state.stall_count).toBe(0);
+    expect(eventsOf(root)[0].event).toBe('runner_gone');
+  });
+
+  test('closeOrphan leaves a finished state alone', () => {
+    const {root} = runnerWith(fail);
+    const runner = runnerIn(root, {});
+    runner.closeOrphan();
+    expect(eventsOf(root)).toEqual([]);
+  });
+
+  test('records the snapshot while an iteration is open and clears it after', async () => {
+    const {runner, root} = runnerWith(fail);
+    await runner.runIteration(1);
+    expect(readState(root).snapshot).toBeNull();
+  });
+
+  test('appends a terminal event for stall, timeout, halt, failures and completion', async () => {
+    const {runner, root} = runnerWith({exitCode: 1, signal: 'SIGKILL', output: '', timedOut: true});
+    await runner.runIteration(1);
+    await runner.runIteration(2);
+    expect(eventsOf(root).map(e => e.event)).toEqual(['timed_out', 'timed_out', 'stalled']);
+    expect(eventsOf(root)[2].reason).toBe('Stalled: nothing merged in 2 iterations');
+
+    const m = runnerWith(fail);
+    m.runner.halt('by hand');
+    expect(eventsOf(m.root)[0]).toMatchObject({event: 'halted', reason: 'by hand'});
+
+    const c = runnerWith(fail);
+    writeFileSync(
+      join(c.root, '.claude', 'state.json'),
+      JSON.stringify({...defaultState(), consecutive_failures: 3})
+    );
+    await runnerIn(c.root, {}).run(1);
+    expect(eventsOf(c.root).map(e => e.event)).toEqual(['too_many_failures']);
+
+    const d = runnerWith(fail);
+    await runnerIn(d.root, {}, done).run(1);
+    expect(eventsOf(d.root).map(e => e.event)).toEqual(['completed']);
+  });
+
+  test('statusReport carries the lock holder, current ticket and next pick', () => {
+    const {root} = runnerWith(fail);
+    writeFileSync(join(root, '.claude', 'runner.lock'), '4242');
+    const runner = runnerIn(root, {isAlive: (p: number) => p === 4242});
+    const r = runner.statusReport();
+    expect(r.runner).toEqual({pid: 4242, alive: true});
+    expect(r.next_pick).toBe('the_ticket');
+    expect(r.remaining).toBe(1);
+  });
+});
