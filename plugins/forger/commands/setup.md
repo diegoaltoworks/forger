@@ -1,5 +1,5 @@
 ---
-description: Onboard this repo for the work loop - templates, tracker, labels, and the companion skills
+description: Onboard this repo for the work loop - templates, tracker, and labels
 disable-model-invocation: true
 allowed-tools: Bash(*), Read, Write, Edit, Glob, Grep, AskUserQuestion
 ---
@@ -13,7 +13,6 @@ file the repo already has; report what exists and what you added.
 
 - **Git remote:** !`git remote get-url origin 2>/dev/null || echo "no origin"`
 - **Existing `.claude/` files:** !`ls .claude 2>/dev/null || echo "none"`
-- **mattpocock-skills plugin:** !`grep -q '"mattpocock-skills@' ~/.claude/plugins/installed_plugins.json 2>/dev/null && echo installed || echo "not installed"`
 - **Tracker doc (`docs/agents/issue-tracker.md`):** !`test -f docs/agents/issue-tracker.md && echo present || echo absent`
 - **`gh` auth:** !`gh auth status >/dev/null 2>&1 && echo ok || echo "not authenticated"`
 - **Bun:** !`bun --version 2>/dev/null || echo "not on PATH"`
@@ -53,9 +52,8 @@ default.
 ## 3. Tracker
 
 Decide `tracker.kind`:
-- If `docs/agents/issue-tracker.md` exists, it already says where issues live
-  (written by `/setup-matt-pocock-skills`). Set `tracker.kind` to match:
-  GitHub -> `github`, local markdown -> `local`, anything else -> `none`, and
+- If `docs/agents/issue-tracker.md` exists, it already says where issues live.
+  Set `tracker.kind` to match: GitHub -> `github`, local markdown -> `local`, anything else -> `none`, and
   tell the user the tracker doc is the authority the commands will follow.
 - Else if `origin` is a GitHub remote and `gh` is authenticated: `github`.
 - Else: `local`, and say why.
@@ -64,33 +62,16 @@ When `github`: create the intake label if missing:
 ```
 gh label create ready-for-agent --description "Fully specified, ready for the work loop" --color 0E8A16 2>/dev/null || true
 ```
-Only this label is the loop's concern. The other triage labels (`needs-triage`,
-`needs-info`, `ready-for-human`, `wontfix`) belong to `/triage` and are set up
-by `/setup-matt-pocock-skills`.
+Only this label is the loop's concern.
 
-## 4. Companion skills
-
-- **Plugin not installed:** recommend it once. The planner and the worker call
-  its `grilling`, `domain-modeling`, `tdd`, `code-review`, `diagnosing-bugs` and
-  `resolving-merge-conflicts` skills when present and fall back to inline
-  versions when not.
-  ```
-  claude plugins install mattpocock-skills
-  ```
-- **Installed, tracker doc absent:** tell the user to run
-  `/setup-matt-pocock-skills` once in this repo. It seeds the tracker doc,
-  `CONTEXT.md` and the ADR layout the skills write into, and its GitHub choice
-  should match `tracker.kind`.
-- **Installed, tracker doc present:** nothing to do.
-
-## 5. process.md
+## 4. process.md
 
 Tell the user `.claude/process.md` still needs its project-specific sections
 filled in (what the repo is, the gotchas). Offer to draft "What this repo is"
 from the README now; leave the gotchas to them, since those are the things a
 careful reader would not guess.
 
-## 6. Report
+## 5. Report
 
 List what was created, what already existed, the tracker decision and why, and
 the next step: `/forger:plan` to plan the first tickets, or

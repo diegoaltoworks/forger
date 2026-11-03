@@ -4,13 +4,9 @@ A Claude Code plugin that implements backlog tickets one at a time, unattended,
 with a human-facing supervisor and an interactive planner. The engine is generic;
 everything project-specific lives in the consumer repo's `.claude/`.
 
-It is built to sit **on top of
-[mattpocock-skills](https://github.com/mattpocock/skills)**: the planner runs
-Matt's `grilling` and `domain-modeling` skills, the worker runs his `tdd`,
-`code-review`, `diagnosing-bugs` and `resolving-merge-conflicts`, and the loop
-adopts tickets published by his `to-tickets`, `triage` and `wayfinder`. Every
-hook degrades to an inline fallback when the plugin is absent, so nothing
-breaks without it; it is just sharper with it.
+Forger carries its own steps for planning, test-first implementation, review and
+diagnosis; it depends on no other skill collection. Needs only Bun, the `claude`
+CLI and `gh`.
 
 Work is tracked on **GitHub Issues**.
 
@@ -18,8 +14,7 @@ Work is tracked on **GitHub Issues**.
 
 The commands split on one axis - **who invokes them** - and the naming encodes
 it. Commands without the infix are human entry points and carry
-`disable-model-invocation`, so only a person can fire them (the same axis
-mattpocock-skills uses). The `-auto-` infix marks self-regulating commands the
+`disable-model-invocation`, so only a person can fire them . The `-auto-` infix marks self-regulating commands the
 loop drives with no human in the turn. All share the `forger:` prefix, so
 typing `/fyne` in Claude Code surfaces the set.
 
@@ -27,8 +22,8 @@ typing `/fyne` in Claude Code surfaces the set.
 
 | Command | Role |
 |---|---|
-| `/forger:setup` | **Onboarding** - scaffold `.claude/`, pick the tracker, create the intake label, and point at the companion skills. Idempotent; never overwrites. |
-| `/forger:plan` | **Interactive planner** - grounds itself in the repo, scopes the session, grills you (with `grilling` + `domain-modeling` when available), then crystallises a plan doc, tracker issues and queued tickets. Needs a human to answer. |
+| `/forger:setup` | **Onboarding** - scaffold `.claude/`, pick the tracker, and create the intake label. Idempotent; never overwrites. |
+| `/forger:plan` | **Interactive planner** - grounds itself in the repo, scopes the session, interviews you in rounds, then crystallises a plan doc, tracker issues and queued tickets. Needs a human to answer. |
 | `/forger:work` | **Supervisor** - start (or attach to) the loop, watch it, report on completion or halt. Idempotent: "start it, or show me where it's at." Never implements. |
 
 ### Machine-internal
@@ -42,61 +37,29 @@ typing `/fyne` in Claude Code surfaces the set.
 the headless `claude` processes the engine spawns, each running
 `/forger:auto-ticket`.
 
-## Working with mattpocock-skills
-
-### Install
+## The pipeline
 
 ```
-claude plugins install mattpocock-skills
+intent                         plan                       build
+/forger:plan  ------------->  tickets + issues  ------>  /forger:work
+(interview, plan doc)         (ready-for-agent)          (worker per ticket,
+                                    ^                     PR closes the issue)
+                                    |
+                          /forger:auto-plan adopts
+                          a spec or ready issues
 ```
 
-Then, once per repo, `/setup-matt-pocock-skills`. It writes
-`docs/agents/issue-tracker.md` (which this plugin treats as the authority on
-tracker operations when present), seeds `CONTEXT.md` and the ADR layout, and
-sets up the triage labels. Pick GitHub there and `tracker.kind` here should
-agree; `/forger:setup` checks that.
-
-### Who calls what
-
-Matt's skills split into user-invoked (only a human can type them:
-`grill-me`, `grill-with-docs`, `wayfinder`, `to-spec`, `to-tickets`, `triage`,
-`implement`) and model-invoked (any skill or command may call them). This plugin
-only ever calls the model-invoked ones; the user-invoked ones are stages that
-sit **beside** the loop and feed it through the tracker.
-
-| Command | Step | Skill called when installed | Fallback |
-|---|---|---|---|
-| `plan` | 3, grill | `grilling`, then `domain-modeling` | inline frontier-round interview |
-| `auto-ticket` | 4, implement | `tdd` | red-green-refactor by hand |
-| `auto-ticket` | 5, gates red | `diagnosing-bugs` | one honest attempt, then stop |
-| `auto-ticket` | 6, review | `code-review` (fixed point = base branch) | two-axis self-review, or the agent `process.md` names |
-| `auto-ticket` | 8, merge conflict | `resolving-merge-conflicts` | resolve by hand, never abort |
-
-### The pipeline
-
-```
-fog                      route clear                    build
-/wayfinder  ---------->  /to-spec  or  /forger:plan  -->  /forger:work
-(decision tickets on      (spec issue, or grill only              (worker per ticket,
- the tracker)              the gaps the map left)                  PR closes the issue)
-                                   |
-                    /to-tickets, /triage --> ready-for-agent issues
-                                   |
-                          /forger:auto-plan adopts them
-```
-
-- **Fog** (the route to a spec is not visible): the human runs `/wayfinder`. Its
-  decision tickets live on the tracker under a `wayfinder:map` issue. The loop
-  never touches `wayfinder:*` issues; they are decisions, not work.
-- **Route clear**: `plan` reads the map's "Decisions so far" as settled and
-  grills only the gaps. `auto-plan` accepts a map with no open children as
-  its spec.
-- **Intake**: anything published as `ready-for-agent`, by `/to-tickets`,
-  `/triage`, or a human, is adopted into the backlog by the planners and by the
-  worker's inbox step, with blocking edges mapped to `depends_on`.
-
-`plan` is the forger-flavoured `grill-with-docs`: the same two skills,
-wrapped in repo grounding before and tickets, issues and a plan doc after.
+- **Plan**: `plan` grounds itself in the repo, interviews you in rounds over the
+  frontier of open decisions (numbered questions, each with a recommendation),
+  then writes a plan doc, ADRs, issues and queued tickets. Vocabulary lives in
+  `GLOSSARY.md`, decisions in `docs/adr/`.
+- **Intake**: anything labelled `ready-for-agent`, from a planner or a human, is
+  adopted into the backlog by the planners and by the worker's inbox step, with
+  blocking edges mapped to `depends_on`. Issues labelled `wayfinder:*` are
+  decisions, not work, and the loop never touches them.
+- **Build**: the worker implements one ticket test-first, reviews its own diff on
+  standards and spec, makes one honest diagnosis attempt when a gate is red, and
+  resolves merge conflicts by hand rather than aborting.
 
 ## Tracker: GitHub Issues
 
@@ -160,8 +123,7 @@ Already-onboarded repos keep their `.claude/` files. An old config without a
 
 Run `/forger:setup`. It copies the templates into `.claude/` (never
 overwriting), asks for the gates command and base branch, decides the tracker,
-creates the `ready-for-agent` label, gitignores the per-run state, and tells you
-whether to install mattpocock-skills or run `/setup-matt-pocock-skills`.
+creates the `ready-for-agent` label, and gitignores the per-run state.
 
 Then fill in `.claude/process.md` - the project's rules and **gotchas**. The
 worker treats these as enforced. Run `/forger:plan` to generate the
@@ -206,7 +168,7 @@ from the consumer repo root so it finds `.claude/`:
 bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts run --continuous   # the loop
 bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts status [--json]      # where it's at: runner pid and liveness, halt, counters, current ticket, next pick
 bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts backlog --json     # workable tickets, remaining, next pick
-bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts check docs [--json]  # writing rules: ASCII punctuation, no emails or home paths, optional .forger-denylist
+bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts check docs [--json]  # writing rules: ASCII punctuation, no emails or home paths, no third-party skill hooks in shipped prose, optional .forger-denylist
 bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts resume             # clear a HALT
 ```
 
@@ -238,9 +200,6 @@ rather than human text.
 The loop stops when the backlog empties, a HALT file appears, it stalls (nothing
 merged for `maxStallIterations` runs in a row), or it hits
 `maxConsecutiveFailures`.
-
-The headless worker inherits the user's plugins, so mattpocock-skills is
-available inside the loop wherever it is installed for the user running it.
 
 ## Engine development
 

@@ -1,6 +1,6 @@
 import {describe, expect, test} from 'bun:test';
 
-import {checkText, denylist, email, formatViolations, homePath, nonAscii, parseDenylist} from './docs-rules';
+import {checkText, denylist, email, formatViolations, homePath, isShipped, nonAscii, parseDenylist, thirdPartySkills} from './docs-rules';
 
 const EM_DASH = '\u2014';
 const CURLY = '\u201C';
@@ -58,5 +58,24 @@ describe('checkText', () => {
   test('formats file:line and rule, or says clean', () => {
     expect(formatViolations(checkText('a.md', EM_DASH))).toBe('a.md:1: non-ascii: U+2014');
     expect(formatViolations([])).toBe('docs check: clean');
+  });
+});
+
+describe('thirdPartySkills', () => {
+  test('flags a collection name and skill-tool hooks', () => {
+    expect(thirdPartySkills('install mattpocock-skills')).toEqual(['mattpocock']);
+    expect(thirdPartySkills('call the Skill tool with "tdd"')).toHaveLength(1);
+    expect(thirdPartySkills('use the matt pocock skills')).toHaveLength(1);
+  });
+  test('plain prose is clean', () => {
+    expect(thirdPartySkills('write the failing test first')).toEqual([]);
+  });
+  test('applies only to shipped prose', () => {
+    expect(isShipped('plugins/forger/commands/plan.md')).toBe(true);
+    expect(isShipped('plugins/forger/templates/process.md')).toBe(true);
+    expect(isShipped('plugins/forger/README.md')).toBe(true);
+    expect(isShipped('docs/07-roadmap.md')).toBe(false);
+    expect(checkText('docs/a.md', 'mattpocock-skills')).toEqual([]);
+    expect(checkText('plugins/forger/commands/a.md', 'mattpocock-skills').map(v => v.rule)).toEqual(['third-party-skills']);
   });
 });

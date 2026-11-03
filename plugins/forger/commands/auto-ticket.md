@@ -1,6 +1,6 @@
 ---
 description: Implement exactly one backlog ticket end to end (invoked by the work-loop engine)
-allowed-tools: Bash(*), Read, Write, Edit, Glob, Grep, Skill, Task, TodoWrite, WebSearch, WebFetch
+allowed-tools: Bash(*), Read, Write, Edit, Glob, Grep, Task, TodoWrite, WebSearch, WebFetch
 ---
 
 # Work a single ticket - start to finish
@@ -17,19 +17,15 @@ and `.claude/workloop.config.json`. Read them; do not assume another repo's rule
 - **Git status:** !`git status --short`
 - **Branch:** !`git branch --show-current`
 - **Recent commits:** !`git log --oneline -5`
-- **mattpocock-skills plugin:** !`grep -q '"mattpocock-skills@' ~/.claude/plugins/installed_plugins.json 2>/dev/null && echo installed || echo "not installed"`
 - **Tracker doc (`docs/agents/issue-tracker.md`):** !`test -f docs/agents/issue-tracker.md && echo present || echo absent`
 
-Where a step below says "if mattpocock-skills is installed, call the Skill tool
-with X", do that when the plugin is installed and use the inline fallback when it
-is not. Never stop because the plugin is missing. If the tracker doc is present,
-it is the authority on tracker operations.
+If the tracker doc is present, it is the authority on tracker operations.
 
 ## Read first (in order)
 1. `.claude/process.md` - the workflow rules and the **project gotchas** (REQUIRED)
 2. `.claude/workloop.config.json` - gates, base branch, model tiers, tracker
 3. This repo's docs (whatever `process.md` points at: architecture, domain,
-   decisions; `CONTEXT.md` and ADRs if present - use their vocabulary)
+   decisions; `GLOSSARY.md` and ADRs if present - use their vocabulary)
 4. `.claude/inbox/*.md` - human instructions
 5. The backlog: with `tracker.kind` `github` the open issues carrying
    `tracker.label` are the tickets; otherwise `.claude/backlog.json`
@@ -67,29 +63,24 @@ can supply, signal `stop`.
   enforced, not advisory.
 - Separate files per concern where the codebase is organised that way - a new
   responsibility gets a new file, not a section bolted onto an existing one.
-- **If mattpocock-skills is installed, call the Skill tool with "tdd"** and drive
-  it from the ticket's acceptance criteria at the highest existing seam. Otherwise
-  write the failing test first yourself, then make it pass, then refactor.
+- Work test-first from the ticket's acceptance criteria, at the highest existing
+  seam: write the failing test, make it pass, then refactor.
 - Pure logic must be pure and tested as such.
 
 ### 5. Quality gates (must all pass)
 Run the gate command from `workloop.config.json` (`gates`). Fix failures; do not
-proceed on red. If a gate is red for a reason you cannot see after one honest
-attempt and mattpocock-skills is installed, call the Skill tool with
-"diagnosing-bugs" before giving up; signal `stop` only after that.
+proceed on red. If a gate is red for a reason you cannot see, make one honest
+diagnosis attempt: reproduce it, read the failing output, form one hypothesis and
+test it. If it is still red, signal `stop`.
 
 ### 6. Review pass
 A second pass is part of Done, not a nicety.
 
-- **If mattpocock-skills is installed, call the Skill tool with "code-review"**,
-  fixed point = the configured base branch. It reviews the diff on two axes,
-  standards and spec; the spec is the ticket's issue (it finds `#<issue>` in the
-  commits) or the ticket body in `backlog.json`, which you should hand it if no
-  issue exists.
-- **Otherwise** review your own diff (`git diff <base>...HEAD`) on the same two
-  axes: does it follow this repo's documented standards and the patterns around
-  it; does it do exactly what the ticket asked, nothing missing, nothing extra.
-  If `process.md` names a review agent, run that instead.
+Review your own diff (`git diff <base>...HEAD`) on two axes: **standards** - does
+it follow this repo's documented standards and the patterns around it; and
+**spec** - does it do exactly what the ticket asked (the ticket's issue, or its
+body in `backlog.json`), nothing missing, nothing extra. If `process.md` names a
+review agent, run that as well.
 
 Address anything at medium severity or above, or say explicitly why you are not.
 Also grep your diff for any of the hazard patterns `process.md` forbids.
@@ -125,9 +116,8 @@ gh pr merge --squash --delete-branch    # after CI is green
 the merge does it, no extra call. Clean commit messages only - no AI
 attribution, no Co-Authored-By. If `gh` is unavailable, squash-merge locally to
 the base branch, push, and close the issue with `gh issue close` if you can.
-If the merge conflicts and mattpocock-skills is installed, call the Skill tool
-with "resolving-merge-conflicts"; never `--abort` and walk away from a green
-ticket.
+If the merge conflicts, resolve it by hand and re-run the gates; never `--abort`
+and walk away from a green ticket.
 
 ### 9. Completion signal
 End your response with exactly one:

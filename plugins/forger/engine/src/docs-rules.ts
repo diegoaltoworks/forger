@@ -4,7 +4,7 @@
  * the violations on it; file reading and the exit code live in docs-check.ts.
  */
 
-export type RuleName = 'non-ascii' | 'email' | 'home-path' | 'denylist';
+export type RuleName = 'non-ascii' | 'email' | 'home-path' | 'denylist' | 'third-party-skills';
 
 export interface Violation {
   file: string;
@@ -18,6 +18,15 @@ type LineRule = (line: string) => string[];
 const NON_ASCII = /[^\x00-\x7F]/g;
 const EMAIL = /[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,}/g;
 const HOME_PATH = /(?:\/home\/|\/Users\/)[A-Za-z0-9._-]+/g;
+
+const THIRD_PARTY_SKILLS = /matt-?\s?pocock|\bSkill tool\b|\bcall(?:s|ed)? the Skill\b/gi;
+
+/** Shipped prose: what a project adopts or reads as instructions. */
+const SHIPPED = [/^plugins\/forger\/commands\//, /^plugins\/forger\/templates\//, /^templates\//, /(^|\/)README\.md$/];
+
+export function isShipped(file: string): boolean {
+  return SHIPPED.some(r => r.test(file));
+}
 
 function codePoint(ch: string): string {
   return 'U+' + ch.codePointAt(0)!.toString(16).toUpperCase().padStart(4, '0');
@@ -38,6 +47,9 @@ export function parseDenylist(text: string): string[] {
     .filter(l => l !== '' && !l.startsWith('#'));
 }
 
+/** Forger carries its own steps: shipped prose never hooks another skill collection. */
+export const thirdPartySkills: LineRule = line => line.match(THIRD_PARTY_SKILLS) ?? [];
+
 export function denylist(terms: string[]): LineRule {
   const lowered = terms.map(t => t.toLowerCase());
   return line => {
@@ -54,6 +66,7 @@ export function checkText(file: string, text: string, terms: string[] = []): Vio
     ['home-path', homePath],
     ['denylist', denylist(terms)],
   ];
+  if (isShipped(file)) rules.push(['third-party-skills', thirdPartySkills]);
   const out: Violation[] = [];
   text.split('\n').forEach((line, i) => {
     for (const [rule, fn] of rules) {
