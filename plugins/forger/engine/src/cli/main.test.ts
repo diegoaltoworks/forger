@@ -499,6 +499,28 @@ describe('measure and retro', () => {
     expect(out.tickets).toEqual([{ticket: 'alpha_ticket', runs: 1, seconds: 90, budget_usd: 20, ci_rounds: 1}]);
   });
 
+  test('measure --json carries merged tickets, rework and owner interventions', async () => {
+    const root = projectWith({});
+    process.chdir(root);
+    const run: CommandRunner = () => '[]';
+    const out = JSON.parse(await capture(['measure', '--json'], run));
+    expect(out.merged).toEqual({tickets: 0});
+    expect(out.rework).toEqual({redone_tickets: 0});
+    expect(out.owner_interventions).toEqual({total: 0, by_event: {}});
+  });
+
+  test('measure --report prints the report and --diff the delta of two reports', async () => {
+    const root = projectWith({});
+    process.chdir(root);
+    const run: CommandRunner = () => '[]';
+    const report = JSON.parse(await capture(['measure', '--report'], run));
+    expect(report.tickets_merged).toBe(0);
+    writeFileSync(join(root, 'a.json'), JSON.stringify(report));
+    writeFileSync(join(root, 'b.json'), JSON.stringify({...report, tickets_merged: 3}));
+    const diff = JSON.parse(await capture(['measure', '--diff', 'a.json', 'b.json'], run));
+    expect(diff.tickets_merged).toEqual({a: 0, b: 3, delta: 3});
+  });
+
   test('measure survives gh failing', async () => {
     const root = projectWith({});
     process.chdir(root);
