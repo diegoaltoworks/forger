@@ -89,6 +89,20 @@ recovered, and where the lasting fix belongs: **E** the engine, **S** a skill
 - **Fix:** E (in place): the log names the ticket the worker took (from its
   branch) and labels the engine's pick when it differs. S: the supervisor reports the real branch.
 
+### A worker overrides the engine's pick
+
+- **Seen:** the engine named one ticket and the worker built another, from its
+  own reading of the backlog or the owner's notes. The loop's order, its
+  dependency checks and its budget tier were then not the ones the run used.
+- **Cause:** the pick was advice in the prompt, and nothing held the run to it.
+- **Fix:** E (in place): the prompt names the pick and the outcome decider marks
+  a run that built a different ticket `off-pick`, which is never counted as
+  progress. S: a worker that cannot build the pick runs `decline` with a reason
+  (`blocked`, `too-large` or `unclear`), which records it, relabels the ticket
+  and halts the loop on repeated declines. Check: `measure --json` reports the
+  share of runs that were off-pick and the share declined over a window, so a
+  rise in either shows up before it costs a ticket.
+
 ### A timed-out run leaves an empty log
 
 - **Seen:** a run far past its timeout went unnoticed because its log held

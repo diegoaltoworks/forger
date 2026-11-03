@@ -108,20 +108,18 @@ export async function runIteration(ctx: IterationContext, iteration: number, cou
     ctx.logger.log('INFO', `Worker took ${taken} (engine picked ${attemptedTask ?? 'none'})`);
   }
 
-  writeFileSync(
-    outputFile,
-    formatIterationLog({
-      iteration,
-      ticket,
-      enginePick: attemptedTask,
-      elapsedSeconds: duration,
-      exitCode: result.exitCode,
-      signal: result.signal,
-      timedOut: result.timedOut,
-      timeoutMinutes,
-      output: result.output,
-    })
-  );
+  const logFacts = {
+    iteration,
+    ticket,
+    enginePick: attemptedTask,
+    elapsedSeconds: duration,
+    exitCode: result.exitCode,
+    signal: result.signal,
+    timedOut: result.timedOut,
+    timeoutMinutes,
+    output: result.output,
+  };
+  writeFileSync(outputFile, formatIterationLog(logFacts));
   ctx.logger.log('INFO', `Claude finished in ${duration}s (exit: ${result.exitCode})`);
 
   const claim = parseClaim(result.output);
@@ -145,6 +143,9 @@ export async function runIteration(ctx: IterationContext, iteration: number, cou
     backlogCompleted,
     unclean: gitFacts.merged ? verify(ctx) : null,
   });
+
+  // Rewritten with the decided status so measures can read it back from the file.
+  writeFileSync(outputFile, formatIterationLog({...logFacts, status: outcome.status}));
 
   const declined: DeclineEntry | null =
     outcome.status === 'declined' && record ? {ticket: record.ticket, reason: record.reason, iteration} : null;

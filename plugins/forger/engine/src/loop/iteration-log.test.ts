@@ -69,4 +69,9 @@ describe('formatIterationLog', () => {
   test('an engine with no pick prints none', () => {
     expect(formatIterationLog({...base, ticket: null, enginePick: null})).toContain('engine pick: none');
   });
+
+  test('prints the decided status after the outcome, and omits it before one', () => {
+    expect(formatIterationLog({...base, status: 'declined'})).toContain('outcome: exited with code 0\nstatus: declined\n');
+    expect(formatIterationLog(base)).not.toContain('status:');
+  });
 });
