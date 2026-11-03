@@ -6,7 +6,7 @@
 
 import type {Finding} from '../waivers';
 
-export type RuleName = 'non-ascii' | 'email' | 'home-path' | 'denylist' | 'third-party-skills';
+export type RuleName = 'non-ascii' | 'email' | 'home-path' | 'denylist' | 'third-party-skills' | 'model-agnostic';
 
 export interface Violation {
   file: string;
@@ -24,6 +24,7 @@ export const RULE_OPINION: Record<RuleName, string> = {
   'home-path': 'base.nothing-personal',
   denylist: 'base.nothing-personal',
   'third-party-skills': 'base.no-hard-coded-skills',
+  'model-agnostic': 'base.model-agnostic',
 };
 
 type LineRule = (line: string) => string[];
@@ -43,6 +44,30 @@ const SHIPPED = [/^plugins\/forger\/commands\//, /^plugins\/forger\/templates\//
 
 export function isShipped(file: string): boolean {
   return SHIPPED.some(r => r.test(file));
+}
+
+/**
+ * Prose outside these files names roles, not models or vendors. The adapter
+ * docs are where a harness and its models are named once, honestly.
+ */
+const ADAPTER_DOCS = [/^plugins\/forger\/README\.md$/, /(^|\/)adapters\/README\.md$/];
+
+export function isAdapterDoc(file: string): boolean {
+  return ADAPTER_DOCS.some(r => r.test(file));
+}
+
+function escapeRegExp(text: string): string {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/**
+ * Whole-word, case-insensitive match of a model or vendor name. A name inside a
+ * path or a dotted/dashed identifier (`.claude/`, `some-claude-thing`) is not prose.
+ */
+export function modelNames(names: string[]): LineRule {
+  if (names.length === 0) return () => [];
+  const re = new RegExp(`(?<![A-Za-z0-9_./-])(?:${names.map(escapeRegExp).join('|')})(?![A-Za-z0-9_/-])`, 'gi');
+  return line => line.match(re) ?? [];
 }
 
 function codePoint(ch: string): string {
@@ -76,7 +101,7 @@ export function denylist(terms: string[]): LineRule {
 }
 
 /** Every violation in one file's text, in line order. */
-export function checkText(file: string, text: string, terms: string[] = []): Violation[] {
+export function checkText(file: string, text: string, terms: string[] = [], names: string[] = []): Violation[] {
   const rules: Array<[RuleName, LineRule]> = [
     ['non-ascii', nonAscii],
     ['email', email],
@@ -84,6 +109,7 @@ export function checkText(file: string, text: string, terms: string[] = []): Vio
     ['denylist', denylist(terms)],
   ];
   if (isShipped(file)) rules.push(['third-party-skills', thirdPartySkills]);
+  if (file.endsWith('.md') && !isAdapterDoc(file)) rules.push(['model-agnostic', modelNames(names)]);
   const out: Violation[] = [];
   text.split('\n').forEach((line, i) => {
     for (const [rule, fn] of rules) {

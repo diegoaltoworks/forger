@@ -14,7 +14,7 @@ the files inside it.
 | [`packs/`](packs/README.md) | Pack manifests, `setup`, skill slots |
 | [`supervisor/`](supervisor/README.md) | Read-only facts, the supervisor's decisions, measures and retro records |
 | [`config/`](config/README.md) | Loading `.claude/workloop.config.json` and its defaults |
-| [`ports/`](ports/README.md) | The types the core is written against and the adapters implement |
+| [`ports/`](ports/README.md) | The types the core is written against and the adapters implement: `CommandRunner`, `AgentRunner` |
 | [`adapters/`](adapters/README.md) | Running a command and spawning the agent |
 
 ## The dependency rule

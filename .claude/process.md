@@ -5,7 +5,7 @@ One ticket per iteration, quality gates green, small clean commits.
 ## What this repo is
 
 Forger: deterministic tools and skills for an unattended, self-improving
-development loop in Claude Code. The plugin lives in `plugins/forger/` (engine in
+development loop for any model and harness. The plugin lives in `plugins/forger/` (engine in
 `plugins/forger/engine/`, commands in `plugins/forger/commands/`, the packs a
 project adopts in `plugins/forger/packs/`). The process it
 encodes lives in `docs/`. Read `README.md`, `docs/01-principles.md`,

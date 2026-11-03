@@ -1,7 +1,7 @@
 /**
- * The agent spawn as the loop sees it: what one worker run is given and what it
- * returns. The loop is written against these types; the real spawn lives in
- * adapters and is handed in by the CLI.
+ * The agent spawn as the loop sees it. The loop is written against
+ * `AgentRunner`; each harness that can run a worker is an adapter that
+ * implements it (see adapters/), and the CLI hands one in.
  */
 
 import type {Tier} from '../config';
@@ -14,13 +14,21 @@ export interface SupervisedResult {
   timedOut: boolean;
 }
 
-export type ClaudeResult = SupervisedResult;
+export type AgentResult = SupervisedResult;
 
-export interface RunClaudeOptions {
+export interface AgentRunOptions {
   prompt: string;
   sessionId: string;
+  /** The role and budget chosen for the ticket. */
   tier: Tier;
+  /** The model id the tier's role maps to, for harnesses that take one. */
+  model: string;
   cwd: string;
   timeoutMinutes: number;
   killGraceSeconds: number;
+}
+
+/** Runs one worker iteration to completion or to its deadline. */
+export interface AgentRunner {
+  run(opts: AgentRunOptions): Promise<AgentResult>;
 }

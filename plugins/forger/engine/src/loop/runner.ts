@@ -11,7 +11,7 @@ import {join} from 'path';
 
 import type {WorkloopConfig} from '../config';
 import type {Backlog} from '../backlog';
-import type {ClaudeResult, CommandRunner, RunClaudeOptions} from '../ports';
+import type {AgentRunner, CommandRunner} from '../ports';
 import {type AutomationState, StateStore} from './state';
 import {Logger, colors} from './logger';
 import {RateLimitError, rateLimitWaitMs} from './infra';
@@ -22,7 +22,7 @@ import {buildStatus, type StatusReport} from './status-report';
 
 export interface RunnerDeps {
   /** The agent spawn; a runner built without one can report and watch, but refuses to run an iteration. */
-  runClaude?: (opts: RunClaudeOptions) => Promise<ClaudeResult>;
+  agent?: AgentRunner;
   gitRunner: CommandRunner;
   uuid?: () => string;
   /** Liveness probe for the lock holder; defaults to a signal-0 check. */
@@ -41,7 +41,7 @@ export class AutomationRunner {
   private store: StateStore;
   private outputDir: string;
   private gitRunner: CommandRunner;
-  private spawnClaude: (opts: RunClaudeOptions) => Promise<ClaudeResult>;
+  private agent: AgentRunner;
   private uuid: () => string;
   private lock: RunnerLock;
   private eventsFile: string;
@@ -63,7 +63,7 @@ export class AutomationRunner {
     this.lock = new RunnerLock(p(config.paths.lock), deps.pid, deps.isAlive);
 
     this.gitRunner = deps.gitRunner;
-    this.spawnClaude = deps.runClaude ?? (() => Promise.reject(new Error('no agent spawn was given to this runner')));
+    this.agent = deps.agent ?? {run: () => Promise.reject(new Error('no agent runner was given to this runner'))};
     this.uuid = deps.uuid ?? (() => crypto.randomUUID());
     this.now = deps.now ?? Date.now;
     this.sleep = deps.sleep ?? (ms => new Promise(resolve => setTimeout(resolve, ms)));
@@ -78,7 +78,7 @@ export class AutomationRunner {
       logger: this.logger,
       outputDir: this.outputDir,
       gitRunner: this.gitRunner,
-      spawnClaude: this.spawnClaude,
+      agent: this.agent,
       uuid: this.uuid,
       refreshBacklog: () => this.refreshBacklog(),
       emit: (kind, iteration, ticket, reason) => this.emit(kind, iteration, ticket, reason),

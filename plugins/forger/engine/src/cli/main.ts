@@ -10,7 +10,7 @@ import {homedir} from 'os';
 import {dirname, join, resolve} from 'path';
 import {parseArgs} from 'util';
 
-import {execRunner, runClaude} from '../adapters';
+import {execRunner, claudeAgent} from '../adapters';
 import type {Backlog} from '../backlog';
 import {loadConfig, type WorkloopConfig} from '../config';
 import {AutomationRunner} from '../loop';
@@ -48,7 +48,7 @@ function contextFor(base: Pick<CommandContext, 'values' | 'positionals' | 'deps'
       return (backlog ??= openBacklog(ctx.projectRoot, ctx.config, base.deps.run));
     },
     get runner() {
-      return (runner ??= new AutomationRunner(ctx.projectRoot, ctx.config, ctx.backlog, {gitRunner: execRunner(ctx.projectRoot), runClaude}));
+      return (runner ??= new AutomationRunner(ctx.projectRoot, ctx.config, ctx.backlog, {gitRunner: execRunner(ctx.projectRoot), agent: claudeAgent}));
     },
   };
   return ctx;

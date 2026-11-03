@@ -15,11 +15,11 @@ afterEach(() => {
 const data: BacklogData = {features: {the_ticket: {priority: 'P0', status: 'not_started', depends_on: []}}};
 
 describe('runIteration', () => {
-  test('a runner given no agent spawn refuses to run an iteration', async () => {
+  test('a runner given no agent runner refuses to run an iteration', async () => {
     const root = mkdtempSync(join(tmpdir(), 'forger-iteration-'));
     dirs.push(root);
     const config = mergeConfig({});
     const runner = new AutomationRunner(root, config, backlogFrom(() => data, config), {gitRunner: () => ''});
-    await expect(runner.runIteration(1)).rejects.toThrow('no agent spawn was given to this runner');
+    await expect(runner.runIteration(1)).rejects.toThrow('no agent runner was given to this runner');
   });
 });

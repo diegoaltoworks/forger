@@ -242,7 +242,7 @@ describe('check', () => {
     const report = JSON.parse(await capture(['check', '--json'], () => 'a.md'));
     expect(report).toEqual({
       ok: true,
-      results: [{check: 'docs', opinions: ['base.ascii-punctuation', 'base.nothing-personal', 'base.no-hard-coded-skills'], status: 'passed', violations: [], waived: []}],
+      results: [{check: 'docs', opinions: ['base.ascii-punctuation', 'base.nothing-personal', 'base.no-hard-coded-skills', 'base.model-agnostic'], status: 'passed', violations: [], waived: []}],
       waivers: [],
       staleWaivers: [],
     });
@@ -253,7 +253,7 @@ describe('check', () => {
     installed();
     const out = await capture(['check', '--summary'], () => 'a.md');
     expect(out).toContain('## forger check: passed');
-    expect(out).toContain('| docs | `base.ascii-punctuation`, `base.nothing-personal`, `base.no-hard-coded-skills` | passed | 0 | 0 |');
+    expect(out).toContain('| docs | `base.ascii-punctuation`, `base.nothing-personal`, `base.no-hard-coded-skills`, `base.model-agnostic` | passed | 0 | 0 |');
   });
 
   test('one violation: failed, carries the opinion id, exit 1', async () => {

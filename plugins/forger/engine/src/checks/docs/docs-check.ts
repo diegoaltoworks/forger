@@ -9,6 +9,7 @@ import {existsSync, readFileSync} from 'fs';
 import {join} from 'path';
 
 import {checkAvoidedTerms, checkDiagrams, checkLinks, parseGlossaryAvoid, type AvoidedTerm, type LinkWorld} from './docs-content';
+import {loadConfig} from '../../config';
 import type {CommandRunner} from '../../ports';
 import {checkText, parseDenylist} from './docs-rules';
 import {LOCK_PATH, parseLock} from '../../packs';
@@ -40,6 +41,7 @@ function contentRules(projectRoot: string, avoided: AvoidedTerm[]): (file: strin
 export function runDocsCheck(projectRoot: string, run: CommandRunner, packs: string[] = installedPackIds(projectRoot)): Finding[] {
   const denyFile = join(projectRoot, '.forger-denylist');
   const terms = existsSync(denyFile) ? parseDenylist(readFileSync(denyFile, 'utf-8')) : [];
+  const names = loadConfig(projectRoot).model_names;
   const files = run('git ls-files').split('\n').filter(f => f !== '' && !SKIP.some(s => s.test(f)));
 
   const glossary = join(projectRoot, GLOSSARY);
@@ -55,7 +57,7 @@ export function runDocsCheck(projectRoot: string, run: CommandRunner, packs: str
     const buf = readFileSync(path);
     if (buf.includes(0)) continue;
     const text = buf.toString('utf-8');
-    out.push(...checkText(file, text, terms));
+    out.push(...checkText(file, text, terms, names));
     if (content && file.endsWith('.md')) out.push(...content(file, text));
   }
   return out;

@@ -13,7 +13,7 @@ recovered, and where the lasting fix belongs: **E** the engine, **S** a skill
   waiting shell's own command line, so the wait never ended. The 90-minute
   timeout fired, but the run went on for about 37 hours.
 - **Cause, worker:** a wait on a process pattern that matches itself.
-- **Cause, engine:** on timeout the engine sends SIGTERM to the `claude` process
+- **Cause, engine:** on timeout the engine sends SIGTERM to the agent process
   only, then waits for the child's `close` event, which waits for its output
   pipes. A grandchild (the shell loop) still holds the pipes, so `close` never
   comes. No process-group kill, no SIGKILL after a grace period.

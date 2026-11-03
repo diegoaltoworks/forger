@@ -4,7 +4,7 @@ import {tmpdir} from 'os';
 import {join} from 'path';
 
 import {type BacklogData, backlogFrom} from '../backlog';
-import type {ClaudeResult, RunClaudeOptions} from '../ports';
+import type {AgentResult, AgentRunOptions} from '../ports';
 import {mergeConfig} from '../config';
 import {RATE_LIMIT_MARGIN_MS, RateLimitError} from './infra';
 import {AutomationRunner, WATCH_BACKLOG_EVERY} from './runner';
@@ -52,23 +52,23 @@ function sceneRunner(scene: GitScene, spawned: () => boolean) {
 }
 
 function runnerWith(
-  result: ClaudeResult,
+  result: AgentResult,
   scene: GitScene = {},
   data: BacklogData = backlog
 ): {
   runner: AutomationRunner;
   root: string;
-  calls: RunClaudeOptions[];
+  calls: AgentRunOptions[];
 } {
   const root = mkdtempSync(join(tmpdir(), 'forger-runner-'));
   dirs.push(root);
-  const calls: RunClaudeOptions[] = [];
+  const calls: AgentRunOptions[] = [];
   const config = mergeConfig({limits: {timeoutMinutes: 7, killGraceSeconds: 11, maxStallIterations: 2}});
   const runner = new AutomationRunner(root, config, backlogFrom(() => data, config), {
-    runClaude: async opts => {
+    agent: {run: async opts => {
       calls.push(opts);
       return result;
-    },
+    }},
     gitRunner: sceneRunner(scene, () => calls.length > 0),
     uuid: () => '00000000-0000-0000-0000-000000000000',
   });
@@ -101,6 +101,13 @@ describe('AutomationRunner iteration log', () => {
     await runner.runIteration(1);
     expect(calls[0].timeoutMinutes).toBe(7);
     expect(calls[0].killGraceSeconds).toBe(11);
+  });
+
+  test('gives the agent the tier role and the model id the role maps to', async () => {
+    const {runner, calls} = runnerWith({exitCode: 0, signal: null, output: '', timedOut: false});
+    await runner.runIteration(1);
+    expect(calls[0].tier.model).toBe('standard');
+    expect(calls[0].model).toBe('sonnet');
   });
 
   test('is written on success', async () => {
@@ -145,7 +152,7 @@ describe('AutomationRunner iteration log', () => {
 });
 
 describe('AutomationRunner outcome from facts', () => {
-  const timedOut: ClaudeResult = {exitCode: 1, signal: 'SIGKILL', output: '', timedOut: true};
+  const timedOut: AgentResult = {exitCode: 1, signal: 'SIGKILL', output: '', timedOut: true};
 
   test('a timed-out run whose PR merged is a success and resets the failure counter', async () => {
     const {runner, root} = runnerWith(timedOut, {merge: true, branch: 'feat/the_ticket'}, done);
@@ -283,7 +290,7 @@ describe('AutomationRunner infrastructure errors and resume', () => {
       limits: {pauseBetweenIterations: 0, pauseAfterFailure: 0, maxStallIterations: 2},
     });
     const runner = new AutomationRunner(root, config, backlogFrom(() => backlog, config), {
-      runClaude: async () => ({exitCode: 1, signal: null, output: '', timedOut: false}),
+      agent: {run: async () => ({exitCode: 1, signal: null, output: '', timedOut: false})},
       gitRunner: () => '',
     });
     await runner.run(1);
@@ -299,14 +306,14 @@ function eventsOf(root: string): {event: string; reason: string | null; ticket: 
 }
 
 describe('AutomationRunner single runner', () => {
-  const fail: ClaudeResult = {exitCode: 1, signal: null, output: '', timedOut: false};
+  const fail: AgentResult = {exitCode: 1, signal: null, output: '', timedOut: false};
   const fast = mergeConfig({
     limits: {pauseBetweenIterations: 0, pauseAfterFailure: 0, maxStallIterations: 9},
   });
 
   function runnerIn(root: string, deps: Record<string, unknown>, data: BacklogData = backlog) {
     return new AutomationRunner(root, fast, backlogFrom(() => data, fast), {
-      runClaude: async () => fail,
+      agent: {run: async () => fail},
       gitRunner: () => '',
       ...deps,
     });
@@ -318,10 +325,10 @@ describe('AutomationRunner single runner', () => {
     let spawned = 0;
     const runner = runnerIn(root, {
       isAlive: (p: number) => p === 4242,
-      runClaude: async () => {
+      agent: {run: async () => {
         spawned++;
         return fail;
-      },
+      }},
     });
     expect(await runner.run(1)).toBe(false);
     expect(spawned).toBe(0);
@@ -359,10 +366,10 @@ describe('AutomationRunner single runner', () => {
     };
     const runner = runnerIn(root, {
       gitRunner: git,
-      runClaude: async () => {
+      agent: {run: async () => {
         spawned++;
         return fail;
-      },
+      }},
     }, done);
     runner.closeOrphan();
     const state = readState(root);
@@ -441,7 +448,7 @@ describe('AutomationRunner and a rate-limited backlog', () => {
   const fast = mergeConfig({
     limits: {pauseBetweenIterations: 0, pauseAfterFailure: 0, maxStallIterations: 9},
   });
-  const fail: ClaudeResult = {exitCode: 1, signal: null, output: '', timedOut: false};
+  const fail: AgentResult = {exitCode: 1, signal: null, output: '', timedOut: false};
 
   /** A backlog whose first `limited` reads hit the rate limit, on a fake clock. */
   function limitedBacklog(limited: number, data: () => BacklogData) {
@@ -477,10 +484,10 @@ describe('AutomationRunner and a rate-limited backlog', () => {
     });
     const runner = new AutomationRunner(root, fast, limited, {
       ...deps,
-      runClaude: async () => {
+      agent: {run: async () => {
         spawned = true;
         return {exitCode: 0, signal: null, output: '<process>complete</process>', timedOut: false};
-      },
+      }},
       gitRunner: sceneRunner({merge: true, branch: 'feat/the_ticket'}, () => spawned),
     });
     expect(await runner.runIteration(1)).toBe(true);
@@ -496,7 +503,7 @@ describe('AutomationRunner and a rate-limited backlog', () => {
     const root = mkdtempSync(join(tmpdir(), 'forger-runner-'));
     dirs.push(root);
     const {clock, backlog: limited, deps} = limitedBacklog(2, () => backlog);
-    const runner = new AutomationRunner(root, fast, limited, {...deps, runClaude: async () => fail, gitRunner: () => ''});
+    const runner = new AutomationRunner(root, fast, limited, {...deps, agent: {run: async () => fail}, gitRunner: () => ''});
     await runner.run(1);
     expect(clock.slept.filter(ms => ms > 0)).toEqual([600_000 + RATE_LIMIT_MARGIN_MS, 600_000 + RATE_LIMIT_MARGIN_MS]);
     const state = readState(root);
@@ -508,7 +515,7 @@ describe('AutomationRunner and a rate-limited backlog', () => {
     const root = mkdtempSync(join(tmpdir(), 'forger-runner-'));
     dirs.push(root);
     const {clock, backlog: counted, deps} = limitedBacklog(0, () => backlog);
-    const runner = new AutomationRunner(root, fast, counted, {...deps, runClaude: async () => fail, gitRunner: () => ''});
+    const runner = new AutomationRunner(root, fast, counted, {...deps, agent: {run: async () => fail}, gitRunner: () => ''});
     await runner.run(2);
     expect(clock.reads).toBe(1 + 2);
   });
@@ -522,7 +529,7 @@ describe('AutomationRunner and a rate-limited backlog', () => {
       backlogFrom(() => {
         throw new Error('GitHub backlog: gh exited 1 with no output, nothing on stderr');
       }, fast),
-      {runClaude: async () => fail, gitRunner: () => '', sleep: async () => {
+      {agent: {run: async () => fail}, gitRunner: () => '', sleep: async () => {
         throw new Error('must not wait');
       }}
     );
