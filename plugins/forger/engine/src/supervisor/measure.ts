@@ -73,6 +73,8 @@ export interface Measures {
   events: Record<string, number>;
   tickets: TicketMeasure[];
   ci_rounds_unmatched: Record<string, number>;
+  /** Inputs that live only on the engine's machine and were not found here; their measures read as unknown. */
+  not_on_this_machine?: string[];
 }
 
 /** Reads one `iteration-N.log`; null when the header is not forger's. */
@@ -334,6 +336,7 @@ export function formatMeasures(m: Measures): string {
     `merged tickets: ${m.merged.tickets}, redone ${m.rework.redone_tickets}, owner interventions ${m.interventions_unknown === null ? m.owner_interventions.total : `unknown (${m.interventions_unknown})`}`,
     ...(m.change_rework === null ? ['rework and escaped defects: unknown'] : formatRework(m.change_rework)),
     `events: ${Object.entries(m.events).map(([k, v]) => `${k} ${v}`).join(', ') || 'none'}`,
+    ...(m.not_on_this_machine?.length ? [`not on this machine: ${m.not_on_this_machine.join(', ')}`] : []),
     'tickets:',
     ...m.tickets.map(
       t =>

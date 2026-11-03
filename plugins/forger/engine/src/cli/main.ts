@@ -9,10 +9,11 @@ import {homedir} from 'os';
 import {dirname, resolve} from 'path';
 import {parseArgs} from 'util';
 
-import {agentFor, execCapture, localStateFor, execRunner, findHarness} from '../adapters';
+import {agentFor, execCapture, gitStateStore, localStateFor, execRunner, findHarness} from '../adapters';
 import type {Backlog} from '../backlog';
 import {detectLayout, isProjectRoot, legacyWarning, loadConfig, type WorkloopConfig} from '../config';
 import {AutomationRunner} from '../loop';
+import type {StateStore} from '../ports';
 import {listCollectionRoots, listInstalledSkills} from '../packs';
 import {STAGES, type CliDeps, type CommandContext, type Stage} from './command';
 import {FLAGS} from './flags';
@@ -34,6 +35,7 @@ function contextFor(base: Pick<CommandContext, 'values' | 'positionals' | 'deps'
   let config: WorkloopConfig | undefined;
   let backlog: Backlog | undefined;
   let runner: AutomationRunner | undefined;
+  let store: StateStore | undefined;
   const ctx: CommandContext = {
     ...base,
     run: () => base.deps.run ?? execRunner(ctx.projectRoot),
@@ -51,8 +53,14 @@ function contextFor(base: Pick<CommandContext, 'values' | 'positionals' | 'deps'
     get backlog() {
       return (backlog ??= openBacklog(ctx.projectRoot, ctx.config, base.deps.run));
     },
+    get stateStore() {
+      if (base.deps.stateStore) return base.deps.stateStore;
+      const from = base.values.from ?? 'local';
+      if (from !== 'local' && from !== 'branch') throw new Error('--from must be local or branch');
+      return (store ??= from === 'branch' ? gitStateStore({repo: ctx.projectRoot}) : localStateFor(ctx.projectRoot, ctx.config));
+    },
     get runner() {
-      return (runner ??= new AutomationRunner(ctx.projectRoot, ctx.config, ctx.backlog, {stateStore: localStateFor(ctx.projectRoot, ctx.config), gitRunner: execRunner(ctx.projectRoot), gitCapture: execCapture(ctx.projectRoot), agent: agentFor(findHarness(ctx.config.harness))}));
+      return (runner ??= new AutomationRunner(ctx.projectRoot, ctx.config, ctx.backlog, {stateStore: ctx.stateStore, gitRunner: execRunner(ctx.projectRoot), gitCapture: execCapture(ctx.projectRoot), agent: agentFor(findHarness(ctx.config.harness))}));
     },
   };
   return ctx;
