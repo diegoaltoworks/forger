@@ -108,3 +108,18 @@ describe('backlog --json', () => {
     expect(calls.every(c => c.startsWith('gh api graphql'))).toBe(true);
   });
 });
+
+describe('check docs', () => {
+  test('prints file:line and rule and sets a failing exit code on a violation', async () => {
+    const root = projectWith({});
+    process.chdir(root);
+    const out = await capture(['check', 'docs'], () => 'a.md');
+    writeFileSync(join(root, 'a.md'), 'x');
+    expect(out).toBe('docs check: clean');
+    writeFileSync(join(root, 'a.md'), 'bad \u2014');
+    const bad = await capture(['check', 'docs', '--json'], () => 'a.md');
+    expect(JSON.parse(bad)).toEqual([{file: 'a.md', line: 1, rule: 'non-ascii', detail: 'U+2014'}]);
+    expect(process.exitCode).toBe(1);
+    process.exitCode = 0;
+  });
+});
