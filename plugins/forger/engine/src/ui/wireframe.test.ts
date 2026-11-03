@@ -4,7 +4,7 @@ import {tmpdir} from 'os';
 import {dirname, join, resolve} from 'path';
 
 import {staticAppServer} from '../adapters';
-import {runDocsCheck} from '../checks/docs/docs-check';
+import {runDocsCheck} from '../checks';
 import type {Screenshotter} from '../ports';
 import {runScreenshots} from './capture';
 import {parseUiConfig} from './ui-config';
