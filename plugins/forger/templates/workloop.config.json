@@ -1,0 +1,26 @@
+{
+  "repo": null,
+  "worker_command": "forger:auto-ticket",
+  "gates": "npm run typecheck && npm run lint && npm test",
+  "base_branch": "main",
+  "model_by_priority": {
+    "P0": { "model": "opus", "budget": 22.5 },
+    "default": { "model": "sonnet", "budget": 18.0 }
+  },
+  "effort_multiplier": { "small": 1, "medium": 1.5, "large": 2.5 },
+  "limits": {
+    "timeoutMinutes": 45,
+    "maxConsecutiveFailures": 3,
+    "pauseBetweenIterations": 5000,
+    "pauseAfterFailure": 10000,
+    "maxStallIterations": 5
+  },
+  "paths": {
+    "backlog": ".claude/backlog.json",
+    "state": ".claude/state.json",
+    "log": ".claude/work.log",
+    "output": ".claude/output",
+    "halt": ".claude/HALT"
+  },
+  "tracker": { "kind": "github", "label": "ready-for-agent" }
+}

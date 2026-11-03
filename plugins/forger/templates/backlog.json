@@ -1,0 +1,25 @@
+{
+  "product": {
+    "name": "<project name> - <what this backlog covers>",
+    "description": "<one or two sentences on the goal of this backlog>",
+    "note": "backlog.json is the source of truth for loop status. The tracker (GitHub Issues) is the human-facing mirror and intake. Prefer additive, opt-in changes over breaking the public API."
+  },
+  "features": {
+    "example_ticket": {
+      "priority": "P0",
+      "status": "not_started",
+      "type": "feature",
+      "depends_on": [],
+      "effort": "medium",
+      "issue": null,
+      "description": "Replace this with a real ticket. Say what and why, enough to implement in one iteration without guessing.",
+      "acceptance_criteria": [
+        "A testable outcome",
+        "Another testable outcome",
+        "Documented where it belongs"
+      ],
+      "files": ["src/"],
+      "reuse": ["name the pattern or reference to follow"]
+    }
+  }
+}

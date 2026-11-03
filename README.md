@@ -1,0 +1,47 @@
+# forger
+
+Deterministic tools and skills that let Claude Code models forge ahead reliably:
+an unattended development loop in which a worker builds one ticket at a time, a
+supervisor turns the owner's requests into tickets and watches the work land, and
+a refinement loop turns every correction and every failure into a better process.
+
+At its core, forger reaches for determinism. Anything that must come out the
+same every time is a tested command; models reason only where judgement is
+needed, between hard boundaries the tools enforce. See
+[`docs/01-principles.md`](docs/01-principles.md), principle 0.
+
+The goal is a loop that heals itself, learns and adapts: each lesson climbs from
+a note to a rule, a template, a check and finally a tool, until it holds without
+anyone remembering it, and the process is measured by commands, not claims.
+
+## The three layers
+
+| Layer | Who runs it | What it does | Where it lives here |
+|---|---|---|---|
+| **Engine and worker** | a detached runner, headless sessions | picks the next ticket, runs one worker per ticket under a budget, counts outcomes, halts on trouble | `plugins/forger/` |
+| **Supervisor** | an interactive session with the owner | intake, ordering, dispatch, watching, verifying, reporting | `docs/04-supervising.md` |
+| **Refinement** | the supervisor, within the owner's approval policy | turns corrections, failures and friction into rules, templates, checks and tools | `docs/05-refining-the-process.md` |
+
+## Read in this order
+
+1. [`docs/01-principles.md`](docs/01-principles.md) - the few ideas everything else follows from.
+2. [`docs/02-the-loop.md`](docs/02-the-loop.md) - roles, files, states and invariants.
+3. [`docs/03-tickets.md`](docs/03-tickets.md) - what a good ticket and a good PR carry.
+4. [`docs/04-supervising.md`](docs/04-supervising.md) - the supervisor's playbook, layer by layer.
+5. [`docs/05-refining-the-process.md`](docs/05-refining-the-process.md) - how the process improves itself.
+6. [`docs/06-failure-catalogue.md`](docs/06-failure-catalogue.md) - failures seen in real runs, their causes and their fixes.
+7. [`docs/07-roadmap.md`](docs/07-roadmap.md) - what to build next.
+
+[`GLOSSARY.md`](GLOSSARY.md) holds the vocabulary; [`docs/adr/`](docs/adr/) the
+decisions. `templates/` holds the files a repository adopts: the ticket and PR
+shapes, the work order, the report, the retro and the rule record.
+
+## Status
+
+Early. The engine and commands in `plugins/forger/` work and carry the defects
+listed in the failure catalogue; the roadmap and the backlog say what is being
+built next.
+
+## Licence
+
+MIT. See [`LICENSE`](LICENSE).

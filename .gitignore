@@ -1,0 +1,8 @@
+node_modules/
+.DS_Store
+.claude/state.json
+.claude/work.log
+.claude/output/
+.claude/HALT
+.claude/settings.local.json
+.forger-denylist

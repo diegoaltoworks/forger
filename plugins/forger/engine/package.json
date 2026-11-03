@@ -1,0 +1,17 @@
+{
+  "name": "@forger/engine",
+  "version": "0.1.0",
+  "description": "Repo-agnostic unattended development loop engine for the forger plugin.",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "bun test",
+    "test:watch": "bun test --watch",
+    "check": "tsc --noEmit && bun test"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "typescript": "^5"
+  }
+}

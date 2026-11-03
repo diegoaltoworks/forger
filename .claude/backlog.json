@@ -1,0 +1,384 @@
+{
+  "product": {
+    "name": "forger - foundation",
+    "description": "A deterministic core, an honest engine, and the first self-improving pieces. See docs/plan-foundation.md.",
+    "note": "GitHub Issues are the backlog (ADR 0001); this file is the fallback and the loop's local mirror until the GitHub backlog lands."
+  },
+  "features": {
+    "engine_timeout_kills_group": {
+      "priority": "P0",
+      "status": "not_started",
+      "type": "feature",
+      "depends_on": [],
+      "effort": "medium",
+      "issue": null,
+      "title": "Engine timeouts end the whole worker and always leave a log",
+      "description": "A worker that outlives its timeout must actually end. Today the engine signals only the direct child, so a worker whose shell waits on something that never ends (a pgrep -f that matched its own command line) ran for a day and a half, and a timed-out iteration leaves an empty log. See docs/06-failure-catalogue.md, the hang entry. Spawn the worker as the leader of its own process group; on timeout send SIGTERM to the group, then SIGKILL to the group after a grace period; resolve when the child exits. Always write the iteration log, including on timeout, with what is known (ticket, elapsed time, exit signal, any captured output).",
+      "acceptance_criteria": [
+        "The worker is spawned detached as a process-group leader",
+        "On timeout the engine signals the negative pid (the group) with SIGTERM, then SIGKILL after a configurable grace period",
+        "A test with a fake worker that ignores SIGTERM and spawns a grandchild proves both end and the run resolves",
+        "The iteration log is written on success, failure and timeout; a timeout log names the ticket, elapsed time and signal",
+        "Every decision this ticket adds is a tested command or pure function, not prompt text (ADR 0002).",
+        "Gates green; docs that describe the changed behaviour are updated in the same PR"
+      ],
+      "files": [
+        "plugins/forger/engine/src/claude.ts",
+        "plugins/forger/engine/src/runner.ts",
+        "plugins/forger/engine/src/config.ts"
+      ],
+      "reuse": [
+        "engine/src/git.ts injectable-runner pattern",
+        "docs/07-roadmap.md section 1"
+      ]
+    },
+    "engine_outcome_from_facts": {
+      "priority": "P0",
+      "status": "not_started",
+      "type": "feature",
+      "depends_on": [
+        "engine_timeout_kills_group"
+      ],
+      "effort": "medium",
+      "issue": null,
+      "title": "Engine decides each run's outcome from git and the PR, not from exit codes",
+      "description": "A run that merged and then timed out was counted as a failure, and a ticket marked completed in the backlog before its PR merged misled the engine. Decide outcomes from facts: did the ticket's branch merge into the base branch, was it pushed, or neither. 'Completed' means merged. Measure progress by merges, not by the remaining count. Log the ticket the worker actually took, which is not always the one the engine expected.",
+      "acceptance_criteria": [
+        "A pure outcome function maps facts (merged / pushed / nothing, exit status, timed out) to an outcome, with a test per case",
+        "A timed-out run whose PR merged counts as a success and resets the failure counter",
+        "A ticket marked completed whose branch is not merged into the base branch is reported, not counted as progress",
+        "Progress for stall detection is counted by merges",
+        "The log names the ticket the worker took, from git, when it differs from the engine's pick",
+        "Every decision this ticket adds is a tested command or pure function, not prompt text (ADR 0002).",
+        "Gates green; docs that describe the changed behaviour are updated in the same PR"
+      ],
+      "files": [
+        "plugins/forger/engine/src/runner.ts",
+        "plugins/forger/engine/src/git.ts",
+        "plugins/forger/engine/src/state.ts"
+      ],
+      "reuse": [
+        "verifyMerged in engine/src/git.ts",
+        "stallUpdate in engine/src/state.ts"
+      ]
+    },
+    "backlog_interface": {
+      "priority": "P0",
+      "status": "not_started",
+      "type": "feature",
+      "depends_on": [
+        "engine_outcome_from_facts"
+      ],
+      "effort": "small",
+      "issue": null,
+      "title": "Backlog interface with the file implementation, in the glossary's words",
+      "description": "Prepare for GitHub Issues as the backlog (ADR 0001). Rename the engine's PRD and PRDFeature types to Backlog and Ticket (GLOSSARY.md). Put ticket selection behind a Backlog interface with one implementation reading backlog.json. The file format, including the `features` key, does not change. Add `backlog --json` to the CLI: the workable tickets in order, the remaining count, and the next pick.",
+      "acceptance_criteria": [
+        "No PRD or PRDFeature identifiers remain in the engine",
+        "The runner depends on the Backlog interface, not on backlog.json directly",
+        "`bun plugins/forger/bin/work.ts backlog --json` prints workable tickets in order, remaining and next, and a test covers its output shape",
+        "Existing selection tests pass unchanged in behaviour",
+        "Every decision this ticket adds is a tested command or pure function, not prompt text (ADR 0002).",
+        "Gates green; docs that describe the changed behaviour are updated in the same PR"
+      ],
+      "files": [
+        "plugins/forger/engine/src/backlog.ts",
+        "plugins/forger/engine/src/runner.ts",
+        "plugins/forger/engine/src/cli.ts"
+      ],
+      "reuse": [
+        "the pure-function split in engine/src/backlog.ts"
+      ]
+    },
+    "github_backlog": {
+      "priority": "P0",
+      "status": "not_started",
+      "type": "feature",
+      "depends_on": [
+        "backlog_interface"
+      ],
+      "effort": "large",
+      "issue": null,
+      "title": "GitHub Issues as the backlog",
+      "description": "Implement the GitHub Backlog per docs/adr/0001-github-issues-are-the-backlog.md. An open issue with the intake label is not started; an issue closed by a merged PR is completed; needs-human and deferred labels carry those statuses; priority labels P0-P3 and effort labels effort:small|medium|large carry priority and effort; native blocked-by dependencies are depends_on; wayfinder-style decision issues are ignored only if configured. Selected when tracker.kind is github; the file backlog stays for local and none. All gh calls go through an injectable runner so the mapping is tested with recorded JSON fixtures.",
+      "acceptance_criteria": [
+        "With tracker.kind github, `backlog --json` lists tickets from issues, ordered by priority, respecting blocked-by",
+        "An issue closed without a merged PR is not completed",
+        "Label and dependency mapping is covered by fixture tests with no network",
+        "tracker.kind local and none keep using backlog.json",
+        "The worker prompt and docs describe issues as the backlog and backlog.json as the fallback",
+        "Every decision this ticket adds is a tested command or pure function, not prompt text (ADR 0002).",
+        "Gates green; docs that describe the changed behaviour are updated in the same PR"
+      ],
+      "files": [
+        "plugins/forger/engine/src/backlog.ts",
+        "plugins/forger/engine/src/prompt.ts",
+        "plugins/forger/engine/src/config.ts",
+        "plugins/forger/README.md",
+        "docs/02-the-loop.md"
+      ],
+      "reuse": [
+        "engine/src/git.ts CommandRunner",
+        "docs/adr/0001-github-issues-are-the-backlog.md"
+      ]
+    },
+    "engine_infra_errors_and_halt": {
+      "priority": "P1",
+      "status": "not_started",
+      "type": "feature",
+      "depends_on": [
+        "engine_outcome_from_facts"
+      ],
+      "effort": "medium",
+      "issue": null,
+      "title": "Engine tells infrastructure errors from worker failures and keeps HALT honest",
+      "description": "An expired login made three runs fail in seconds and tripped the consecutive-failure halt; clearing that HALT did not stick because the counters survived it; every engine start logs a false stall; a worker that left engine-owned or local-only files modified was counted as a failure. Classify a run's exit: authentication, billing or network errors are infrastructure, halt once with the reason and do not count as worker failures. `resume` resets the failure and stall counters. A fresh start does not count a stall. Files the engine owns or the config marks local-only are excluded from the dirty-tree check.",
+      "acceptance_criteria": [
+        "A pure classifier maps exit code and output to worker failure or infrastructure error, tested with the known messages",
+        "An infrastructure error halts at once with its reason and leaves the failure counter alone",
+        "After `resume`, the next iteration starts with zero failures and zero stalls",
+        "The first iteration after a start never logs a stall",
+        "A dirty tree containing only engine-owned or local-only files is not a failure",
+        "Every decision this ticket adds is a tested command or pure function, not prompt text (ADR 0002).",
+        "Gates green; docs that describe the changed behaviour are updated in the same PR"
+      ],
+      "files": [
+        "plugins/forger/engine/src/runner.ts",
+        "plugins/forger/engine/src/state.ts",
+        "plugins/forger/engine/src/cli.ts"
+      ],
+      "reuse": [
+        "stallUpdate in engine/src/state.ts"
+      ]
+    },
+    "engine_single_runner_and_status": {
+      "priority": "P1",
+      "status": "not_started",
+      "type": "feature",
+      "depends_on": [
+        "engine_infra_errors_and_halt"
+      ],
+      "effort": "medium",
+      "issue": null,
+      "title": "One runner at a time, orphan close-out, and machine-readable status",
+      "description": "Duplicate runners and restarts mid-iteration re-ran tickets, and supervisors had to parse human status text. Write a lock file holding the runner's own pid and refuse to start while a live runner holds it (a stale lock is taken over). On start, close out an iteration a previous runner left open instead of re-running its ticket blindly. Add `status --json` and an append-only terminal-event file (completed, halted, stalled, timed out, too many failures, runner gone) for watchers.",
+      "acceptance_criteria": [
+        "A second `run` exits with a clear message while a live runner holds the lock; a lock with a dead pid is taken over",
+        "An iteration left open by a dead runner is closed out with its outcome decided from facts before the next one starts",
+        "`status --json` reports runner pid, liveness, halt, counters, current ticket and next pick, with a test on its shape",
+        "Each terminal event appends one JSON line to the event file",
+        "Every decision this ticket adds is a tested command or pure function, not prompt text (ADR 0002).",
+        "Gates green; docs that describe the changed behaviour are updated in the same PR"
+      ],
+      "files": [
+        "plugins/forger/engine/src/runner.ts",
+        "plugins/forger/engine/src/state.ts",
+        "plugins/forger/engine/src/cli.ts",
+        "plugins/forger/engine/src/config.ts"
+      ],
+      "reuse": [
+        "engine_outcome_from_facts outcome function"
+      ]
+    },
+    "pure_forger": {
+      "priority": "P1",
+      "status": "not_started",
+      "type": "feature",
+      "depends_on": [],
+      "effort": "medium",
+      "issue": null,
+      "title": "Forger stands alone, with no third-party skill collection",
+      "description": "Forger must not depend on another skill collection. Remove every hook to one (the 'if installed, call X' steps and the install suggestions) from the commands, templates and READMEs. The inline fallbacks become forger's own steps: the frontier-round interview in /forger:plan, test-first and two-axis self-review in /forger:auto-ticket, one honest diagnosis attempt then stop. Vocabulary and decisions live in GLOSSARY.md and docs/adr/, which /forger:plan writes.",
+      "acceptance_criteria": [
+        "No command, template or README mentions a third-party skill collection or its skills",
+        "/forger:plan describes its own interview: rounds over the frontier, numbered questions each with a recommendation",
+        "/forger:auto-ticket describes its own test-first, review and diagnosis steps",
+        "/forger:setup no longer suggests installing anything beyond Bun, the claude CLI and gh",
+        "Every decision this ticket adds is a tested command or pure function, not prompt text (ADR 0002).",
+        "Gates green; docs that describe the changed behaviour are updated in the same PR"
+      ],
+      "files": [
+        "plugins/forger/commands/",
+        "plugins/forger/README.md",
+        "plugins/forger/templates/process.md",
+        "plugins/forger/.claude-plugin/plugin.json",
+        ".claude-plugin/marketplace.json"
+      ],
+      "reuse": [
+        "the existing inline fallbacks in each command"
+      ]
+    },
+    "docs_check": {
+      "priority": "P1",
+      "status": "not_started",
+      "type": "feature",
+      "depends_on": [],
+      "effort": "small",
+      "issue": null,
+      "title": "A docs check that enforces punctuation and the scrub rules",
+      "description": "Make the writing rules a check, not a memory (principle 7). Add `check docs` to the CLI: it fails on non-ASCII punctuation, on email addresses and home-directory paths, and on any term in an untracked `.forger-denylist` file at the repository root (one term per line, case-insensitive; absent file means no denylist). It prints file:line and the rule for each hit, with a JSON mode. Wire it into this repository's gates.",
+      "acceptance_criteria": [
+        "`check docs` exits non-zero with file:line and rule for each violation, and zero on a clean tree",
+        "Rules are pure functions with tests for each: non-ASCII, email, home path, denylist",
+        "The denylist file is read only if present and is listed in .gitignore",
+        "The gates in .claude/workloop.config.json run it and the tree passes",
+        "Every decision this ticket adds is a tested command or pure function, not prompt text (ADR 0002).",
+        "Gates green; docs that describe the changed behaviour are updated in the same PR"
+      ],
+      "files": [
+        "plugins/forger/engine/src/cli.ts",
+        "plugins/forger/engine/src/",
+        ".claude/workloop.config.json",
+        ".gitignore"
+      ],
+      "reuse": [
+        "engine/src/config.ts pure-plus-thin-I/O split"
+      ]
+    },
+    "import_catalogue_and_roadmap": {
+      "priority": "P1",
+      "status": "not_started",
+      "type": "feature",
+      "depends_on": [
+        "docs_check"
+      ],
+      "effort": "medium",
+      "issue": null,
+      "title": "Complete the failure catalogue and roadmap",
+      "description": "Fold the failures found in the original project's runs that docs/06-failure-catalogue.md does not yet cover into it, each with symptom, cause and fix in the catalogue's existing shape, and add the matching items to docs/07-roadmap.md. The evidence, already stripped of names and specifics: An expired login failed three runs in seconds and tripped the consecutive-failure halt: the engine cannot tell infrastructure errors from worker failures; Clearing a HALT did not stick: the failure counter survived and re-created it seconds later; Every engine start logs a false stall; A worker that left local-only files modified (local settings, the work order) was counted as a failure for a dirty tree; An engine restarted mid-iteration left it open and re-ran the same ticket; A supervisor's own pkill -f killed its own shell; A rule held only in a memory note was broken five times by workers who had it loaded; it needed a hook or check; A commit-msg hook rejected a word only after minutes of pre-commit gates, and the rejection was easy to miss; Completion notices for background work arrived before the files existed; check the files, the log and the PR checks directly; Knock-on test failures found one CI run at a time caused timeouts; the fix was impact analysis up front and running only affected tests, and the budget was not raised; Outside platforms (CI billing limits, package registry integrity errors, an auth provider outage, a PR awaiting approval) halted workers, correctly, instead of retrying; The engine exited 'all tasks completed' while the work order still listed work; Other loops on the same machine shared the global gh account, so a runner started without a scoped token acted as the wrong account; An earlier hang ran many hours past its timeout and went unnoticed; its log was empty. Merge into existing entries where one already covers it; no issue numbers, dates, counts, people or products.",
+      "acceptance_criteria": [
+        "Each evidence item is covered by a catalogue entry, merged where an entry already exists",
+        "The roadmap names an item for each failure that still needs an engine or skill change, pointing at the backlog ticket where one exists",
+        "`check docs` passes",
+        "Every decision this ticket adds is a tested command or pure function, not prompt text (ADR 0002).",
+        "Gates green; docs that describe the changed behaviour are updated in the same PR"
+      ],
+      "files": [
+        "docs/06-failure-catalogue.md",
+        "docs/07-roadmap.md"
+      ],
+      "reuse": [
+        "the existing catalogue entry shape"
+      ]
+    },
+    "setup_installs_opinions": {
+      "priority": "P2",
+      "status": "not_started",
+      "type": "feature",
+      "depends_on": [
+        "pure_forger",
+        "docs_check"
+      ],
+      "effort": "medium",
+      "issue": null,
+      "title": "Setup installs forger's opinions into a project",
+      "description": "A project starts with forger's opinions as files it owns, which the retro then refines. /forger:setup copies, never overwriting: process.md with principle 0 and the default gotchas, the ticket, PR, work order, report, retro and rule templates, and the config with the docs check in the gates. The copy and the idempotence are a tested command (`setup --json` reports what it wrote and what it left), and the command prose only asks the owner what the tool cannot know.",
+      "acceptance_criteria": [
+        "`setup` writes the default files into .claude/ and reports each as written or kept; a second run writes nothing",
+        "The installed process.md carries principle 0 and the default gotchas",
+        "The gates written into the config include the docs check",
+        "/forger:setup calls the tool and asks only for the gates command, base branch and tracker",
+        "Every decision this ticket adds is a tested command or pure function, not prompt text (ADR 0002).",
+        "Gates green; docs that describe the changed behaviour are updated in the same PR"
+      ],
+      "files": [
+        "plugins/forger/commands/setup.md",
+        "plugins/forger/templates/",
+        "templates/",
+        "plugins/forger/engine/src/cli.ts"
+      ],
+      "reuse": [
+        "docs_check CLI wiring"
+      ]
+    },
+    "work_supervisor": {
+      "priority": "P2",
+      "status": "not_started",
+      "type": "feature",
+      "depends_on": [
+        "engine_single_runner_and_status"
+      ],
+      "effort": "large",
+      "issue": null,
+      "title": "/forger:work supervises from facts",
+      "description": "Turn the supervisor playbook (docs/04-supervising.md) into /forger:work: orient, intake, order, dispatch, watch, verify, report. Every fact it acts on comes from a tool: `status --json`, the terminal-event file, `backlog --json`, git and gh. It follows the approval policy: alone it files, orders, starts the runner, records notes and process rules by PR; anything that changes a principle, the approval table, budgets or a blocking check waits for the owner.",
+      "acceptance_criteria": [
+        "/forger:work starts or attaches to exactly one runner and reads status from `status --json`",
+        "It watches the event file rather than polling human text, and never matches its own command line",
+        "Its report has merged, in progress (the real branch), next and waiting-on-owner, each owner item with a recommendation",
+        "The approval policy is written in the command and in docs/04-supervising.md",
+        "Every decision this ticket adds is a tested command or pure function, not prompt text (ADR 0002).",
+        "Gates green; docs that describe the changed behaviour are updated in the same PR"
+      ],
+      "files": [
+        "plugins/forger/commands/work.md",
+        "docs/04-supervising.md"
+      ],
+      "reuse": [
+        "templates/report.md",
+        "templates/work-order.md"
+      ]
+    },
+    "retro_and_measures": {
+      "priority": "P2",
+      "status": "not_started",
+      "type": "feature",
+      "depends_on": [
+        "engine_single_runner_and_status",
+        "setup_installs_opinions"
+      ],
+      "effort": "large",
+      "issue": null,
+      "title": "/forger:retro and the measures it runs on",
+      "description": "The self-improving layer. `measure --json` computes, from state, logs and gh: runs, failures and timeouts by cause, CI rounds per ticket, and time and cost per ticket over a window. /forger:retro captures a signal (owner correction, failure, friction, cost) verbatim, finds the cause from the measures and transcripts, picks the rung on the ladder in docs/05-refining-the-process.md, and edits the project's own files by PR. A lesson that holds for every project is filed upstream as an issue on forger, with the evidence.",
+      "acceptance_criteria": [
+        "`measure --json` reports each measure with a test on fixture logs and state",
+        "/forger:retro writes a rule record from templates/rule.md and lands it by PR",
+        "A lesson marked as general produces an upstream issue draft with the evidence",
+        "No measure is written into a durable doc; docs point at the command",
+        "Every decision this ticket adds is a tested command or pure function, not prompt text (ADR 0002).",
+        "Gates green; docs that describe the changed behaviour are updated in the same PR"
+      ],
+      "files": [
+        "plugins/forger/commands/",
+        "plugins/forger/engine/src/",
+        "docs/05-refining-the-process.md"
+      ],
+      "reuse": [
+        "templates/retro.md",
+        "templates/rule.md"
+      ]
+    },
+    "docs_with_diagrams": {
+      "priority": "P2",
+      "status": "not_started",
+      "type": "feature",
+      "depends_on": [
+        "pure_forger",
+        "import_catalogue_and_roadmap"
+      ],
+      "effort": "medium",
+      "issue": null,
+      "title": "Document forger in the repo, with diagrams of its concepts",
+      "description": "All documentation lives in the repository as markdown. Review README.md, plugins/forger/README.md and docs/ for gaps after the engine and pure-forger changes, and make good use of diagrams to depict the concepts forger promotes. Diagrams are Mermaid blocks in the markdown (rendered by GitHub, plain text, diffable, ASCII), not images. At least: determinism first (tools as hard boundaries, model reasoning between them); the roles and the lifecycle of a request from owner message to merged PR; ticket statuses as a state machine; one engine iteration and how its outcome is decided; the refinement ladder from note to rule to template to check to tool; and the two improvement loops (a project refining its own installed files, and lessons going upstream into forger's defaults and tools).",
+      "acceptance_criteria": [
+        "Each concept listed in the description has a Mermaid diagram beside the prose that explains it",
+        "README.md links every doc and shows the determinism diagram near the top",
+        "Every diagram matches the code and commands as they stand; nothing describes removed behaviour",
+        "`check docs` passes, with no transient specifics",
+        "Every decision this ticket adds is a tested command or pure function, not prompt text (ADR 0002).",
+        "Gates green; docs that describe the changed behaviour are updated in the same PR"
+      ],
+      "files": [
+        "README.md",
+        "docs/",
+        "plugins/forger/README.md",
+        "GLOSSARY.md"
+      ],
+      "reuse": [
+        "docs/05-refining-the-process.md ladder",
+        "docs/02-the-loop.md lifecycle"
+      ]
+    }
+  }
+}

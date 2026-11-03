@@ -1,0 +1,14 @@
+{
+  "name": "forger",
+  "description": "Forger: deterministic tools and skills for an unattended, self-improving development loop in Claude Code.",
+  "owner": {
+    "name": "Diego"
+  },
+  "plugins": [
+    {
+      "name": "forger",
+      "source": "./plugins/forger",
+      "description": "Unattended development loop on GitHub Issues. Human entry points (/forger:setup, /forger:plan, /forger:work) and machine commands the loop drives (/forger:auto-ticket, /forger:auto-plan)."
+    }
+  ]
+}
