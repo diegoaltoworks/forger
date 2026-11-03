@@ -99,8 +99,19 @@ improvise them:
 - `orient --json`: halt, attach, start or nothing to do, with anomalies.
 - `status --json`, `backlog --json`: counters, current ticket, next pick.
 - `events`, `await-event`: the terminal-event file, read as data.
+- `facts --json [--issue N]`: the loop checkout's branch, whether it is clean,
+  the base head on `origin`, and an issue's closing PR and whether it merged,
+  read without touching the working tree.
 - `report`: the four report sections from the same facts.
 - `approval <action>`: who may do an action, from the table below.
+
+## Read-only on the loop's checkout
+
+While a runner is alive the supervisor never checks out, switches, resets,
+stashes, pulls, merges or commits in the loop's working tree; the worker owns
+it, and a changed HEAD can move the worker off its branch. Verification reads
+`facts --json`. A test fails if `commands/work.md` contains a state-changing git
+command.
 
 ## Approval reference
 
