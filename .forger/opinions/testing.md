@@ -20,7 +20,7 @@ service really says. A unit test never calls the live service.
 
 A bug that returns was fixed without a test. `check tests` fails a branch whose
 commits include a `fix:` subject unless the diff also adds or changes a file
-matching `test_paths` in `.claude/testing.json`. Write the failing test first,
+matching `test_paths` in `.forger/testing.json`. Write the failing test first,
 see it fail for the right reason, then fix.
 
 ## Unit tests stay off the network (check: testing.no-network)

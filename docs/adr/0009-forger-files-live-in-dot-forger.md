@@ -1,6 +1,6 @@
 # Forger's files live in .forger/, and the harness is an adapter
 
-Status: Proposed
+Status: Accepted
 
 Forger's backlog, state, log, config, opinions, templates and locks sat in `.claude/`, the folder of one agent tool, and the engine named that path in many places. A user of another tool would have forger's state inside a folder that tool does not own, mixed with settings and instruction files forger does not own, and ADR 0005 had made the model and the harness replaceable in everything but the folder name.
 
@@ -16,7 +16,7 @@ We chose a new folder over a symlink or a configurable root because a symlink hi
 ## Consequences
 
 - Fresh setups write `.forger/` only, plus the harness's own command files.
-- This repository's own loop state moves by an owner step, since the loop runs from it: stop the engine, run `migrate`, restart.
+- This repository's own loop state lives in `.forger/`. A repository moves by an owner step while no engine runs, since the loop runs from those files: stop the engine, run `migrate`, restart.
 - Packs install to logical `.forger/` targets; the lock records them logically, so a lock written before the move reads the same after it.
 - OpenCode takes a model as `provider/model` and has no spend cap, so a project using it maps the roles under `models` to such ids and the tier budget is not enforced by the harness.
 - Other harnesses are follow-up adapters, each a file in `adapters/` with a table test of its spawn arguments and install path.

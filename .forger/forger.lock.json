@@ -5,27 +5,27 @@
       "version": "1.1.0",
       "files": [
         {
-          "path": ".claude/templates/pr.md",
+          "path": ".forger/templates/pr.md",
           "sha256": "4cc1fbdba26617792d68984215d4c74b4ef996f6d7fac8fea7aa684623c46525"
         },
         {
-          "path": ".claude/templates/report.md",
+          "path": ".forger/templates/report.md",
           "sha256": "b24186b4e8c718b18f1a3e94bd65905ce2844f694a3839ce414545e3ac41217f"
         },
         {
-          "path": ".claude/templates/retro.md",
+          "path": ".forger/templates/retro.md",
           "sha256": "97675f124fa6edade1c8fc03e3a7424cea227b4f8a9d7d1731a7007805548b09"
         },
         {
-          "path": ".claude/templates/rule.md",
+          "path": ".forger/templates/rule.md",
           "sha256": "e48e7d307f70e900dda85a2a0d8a9c0ef189d5d6e53b8bd0f1c1a401d3e78abf"
         },
         {
-          "path": ".claude/templates/ticket.md",
+          "path": ".forger/templates/ticket.md",
           "sha256": "b3073b3bb6cfe2a18caa217702fd245082e743da6f823af31cc0932e71c7f7db"
         },
         {
-          "path": ".claude/templates/work-order.md",
+          "path": ".forger/templates/work-order.md",
           "sha256": "6b9e45cecf30392e57e94972d6766a9652fe48802f66d2fef74b0eaf5d902bd8"
         }
       ]
@@ -35,7 +35,7 @@
       "version": "1.0.0",
       "files": [
         {
-          "path": ".claude/opinions/docs.md",
+          "path": ".forger/opinions/docs.md",
           "sha256": "c93c9efcbaf68a459c5680390bc7ab09b637b18052d518877f38d1451eaebebe"
         }
       ]
@@ -45,11 +45,11 @@
       "version": "1.1.0",
       "files": [
         {
-          "path": ".claude/opinions/architecture.md",
+          "path": ".forger/opinions/architecture.md",
           "sha256": "7eca705affa19aa285dafe0f777406cd3271fc23f12ac5d9e2c02d42ed164a35"
         },
         {
-          "path": ".claude/templates/adr.md",
+          "path": ".forger/templates/adr.md",
           "sha256": "3ad094e5febda6439164233c8b7f6d0aad66e6aa43410e93d11afc75bb4dd924"
         }
       ]
@@ -59,11 +59,11 @@
       "version": "1.0.1",
       "files": [
         {
-          "path": ".claude/opinions/safety.md",
+          "path": ".forger/opinions/safety.md",
           "sha256": "a15654faf8593762468c89b637385ae8deaf95dfa64c4d3abc56c5655687671b"
         },
         {
-          "path": ".claude/safety.json",
+          "path": ".forger/safety.json",
           "sha256": "67c256049a81bbb8a88f80fb86e923f02c7f99413a469de2e9ecdbb23493d315"
         }
       ]
@@ -73,11 +73,11 @@
       "version": "1.0.0",
       "files": [
         {
-          "path": ".claude/opinions/testing.md",
+          "path": ".forger/opinions/testing.md",
           "sha256": "05ef79162a37ae61aa5e48bc01b9fbd0e49eb2dab7658244851103b67ca41d9b"
         },
         {
-          "path": ".claude/testing.json",
+          "path": ".forger/testing.json",
           "sha256": "c80ecd63e389ec0d08908b3a91c1bd100237a21dbb067cc31b389b160f5a8d37"
         }
       ]
