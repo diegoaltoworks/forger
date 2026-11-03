@@ -3,8 +3,8 @@ import {homedir} from 'os';
 import {join} from 'path';
 
 import {readAllEvents, readAllVerdicts, readEvents, readSchedule} from '../loop';
-import {buildComparisonReport, DEFAULT_PRICES, mergePrices, sessionCostUsd, type PriceTable, computeMeasures, diffReports, parseDiffRanges, picksToPrs, DEFAULT_REWORK_WINDOW, type MergedPr, type TrackerIssue, type ReworkInputs, type ComparisonReport, formatMeasures, parseBudgets, parseIterationLog, type CiRun, type IterationRecord} from '../supervisor';
-import type {Command} from './command';
+import {buildComparisonReport, DEFAULT_PRICES, mergePrices, sessionCostUsd, type PriceTable, type Measures, computeMeasures, diffReports, parseDiffRanges, picksToPrs, DEFAULT_REWORK_WINDOW, type MergedPr, type TrackerIssue, type ReworkInputs, type ComparisonReport, formatMeasures, parseBudgets, parseIterationLog, type CiRun, type IterationRecord} from '../supervisor';
+import type {Command, CommandContext} from './command';
 
 /** The transcript a session left, searched under every project folder of the harness's config dir; null when there is none. */
 function readTranscript(sessionId: string): string | null {
@@ -59,6 +59,44 @@ function gatherChanges(run: (cmd: string) => string, iterations: IterationRecord
   }
 }
 
+/** Reads the logs, the transcripts and the tracker into the measures; the arithmetic is in `computeMeasures`. */
+export function gatherMeasures(ctx: CommandContext): Measures {
+  const {values, projectRoot, config} = ctx;
+  const outDir = join(projectRoot, config.paths.output);
+  const iterations: IterationRecord[] = existsSync(outDir)
+    ? readdirSync(outDir)
+        .filter(f => /^iteration-\d+\.log$/.test(f))
+        .flatMap(f => parseIterationLog(readFileSync(join(outDir, f), 'utf-8')) ?? [])
+    : [];
+  const workLog = join(projectRoot, config.paths.log);
+  let ciRuns: CiRun[] = [];
+  try {
+    ciRuns = JSON.parse(ctx.run()('gh run list --limit 500 --json headBranch,event')) as CiRun[];
+  } catch {
+    // No CI, no gh or offline: CI rounds are reported as unknown.
+  }
+  const budgets = existsSync(workLog) ? parseBudgets(readFileSync(workLog, 'utf-8')) : [];
+  const prices = readPrices(projectRoot);
+  const sessionCosts: Record<string, number | null> = {};
+  for (const b of budgets) if (b.sessionId !== undefined) sessionCosts[b.sessionId] = sessionCostUsd(readTranscript(b.sessionId), prices);
+  const window = values.window === undefined ? DEFAULT_REWORK_WINDOW : parseInt(values.window, 10);
+  if (!(window >= 1)) throw new Error('--window must be a whole number of merges, 1 or more');
+  const picked = readAllEvents(join(projectRoot, config.paths.events)).filter(e => e.event === 'picked');
+  const changes = gatherChanges(ctx.run(), iterations, picked, window, 100);
+  const measures = computeMeasures({
+    ...(changes === null ? {} : {changes}),
+    iterations,
+    budgets,
+    sessionCosts,
+    verdicts: readAllVerdicts(join(projectRoot, config.paths.verdicts)),
+    schedule: readSchedule(join(outDir, 'schedule-decisions.jsonl')),
+    events: readEvents(join(projectRoot, config.paths.events)),
+    ciRuns,
+    last: values.last === undefined ? null : parseInt(values.last, 10),
+  });
+return measures;
+}
+
 export const measure: Command = {
   name: 'measure',
   needs: 'config',
@@ -77,38 +115,7 @@ export const measure: Command = {
       console.log(JSON.stringify(diffReports(read(a), read(b))));
       return;
     }
-    const outDir = join(projectRoot, config.paths.output);
-    const iterations: IterationRecord[] = existsSync(outDir)
-      ? readdirSync(outDir)
-          .filter(f => /^iteration-\d+\.log$/.test(f))
-          .flatMap(f => parseIterationLog(readFileSync(join(outDir, f), 'utf-8')) ?? [])
-      : [];
-    const workLog = join(projectRoot, config.paths.log);
-    let ciRuns: CiRun[] = [];
-    try {
-      ciRuns = JSON.parse(ctx.run()('gh run list --limit 500 --json headBranch,event')) as CiRun[];
-    } catch {
-      // No CI, no gh or offline: CI rounds are reported as unknown.
-    }
-    const budgets = existsSync(workLog) ? parseBudgets(readFileSync(workLog, 'utf-8')) : [];
-    const prices = readPrices(projectRoot);
-    const sessionCosts: Record<string, number | null> = {};
-    for (const b of budgets) if (b.sessionId !== undefined) sessionCosts[b.sessionId] = sessionCostUsd(readTranscript(b.sessionId), prices);
-    const window = values.window === undefined ? DEFAULT_REWORK_WINDOW : parseInt(values.window, 10);
-    if (!(window >= 1)) throw new Error('--window must be a whole number of merges, 1 or more');
-    const picked = readAllEvents(join(projectRoot, config.paths.events)).filter(e => e.event === 'picked');
-    const changes = gatherChanges(ctx.run(), iterations, picked, window, 100);
-    const measures = computeMeasures({
-      ...(changes === null ? {} : {changes}),
-      iterations,
-      budgets,
-      sessionCosts,
-      verdicts: readAllVerdicts(join(projectRoot, config.paths.verdicts)),
-      schedule: readSchedule(join(outDir, 'schedule-decisions.jsonl')),
-      events: readEvents(join(projectRoot, config.paths.events)),
-      ciRuns,
-      last: values.last === undefined ? null : parseInt(values.last, 10),
-    });
+    const measures = gatherMeasures(ctx);
     if (values.report) {
       console.log(JSON.stringify(buildComparisonReport(measures)));
       return;

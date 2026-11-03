@@ -180,6 +180,12 @@ read the section reports unknown rather than zero.
 ADR 0012, and `measure --diff A.json B.json` gives the per-measure delta between
 two saved reports.
 
+`report` shows the owner four of these without the retro detail: cost per merged
+ticket (the mean over tickets whose cost is known, with how many are unknown),
+the rework rate, escaped defects and owner interventions, all from `measure`.
+`report --json` carries them under `measures`; an unreadable tracker reports
+them as null, not zero.
+
 With workers side by side (ADR 0011) the same command reports what that bought
 and cost, from the iteration logs and the scheduling decisions the parallel loop
 records, never from a worker's account:

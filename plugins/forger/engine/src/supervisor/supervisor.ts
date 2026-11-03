@@ -5,6 +5,8 @@
  */
 
 import type {HandedOver, StatusReport} from '../loop';
+import type {Measures} from './measure';
+import {buildReportMeasures, formatReportMeasures, type ReportMeasures} from './report-measures';
 
 export type OrientAction = 'surface_halt' | 'attach' | 'start' | 'nothing_to_do';
 
@@ -96,6 +98,8 @@ export interface OwnerItem {
 }
 
 export interface ReportInputs {
+  /** The measures the owner sees; absent leaves the section out. */
+  measures?: Measures;
   status: StatusReport;
   plan: OrientPlan;
   branch: string;
@@ -111,6 +115,7 @@ export interface Report {
   handed_over: Array<{ticket: string; pr: number; criteria: string[]}>;
   next: string[];
   waiting_on_owner: OwnerItem[];
+  measures: ReportMeasures | null;
 }
 
 export function buildReport(i: ReportInputs): Report {
@@ -142,6 +147,7 @@ export function buildReport(i: ReportInputs): Report {
     })),
     next: s.next_pick ? [s.next_pick] : [],
     waiting_on_owner: waiting,
+    measures: i.measures === undefined ? null : buildReportMeasures(i.measures),
   };
 }
 
@@ -165,5 +171,6 @@ export function formatReport(r: Report): string {
     '',
     '**Waiting on you**',
     ...list(r.waiting_on_owner.map(o => `${o.question} - I recommend ${o.recommendation}, because ${o.because}.`)),
+    ...(r.measures === null ? [] : ['', '**Measures**', ...formatReportMeasures(r.measures)]),
   ].join('\n');
 }
