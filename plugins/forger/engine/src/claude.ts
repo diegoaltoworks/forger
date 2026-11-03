@@ -1,33 +1,28 @@
 /**
- * Spawns the headless `claude` process for one iteration and collects its
- * output, enforcing the per-iteration timeout. This is the genuine side-effect
- * boundary - it is exercised by integration rather than unit tests.
+ * Spawns the headless `claude` process for one iteration under the
+ * per-iteration deadline. The process supervision lives in `supervise.ts`;
+ * this module only knows how to invoke `claude`.
  */
 
-import {spawn} from 'child_process';
-import {writeFileSync} from 'fs';
-
 import type {Tier} from './config';
+import {type SupervisedResult, runSupervised} from './supervise';
 
-export interface ClaudeResult {
-  exitCode: number;
-  output: string;
-  timedOut: boolean;
-}
+export type ClaudeResult = SupervisedResult;
 
 export interface RunClaudeOptions {
   prompt: string;
   sessionId: string;
-  outputFile: string;
   tier: Tier;
   cwd: string;
   timeoutMinutes: number;
+  killGraceSeconds: number;
 }
 
 export function runClaude(opts: RunClaudeOptions): Promise<ClaudeResult> {
-  const {prompt, sessionId, outputFile, tier, cwd, timeoutMinutes} = opts;
-  return new Promise(resolve => {
-    const args = [
+  const {prompt, sessionId, tier, cwd, timeoutMinutes, killGraceSeconds} = opts;
+  return runSupervised({
+    command: 'claude',
+    args: [
       '--print',
       '--model',
       tier.model,
@@ -36,41 +31,10 @@ export function runClaude(opts: RunClaudeOptions): Promise<ClaudeResult> {
       '--session-id',
       sessionId,
       '--dangerously-skip-permissions',
-    ];
-
-    const child = spawn('claude', args, {cwd, stdio: ['pipe', 'pipe', 'pipe']});
-
-    let output = '';
-    let timedOut = false;
-
-    const timeout = setTimeout(
-      () => {
-        timedOut = true;
-        child.kill('SIGTERM');
-      },
-      timeoutMinutes * 60 * 1000
-    );
-
-    child.stdout?.on('data', (data: Buffer) => {
-      output += data.toString();
-    });
-    child.stderr?.on('data', (data: Buffer) => {
-      output += data.toString();
-    });
-
-    child.on('close', code => {
-      clearTimeout(timeout);
-      writeFileSync(outputFile, output);
-      resolve({exitCode: code ?? 1, output, timedOut});
-    });
-
-    child.on('error', err => {
-      clearTimeout(timeout);
-      writeFileSync(outputFile, `Error: ${err.message}\n${output}`);
-      resolve({exitCode: 1, output: `Error: ${err.message}`, timedOut: false});
-    });
-
-    child.stdin?.write(prompt);
-    child.stdin?.end();
+    ],
+    cwd,
+    input: prompt,
+    timeoutMs: timeoutMinutes * 60 * 1000,
+    graceMs: killGraceSeconds * 1000,
   });
 }

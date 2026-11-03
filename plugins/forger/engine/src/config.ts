@@ -26,6 +26,8 @@ export interface WorkloopConfig {
   effort_multiplier: Record<string, number>;
   limits: {
     timeoutMinutes: number;
+    /** Seconds between SIGTERM and SIGKILL to the worker's process group on timeout. */
+    killGraceSeconds: number;
     maxConsecutiveFailures: number;
     pauseBetweenIterations: number;
     pauseAfterFailure: number;
@@ -89,6 +91,7 @@ export const DEFAULT_CONFIG: WorkloopConfig = {
   },
   limits: {
     timeoutMinutes: 45,
+    killGraceSeconds: 30,
     maxConsecutiveFailures: 3,
     pauseBetweenIterations: 5000,
     pauseAfterFailure: 10000,

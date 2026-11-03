@@ -10,6 +10,7 @@
   "effort_multiplier": { "small": 1, "medium": 1.5, "large": 2.5 },
   "limits": {
     "timeoutMinutes": 45,
+    "killGraceSeconds": 30,
     "maxConsecutiveFailures": 3,
     "pauseBetweenIterations": 5000,
     "pauseAfterFailure": 10000,

@@ -173,7 +173,7 @@ and gitignore `.claude/state.json`, `.claude/work.log`, `.claude/output/`,
 | `base_branch` | Branch an iteration must land on. Merge verification checks HEAD against it. |
 | `model_by_priority` | Model + USD budget per priority (`P0`, `default`, and any others). |
 | `effort_multiplier` | Budget multiplier by ticket `effort` (`small`/`medium`/`large`/...). |
-| `limits` | `timeoutMinutes`, `maxConsecutiveFailures`, `pauseBetweenIterations`, `pauseAfterFailure`, `maxStallIterations`. |
+| `limits` | `timeoutMinutes`, `killGraceSeconds` (SIGTERM to SIGKILL on timeout), `maxConsecutiveFailures`, `pauseBetweenIterations`, `pauseAfterFailure`, `maxStallIterations`. |
 | `paths` | Where the backlog, state, log, output dir, and HALT file live. |
 | `tracker` | `{ kind, label }`. `kind` is `github` (default), `local`, or `none`. `label` is the intake label, default `ready-for-agent`. When `docs/agents/issue-tracker.md` exists it is the authority on how to talk to the tracker. |
 

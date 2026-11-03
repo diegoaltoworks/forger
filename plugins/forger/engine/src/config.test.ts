@@ -50,6 +50,13 @@ describe('mergeConfig', () => {
     expect(c.tracker.label).toBe('ready-for-agent');
   });
 
+  test('the kill grace period has a default and can be overridden alone', () => {
+    expect(DEFAULT_CONFIG.limits.killGraceSeconds).toBeGreaterThan(0);
+    const c = mergeConfig({limits: {killGraceSeconds: 5}});
+    expect(c.limits.killGraceSeconds).toBe(5);
+    expect(c.limits.timeoutMinutes).toBe(DEFAULT_CONFIG.limits.timeoutMinutes);
+  });
+
   test('does not mutate the base config', () => {
     mergeConfig({base_branch: 'x', limits: {timeoutMinutes: 1}});
     expect(DEFAULT_CONFIG.base_branch).toBe('main');

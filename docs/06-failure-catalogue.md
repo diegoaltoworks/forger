@@ -19,8 +19,9 @@ recovered, and where the lasting fix belongs: **E** the engine, **S** a skill
   comes. No process-group kill, no SIGKILL after a grace period.
 - **Recovered by:** stopping the runner and the worker by hand, then opening
   the PR for the branch the worker had already pushed.
-- **Fix:** E: spawn the worker in its own process group, kill the group, escalate
-  to SIGKILL after a grace period, and resolve on `exit`, not `close`. S: never
+- **Fix:** E (in place): the worker is spawned as the leader of its own process
+  group; on timeout the engine sends SIGTERM to the group, then SIGKILL after
+  `limits.killGraceSeconds`, and resolves on `exit`, not `close`. S: never
   wait on a `pgrep -f` pattern; wait on a process id, or on the background job's
   own completion.
 
@@ -60,7 +61,9 @@ recovered, and where the lasting fix belongs: **E** the engine, **S** a skill
 
 ### A timed-out run leaves an empty log
 
-- **Fix:** E: on timeout, write the ticket, branch, last commits, PR state and the
+- **Fix:** E: every run writes its iteration log, a timeout included, headed by
+  the ticket, elapsed time and the signal that ended it, then the captured
+  output (in place). Still to add: the branch, last commits, PR state and the
   last messages from the transcript.
 
 ### The worker gets no warning before the deadline
