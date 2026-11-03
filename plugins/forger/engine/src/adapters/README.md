@@ -26,6 +26,11 @@ world, and is tested against real processes.
   a `SpecOutputError` naming the field. Tested on recorded output in `fixtures/slcr/`.
 - `harnesses.ts` - the shipped harnesses by id, and `agentFor`, the
   `AgentRunner` any of them yields over `supervise.ts`.
+- `local-state-store.ts` - the `StateStore` over files beside the engine, the behaviour before the state branch.
+- `memory-state-store.ts` - the in-memory `StateStore` the loop's tests use.
+- `git-state-store.ts` - the `StateStore` over the state branch: reads and writes use git plumbing and a
+  private ref, so HEAD and the working tree never move; a write is a non-forced push, retried a bounded
+  number of times on a fresh read, and a lease that cannot be written is lost.
 
 ## Entry point
 

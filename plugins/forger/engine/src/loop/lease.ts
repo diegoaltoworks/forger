@@ -3,13 +3,9 @@
  * clock is an input and nothing is read or written here.
  */
 
-export interface Lease {
-  holder: string;
-  host: string;
-  acquired_at: string;
-  renewed_at: string;
-  ttl_seconds: number;
-}
+import type {Lease} from '../ports';
+
+export type {Lease};
 
 export type LeaseDecision =
   | {action: 'acquire'}
@@ -45,4 +41,21 @@ export function decideLease(lease: unknown, self: string, now: Date): LeaseDecis
     return {action: 'refuse', holder: current.holder, expiresAt: new Date(expiresMs).toISOString()};
   }
   return {action: 'takeover', previousHolder: current.holder, previousHost: current.host};
+}
+
+/** The record a decision writes: a renewal keeps the original acquisition time. */
+export function leaseFor(
+  decision: LeaseDecision,
+  existing: unknown,
+  req: {self: string; host: string; ttlSeconds: number; now: Date}
+): Lease {
+  const now = req.now.toISOString();
+  const kept = decision.action === 'renew' ? parseLease(existing) : null;
+  return {
+    holder: req.self,
+    host: req.host,
+    acquired_at: kept?.acquired_at ?? now,
+    renewed_at: now,
+    ttl_seconds: req.ttlSeconds,
+  };
 }

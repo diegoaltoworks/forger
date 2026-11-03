@@ -5,6 +5,7 @@ import {join} from 'path';
 
 import {type BacklogData, backlogFrom} from '../backlog';
 import type {AgentResult, AgentRunOptions} from '../ports';
+import {localStateFor, memoryStateStore} from '../adapters';
 import {mergeConfig} from '../config';
 import {RATE_LIMIT_MARGIN_MS, RateLimitError} from './infra';
 import {AutomationRunner, WATCH_BACKLOG_EVERY} from './runner';
@@ -81,7 +82,7 @@ function runnerWith(
   }
   const calls: AgentRunOptions[] = [];
   const config = mergeConfig({limits: {timeoutMinutes: 7, killGraceSeconds: 11, maxStallIterations: 2}});
-  const runner = new AutomationRunner(root, config, backlogFrom(() => data, config), {
+  const runner = new AutomationRunner(root, config, backlogFrom(() => data, config), {stateStore: localStateFor(root, config), 
     agent: {run: async opts => {
       calls.push(opts);
       return result;
@@ -348,7 +349,7 @@ describe('AutomationRunner infrastructure errors and resume', () => {
     const config = mergeConfig({
       limits: {pauseBetweenIterations: 0, pauseAfterFailure: 0, maxStallIterations: 2},
     });
-    const runner = new AutomationRunner(root, config, backlogFrom(() => backlog, config), {
+    const runner = new AutomationRunner(root, config, backlogFrom(() => backlog, config), {stateStore: localStateFor(root, config), 
       agent: {run: async () => ({exitCode: 1, signal: null, output: '', timedOut: false})},
       gitRunner: () => '',
     });
@@ -378,7 +379,7 @@ describe('AutomationRunner single runner', () => {
   });
 
   function runnerIn(root: string, deps: Record<string, unknown>, data: BacklogData = backlog) {
-    return new AutomationRunner(root, fast, backlogFrom(() => data, fast), {
+    return new AutomationRunner(root, fast, backlogFrom(() => data, fast), {stateStore: localStateFor(root, fast), 
       agent: {run: async () => fail},
       gitRunner: () => '',
       ...deps,
@@ -570,7 +571,7 @@ describe('AutomationRunner and a rate-limited backlog', () => {
       }
       return spawned ? done : backlog;
     });
-    const runner = new AutomationRunner(root, fast, limited, {
+    const runner = new AutomationRunner(root, fast, limited, {stateStore: localStateFor(root, fast), 
       ...deps,
       agent: {run: async () => {
         spawned = true;
@@ -591,7 +592,7 @@ describe('AutomationRunner and a rate-limited backlog', () => {
     const root = mkdtempSync(join(tmpdir(), 'forger-runner-'));
     dirs.push(root);
     const {clock, backlog: limited, deps} = limitedBacklog(2, () => backlog);
-    const runner = new AutomationRunner(root, fast, limited, {...deps, agent: {run: async () => fail}, gitRunner: () => ''});
+    const runner = new AutomationRunner(root, fast, limited, {stateStore: localStateFor(root, fast), ...deps, agent: {run: async () => fail}, gitRunner: () => ''});
     await runner.run(1);
     expect(clock.slept.filter(ms => ms > 0)).toEqual([600_000 + RATE_LIMIT_MARGIN_MS, 600_000 + RATE_LIMIT_MARGIN_MS]);
     const state = readState(root);
@@ -603,7 +604,7 @@ describe('AutomationRunner and a rate-limited backlog', () => {
     const root = mkdtempSync(join(tmpdir(), 'forger-runner-'));
     dirs.push(root);
     const {clock, backlog: counted, deps} = limitedBacklog(0, () => backlog);
-    const runner = new AutomationRunner(root, fast, counted, {...deps, agent: {run: async () => fail}, gitRunner: () => ''});
+    const runner = new AutomationRunner(root, fast, counted, {stateStore: localStateFor(root, fast), ...deps, agent: {run: async () => fail}, gitRunner: () => ''});
     await runner.run(2);
     expect(clock.reads).toBe(1 + 2);
   });
@@ -617,7 +618,7 @@ describe('AutomationRunner and a rate-limited backlog', () => {
       backlogFrom(() => {
         throw new Error('GitHub backlog: gh exited 1 with no output, nothing on stderr');
       }, fast),
-      {agent: {run: async () => fail}, gitRunner: () => '', sleep: async () => {
+      {stateStore: memoryStateStore(), agent: {run: async () => fail}, gitRunner: () => '', sleep: async () => {
         throw new Error('must not wait');
       }}
     );
@@ -637,7 +638,7 @@ describe('AutomationRunner and a rate-limited backlog', () => {
         if (failing) throw new Error('offline');
         return backlog;
       }, fast),
-      {gitRunner: () => ''}
+      {stateStore: memoryStateStore(), gitRunner: () => ''}
     );
     for (let redraw = 1; redraw < WATCH_BACKLOG_EVERY; redraw++) expect(runner.watchRefresh(redraw)).toBeNull();
     expect(reads).toBe(0);
@@ -659,7 +660,7 @@ describe('AutomationRunner declines', () => {
     const root = mkdtempSync(join(tmpdir(), 'forger-runner-'));
     dirs.push(root);
     const config = mergeConfig({limits: {maxStallIterations: 50}});
-    const runner = new AutomationRunner(root, config, backlogFrom(() => two, config), {
+    const runner = new AutomationRunner(root, config, backlogFrom(() => two, config), {stateStore: localStateFor(root, config), 
       agent: {run: async () => {
         mkdirSync(join(root, '.forger'), {recursive: true});
         writeFileSync(

@@ -16,6 +16,8 @@ implements them and `cli/` hands the implementations in.
   Types only.
 - `harness.ts` - `Harness`, what differs between agent tools: the headless spawn,
   where commands are installed, the plugin-root variable. Types only.
+- `state-store.ts` - `StateStore`, where the state record, the event log and the lease live (ADR 0015),
+  and `LeaseClaim`, the answer to asking for the lease. Types only.
 
 ## Entry point
 

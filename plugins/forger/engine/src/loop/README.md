@@ -17,6 +17,7 @@ Pure:
 - `prompt.ts` - the per-iteration prompt; it names the engine's pick, or says there is none.
 - `lease.ts` - the cross-machine lease (ADR 0015): acquire, renew, refuse or
   take over an expired one, with the clock passed in.
+- `state.ts` - the loop state record and `LoopStore`, which persists it through the `StateStore` port.
 - `iteration-log.ts` - the per-iteration log text.
 - `status-report.ts` - the machine-readable status a supervisor acts on.
 - `pr-checks.ts` - a PR's CI result folded from its check rollup.

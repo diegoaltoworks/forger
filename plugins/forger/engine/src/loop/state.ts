@@ -4,8 +4,9 @@
  * the default shape and stall detection - are pure and live here.
  */
 
-import {existsSync, readFileSync, unlinkSync, writeFileSync} from 'fs';
+import {existsSync, unlinkSync, writeFileSync} from 'fs';
 
+import type {StateStore} from '../ports';
 import type {DeclineEntry} from './decline';
 import type {RunSnapshot} from './run-facts';
 
@@ -136,26 +137,24 @@ export function stallUpdate(
   return {stall_count: next, stalled: next >= maxStall};
 }
 
-/** Reads and writes the state file and the HALT file. */
-export class StateStore {
+/** Reads and writes the loop state through the store, and the HALT file. */
+export class LoopStore {
   constructor(
-    private stateFile: string,
+    private store: StateStore,
     private haltFile: string
   ) {}
 
   load(): AutomationState {
-    if (existsSync(this.stateFile)) {
-      try {
-        return migrateState(JSON.parse(readFileSync(this.stateFile, 'utf-8')));
-      } catch {
-        return defaultState();
-      }
+    try {
+      const text = this.store.readState();
+      return text === null ? defaultState() : migrateState(JSON.parse(text));
+    } catch {
+      return defaultState();
     }
-    return defaultState();
   }
 
   save(state: AutomationState): void {
-    writeFileSync(this.stateFile, JSON.stringify(state, null, 2));
+    this.store.writeState(JSON.stringify(state, null, 2));
   }
 
   reset(): void {

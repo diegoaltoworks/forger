@@ -19,10 +19,16 @@ export function execRunner(cwd: string): CommandRunner {
   };
 }
 
-export function execCapture(cwd: string): CapturingRunner {
+export function execCapture(cwd: string, env?: Record<string, string>): CapturingRunner {
   return (cmd: string): CommandResult => {
     try {
-      const stdout = execSync(cmd, {cwd, encoding: 'utf-8', maxBuffer: 64 * 1024 * 1024, stdio: ['ignore', 'pipe', 'pipe']});
+      const stdout = execSync(cmd, {
+        cwd,
+        env: env ? {...process.env, ...env} : process.env,
+        encoding: 'utf-8',
+        maxBuffer: 64 * 1024 * 1024,
+        stdio: ['ignore', 'pipe', 'pipe'],
+      });
       return {stdout: stdout.trim(), stderr: '', exitCode: 0};
     } catch (e) {
       const err = e as {stdout?: string | Buffer; stderr?: string | Buffer; status?: number | null};
