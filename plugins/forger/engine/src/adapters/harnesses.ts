@@ -29,6 +29,7 @@ export function agentFor(harness: Harness): AgentRunner {
         input: spec.input ?? '',
         timeoutMs: opts.timeoutMinutes * 60 * 1000,
         graceMs: opts.killGraceSeconds * 1000,
+        abort: opts.abort,
       });
     },
   };

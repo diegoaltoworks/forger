@@ -48,6 +48,12 @@ export interface WorkloopConfig {
     /** Verifier rounds per PR before the ticket is handed to the owner (ADR 0010). */
     maxVerifyRounds: number;
   };
+  /**
+   * Workers the loop runs at once (ADR 0011). 1 is the single-worker loop; a
+   * higher number runs tickets side by side in their own worktrees, as far as
+   * the scheduling rule says they are safe together. A positive integer.
+   */
+  parallelism: number;
   /** The harness that runs the worker: `claude` (default), `opencode`, `codex` or `copilot`. */
   harness: string;
   paths: {
@@ -108,6 +114,7 @@ export interface WorkloopConfigInput {
   effort_multiplier?: Record<string, number>;
   verifier?: Tier | null;
   harness?: string;
+  parallelism?: number;
   limits?: Partial<WorkloopConfig['limits']>;
   paths?: Partial<WorkloopConfig['paths']>;
   tracker?: Partial<WorkloopConfig['tracker']>;
@@ -127,6 +134,7 @@ export const DEFAULT_CONFIG: WorkloopConfig = {
   gates: '',
   base_branch: 'main',
   harness: 'claude',
+  parallelism: 1,
   /**
    * P0 is the foundation. A subtle error there is both expensive and invisible,
    * so those tickets get the stronger model and a wider budget. A cap that
@@ -174,6 +182,11 @@ export const DEFAULT_CONFIG: WorkloopConfig = {
   model_names: ['claude', 'anthropic', 'opus', 'sonnet', 'haiku', 'gpt', 'openai', 'gemini', 'llama', 'mistral'],
 };
 
+/** A worker count the loop can honour: a whole number of at least one. Pure. */
+export function validParallelism(n: unknown): n is number {
+  return typeof n === 'number' && Number.isInteger(n) && n >= 1;
+}
+
 /**
  * Merge a partial user config over a base, one level deep for each nested
  * section so a user who overrides only `limits.timeoutMinutes` keeps every
@@ -183,6 +196,9 @@ export function mergeConfig(
   user: WorkloopConfigInput,
   base: WorkloopConfig = DEFAULT_CONFIG
 ): WorkloopConfig {
+  if (user.parallelism !== undefined && !validParallelism(user.parallelism)) {
+    throw new Error(`parallelism must be a positive integer, got ${JSON.stringify(user.parallelism)}`);
+  }
   return {
     ...base,
     ...user,

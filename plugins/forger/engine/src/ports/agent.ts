@@ -28,6 +28,8 @@ export interface AgentRunOptions {
   cwd: string;
   timeoutMinutes: number;
   killGraceSeconds: number;
+  /** Ends the worker's process group (SIGTERM, then SIGKILL after the grace) when aborted, as the loop does on HALT. */
+  abort?: AbortSignal;
 }
 
 /** Runs one worker iteration to completion or to its deadline. */

@@ -9,7 +9,7 @@ import {homedir} from 'os';
 import {dirname, resolve} from 'path';
 import {parseArgs} from 'util';
 
-import {agentFor, execRunner, findHarness} from '../adapters';
+import {agentFor, execCapture, execRunner, findHarness} from '../adapters';
 import type {Backlog} from '../backlog';
 import {detectLayout, isProjectRoot, legacyWarning, loadConfig, type WorkloopConfig} from '../config';
 import {AutomationRunner} from '../loop';
@@ -52,7 +52,7 @@ function contextFor(base: Pick<CommandContext, 'values' | 'positionals' | 'deps'
       return (backlog ??= openBacklog(ctx.projectRoot, ctx.config, base.deps.run));
     },
     get runner() {
-      return (runner ??= new AutomationRunner(ctx.projectRoot, ctx.config, ctx.backlog, {gitRunner: execRunner(ctx.projectRoot), agent: agentFor(findHarness(ctx.config.harness))}));
+      return (runner ??= new AutomationRunner(ctx.projectRoot, ctx.config, ctx.backlog, {gitRunner: execRunner(ctx.projectRoot), gitCapture: execCapture(ctx.projectRoot), agent: agentFor(findHarness(ctx.config.harness))}));
     },
   };
   return ctx;

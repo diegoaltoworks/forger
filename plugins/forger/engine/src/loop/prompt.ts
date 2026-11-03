@@ -45,11 +45,24 @@ function pickClause(pick: string | null): string {
   return `Build ticket \`${pick}\` (the engine's pick) and no other. Read it, then build it or decline it: if it is blocked, too large or unclear, signal stop and say why`;
 }
 
+/**
+ * A worker that shares the loop with others builds in its own worktree, on
+ * a branch the engine made, and stays current with a command (ADR 0011).
+ */
+function worktreeSection(config: WorkloopConfig, pick: string): string {
+  return [
+    '## Your worktree',
+    `- You are already in your own worktree, on the branch \`feat/${pick}\` made from ${config.base_branch}. Do not create or switch branches, and never touch another checkout.`,
+    `- Before you push, and again before you merge if ${config.base_branch} moved, run \`bun plugins/forger/bin/work.ts rebase --ticket ${pick} --json\`. On \`conflict\` resolve it by hand, once, re-run the gates and push; if it still conflicts, stop and say so.`,
+  ].join('\n');
+}
+
 export function buildPrompt(
   config: WorkloopConfig,
   iteration: number,
   completedTasks: string[],
-  pick: string | null
+  pick: string | null,
+  inWorktree = false
 ): string {
   const completed = completedTasks.join(', ') || 'none';
   const gatesClause = config.gates ? ` (\`${config.gates}\`)` : '';
@@ -71,7 +84,7 @@ export function buildPrompt(
 5. Squash merge onto ${config.base_branch}
 
 ${backlogSection(config)}
-
+${inWorktree && pick ? `\n${worktreeSection(config, pick)}\n` : ''}
 ## IMPORTANT: Commit Rules
 - Bundle EVERYTHING in one feat: PR (code + tests + docs + state updates)
 - Do NOT create separate chore: or docs: commits

@@ -19,6 +19,7 @@ export type AutomationStatus =
   | 'off-pick'
   | 'declined'
   | 'failed'
+  | 'conflict'
   | 'timeout'
   | 'error'
   | 'halted';
