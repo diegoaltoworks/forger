@@ -55,3 +55,30 @@ describe('reading events', () => {
     expect(await awaitEvent(f, 1, 2000, async () => {}, 1000)).toBeNull();
   });
 });
+
+import {RECORDED_EVENTS, parseAllEvents, readAllEvents} from './events';
+
+describe('recorded events', () => {
+  const at = new Date('2000-01-02T03:04:05.000Z');
+  const cases: [Parameters<typeof terminalEvent>, string][] = [
+    [['picked', 7, 'issue-9', null, at], '{"event":"picked","at":"2000-01-02T03:04:05.000Z","iteration":7,"ticket":"issue-9","reason":null}\n'],
+    [['approval_asked', 0, null, 'clear_halt: owner', at], '{"event":"approval_asked","at":"2000-01-02T03:04:05.000Z","iteration":0,"ticket":null,"reason":"clear_halt: owner"}\n'],
+    [['halt_cleared', 3, 'issue-9', 'why', at], '{"event":"halt_cleared","at":"2000-01-02T03:04:05.000Z","iteration":3,"ticket":"issue-9","reason":"why"}\n'],
+  ];
+  test.each(cases)('%j is written as one fixed line', (args, line) => {
+    expect(eventLine(terminalEvent(...args))).toBe(line);
+  });
+  test('every recorded kind has a case', () => {
+    expect(cases.map(c => c[0][0]).sort()).toEqual([...RECORDED_EVENTS].sort());
+  });
+  test('terminal readers skip them and existing terminal lines read unchanged', () => {
+    const terminal = '{"event":"halted","at":"2000-01-02T03:04:05.000Z","iteration":1,"ticket":null,"reason":"r"}\n';
+    const text = eventLine(terminalEvent('picked', 1, 't', null)) + terminal + eventLine(terminalEvent('halt_cleared', 1, null, 'r'));
+    expect(parseEvents(text).map(e => e.event)).toEqual(['halted']);
+    expect(parseEvents(text)[0]).toEqual({event: 'halted', at: '2000-01-02T03:04:05.000Z', iteration: 1, ticket: null, reason: 'r'});
+    expect(parseAllEvents(text).map(e => e.event)).toEqual(['picked', 'halted', 'halt_cleared']);
+  });
+  test('a missing file has none', () => {
+    expect(readAllEvents('/nonexistent/events.jsonl')).toEqual([]);
+  });
+});
