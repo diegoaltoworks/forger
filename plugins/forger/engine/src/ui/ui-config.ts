@@ -17,6 +17,8 @@ export type Theme = 'light' | 'dark';
 export interface UiConfig {
   /** Globs of files that count as UI. */
   paths: string[];
+  /** Globs of the files that define colours; raw colour literals are allowed only there. */
+  tokens: string[];
   /** The command that serves the app. */
   start: string;
   /** Where the served app answers. */
@@ -96,6 +98,7 @@ export function parseUiConfig(raw: string): UiConfig {
 
   return {
     paths: strings(o.paths, 'paths'),
+    tokens: o.tokens === undefined ? [] : strings(o.tokens, 'tokens'),
     start: text(o.start, 'start'),
     url: url.replace(/\/+$/, ''),
     routes,

@@ -12,7 +12,7 @@ world, and is tested against real processes.
   group at the deadline.
 - `app-server.ts` - the `AppServer` port over a shell command in its own process
   group, ready when the url answers.
-- `playwright.ts` - the `Screenshotter` port over the project's own Playwright,
+- `playwright.ts` - the `Screenshotter` and `AccessibilityAuditor` ports over the project's own Playwright,
   resolved from the project, never a dependency of forger.
 - `claude.ts` - the `AgentRunner` for the headless `claude` CLI, the one
   harness shipped today. A second harness is another file here implementing

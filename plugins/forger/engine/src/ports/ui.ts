@@ -26,14 +26,44 @@ export interface AppServer {
   stop(): Promise<void>;
 }
 
+export type AxeImpact = 'minor' | 'moderate' | 'serious' | 'critical';
+
+/** The part of axe-core's output the check reads. */
+export interface AxeViolation {
+  id: string;
+  impact: AxeImpact | null;
+  help: string;
+  nodes: Array<{target: unknown[]}>;
+}
+
+export interface AxeResults {
+  violations: AxeViolation[];
+}
+
+export interface AuditRequest {
+  url: string;
+  width: number;
+  height: number;
+  theme: 'light' | 'dark';
+}
+
+export interface AuditedPage {
+  request: AuditRequest;
+  results: AxeResults;
+}
+
+export interface AccessibilityAuditor {
+  audit(pages: AuditRequest[]): Promise<AuditedPage[]>;
+}
+
 /**
  * The environment cannot take screenshots: the browser library is missing, or
  * the app never came up. The project's code did not fail, so callers report it
  * apart from a bad config.
  */
 export class UiInfrastructureError extends Error {
-  readonly category: 'playwright-missing' | 'app-not-ready';
-  constructor(category: 'playwright-missing' | 'app-not-ready', message: string) {
+  readonly category: 'playwright-missing' | 'axe-missing' | 'app-not-ready';
+  constructor(category: 'playwright-missing' | 'axe-missing' | 'app-not-ready', message: string) {
     super(message);
     this.category = category;
   }

@@ -119,12 +119,15 @@ The globs and library list live in `.claude/testing.json`, with the path of the 
 
 ## The ui pack
 
-The `ui` pack makes a UI change reviewable by showing it. One opinion is enforced, and two are templates:
+The `ui` pack makes a UI change reviewable by showing it. Evidence, colour tokens and accessibility are enforced; the rest are templates and rules:
 
 | Opinion | Rung | What it asks |
 |---|---|---|
 | `ui.evidence` | check (`check ui`) | a branch that changes a file matching `paths` also adds or updates a file under `docs/screenshots/` |
+| `ui.tokens` | check (`check ui`) | files under `paths` hold no raw colour literal (hex, `rgb()`, `hsl()`) outside the files named by `tokens`; comments are ignored |
+| `ui.a11y` | tool (`check a11y`) | axe-core runs on every route at every viewport and theme; serious and critical violations fail |
+| `ui.keyboard`, `ui.contrast`, `ui.responsive` | rule | interactive elements work by keyboard, text contrast meets WCAG AA, layouts hold at phone width |
 | `ui.screenshots-in-pr` | template | the PR body's Screenshots section links the updated files at the head commit |
 | `ui.states` | template | the ticket's UI states section says what the screen shows when empty, loading, failed and full |
 
-`.claude/ui.json` holds `paths`, the `start` command that serves the app, its `url`, the `routes`, the `viewports` (a phone and a desktop by default) and the `themes` (light and dark). `screenshot` starts the app, waits for it, captures every route x viewport x theme with the project's own Playwright into `docs/screenshots/<route>-<viewport>-<theme>.png`, stops the app and reports the files. The matrix and the names are computed from the config, so a re-run overwrites the same files. When Playwright or the app is unavailable the command says so and exits 2, an environment problem apart from a bad config (exit 1). Feature docs can embed the images, so they stay current with each UI change. Like `check decisions`, `check ui` reads the working tree and branch against the merge-base with the configured base branch.
+`.claude/ui.json` holds `paths`, the `start` command that serves the app, its `url`, the `routes`, the `viewports` (a phone and a desktop by default) and the `themes` (light and dark). `screenshot` starts the app, waits for it, captures every route x viewport x theme with the project's own Playwright into `docs/screenshots/<route>-<viewport>-<theme>.png`, stops the app and reports the files. The matrix and the names are computed from the config, so a re-run overwrites the same files. When Playwright or the app is unavailable the command says so and exits 2, an environment problem apart from a bad config (exit 1). Feature docs can embed the images, so they stay current with each UI change. `check a11y` serves the app the same way and audits each page with the project's own Playwright and `axe-core`; it needs a browser, so it runs on its own rather than inside the umbrella `check`, and exits 2 when the environment lacks either library. Violations are mapped from axe's output by a pure function. Like `check decisions`, `check ui` reads the working tree and branch against the merge-base with the configured base branch.

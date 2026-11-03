@@ -53,3 +53,8 @@ export function planCaptures(config: UiConfig): Capture[] {
   }
   return plan;
 }
+
+/** The route a captured url came from: the url without the app's base. */
+export function routeOf(url: string, base: string): string {
+  return url.startsWith(base) ? url.slice(base.length) || '/' : url;
+}
