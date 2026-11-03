@@ -11,6 +11,7 @@
     "check": "tsc --noEmit && bun test --coverage --coverage-reporter=lcov"
   },
   "devDependencies": {
+    "@resvg/resvg-js": "^2.6.2",
     "@types/bun": "latest",
     "typescript": "^5"
   }

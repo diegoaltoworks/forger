@@ -5,6 +5,7 @@
 
 import {approval} from './approval';
 import {backlog} from './backlog';
+import {brand} from './brand';
 import {check} from './check';
 import type {Command} from './command';
 import {awaitEventCommand, events} from './events';
@@ -30,6 +31,7 @@ export const COMMANDS: Command[] = [
   skills,
   check,
   screenshot,
+  brand,
   backlog,
   orient,
   report,

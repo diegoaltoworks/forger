@@ -11,6 +11,7 @@ the files inside it.
 | [`loop/`](loop/README.md) | The engine's outer loop, one iteration, state, lock, events, outcome, prompt, claim, infra errors, status |
 | [`backlog/`](backlog/README.md) | The Backlog interface and its GitHub and file adapters |
 | [`checks/`](checks/README.md) | The umbrella `check`, waivers, the CI summary, and one folder per check |
+| [`brand/`](brand/README.md) | The brand rasters and icon, rendered from the SVG sources in `assets/brand/` |
 | [`ui/`](ui/README.md) | The ui pack's config, the capture matrix and the screenshot run |
 | [`migrate/`](migrate/README.md) | Moving a repo from the legacy layout to `.forger/` |
 | [`packs/`](packs/README.md) | Pack manifests, `setup`, skill slots |

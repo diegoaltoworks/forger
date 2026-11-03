@@ -5,6 +5,9 @@ clears items.
 
 ## Owner steps
 
+- **Upload the repository social preview.** In the repository's GitHub settings,
+  under Social preview, upload `assets/brand/social-preview.png`. No API sets it.
+
 - **Move this repo's loop state to `.forger/`.** Forger's own files still live in
   `.claude/`, because the loop runs from them. When convenient: stop the engine,
   run `bun plugins/forger/bin/work.ts migrate`, commit the moves, and restart.
