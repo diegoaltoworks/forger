@@ -8,11 +8,8 @@ From the failure catalogue, with a test for each outcome:
 
 - Count `completed` only when the PR is merged; read status from the base
   branch.
-- Decide a timed-out run's outcome from facts: merged, pushed, or nothing.
-- Measure progress by merges, not by the remaining count.
 - Pass the deadline to the worker and warn before it.
 - Add the branch, last commits and PR state to a timed-out run's iteration log.
-- Log the ticket the worker actually took.
 - `status --json`, the runner's own process id in a file, and a terminal-event
   file for watchers.
 - Adopt labelled issues from the tracker, with `depends_on`.

@@ -5,7 +5,9 @@
 
 export interface IterationLogFacts {
   iteration: number;
+  /** The ticket the worker took, from git, else the engine's pick. */
   ticket: string | null;
+  enginePick?: string | null;
   elapsedSeconds: number;
   exitCode: number;
   signal: string | null;
@@ -28,6 +30,9 @@ export function formatIterationLog(f: IterationLogFacts): string {
   return [
     `=== forger iteration ${f.iteration} ===`,
     `ticket: ${f.ticket ?? 'none picked'}`,
+    ...(f.enginePick !== undefined && f.enginePick !== f.ticket
+      ? [`engine pick: ${f.enginePick ?? 'none'}`]
+      : []),
     `elapsed: ${f.elapsedSeconds}s`,
     `outcome: ${outcome(f)}`,
     '=== output ===',

@@ -50,4 +50,14 @@ describe('formatIterationLog', () => {
   test('output without a trailing newline still ends the log with one', () => {
     expect(formatIterationLog({...base, output: 'x'}).endsWith('x\n')).toBe(true);
   });
+
+  test('names the engine pick when the worker took a different ticket', () => {
+    const log = formatIterationLog({...base, ticket: 'other', enginePick: 'engine_timeout_kills_group'});
+    expect(log).toContain('ticket: other\nengine pick: engine_timeout_kills_group\n');
+  });
+
+  test('omits the engine pick when it matches', () => {
+    const log = formatIterationLog({...base, enginePick: 'engine_timeout_kills_group'});
+    expect(log).not.toContain('engine pick');
+  });
 });

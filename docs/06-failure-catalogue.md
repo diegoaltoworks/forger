@@ -35,29 +35,33 @@ recovered, and where the lasting fix belongs: **E** the engine, **S** a skill
   before the merge, not after it.
 - **Recovered by:** resetting the status, and stopping a worker that had started
   on a base without its prerequisite.
-- **Fix:** E: count a ticket completed only when its PR is merged; read status
-  from the base branch, not the working tree. S: the worker writes `completed`
+- **Fix:** E: count a ticket completed only when its PR is merged (in place: a
+  ticket that reads `completed` with nothing merged is reported and halts the
+  loop, and is not counted as progress); still to do, read status from the
+  base branch, not the working tree. S: the worker writes `completed`
   in the same squash as the merge, never before.
 
 ### A run that merged counts as a failure
 
 - **Seen:** a worker merged its PR, then timed out writing its summary. The
   engine counted a consecutive failure.
-- **Fix:** E: decide a timed-out run's outcome from facts (merged, pushed,
-  nothing) before counting it.
+- **Fix:** E (in place): every run's outcome is decided from facts (merged,
+  pushed, nothing) before it is counted; a merge is a success whatever the
+  exit.
 
 ### Adopting new work looks like a stall
 
 - **Seen:** a run finished one ticket and adopted one new issue; the remaining
   count was unchanged, so the engine counted a stall.
-- **Fix:** E: measure progress by tickets merged, not by the remaining count.
+- **Fix:** E (in place): progress is measured by merges, not by the remaining
+  count.
 
 ### The log names a ticket the worker is not building
 
 - **Seen:** the engine logs its own pick; the worker follows the owner's work
   order and builds something else.
-- **Fix:** E: log the ticket the worker actually took (from its branch), label
-  the engine's guess as a suggestion. S: the supervisor reports the real branch.
+- **Fix:** E (in place): the log names the ticket the worker took (from its
+  branch) and labels the engine's pick when it differs. S: the supervisor reports the real branch.
 
 ### A timed-out run leaves an empty log
 

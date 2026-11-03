@@ -188,8 +188,18 @@ bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts status             # where it's at
 bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts resume             # clear a HALT
 ```
 
-The loop stops when the backlog empties, a HALT file appears, it stalls (no
-progress for `maxStallIterations`), or it hits `maxConsecutiveFailures`.
+Each run's outcome is decided from git, not from the worker's exit code or its
+own completion signal: the base branch moved on the remote (merged), the
+worker's branch is on the remote (pushed), or neither. A run that merged and
+then timed out is a success; a run that claimed completion and merged nothing
+is a failure; a ticket the backlog reads `completed` with nothing merged halts
+the loop for recovery. The ticket a run is held to is the one the worker took,
+read from its branch, which the log names when it differs from the engine's
+pick.
+
+The loop stops when the backlog empties, a HALT file appears, it stalls (nothing
+merged for `maxStallIterations` runs in a row), or it hits
+`maxConsecutiveFailures`.
 
 The headless worker inherits the user's plugins, so mattpocock-skills is
 available inside the loop wherever it is installed for the user running it.
@@ -202,7 +212,8 @@ The engine is a real, tested project under `engine/`:
 cd engine
 bun install
 bun test          # unit tests for config merge, ticket selection, tiering,
-                  # prompt building, merge verification, and stall detection
+                  # prompt building, merge verification, run outcomes, and
+                  # stall detection
 bun run typecheck # tsc --noEmit
 ```
 
@@ -214,7 +225,10 @@ engine/src/
   backlog.ts   ticket selection, remaining/workable counts, tiering (pure)
   prompt.ts    per-iteration prompt (pure): worker command, gates, tracker
   git.ts       merge verification against an injectable command runner (pure)
-  state.ts     state shape, stall detection (pure) + StateStore (I/O)
+  run-facts.ts the git facts a run is judged by: merged, pushed, branch taken
+  claim.ts     the worker's completion signal, parsed (pure)
+  outcome.ts   a run's outcome from its facts (pure)
+  state.ts     state shape, stall detection by merges (pure) + StateStore (I/O)
   logger.ts    terminal + file logging
   claude.ts    headless `claude` spawn (the side-effect boundary)
   runner.ts    orchestration: the run loop and one iteration

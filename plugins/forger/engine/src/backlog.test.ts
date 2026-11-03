@@ -3,6 +3,7 @@ import {describe, expect, test} from 'bun:test';
 import {mergeConfig} from './config';
 import type {PRD} from './backlog';
 import {
+  hasTicket,
   isTicketCompleted,
   nextTaskName,
   remainingTasks,
@@ -134,5 +135,16 @@ describe('isTicketCompleted', () => {
     expect(isTicketCompleted(p, 'a')).toBe(true);
     expect(isTicketCompleted(p, 'b')).toBe(false);
     expect(isTicketCompleted(p, 'missing')).toBe(false);
+  });
+});
+
+describe('hasTicket', () => {
+  const p: PRD = {features: {a: {status: 'not_started'}, junk: 'x'}};
+  test('true for a ticket in the backlog', () => {
+    expect(hasTicket(p, 'a')).toBe(true);
+  });
+  test('false for an unknown or malformed entry', () => {
+    expect(hasTicket(p, 'typo')).toBe(false);
+    expect(hasTicket(p, 'junk')).toBe(false);
   });
 });
