@@ -618,6 +618,44 @@ describe('screenshot', () => {
   });
 });
 
+describe('worktree and rebase', () => {
+  test('worktree prints the path as JSON and never touches the main checkout', async () => {
+    const root = projectWith({});
+    process.chdir(root);
+    const calls: string[] = [];
+    const run: CommandRunner = cmd => (calls.push(cmd), '');
+    const out = JSON.parse(await capture(['worktree', '--ticket', 'issue-5', '--json'], run));
+    expect(out).toMatchObject({ok: true, branch: 'feat/issue-5', path: join(root, '.forger', 'worktrees', 'issue-5')});
+    expect(calls.some(c => /checkout|switch|reset/.test(c))).toBe(false);
+  });
+
+  test('worktree --remove removes it', async () => {
+    const root = projectWith({});
+    process.chdir(root);
+    const calls: string[] = [];
+    await capture(['worktree', '--ticket', 'issue-5', '--remove', '--json'], cmd => (calls.push(cmd), ''));
+    expect(calls[0]).toContain('git worktree remove --force');
+  });
+
+  test('an unusable ticket exits 1', async () => {
+    const root = projectWith({});
+    process.chdir(root);
+    try {
+      await capture(['worktree', '--ticket', '../x', '--json'], () => '');
+      expect(process.exitCode).toBe(1);
+    } finally {
+      process.exitCode = 0;
+    }
+  });
+
+  test('rebase reports clean as JSON', async () => {
+    const root = projectWith({});
+    process.chdir(root);
+    const out = JSON.parse(await capture(['rebase', '--ticket', 'issue-5', '--json'], () => ''));
+    expect(out).toMatchObject({status: 'clean', onto: 'origin/main'});
+  });
+});
+
 describe('decline', () => {
   test('writes the record, relabels the issue through the runner and exits 0', async () => {
     const root = projectWith({}, {kind: 'github', label: 'ready-for-agent'});
