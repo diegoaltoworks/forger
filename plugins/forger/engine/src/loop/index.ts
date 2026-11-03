@@ -18,6 +18,7 @@ export * from './run-facts';
 export * from './runner';
 export * from './state';
 export * from './status-report';
+export * from './mechanical';
 export * from './verdict';
 export * from './verdict-store';
 export * from './verify';

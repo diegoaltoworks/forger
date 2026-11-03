@@ -141,6 +141,49 @@ describe('computeMeasures', () => {
   });
 });
 
+describe('verification measures', () => {
+  const rec = (pr: number, ticket: string, decision: 'pass' | 'block' | 'unclear') =>
+    ({pr, head: `h${pr}${decision}`, ticket, verifier: 'v', decision, entries: [], problems: [], at: 'now'});
+  const its: IterationRecord[] = [
+    {iteration: 1, ticket: 'issue-1', elapsedSeconds: 1, cause: 'ok', status: 'completed'},
+    {iteration: 2, ticket: 'issue-2', elapsedSeconds: 1, cause: 'ok', status: 'merged-red'},
+    {iteration: 3, ticket: 'issue-3', elapsedSeconds: 1, cause: 'ok', status: 'completed'},
+    {iteration: 4, ticket: 'issue-4', elapsedSeconds: 1, cause: 'ok', status: 'completed'},
+  ];
+  const verdicts = [
+    rec(11, 'issue-1', 'pass'),
+    rec(12, 'issue-2', 'pass'),
+    rec(13, 'issue-3', 'block'),
+    rec(13, 'issue-3', 'pass'),
+    rec(14, 'issue-4', 'unclear'),
+    rec(99, 'issue-outside', 'block'),
+  ];
+  const inputs = {iterations: its, budgets: [], events: [], ciRuns: [], verdicts, last: null};
+
+  test('blocked, passed and later-failed runs yield the expected shares', () => {
+    const v = computeMeasures(inputs).verification;
+    expect(v.verified).toBe(4);
+    expect(v.blocked).toBe(2);
+    expect(v.blocked_share).toBe(0.5);
+    expect(v.passed).toBe(3);
+    expect(v.passed_then_failed).toBe(1);
+    expect(v.passed_then_failed_share).toBeCloseTo(1 / 3);
+  });
+
+  test('no verdicts is zero shares, not NaN', () => {
+    const v = computeMeasures({...inputs, verdicts: undefined}).verification;
+    expect(v).toEqual({verified: 0, blocked: 0, blocked_share: 0, passed: 0, passed_then_failed: 0, passed_then_failed_share: 0});
+  });
+
+  test('the window limits which tickets count', () => {
+    expect(computeMeasures({...inputs, last: 1}).verification.verified).toBe(1);
+  });
+
+  test('the table reports both shares', () => {
+    expect(formatMeasures(computeMeasures(inputs))).toContain('verification: blocked 50% (2 of 4), passed then failed 33% (1 of 3)');
+  });
+});
+
 describe('rule record', () => {
   const rule: RuleRecord = {
     name: 'push-before-slow-steps',

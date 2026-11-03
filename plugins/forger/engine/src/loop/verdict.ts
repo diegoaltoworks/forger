@@ -7,7 +7,7 @@
 
 export type Judgement = 'met' | 'not_met' | 'cannot_tell';
 export type Decision = 'pass' | 'block' | 'unclear';
-export type EvidenceKind = 'file' | 'command' | 'test';
+export type EvidenceKind = 'file' | 'command' | 'test' | 'check';
 
 export interface Evidence {
   kind: EvidenceKind;

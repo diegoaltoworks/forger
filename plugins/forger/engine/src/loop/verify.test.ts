@@ -87,6 +87,45 @@ describe('verifyPr', () => {
     expect(f.calls.some(c => c.startsWith('git worktree remove --force'))).toBe(true);
   });
 
+  describe('criteria bound to a satisfied requirement', () => {
+    const bound = '## Acceptance\n- [ ] refuses a failed check [spec:R-1]\n- [ ] names the head\n';
+    const report = {requirements: [{id: 'R-1', modality: 'MUST' as const, state: 'satisfied' as const}]};
+
+    test('is met with the spec check as evidence and absent from the verifier input', async () => {
+      const f = fixture();
+      const run: CommandRunner = cmd => (cmd.startsWith('gh issue view') ? bound : f.run(cmd));
+      const out = JSON.stringify({verdict: [{criterion: 'c2', verdict: 'met', evidence: [{kind: 'command', ref: 'bun test'}]}]});
+      const record = await verifyPr(run, f.agentSaying(out), {...f.opts, specReport: () => report});
+      expect(record.entries).toEqual([
+        {criterion: 'c1', verdict: 'met', evidence: [{kind: 'check', ref: 'spec:R-1'}]},
+        {criterion: 'c2', verdict: 'met', evidence: [{kind: 'command', ref: 'bun test'}]},
+      ]);
+      expect(record.decision).toBe('pass');
+      expect(f.prompts[0]).toContain('c2: names the head');
+      expect(f.prompts[0]).not.toContain('refuses a failed check');
+    });
+
+    test('when every criterion is bound and satisfied the verifier is not run', async () => {
+      const f = fixture();
+      const run: CommandRunner = cmd => (cmd.startsWith('gh issue view') ? '## Acceptance\n- [ ] one [spec:R-1]\n' : f.run(cmd));
+      const record = await verifyPr(run, f.agentSaying('never read'), {...f.opts, specReport: () => report});
+      expect(f.prompts).toEqual([]);
+      expect(record.decision).toBe('pass');
+      expect(existsSync(verdictFile(f.verdicts, 5, 'deadbeef'))).toBe(true);
+    });
+
+    test('an unreadable spec leaves every criterion with the verifier', async () => {
+      const f = fixture();
+      const run: CommandRunner = cmd => (cmd.startsWith('gh issue view') ? bound : f.run(cmd));
+      await verifyPr(run, f.agentSaying('x'), {...f.opts, specReport: () => { throw new Error('boom'); }});
+      expect(f.prompts[0]).toContain('c1: refuses a failed check');
+    });
+
+    test('a verifier cannot claim the spec check as its evidence', () => {
+      expect(evidenceResolves(() => '', '/nowhere', {kind: 'check', ref: 'spec:R-1'})).toBe(false);
+    });
+  });
+
   test('refuses a branch that names no ticket', async () => {
     const f = fixture();
     const run: CommandRunner = c => (c.startsWith('gh pr view') ? view.replace('feat/issue-9', 'wip') : f.run(c));

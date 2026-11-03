@@ -138,7 +138,7 @@ The `ui` pack makes a UI change reviewable by showing it. Evidence, colour token
 
 ## The spec pack
 
-The `spec` pack keeps requirements checked after merge ([ADR 0007](adr/0007-spec-pack-requirements-that-stay-checked.md)). The spec holds the current state and the issue is the unit of change: a ticket carries a `Satisfies:` line naming requirement IDs, and the spec never names an issue. `check spec` joins the IDs the branch's issue names (`feat/issue-<n>`), the requirement report and the base branch's report, and decides purely from them.
+The `spec` pack keeps requirements checked after merge ([ADR 0007](adr/0007-spec-pack-requirements-that-stay-checked.md)). The spec holds the current state and the issue is the unit of change: a ticket carries a `Satisfies:` line naming requirement IDs, and the spec never names an issue. `check spec` joins the IDs the branch's issue names (`feat/issue-<n>`), the requirement report and the base branch's report, and decides purely from them. A ticket's acceptance criterion can also be bound to a requirement by writing `[spec:ID]` in its text: when the head's report shows that requirement satisfied, `verify` records the criterion `met` with the spec check as evidence and leaves it out of what the verifier judges ([ADR 0010](adr/0010-an-independent-verifier-checks-acceptance-before-merge.md)).
 
 ```mermaid
 flowchart LR

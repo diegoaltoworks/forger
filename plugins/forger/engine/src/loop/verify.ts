@@ -10,9 +10,10 @@ import {tmpdir} from 'os';
 import {isAbsolute, join, normalize} from 'path';
 
 import type {Tier} from '../config';
-import type {AgentRunner, CommandRunner} from '../ports';
+import type {AgentRunner, CommandRunner, SpecReport} from '../ports';
 import {issueNumber} from './decline';
 import {PR_FIELDS, parsePr} from './pr-checks';
+import {mergeEntries, partitionCriteria} from './mechanical';
 import {parseCriteria, type Criterion, type Evidence} from './verdict';
 import {buildVerifierInput, recordVerdict, type VerdictRecord} from './verify-input';
 
@@ -29,6 +30,8 @@ export interface VerifyOptions {
   timeoutMinutes: number;
   killGraceSeconds: number;
   sessionId: string;
+  /** The spec report of the head checkout; null or absent when there is no spec to bind criteria to. */
+  specReport?: (checkoutDir: string) => SpecReport | null;
   now?: () => Date;
 }
 
@@ -58,6 +61,8 @@ export function evidenceResolves(run: CommandRunner, root: string, e: Evidence):
   const ref = (e.ref ?? '').trim();
   if (ref === '') return false;
   if (e.kind === 'command') return true;
+  // Only the engine's own spec check is evidence of kind check; a verifier cannot claim it.
+  if (e.kind === 'check') return false;
   if (e.kind === 'test') {
     try {
       return run(`git -C ${shellQuote(root)} grep -F -l -e ${shellQuote(ref)}`).trim() !== '';
@@ -85,15 +90,24 @@ export async function verifyPr(run: CommandRunner, agent: AgentRunner, opts: Ver
   const criteria = criteriaFor(run, opts, ticket);
   if (criteria.length === 0) throw new Error(`${ticket} has no acceptance criteria to verify`);
 
-  const prompt = buildVerifierInput({criteria, diff: run(`gh pr diff ${opts.pr}`), gate: {checks: pr.checks, failing_checks: pr.failing_checks}});
-
   run(`git fetch origin pull/${opts.pr}/head`);
   const dir = mkdtempSync(join(tmpdir(), `forger-verify-${opts.pr}-`));
   run(`git worktree add --detach ${shellQuote(dir)} ${head}`);
-  // Read-only so the verifier cannot edit what it judges.
-  run(`chmod -R a-w ${shellQuote(dir)}`);
-  let output = '';
   try {
+    let report: SpecReport | null = null;
+    try {
+      report = opts.specReport?.(dir) ?? null;
+    } catch {
+      // an unreadable spec decides nothing; every criterion stays with the verifier
+    }
+    const {mechanical, remaining} = partitionCriteria(criteria, report);
+    const subject = {pr: opts.pr, head, ticket, verifier: opts.model, at: (opts.now?.() ?? new Date()).toISOString()};
+    if (remaining.length === 0) {
+      return writeRecord(opts, {...subject, verifier: 'spec-check', ...mergeEntries(criteria, mechanical, []), problems: []});
+    }
+    // Read-only so the verifier cannot edit what it judges.
+    run(`chmod -R a-w ${shellQuote(dir)}`);
+    const prompt = buildVerifierInput({criteria: remaining, diff: run(`gh pr diff ${opts.pr}`), gate: {checks: pr.checks, failing_checks: pr.failing_checks}});
     const result = await agent.run({
       prompt,
       sessionId: opts.sessionId,
@@ -104,18 +118,16 @@ export async function verifyPr(run: CommandRunner, agent: AgentRunner, opts: Ver
       timeoutMinutes: opts.timeoutMinutes,
       killGraceSeconds: opts.killGraceSeconds,
     });
-    output = result.output;
-    const record = recordVerdict(
-      {pr: opts.pr, head, ticket, verifier: opts.model, at: (opts.now?.() ?? new Date()).toISOString()},
-      criteria,
-      output,
-      e => evidenceResolves(run, dir, e),
-    );
-    mkdirSync(opts.verdictsDir, {recursive: true});
-    writeFileSync(verdictFile(opts.verdictsDir, opts.pr, head), JSON.stringify(record, null, 2) + '\n');
-    return record;
+    const judged = recordVerdict(subject, remaining, result.output, e => evidenceResolves(run, dir, e));
+    return writeRecord(opts, {...judged, ...mergeEntries(criteria, mechanical, judged.entries), problems: judged.problems});
   } finally {
     run(`chmod -R u+w ${shellQuote(dir)}`);
     run(`git worktree remove --force ${shellQuote(dir)}`);
   }
+}
+
+function writeRecord(opts: VerifyOptions, record: VerdictRecord): VerdictRecord {
+  mkdirSync(opts.verdictsDir, {recursive: true});
+  writeFileSync(verdictFile(opts.verdictsDir, record.pr, record.head), JSON.stringify(record, null, 2) + '\n');
+  return record;
 }

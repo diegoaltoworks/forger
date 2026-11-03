@@ -1,7 +1,7 @@
 import {join} from 'path';
 import {randomUUID} from 'crypto';
 
-import {agentFor, findHarness} from '../adapters';
+import {agentFor, findHarness, slcrProvider} from '../adapters';
 import {resolveModel} from '../config';
 import {verifierTier, verifyPr} from '../loop';
 import type {Command} from './command';
@@ -35,6 +35,7 @@ export const verify: Command = {
         timeoutMinutes: config.limits.timeoutMinutes,
         killGraceSeconds: config.limits.killGraceSeconds,
         sessionId: randomUUID(),
+        specReport: dir => slcrProvider({projectRoot: dir, baseBranch: config.base_branch}).report('head'),
       });
       if (record.decision !== 'pass') process.exitCode = 1;
       console.log(
