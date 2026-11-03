@@ -8,7 +8,7 @@ describe('routeSlug', () => {
     ['/', 'index'],
     ['/about', 'about'],
     ['/a/b', 'a-b'],
-    ['/Users/42/', 'users-42'],
+    ['/Accounts/42/', 'accounts-42'],
     ['/search?q=a b', 'search-q-a-b'],
   ];
   for (const [route, slug] of table) test(`${route} is ${slug}`, () => expect(routeSlug(route)).toBe(slug));
