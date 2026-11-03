@@ -1,0 +1,50 @@
+{
+  "passed": false,
+  "interrupted": false,
+  "descriptors": [
+    {
+      "tool": "sh",
+      "status": "already-installed"
+    }
+  ],
+  "vet": {
+    "passed": false,
+    "project": {
+      "manifest": "SLCR.toml",
+      "passed": true,
+      "problems": []
+    },
+    "files": [
+      {
+        "path": "SPEC.slcr.yml",
+        "passed": true,
+        "violations": 0,
+        "warnings": 0,
+        "findings": []
+      }
+    ],
+    "validators": [
+      {
+        "path": "src/.validators.slcr.toml",
+        "passed": false,
+        "problems": [
+          {
+            "validator": 1,
+            "code": "unknown-requirement",
+            "id": "shop/REQ-099",
+            "path": "SPEC.slcr.yml",
+            "message": "`shop/REQ-099` names REQ-099, which the specification `shop` (SPEC.slcr.yml) doesn't have",
+            "labels": [
+              {
+                "line": 4,
+                "column": 15,
+                "offset": 49,
+                "length": 14
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

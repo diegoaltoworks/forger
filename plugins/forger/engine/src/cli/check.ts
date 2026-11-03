@@ -18,6 +18,7 @@ import {
 import {playwrightAuditor, shellAppServer} from '../adapters';
 import {UiInfrastructureError} from '../ports';
 import type {Command} from './command';
+import {specProvider} from './spec-provider';
 
 const SINGLE = {docs: runDocsCheck, arch: runArchCheck, decisions: runDecisionsCheck, safety: runSafetyCheck, tests: runTestsCheck, coverage: runCoverageCheck, ui: runUiCheck};
 
@@ -35,7 +36,7 @@ export const check: Command = {
   check coverage [--json] [--update] Fail when line coverage drops below the baseline; --update raises it
   check ui [--json] Fail when a branch changes UI files and updates no screenshot under docs/screenshots/, or a UI file holds a raw colour literal
   check a11y [--json] Serve the app and fail on serious or critical axe violations on every route, viewport and theme (exit 2 when Playwright, axe-core or the app is unavailable)
-  check spec [--json] Fail when a requirement the issue names is unsatisfied or a MUST regresses; no provider is a gap, not a pass
+  check spec [--json] Fail when a requirement the issue names is unsatisfied or a MUST regresses; the slcr binary is the provider; none is a gap, not a pass
   check arch [--json] Fail on an import that crosses a forbidden edge of .forger/architecture.json
   check docs [--json] Fail on non-ASCII punctuation, emails, home paths, denylist terms`,
   async run(ctx) {
@@ -53,7 +54,7 @@ export const check: Command = {
     }
     if (positionals[1] === undefined) {
       try {
-        const report = runChecks(projectRoot, pluginRoot, ctx.run());
+        const report = runChecks(projectRoot, pluginRoot, ctx.run(), specProvider(ctx));
         console.log(values.json ? JSON.stringify(report) : values.summary ? formatSummary(report) : formatCheckReport(report));
         if (!report.ok) process.exitCode = 1;
       } catch (e) {
@@ -63,7 +64,7 @@ export const check: Command = {
       return;
     }
     if (positionals[1] === 'spec') {
-      const {findings, gaps, summary} = runSpecDecision(ctx.run());
+      const {findings, gaps, summary} = runSpecDecision(ctx.run(), specProvider(ctx));
       console.log(values.json ? JSON.stringify({findings, gaps, summary}) : formatViolations(findings, 'spec') + gaps.map(g => `\ngap (${g.modality}): ${g.opinion}: ${g.detail}`).join(''));
       if (findings.length > 0 || gaps.some(g => g.modality === 'MUST')) process.exitCode = 1;
       return;

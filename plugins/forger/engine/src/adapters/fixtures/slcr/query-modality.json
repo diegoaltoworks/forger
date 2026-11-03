@@ -1,0 +1,15 @@
+{
+  "columns": [
+    "r.id",
+    "r.modality"
+  ],
+  "rows": [
+    ["REQ-001", "MUST"],
+    ["REQ-002", "MUST"],
+    ["REQ-003", "SHOULD"],
+    ["REQ-004", "MAY"],
+    ["REQ-005", "MUST"],
+    ["REQ-006", "MUST NOT"],
+    ["REQ-007", "MUST"]
+  ]
+}

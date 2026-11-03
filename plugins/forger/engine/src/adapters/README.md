@@ -20,6 +20,10 @@ world, and is tested against real processes.
   another file here implementing the same interface; its spawn arguments and
   install paths are pure and table-tested.
 - `skill-package.ts` - repackages a command as a repository skill, for the harnesses that load skills.
+- `slcr.ts` - the `SpecProvider` over the `slcr` binary: `check --format json`, `query` and `slice`
+  through the command port; the base side is the base branch exported to a scratch folder.
+- `slcr-report.ts` - the pure parsing of that output into the normalized report; a changed shape is
+  a `SpecOutputError` naming the field. Tested on recorded output in `fixtures/slcr/`.
 - `harnesses.ts` - the shipped harnesses by id, and `agentFor`, the
   `AgentRunner` any of them yields over `supervise.ts`.
 

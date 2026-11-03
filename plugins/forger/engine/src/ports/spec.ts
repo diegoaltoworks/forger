@@ -24,4 +24,14 @@ export interface SpecReport {
  */
 export interface SpecProvider {
   report(side: 'head' | 'base'): SpecReport | null;
+  /** The context needed to implement one requirement, or null when no provider can read it. */
+  slice(id: string): string | null;
+}
+
+/** A provider's output was not the shape it is read as; the message names the field. */
+export class SpecOutputError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'SpecOutputError';
+  }
 }
