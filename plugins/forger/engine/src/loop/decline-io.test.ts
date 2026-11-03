@@ -21,9 +21,9 @@ const record: DeclineRecord = {ticket: 'issue-7', reason: 'blocked', detail: "ne
 describe('leaveQueue on GitHub', () => {
   test('swaps the intake label for needs-info and comments the detail', () => {
     const calls: string[] = [];
-    const msg = leaveQueue(cmd => (calls.push(cmd), ''), {trackerKind: 'github', intakeLabel: 'ready-for-agent', backlogFile: ''}, record);
+    const msg = leaveQueue(cmd => (calls.push(cmd), cmd.startsWith('gh issue view') ? 'needs-info' : ''), {trackerKind: 'github', intakeLabel: 'ready-for-agent', backlogFile: ''}, record);
     expect(msg).toBe('issue #7 relabelled needs-info');
-    expect(calls).toHaveLength(2);
+    expect(calls).toHaveLength(3);
     expect(calls[0]).toBe("gh issue edit 7 --remove-label 'ready-for-agent' --add-label needs-info");
     expect(calls[1]).toStartWith('gh issue comment 7 --body ');
     expect(calls[1]).toContain("needs the owner'\\''s key");

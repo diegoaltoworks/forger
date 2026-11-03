@@ -15,6 +15,8 @@ export interface OrientInputs {
   /** `git branch --show-current`; empty when detached. */
   branch: string;
   baseBranch: string;
+  /** Loop labels the repository lacks; undefined when not checked. */
+  missingLabels?: string[];
 }
 
 export interface OrientPlan {
@@ -38,6 +40,9 @@ export function orient(i: OrientInputs): OrientPlan {
   }
   if (s.runner.pid !== null && !s.runner.alive) {
     anomalies.push(`the lock names pid ${s.runner.pid}, which is gone`);
+  }
+  for (const label of i.missingLabels ?? []) {
+    anomalies.push(`the label "${label}" the loop relies on does not exist on GitHub; run setup to create it`);
   }
   if (s.halted) {
     return {action: 'surface_halt', reason: i.haltReason?.trim() || s.last_error || 'halted, no reason recorded', anomalies};

@@ -1,6 +1,24 @@
+import {ensureLabels} from '../loop';
+import {loadConfig} from '../config';
 import {findHarness} from '../adapters';
 import {formatSetup, formatUpgrade, loadPresets, offerPresets, parsePackList, runSetup, runUpgrade} from '../packs';
-import type {Command} from './command';
+import type {Command, CommandContext} from './command';
+
+interface LabelOutcome {
+  created: string[];
+  error?: string;
+}
+
+/** GitHub repositories only; a failure (no gh, no remote) is reported, not fatal, since the files are already installed. */
+function createLabels(ctx: CommandContext): LabelOutcome {
+  const config = loadConfig(process.cwd());
+  if (config.tracker.kind !== 'github') return {created: []};
+  try {
+    return {created: ensureLabels(ctx.run(), config.tracker.label)};
+  } catch (e) {
+    return {created: [], error: `could not create the loop labels: ${(e as Error).message}`};
+  }
+}
 
 export const setup: Command = {
   name: 'setup',
@@ -12,7 +30,8 @@ export const setup: Command = {
                    --harness H sets the harness (claude, opencode, codex, copilot) and installs its commands
                    --upgrade brings installed packs to this plugin's version: untouched files take the
                    new version, refined files are kept, files both sides changed get <file>.upstream`,
-  run({values, pluginRoot, installedSkills}) {
+  run(ctx) {
+    const {values, pluginRoot, installedSkills} = ctx;
     if (values.upgrade) {
       try {
         const upgrade = runUpgrade(process.cwd(), pluginRoot);
@@ -49,7 +68,10 @@ export const setup: Command = {
       process.exitCode = 1;
       return;
     }
+    const labels = createLabels(ctx);
     const offered = offerPresets(loadPresets(pluginRoot), installedSkills());
-    console.log(values.json ? JSON.stringify({...result, presets: offered.map(p => p.name)}) : formatSetup(result, offered.map(p => p.name)));
+    const presets = offered.map(p => p.name);
+    if (values.json) console.log(JSON.stringify({...result, presets, labels}));
+    else console.log([formatSetup(result, presets), ...labels.created.map(l => `label   ${l}`), ...(labels.error ? [`! ${labels.error}`] : [])].join('\n'));
   },
 };

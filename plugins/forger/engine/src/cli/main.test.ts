@@ -1,5 +1,5 @@
 import {afterEach, describe, expect, spyOn, test} from 'bun:test';
-import {mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync} from 'fs';
+import {existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync} from 'fs';
 import {tmpdir} from 'os';
 import {join} from 'path';
 
@@ -315,6 +315,25 @@ describe('setup --json', () => {
   });
 });
 
+describe('setup creates the loop labels', () => {
+  test('creates the missing ones on a GitHub tracker, and none the second time', async () => {
+    const root = realpathSync(mkdtempSync(join(tmpdir(), 'forger-cli-labels-')));
+    dirs.push(root);
+    process.chdir(root);
+    const repo = new Set(['ready-for-agent']);
+    const run: CommandRunner = cmd => {
+      if (cmd.startsWith('gh label list')) return [...repo].join('\n');
+      const m = /^gh label create '([^']+)'/.exec(cmd);
+      if (m) repo.add(m[1]);
+      return '';
+    };
+    const first = JSON.parse(await capture(['setup', '--json'], run));
+    expect(first.labels.created).toContain('needs-info');
+    expect(first.labels.created).not.toContain('ready-for-agent');
+    expect(JSON.parse(await capture(['setup', '--json'], run)).labels.created).toEqual([]);
+  });
+});
+
 describe('skills --json', () => {
   test('resolves each slot from the config against the installed skills', async () => {
     const root = projectWith({});
@@ -604,11 +623,27 @@ describe('decline', () => {
     const root = projectWith({}, {kind: 'github', label: 'ready-for-agent'});
     process.chdir(root);
     const calls: string[] = [];
-    const run: CommandRunner = cmd => (calls.push(cmd), '');
+    const run: CommandRunner = cmd => (calls.push(cmd), cmd.startsWith('gh issue view') ? 'needs-info' : '');
     const out = JSON.parse(await capture(['decline', '--ticket', 'issue-5', '--reason', 'unclear', '--detail', 'which API?', '--json'], run));
     expect(out.declined).toMatchObject({ticket: 'issue-5', reason: 'unclear', detail: 'which API?'});
     expect(calls[0]).toContain('gh issue edit 5 --remove-label');
     expect(JSON.parse(readFileSync(join(root, '.forger', 'declined.json'), 'utf-8')).ticket).toBe('issue-5');
+  });
+
+  test('exits non-zero and names the label when the relabel did not hold', async () => {
+    const root = projectWith({}, {kind: 'github', label: 'ready-for-agent'});
+    process.chdir(root);
+    const run: CommandRunner = cmd => (cmd.startsWith('gh issue edit') ? (() => { throw new Error("'needs-info' not found"); })() : '');
+    const err = spyOn(console, 'error').mockImplementation(() => {});
+    try {
+      await capture(['decline', '--ticket', 'issue-5', '--reason', 'unclear', '--detail', 'x'], run);
+      expect(process.exitCode).toBe(1);
+      expect(err.mock.calls.flat().join(' ')).toContain("needs-info");
+    } finally {
+      process.exitCode = 0;
+      err.mockRestore();
+    }
+    expect(existsSync(join(root, '.forger', 'declined.json'))).toBe(false);
   });
 
   test('rejects an unknown reason and an empty detail without touching the tracker', async () => {

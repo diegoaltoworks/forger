@@ -27,6 +27,8 @@ Touch the world (their own files, the terminal, the clock):
 - `runner.ts` - the outer loop: lock, halt, stall and failure limits, status and
   watch displays.
 - `iteration.ts` - one iteration and the close-out of one a dead engine left open.
+- `labels.ts` - the GitHub labels the loop relies on, declared once; creating the
+  missing ones, and checking a decline's relabel from the issue's labels read back.
 - `decline-io.ts` - the decline record file and the tracker calls that take a
   declined ticket out of the backlog, through the command port.
 - `state.ts`, `lock.ts`, `events.ts`, `logger.ts` - the state file and HALT, the

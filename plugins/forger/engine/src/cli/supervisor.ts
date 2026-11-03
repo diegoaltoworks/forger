@@ -1,6 +1,7 @@
 import {existsSync, readFileSync} from 'fs';
 import {join} from 'path';
 
+import {listRepoLabels, loopLabels, missingLabels} from '../loop';
 import {buildReport, formatReport, orient as orientPlan} from '../supervisor';
 import type {Command, CommandContext} from './command';
 
@@ -10,7 +11,16 @@ function supervise(which: 'orient' | 'report') {
     const status = runner.statusReport();
     const haltFile = join(projectRoot, config.paths.halt);
     const branch = ctx.run()('git branch --show-current');
+    let missing: string[] | undefined;
+    if (config.tracker.kind === 'github') {
+      try {
+        missing = missingLabels(loopLabels(config.tracker.label), listRepoLabels(ctx.run())).map(l => l.name);
+      } catch {
+        missing = undefined;
+      }
+    }
     const plan = orientPlan({
+      missingLabels: missing,
       status,
       haltReason: existsSync(haltFile) ? readFileSync(haltFile, 'utf-8') : null,
       branch,
