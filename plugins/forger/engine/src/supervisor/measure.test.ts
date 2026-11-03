@@ -125,8 +125,8 @@ describe('computeMeasures', () => {
   test('time, cap and CI rounds per ticket', () => {
     const m = computeMeasures(base);
     expect(m.tickets).toEqual([
-      {ticket: 'alpha_ticket', runs: 2, seconds: 150, budget_cap_usd: 10, ci_rounds: 2},
-      {ticket: 'beta', runs: 1, seconds: 10, budget_cap_usd: null, ci_rounds: null},
+      {ticket: 'alpha_ticket', runs: 2, seconds: 150, budget_cap_usd: 10, cost_usd: null, ci_rounds: 2},
+      {ticket: 'beta', runs: 1, seconds: 10, budget_cap_usd: null, cost_usd: null, ci_rounds: null},
     ]);
     expect(m.ci_rounds_unmatched).toEqual({'feat/stray': 1});
   });
@@ -151,7 +151,7 @@ describe('computeMeasures', () => {
     expect(formatMeasures(m)).toContain('runs: 0');
   });
   test('text output names every ticket', () => {
-    expect(formatMeasures(computeMeasures(base))).toContain('alpha_ticket: 2 run(s), 150s, cap $10, CI rounds 2');
+    expect(formatMeasures(computeMeasures(base))).toContain('alpha_ticket: 2 run(s), 150s, cap $10, cost unknown, CI rounds 2');
     expect(formatMeasures(computeMeasures(base))).toContain('pick: off-pick 25% (1), declined 25% (1)');
   });
 });
@@ -236,5 +236,43 @@ describe('draftUpstreamIssue', () => {
   });
   test('refuses a lesson with no evidence', () => {
     expect(() => draftUpstreamIssue({title: 't', lesson: 'l', evidence: []})).toThrow('evidence');
+  });
+});
+
+describe('session cost per ticket', () => {
+  const sid = (n: number) => `0000000${n}-0000-0000-0000-000000000000`;
+  const it = (iteration: number, ticket: string): IterationRecord => ({iteration, ticket, elapsedSeconds: 1, cause: 'ok', status: 'completed'});
+  const inputs = (budgets: {ticket: string; sessionId?: string}[], sessionCosts?: Record<string, number | null>) => ({
+    iterations: [it(1, 'issue-1'), it(2, 'issue-2'), it(3, 'issue-3')],
+    budgets: budgets.map(b => ({...b, model: 'opus', budgetUsd: 20})),
+    sessionCosts,
+    events: [],
+    ciRuns: [],
+    last: null,
+  });
+  const costs = (m: ReturnType<typeof computeMeasures>) => Object.fromEntries(m.tickets.map(t => [t.ticket, t.cost_usd]));
+
+  test('joins a ticket to its session costs and sums its sessions', () => {
+    const m = computeMeasures(inputs([{ticket: 'issue-1', sessionId: sid(1)}, {ticket: 'issue-1', sessionId: sid(2)}, {ticket: 'issue-2', sessionId: sid(3)}], {[sid(1)]: 1.5, [sid(2)]: 0.25, [sid(3)]: 0}));
+    expect(costs(m)).toEqual({'issue-1': 1.75, 'issue-2': 0, 'issue-3': null});
+  });
+  test('a session without a transcript makes the ticket unknown, never the cap or zero', () => {
+    const m = computeMeasures(inputs([{ticket: 'issue-1', sessionId: sid(1)}, {ticket: 'issue-1', sessionId: sid(2)}, {ticket: 'issue-2', sessionId: sid(3)}], {[sid(1)]: 1.5, [sid(2)]: null}));
+    expect(costs(m)).toEqual({'issue-1': null, 'issue-2': null, 'issue-3': null});
+    expect(m.tickets[0].budget_cap_usd).toBe(40);
+  });
+  test('a work log line without a session id is unknown', () => {
+    expect(costs(computeMeasures(inputs([{ticket: 'issue-1'}], {})))['issue-1']).toBeNull();
+  });
+  test('parseBudgets reads the session id when the line carries one', () => {
+    const text = `[t] [INFO] Ticket: issue-1 [opus, $20] session ${sid(1)}\n[t] [INFO] Ticket: issue-2 [opus, $20]`;
+    expect(parseBudgets(text)).toEqual([
+      {ticket: 'issue-1', model: 'opus', budgetUsd: 20, sessionId: sid(1)},
+      {ticket: 'issue-2', model: 'opus', budgetUsd: 20},
+    ]);
+  });
+  test('the text report shows cost beside the cap', () => {
+    const m = computeMeasures(inputs([{ticket: 'issue-1', sessionId: sid(1)}], {[sid(1)]: 1.5}));
+    expect(formatMeasures(m)).toContain('cap $20, cost $1.50,');
   });
 });

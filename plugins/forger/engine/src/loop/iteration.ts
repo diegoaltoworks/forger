@@ -98,7 +98,7 @@ export async function runIteration(
   const tier = ctx.backlog.tier(attemptedTask);
   ctx.logger.log('INFO', `Running the agent (session: ${sessionId.slice(0, 8)}...)`);
   if (attemptedTask) {
-    ctx.logger.log('INFO', `Ticket: ${attemptedTask} [${tier.model}, $${tier.budget}]`);
+    ctx.logger.log('INFO', `Ticket: ${attemptedTask} [${tier.model}, $${tier.budget}] session ${sessionId}`);
   }
 
   const {timeoutMinutes, killGraceSeconds} = ctx.config.limits;

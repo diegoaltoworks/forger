@@ -3,3 +3,4 @@ export * from './measure';
 export * from './supervisor';
 export * from './parallel-measures';
 export * from './comparison';
+export * from './cost';

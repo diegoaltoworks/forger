@@ -515,7 +515,33 @@ describe('measure and retro', () => {
     process.chdir(root);
     const run: CommandRunner = () => JSON.stringify([{headBranch: 'feat/alpha-ticket', event: 'pull_request'}]);
     const out = JSON.parse(await capture(['measure', '--json'], run));
-    expect(out.tickets).toEqual([{ticket: 'alpha_ticket', runs: 1, seconds: 90, budget_cap_usd: 20, ci_rounds: 1}]);
+    expect(out.tickets).toEqual([{ticket: 'alpha_ticket', runs: 1, seconds: 90, budget_cap_usd: 20, cost_usd: null, ci_rounds: 1}]);
+  });
+
+  test('measure --json carries the session cost beside the cap, unknown without a transcript', async () => {
+    const root = projectWith({});
+    mkdirSync(join(root, '.forger/output'));
+    writeFileSync(join(root, '.forger/output/iteration-1.log'), '=== forger iteration 1 ===\nticket: issue-1\nelapsed: 9s\noutcome: exited with code 0\n=== output ===\nok\n');
+    writeFileSync(join(root, '.forger/output/iteration-2.log'), '=== forger iteration 2 ===\nticket: issue-2\nelapsed: 9s\noutcome: exited with code 0\n=== output ===\nok\n');
+    const [known, missing] = ['11111111-1111-1111-1111-111111111111', '22222222-2222-2222-2222-222222222222'];
+    writeFileSync(join(root, '.forger/work.log'), `[t] [INFO] Ticket: issue-1 [opus, $20] session ${known}\n[t] [INFO] Ticket: issue-2 [opus, $20] session ${missing}\n`);
+    writeFileSync(join(root, '.forger/prices.json'), JSON.stringify({opus: {input: 2, output: 0, cache_read: 0, cache_write: 0}}));
+    const config = join(root, 'harness');
+    mkdirSync(join(config, 'projects/p'), {recursive: true});
+    writeFileSync(join(config, 'projects/p', `${known}.jsonl`), JSON.stringify({message: {id: 'm', model: 'claude-opus-x', usage: {input_tokens: 1_000_000, output_tokens: 5}}}) + '\n');
+    process.chdir(root);
+    const before = process.env.CLAUDE_CONFIG_DIR;
+    process.env.CLAUDE_CONFIG_DIR = config;
+    try {
+      const out = JSON.parse(await capture(['measure', '--json'], () => '[]'));
+      expect(out.tickets.map((t: {ticket: string; budget_cap_usd: number; cost_usd: number | null}) => [t.ticket, t.budget_cap_usd, t.cost_usd])).toEqual([
+        ['issue-1', 20, 2],
+        ['issue-2', 20, null],
+      ]);
+    } finally {
+      if (before === undefined) delete process.env.CLAUDE_CONFIG_DIR;
+      else process.env.CLAUDE_CONFIG_DIR = before;
+    }
   });
 
   test('measure --json carries merged tickets, rework and owner interventions', async () => {
