@@ -11,11 +11,12 @@ the files inside it.
 | [`loop/`](loop/README.md) | The engine's outer loop, one iteration, state, lock, events, outcome, prompt, claim, infra errors, status |
 | [`backlog/`](backlog/README.md) | The Backlog interface and its GitHub and file adapters |
 | [`checks/`](checks/README.md) | The umbrella `check`, waivers, the CI summary, and one folder per check |
+| [`ui/`](ui/README.md) | The ui pack's config, the capture matrix and the screenshot run |
 | [`packs/`](packs/README.md) | Pack manifests, `setup`, skill slots |
 | [`supervisor/`](supervisor/README.md) | Read-only facts, the supervisor's decisions, measures and retro records |
 | [`config/`](config/README.md) | Loading `.claude/workloop.config.json` and its defaults |
-| [`ports/`](ports/README.md) | The types the core is written against and the adapters implement: `CommandRunner`, `AgentRunner` |
-| [`adapters/`](adapters/README.md) | Running a command and spawning the agent |
+| [`ports/`](ports/README.md) | The types the core is written against and the adapters implement: `CommandRunner`, `AgentRunner`, `AppServer`, `Screenshotter` |
+| [`adapters/`](adapters/README.md) | Running a command, spawning the agent, serving and photographing an app |
 
 ## The dependency rule
 

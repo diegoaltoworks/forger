@@ -8,6 +8,10 @@ Closes #<n>
 
 <The boards changed, or "none".>
 
+## Screenshots
+
+<Links to the files under docs/screenshots/ updated at the head commit, or "none".>
+
 ## Languages to review
 
 <The languages and the wording changed, or "none".>

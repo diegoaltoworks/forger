@@ -93,7 +93,8 @@ the ticket and PR shapes, the work order, the report, the retro and the rule rec
 the docs habits with checks for links, images, diagrams and glossary terms, and the `architecture` pack carries
 the functional-core habits with the dependency rule enforced by `check arch` and decisions recorded as ADRs by `check decisions`, the `safety` pack carries
 the never-commit-a-secret and carry-stored-data-forward habits enforced by `check safety`, and the `testing` pack carries
-the tables, fixtures, fix-with-a-test and coverage-ratchet habits enforced by `check tests` and `check coverage`.
+the tables, fixtures, fix-with-a-test and coverage-ratchet habits enforced by `check tests` and `check coverage`, and the `ui` pack carries
+the screenshots-from-a-command habit, with `check ui` requiring them when UI files change.
 
 ## Status
 

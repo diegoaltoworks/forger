@@ -9,11 +9,12 @@ import {
   runDocsCheck,
   runSafetyCheck,
   runTestsCheck,
+  runUiCheck,
   updateCoverageBaseline,
 } from '../checks';
 import type {Command} from './command';
 
-const SINGLE = {docs: runDocsCheck, arch: runArchCheck, decisions: runDecisionsCheck, safety: runSafetyCheck, tests: runTestsCheck, coverage: runCoverageCheck};
+const SINGLE = {docs: runDocsCheck, arch: runArchCheck, decisions: runDecisionsCheck, safety: runSafetyCheck, tests: runTestsCheck, coverage: runCoverageCheck, ui: runUiCheck};
 
 export const check: Command = {
   name: 'check',
@@ -27,6 +28,7 @@ export const check: Command = {
   check safety [--json] Fail on an added secret or a stored-shape change with no test
   check tests [--json] Fail on a fix with no test, or a unit test that imports a network or process module
   check coverage [--json] [--update] Fail when line coverage drops below the baseline; --update raises it
+  check ui [--json] Fail when a branch changes UI files and updates no screenshot under docs/screenshots/
   check arch [--json] Fail on an import that crosses a forbidden edge of .claude/architecture.json
   check docs [--json] Fail on non-ASCII punctuation, emails, home paths, denylist terms`,
   run(ctx) {
@@ -43,7 +45,7 @@ export const check: Command = {
       return;
     }
     if (!(positionals[1] in SINGLE)) {
-      console.error('Usage: check [--json | --summary] | check docs|arch|decisions|safety|tests|coverage [--json] | check coverage --update');
+      console.error('Usage: check [--json | --summary] | check docs|arch|decisions|safety|tests|coverage|ui [--json] | check coverage --update');
       process.exitCode = 1;
       return;
     }

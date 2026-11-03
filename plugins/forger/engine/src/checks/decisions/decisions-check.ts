@@ -14,7 +14,7 @@ import {checkDecisions, diffDependencies, lineOf, manifestReaderFor, parseNameSt
 import type {CommandRunner} from '../../ports';
 import type {Finding} from '../waivers';
 
-function mergeBase(run: CommandRunner, base: string): string {
+export function mergeBase(run: CommandRunner, base: string): string {
   for (const ref of [base, `origin/${base}`]) {
     const sha = run(`git merge-base ${ref} HEAD`);
     if (sha !== '') return sha;

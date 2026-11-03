@@ -233,6 +233,8 @@ bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts check safety [--json]  # with the safety p
 bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts check tests [--json]  # with the testing pack: a fix: commit needs a test change; unit tests may not import network or process modules
 bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts check coverage [--json]  # with the testing pack: line coverage must not fall below the generated baseline
 bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts check coverage --update  # raise the baseline to the current coverage; never lowers it
+bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts check ui [--json]  # with the ui pack: a branch that changes ui.paths must update files under docs/screenshots/
+bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts screenshot [--json]  # with the ui pack: start the app, capture every route x viewport x theme into docs/screenshots/, stop it; exit 2 when Playwright or the app is unavailable
 bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts check docs [--json]  # writing rules: ASCII punctuation, no emails or home paths, no hard-coded skill calls in commands or templates, optional .forger-denylist; with the docs pack also links, anchors, images, mermaid blocks and avoided glossary terms
 bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts resume             # clear a HALT
 ```

@@ -1,6 +1,6 @@
 {
   "id": "base",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "The process every forger project starts from: the work-loop config, the process doc, the backlog and the ticket, PR, report and retro shapes.",
   "detect": [],
   "files": [

@@ -13,6 +13,7 @@ import {halt, reset, resume, run, status, watch} from './loop';
 import {measure} from './measure';
 import {opinions, packs} from './packs';
 import {retro} from './retro';
+import {screenshot} from './screenshot';
 import {setup} from './setup';
 import {skills} from './skills';
 import {orient, report} from './supervisor';
@@ -25,6 +26,7 @@ export const COMMANDS: Command[] = [
   opinions,
   skills,
   check,
+  screenshot,
   backlog,
   orient,
   report,
