@@ -6,3 +6,4 @@ export * from './opencode';
 export * from './playwright';
 export * from './static-server';
 export * from './supervise';
+export * from './svg-raster';
