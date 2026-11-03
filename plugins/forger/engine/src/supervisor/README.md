@@ -13,6 +13,8 @@ an action, and the measures and retro records the refinement loop runs on.
   rule records and upstream drafts. Pure.
 - `parallel-measures.ts` - merges per hour by parallelism, conflicts, rework and
   the scheduling rule's verdict mix. Pure.
+- `comparison.ts` - the comparison report (ADR 0012): the five measures of a run
+  as one JSON document, and the per-measure delta between two reports. Pure.
 - `*.json` - recorded `gh` output the tests replay.
 
 ## Entry point

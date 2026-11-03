@@ -55,6 +55,12 @@ export interface Measures {
   };
   /** What workers side by side bought and cost (ADR 0011). */
   parallel: ParallelMeasures;
+  /** Tickets with at least one run that merged, over the window. */
+  merged: {tickets: number};
+  /** Work done twice: a ticket that merged more than once, or failed after it merged. */
+  rework: {redone_tickets: number};
+  /** Events that stop the loop until a person acts (ADR 0012). */
+  owner_interventions: {total: number; by_event: Record<string, number>};
   events: Record<string, number>;
   tickets: TicketMeasure[];
   ci_rounds_unmatched: Record<string, number>;
@@ -160,6 +166,26 @@ export function verificationMeasures(verdicts: VerdictRecord[], iterations: Iter
   };
 }
 
+/** Terminal events after which only a person can restart or settle the work. */
+export const INTERVENTION_EVENTS: readonly string[] = ['halted', 'too_many_failures', 'merged_red', 'unverified'];
+
+/** Tickets that merged more than once, or ran again to a failure after a merge. */
+export function reworkMeasures(iterations: IterationRecord[]): {merged: number; redone: number} {
+  const ordered = [...iterations].sort((a, b) => a.iteration - b.iteration);
+  const merges = new Map<string, number>();
+  const redone = new Set<string>();
+  for (const it of ordered) {
+    if (it.ticket === null) continue;
+    if (it.status === 'completed') {
+      if ((merges.get(it.ticket) ?? 0) > 0) redone.add(it.ticket);
+      merges.set(it.ticket, (merges.get(it.ticket) ?? 0) + 1);
+    } else if (it.status !== null && LATER_FAILURES.includes(it.status) && (merges.get(it.ticket) ?? 0) > 0) {
+      redone.add(it.ticket);
+    }
+  }
+  return {merged: merges.size, redone: redone.size};
+}
+
 export function computeMeasures(inputs: MeasureInputs): Measures {
   const sorted = [...inputs.iterations].sort((a, b) => a.iteration - b.iteration);
   const windowed = inputs.last === null ? sorted : sorted.slice(-Math.max(inputs.last, 0));
@@ -181,6 +207,10 @@ export function computeMeasures(inputs: MeasureInputs): Measures {
     if (first !== null && e.iteration < first) continue;
     events[e.event] = (events[e.event] ?? 0) + 1;
   }
+
+  const interventions: Record<string, number> = {};
+  for (const [name, n] of Object.entries(events)) if (INTERVENTION_EVENTS.includes(name)) interventions[name] = n;
+  const rework = reworkMeasures(windowed);
 
   const rounds = ciRoundsByBranch(inputs.ciRuns);
   const byNormalized = new Map<string, string>();
@@ -213,6 +243,9 @@ export function computeMeasures(inputs: MeasureInputs): Measures {
     pick: {off_pick: offPick, off_pick_share: share(offPick), declined: declinedRuns, declined_share: share(declinedRuns)},
     verification: verificationMeasures(inputs.verdicts ?? [], windowed),
     parallel: computeParallelMeasures(windowed.map(it => ({...it, startedAt: it.startedAt ?? null, parallelism: it.parallelism ?? null})), windowStart === null ? decisions : decisions.filter(d => d.at >= windowStart)),
+    merged: {tickets: rework.merged},
+    rework: {redone_tickets: rework.redone},
+    owner_interventions: {total: Object.values(interventions).reduce((a, b) => a + b, 0), by_event: interventions},
     events,
     tickets: [...perTicket.values()],
     ci_rounds_unmatched: unmatched,
@@ -240,6 +273,7 @@ export function formatMeasures(m: Measures): string {
     `pick: off-pick ${pct(m.pick.off_pick_share)} (${m.pick.off_pick}), declined ${pct(m.pick.declined_share)} (${m.pick.declined})`,
     `verification: blocked ${pct(m.verification.blocked_share)} (${m.verification.blocked} of ${m.verification.verified}), passed then failed ${pct(m.verification.passed_then_failed_share)} (${m.verification.passed_then_failed} of ${m.verification.passed})`,
     ...formatParallel(m.parallel),
+    `merged tickets: ${m.merged.tickets}, redone ${m.rework.redone_tickets}, owner interventions ${m.owner_interventions.total}`,
     `events: ${Object.entries(m.events).map(([k, v]) => `${k} ${v}`).join(', ') || 'none'}`,
     'tickets:',
     ...m.tickets.map(

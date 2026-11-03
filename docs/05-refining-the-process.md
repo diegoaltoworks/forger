@@ -149,7 +149,11 @@ from a number written in a doc. `measure --json` reports runs and failures by
 cause, the share of runs that were off-pick or declined, how often the verifier
 blocked a PR and how often a PR it passed later failed, the terminal events,
 and the time, budget cap and CI rounds per ticket,
-over all runs or the last N.
+over all runs or the last N. It also reports the merged tickets, the tickets
+that had to be redone and the events that stop the loop until a person acts.
+`measure --report` folds these into the five-measure comparison report of
+ADR 0012, and `measure --diff A.json B.json` gives the per-measure delta between
+two saved reports.
 
 With workers side by side (ADR 0011) the same command reports what that bought
 and cost, from the iteration logs and the scheduling decisions the parallel loop
