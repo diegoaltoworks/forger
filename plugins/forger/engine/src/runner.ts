@@ -19,6 +19,7 @@ import {Logger, colors} from './logger';
 import {type ClaudeResult, type RunClaudeOptions, runClaude} from './claude';
 import {formatIterationLog} from './iteration-log';
 import {decideOutcome} from './outcome';
+import {classifyExit} from './infra';
 import {parseClaim} from './claim';
 import {gatherFacts, takeSnapshot, ticketFromBranch} from './run-facts';
 
@@ -67,7 +68,9 @@ export class AutomationRunner {
   }
 
   private verify(): string | null {
-    return verifyMerged(this.gitRunner, this.config.base_branch);
+    const {state, log, output, halt} = this.config.paths;
+    const ignore = [state, log, output, halt, ...this.config.local_only];
+    return verifyMerged(this.gitRunner, this.config.base_branch, ignore);
   }
 
   halt(reason: string): void {
@@ -84,12 +87,13 @@ export class AutomationRunner {
       this.store.clearHalt();
       this.logger.log('INFO', 'Cleared HALT file');
     }
+    // The counters that tripped the halt would trip it again on the first
+    // iteration after the human has fixed the cause.
     const state = this.store.load();
-    if (state.status === 'halted') {
-      state.status = 'ready';
-      state.stall_count = 0;
-      this.store.save(state);
-    }
+    if (state.status === 'halted') state.status = 'ready';
+    state.consecutive_failures = 0;
+    state.stall_count = 0;
+    this.store.save(state);
   }
 
   resetState(): void {
@@ -97,7 +101,7 @@ export class AutomationRunner {
     this.logger.log('INFO', 'State reset complete');
   }
 
-  async runIteration(iteration: number): Promise<boolean> {
+  async runIteration(iteration: number, countStall = true): Promise<boolean> {
     const state = this.store.load();
     const outputFile = join(this.outputDir, `iteration-${iteration}.log`);
     const sessionId = this.uuid();
@@ -166,8 +170,10 @@ export class AutomationRunner {
 
     const claim = parseClaim(result.output);
     const backlogCompleted = ticket !== null && this.backlog.isCompleted(ticket);
+    const exit = classifyExit(result.exitCode, result.output, result.timedOut);
     const outcome = decideOutcome({
       ...gitFacts,
+      infraError: exit.kind === 'infrastructure' ? exit.reason : null,
       ticket,
       claim: claim.claim,
       stopReason: claim.stopReason,
@@ -203,7 +209,11 @@ export class AutomationRunner {
     }
     if (outcome.warning) this.logger.log('WARN', `Iteration ${iteration}: ${outcome.warning}`);
 
-    const stall = stallUpdate(state.stall_count, outcome.merged, maxStallIterations);
+    // The first iteration after a start has no earlier run in this session to
+    // have stalled behind, so it is never counted.
+    const stall = countStall
+      ? stallUpdate(state.stall_count, outcome.merged, maxStallIterations)
+      : {stall_count: state.stall_count, stalled: false};
     state.stall_count = stall.stall_count;
     this.store.save(state);
 
@@ -213,7 +223,7 @@ export class AutomationRunner {
       const reason = `Stalled: nothing merged in ${maxStallIterations} iterations`;
       this.logger.log('ERROR', reason);
       this.halt(reason);
-    } else if (!outcome.merged) {
+    } else if (!outcome.merged && countStall) {
       this.logger.log('WARN', `Nothing merged (stall ${stall.stall_count}/${maxStallIterations})`);
     }
 
@@ -232,6 +242,9 @@ export class AutomationRunner {
       this.showStatus();
       return;
     }
+
+    initial.stall_count = 0;
+    this.store.save(initial);
 
     let iteration = initial.iteration;
     const sessionStartIteration = iteration;
@@ -273,7 +286,7 @@ export class AutomationRunner {
 
       this.logger.log('INFO', `Remaining tasks: ${remaining}`);
 
-      if (await this.runIteration(iteration)) {
+      if (await this.runIteration(iteration, iterationsThisSession > 1)) {
         completed++;
       } else {
         await this.sleep(pauseAfterFailure);

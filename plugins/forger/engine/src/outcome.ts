@@ -30,6 +30,8 @@ export interface RunFacts {
   backlogCompleted: boolean;
   /** Why the local checkout is not a clean, pushed base; null if it is. */
   unclean: string | null;
+  /** The platform failed the run (login, billing, network); null if it did not. */
+  infraError: string | null;
 }
 
 export interface Outcome {
@@ -82,6 +84,19 @@ export function decideOutcome(f: RunFacts): Outcome {
     warning: null,
     halt: null,
   });
+
+  // Not the worker's fault, so it neither counts as a failure nor a verdict on
+  // the ticket: stop once, say why, and let a human fix the platform.
+  if (f.infraError) {
+    return {
+      status: 'error',
+      result: 'neutral',
+      merged: false,
+      error: f.infraError,
+      warning: null,
+      halt: f.infraError,
+    };
+  }
 
   if (f.backlogCompleted && f.ticket) {
     const reason = divergence(f);

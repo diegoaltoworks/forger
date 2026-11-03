@@ -193,6 +193,7 @@ and gitignore `.claude/state.json`, `.claude/work.log`, `.claude/output/`,
 | `effort_multiplier` | Budget multiplier by ticket `effort` (`small`/`medium`/`large`/...). |
 | `limits` | `timeoutMinutes`, `killGraceSeconds` (SIGTERM to SIGKILL on timeout), `maxConsecutiveFailures`, `pauseBetweenIterations`, `pauseAfterFailure`, `maxStallIterations`. |
 | `paths` | Where the backlog, state, log, output dir, and HALT file live. |
+| `local_only` | Paths that stay modified in a checkout without being the worker's doing (local settings, a work order). The dirty-tree check skips them and the engine's own files (`paths`); a directory covers what is under it. Default none. |
 | `tracker` | `{ kind, label, ignore }`. `kind` is `github` (default: issues are the backlog), `local`, or `none` (both read `backlog.json`). `label` is the intake label, default `ready-for-agent`. `ignore` lists labels whose issues are not work, a trailing `*` matching a prefix (`["wayfinder:*"]`); default none. When `docs/agents/issue-tracker.md` exists it is the authority on how to talk to the tracker. |
 
 ## How the engine runs
@@ -216,6 +217,12 @@ is a failure; a ticket the backlog reads `completed` with nothing merged halts
 the loop for recovery. The ticket a run is held to is the one the worker took,
 read from its branch, which the log names when it differs from the engine's
 pick.
+
+A run that exits non-zero with an authentication, billing or network error is
+an infrastructure error, not a worker failure: the loop halts at once with the
+reason and the failure counter is left alone. `resume` clears the HALT and zeroes
+the failure and stall counters, so the first run after a fix starts clean, and
+the first run after any start is never counted as a stall.
 
 The loop stops when the backlog empties, a HALT file appears, it stalls (nothing
 merged for `maxStallIterations` runs in a row), or it hits
@@ -253,6 +260,7 @@ engine/src/
   run-facts.ts the git facts a run is judged by: merged, pushed, branch taken
   claim.ts     the worker's completion signal, parsed (pure)
   outcome.ts   a run's outcome from its facts (pure)
+  infra.ts     tells infrastructure errors from worker failures (pure)
   state.ts     state shape, stall detection by merges (pure) + StateStore (I/O)
   logger.ts    terminal + file logging
   claude.ts    headless `claude` spawn (the side-effect boundary)

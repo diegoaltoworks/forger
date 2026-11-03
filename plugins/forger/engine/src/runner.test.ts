@@ -1,5 +1,5 @@
 import {afterEach, describe, expect, test} from 'bun:test';
-import {existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync} from 'fs';
+import {existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync} from 'fs';
 import {tmpdir} from 'os';
 import {join} from 'path';
 
@@ -219,5 +219,74 @@ describe('AutomationRunner outcome from facts', () => {
       'Worker took other (engine picked the_ticket)'
     );
     expect(readState(root).completed_tasks).toEqual(['other']);
+  });
+});
+
+describe('AutomationRunner infrastructure errors and resume', () => {
+  test('an infrastructure error halts at once and leaves the failure counter alone', async () => {
+    const {runner, root} = runnerWith({
+      exitCode: 1,
+      signal: null,
+      output: 'Credit balance is too low',
+      timedOut: false,
+    });
+    expect(await runner.runIteration(1)).toBe(false);
+    const state = readState(root);
+    expect(state.status).toBe('halted');
+    expect(state.consecutive_failures).toBe(0);
+    expect(state.failed_iterations).toBe(0);
+    expect(state.last_error).toContain('billing');
+    expect(existsSync(join(root, '.claude', 'HALT'))).toBe(true);
+  });
+
+  test('resume zeroes the failure and stall counters', async () => {
+    const {runner, root} = runnerWith({exitCode: 1, signal: null, output: '', timedOut: false});
+    await runner.runIteration(1);
+    await runner.runIteration(2);
+    expect(readState(root).consecutive_failures).toBe(2);
+    runner.clearHalt();
+    const state = readState(root);
+    expect(state.consecutive_failures).toBe(0);
+    expect(state.stall_count).toBe(0);
+    expect(state.status).toBe('ready');
+    expect(existsSync(join(root, '.claude', 'HALT'))).toBe(false);
+  });
+
+  test('resume clears counters even when no HALT file was left', () => {
+    const {runner, root} = runnerWith({exitCode: 1, signal: null, output: '', timedOut: false});
+    mkdirSync(join(root, '.claude'), {recursive: true});
+    writeFileSync(
+      join(root, '.claude', 'state.json'),
+      JSON.stringify({...defaultState(), consecutive_failures: 3, stall_count: 4})
+    );
+    runner.clearHalt();
+    expect(readState(root).consecutive_failures).toBe(0);
+    expect(readState(root).stall_count).toBe(0);
+  });
+
+  test('the first iteration after a start is never counted as a stall', async () => {
+    const {runner, root} = runnerWith({exitCode: 1, signal: null, output: '', timedOut: false});
+    await runner.runIteration(1, false);
+    expect(readState(root).stall_count).toBe(0);
+    await runner.runIteration(2);
+    expect(readState(root).stall_count).toBe(1);
+  });
+
+  test('a stale stall count does not survive a fresh start', async () => {
+    const {root} = runnerWith({exitCode: 1, signal: null, output: '', timedOut: false});
+    writeFileSync(
+      join(root, '.claude', 'state.json'),
+      JSON.stringify({...defaultState(), stall_count: 4})
+    );
+    const config = mergeConfig({
+      limits: {pauseBetweenIterations: 0, pauseAfterFailure: 0, maxStallIterations: 2},
+    });
+    const runner = new AutomationRunner(root, config, backlogFrom(() => backlog, config), {
+      runClaude: async () => ({exitCode: 1, signal: null, output: '', timedOut: false}),
+      gitRunner: () => '',
+    });
+    await runner.run(1);
+    expect(readState(root).stall_count).toBe(0);
+    expect(existsSync(join(root, '.claude', 'HALT'))).toBe(false);
   });
 });

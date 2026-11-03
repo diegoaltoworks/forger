@@ -124,7 +124,7 @@
     },
     "engine_infra_errors_and_halt": {
       "priority": "P1",
-      "status": "not_started",
+      "status": "completed",
       "type": "feature",
       "depends_on": [
         "engine_outcome_from_facts"
