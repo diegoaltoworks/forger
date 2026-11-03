@@ -1,7 +1,7 @@
 # checks/arch
 
 `check arch`: the dependency rule. A project names layers as path globs in
-`.claude/architecture.json` and says which may import which; an import across a
+`.forger/architecture.json` and says which may import which; an import across a
 forbidden edge is a finding. Optionally the same file declares folders,
 which get a README and a public entry.
 

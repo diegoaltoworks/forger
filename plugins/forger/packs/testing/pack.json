@@ -4,8 +4,8 @@
   "description": "The testing habits forger's engine relies on: tables for the pure core, fixtures for adapters, fixes with tests, coverage that never drops.",
   "detect": [],
   "files": [
-    {"source": "files/testing.md", "target": ".claude/opinions/testing.md"},
-    {"source": "files/testing.json", "target": ".claude/testing.json"}
+    {"source": "files/testing.md", "target": ".forger/opinions/testing.md"},
+    {"source": "files/testing.json", "target": ".forger/testing.json"}
   ],
   "opinions": [
     {"id": "testing.tables", "rung": "rule", "summary": "The pure core is tested by tables of input and expected output.", "check": null},

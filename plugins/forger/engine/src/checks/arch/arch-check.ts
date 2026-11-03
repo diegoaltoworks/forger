@@ -12,9 +12,10 @@ import {moduleReadmeFindings, publicEntryFindings} from './modules';
 import type {CommandRunner} from '../../ports';
 import {projectFiles} from '../files';
 import type {Finding} from '../waivers';
+import {forgerPath} from '../../config';
 
 export function runArchCheck(projectRoot: string, run: CommandRunner): Finding[] {
-  const configPath = join(projectRoot, ARCH_PATH);
+  const configPath = forgerPath(projectRoot, ARCH_PATH);
   if (!existsSync(configPath)) throw new Error(`${ARCH_PATH} not found; the architecture pack's layer map is required`);
   const config = parseArchConfig(readFileSync(configPath, 'utf-8'));
   const files: SourceFile[] = [];

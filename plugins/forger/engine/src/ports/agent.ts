@@ -23,6 +23,8 @@ export interface AgentRunOptions {
   tier: Tier;
   /** The model id the tier's role maps to, for harnesses that take one. */
   model: string;
+  /** The worker command to run, without the leading slash (`forger:auto-ticket`). */
+  workerCommand: string;
   cwd: string;
   timeoutMinutes: number;
   killGraceSeconds: number;

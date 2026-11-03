@@ -9,6 +9,8 @@ import {createHash} from 'crypto';
 import {existsSync, readdirSync, readFileSync} from 'fs';
 import {join} from 'path';
 
+import {toLogical} from '../config';
+
 /** Where an opinion sits on the refinement ladder, weakest to strongest. */
 export const RUNGS = ['note', 'rule', 'template', 'check', 'tool'] as const;
 export type Rung = (typeof RUNGS)[number];
@@ -159,7 +161,7 @@ export function selectPacks(available: LoadedPack[], ids: string[]): {packs: Loa
   return {packs: ids.flatMap(i => byId.get(i) ?? []), unknown};
 }
 
-export const LOCK_PATH = '.claude/forger.lock.json';
+export const LOCK_PATH = '.forger/forger.lock.json';
 
 export interface LockedFile {
   path: string;
@@ -218,7 +220,7 @@ export function parseLock(text: string): Lock {
       version: str(p.version, `lock.packs[${i}].version`),
       files: p.files.map((f, j) => {
         if (!isRecord(f)) throw new ManifestError(`lock.packs[${i}].files[${j}]`, 'must be an object');
-        return {path: str(f.path, `lock.packs[${i}].files[${j}].path`), sha256: str(f.sha256, `lock.packs[${i}].files[${j}].sha256`)};
+        return {path: toLogical(str(f.path, `lock.packs[${i}].files[${j}].path`)), sha256: str(f.sha256, `lock.packs[${i}].files[${j}].sha256`)};
       }),
     };
   });

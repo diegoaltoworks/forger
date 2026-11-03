@@ -14,9 +14,9 @@ afterEach(() => {
 function project(): string {
   const root = mkdtempSync(join(tmpdir(), 'forger-open-'));
   dirs.push(root);
-  mkdirSync(join(root, '.claude'));
+  mkdirSync(join(root, '.forger'));
   writeFileSync(
-    join(root, '.claude', 'backlog.json'),
+    join(root, '.forger', 'backlog.json'),
     JSON.stringify({features: {from_file: {status: 'not_started'}}})
   );
   return root;

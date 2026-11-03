@@ -15,13 +15,14 @@ import {projectFiles} from '../files';
 import {checkText, parseDenylist} from './docs-rules';
 import {LOCK_PATH, parseLock} from '../../packs';
 import type {Finding} from '../waivers';
+import {forgerPath} from '../../config';
 
 /** Lockfiles are generated, not written. */
 const SKIP = [/(^|\/)bun\.lock$/];
 
 /** The ids in the project's lock; no lock means no packs. */
 export function installedPackIds(projectRoot: string): string[] {
-  const path = join(projectRoot, LOCK_PATH);
+  const path = forgerPath(projectRoot, LOCK_PATH);
   return existsSync(path) ? parseLock(readFileSync(path, 'utf-8')).packs.map(p => p.id) : [];
 }
 

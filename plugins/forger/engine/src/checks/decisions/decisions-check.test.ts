@@ -61,7 +61,7 @@ describe('runDecisionsCheck', () => {
 
   test('a changed layer map with no ADR fails', () => {
     const root = repo({});
-    const out = runDecisionsCheck(root, git({diff: 'M\t.claude/architecture.json'}));
+    const out = runDecisionsCheck(root, git({diff: 'M\t.forger/architecture.json'}));
     expect(out.map(f => f.rule)).toEqual(['layer-map-without-adr']);
   });
 
@@ -74,7 +74,7 @@ describe('runDecisionsCheck', () => {
   });
 
   test('the base branch comes from the workloop config', () => {
-    const root = repo({'.claude/workloop.config.json': JSON.stringify({base_branch: 'develop'})});
+    const root = repo({'.forger/workloop.config.json': JSON.stringify({base_branch: 'develop'})});
     const seen: string[] = [];
     runDecisionsCheck(root, cmd => (seen.push(cmd), cmd.startsWith('git merge-base') ? 'abc' : ''));
     expect(seen[0]).toBe('git merge-base develop HEAD');
@@ -90,6 +90,6 @@ describe('the shipped architecture pack', () => {
   });
 
   test('installs an ADR template', () => {
-    expect(pack.manifest.files.map(f => f.target)).toContain('.claude/templates/adr.md');
+    expect(pack.manifest.files.map(f => f.target)).toContain('.forger/templates/adr.md');
   });
 });

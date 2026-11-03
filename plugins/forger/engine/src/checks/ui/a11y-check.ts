@@ -11,6 +11,7 @@ import type {AccessibilityAuditor, AppServer} from '../../ports';
 import {UI_PATH, parseUiConfig, planCaptures, type UiConfig} from '../../ui';
 import type {Finding} from '../waivers';
 import {axeFindings} from './a11y';
+import {forgerPath} from '../../config';
 
 export async function runA11y(config: UiConfig, server: AppServer, auditor: AccessibilityAuditor): Promise<Finding[]> {
   const pages = planCaptures(config).map(c => ({url: c.url, width: c.width, height: c.height, theme: c.theme}));
@@ -24,7 +25,7 @@ export async function runA11y(config: UiConfig, server: AppServer, auditor: Acce
 }
 
 export function loadUiConfig(projectRoot: string): UiConfig {
-  const path = join(projectRoot, UI_PATH);
+  const path = forgerPath(projectRoot, UI_PATH);
   if (!existsSync(path)) throw new Error(`${UI_PATH} not found; the ui pack's config is required`);
   return parseUiConfig(readFileSync(path, 'utf-8'));
 }

@@ -40,8 +40,8 @@ Slots used here: `interview` (step 3), `glossary` (steps 3 and 4) and `design` (
 
 Read enough to hold an intelligent conversation - do not interrogate the user for
 what the repo already tells you:
-- `.claude/process.md` (the rules and gotchas), `.claude/workloop.config.json`
-- `.claude/backlog.json` and `.claude/backlog.md` - what is already queued or done
+- `.forger/process.md` (the rules and gotchas), `.forger/workloop.config.json`
+- `.forger/backlog.json` and `.forger/backlog.md` - what is already queued or done
 - `GLOSSARY.md` and `docs/adr/` if present - the vocabulary and the decisions
   already made; use the glossary's terms from here on
 - The repo's docs (architecture / domain / decisions / any phase docs) and README
@@ -119,7 +119,7 @@ from the plan, not restated in it; a decision lives in one place.
 ## 5. Draft the tickets
 
 Turn the agreed plan into tickets in the `process.md` shape, for
-`.claude/backlog.json` `features`. Each ticket:
+`.forger/backlog.json` `features`. Each ticket:
 - is a **vertical slice**: one iteration of work, a complete path through every
   layer it touches, demoable or verifiable on its own (split anything larger; a
   wide mechanical refactor is sequenced expand, migrate in batches, contract);
@@ -159,11 +159,11 @@ can reference real numbers. Then:
 
 ## 7. Commit and hand off
 
-Write the tickets to `.claude/backlog.json`, update `.claude/backlog.md` with the
+Write the tickets to `.forger/backlog.json`, update `.forger/backlog.md` with the
 human summary grouped by priority, then one commit touching only the plan and
 the backlog (ADRs and `GLOSSARY.md` edits ride in the same commit):
 ```
-git add .claude/backlog.json .claude/backlog.md docs/ GLOSSARY.md
+git add .forger/backlog.json .forger/backlog.md docs/ GLOSSARY.md
 git commit -m "Plan <theme>: <short list of items>"
 ```
 Then report: the goal, the tickets created (ids, issue numbers, priority, build

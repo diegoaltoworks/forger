@@ -25,7 +25,7 @@ export const check: Command = {
   needs: 'root',
   flags: ['json', 'summary', 'update'],
   help: `  check [--json | --summary]
-                   Run every check the installed packs declare, apply .claude/waivers.json,
+                   Run every check the installed packs declare, apply .forger/waivers.json,
                    exit non-zero on any unwaived violation; --summary prints the CI job
                    summary in markdown
   check decisions [--json] Fail on a new dependency or layer-map change with no ADR in the diff
@@ -34,7 +34,7 @@ export const check: Command = {
   check coverage [--json] [--update] Fail when line coverage drops below the baseline; --update raises it
   check ui [--json] Fail when a branch changes UI files and updates no screenshot under docs/screenshots/, or a UI file holds a raw colour literal
   check a11y [--json] Serve the app and fail on serious or critical axe violations on every route, viewport and theme (exit 2 when Playwright, axe-core or the app is unavailable)
-  check arch [--json] Fail on an import that crosses a forbidden edge of .claude/architecture.json
+  check arch [--json] Fail on an import that crosses a forbidden edge of .forger/architecture.json
   check docs [--json] Fail on non-ASCII punctuation, emails, home paths, denylist terms`,
   async run(ctx) {
     const {values, positionals, projectRoot, pluginRoot} = ctx;

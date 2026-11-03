@@ -65,7 +65,7 @@ export function workflowRuns(yaml: string): string[] {
 
 /** Null when a workflow step runs exactly the configured gates; otherwise why it drifted. */
 export function gatesDrift(yaml: string, gates: string | null): string | null {
-  if (gates === null || gates.trim() === '') return 'no gates configured in .claude/workloop.config.json';
+  if (gates === null || gates.trim() === '') return 'no gates configured in the forger config';
   if (workflowRuns(yaml).includes(gates.trim())) return null;
   return `no step in ${WORKFLOW_PATH} runs the configured gates verbatim: ${gates}`;
 }

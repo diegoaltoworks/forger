@@ -3,10 +3,11 @@ import {join} from 'path';
 
 import {LOCK_PATH, formatOpinions, formatPacks, listOpinions, listPacks, loadPacks, parseLock} from '../packs';
 import type {Command, CommandContext} from './command';
+import {forgerPath} from '../config';
 
 function installed(which: 'packs' | 'opinions') {
   return ({values, projectRoot, pluginRoot}: CommandContext): void => {
-    const lockPath = join(projectRoot, LOCK_PATH);
+    const lockPath = forgerPath(projectRoot, LOCK_PATH);
     let out;
     try {
       const lock = existsSync(lockPath) ? parseLock(readFileSync(lockPath, 'utf-8')) : {packs: []};

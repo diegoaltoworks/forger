@@ -6,7 +6,7 @@ What the ui pack holds, and why. A rule marked "check" is enforced by
 ## A UI change is seen, not described (check: ui.evidence)
 
 A reviewer cannot judge a screen from a diff. `check ui` fails a branch that
-changes a file matching `paths` in `.claude/ui.json` unless the same branch
+changes a file matching `paths` in `.forger/ui.json` unless the same branch
 also adds or updates a file under `docs/screenshots/`. Run `screenshot` to
 produce them; do not take them by hand.
 
@@ -50,7 +50,7 @@ pack); wireframes are for screens.
 
 `check ui` also fails a raw colour literal - hex, `rgb()`, `hsl()` and their
 alpha forms - in a text file under `paths`, unless the file matches `tokens` in
-`.claude/ui.json`. Define a colour once in a token file and reference it
+`.forger/ui.json`. Define a colour once in a token file and reference it
 everywhere else. Comments are ignored. A deliberate exception is a waiver, in
 the open.
 

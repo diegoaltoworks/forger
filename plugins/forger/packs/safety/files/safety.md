@@ -17,7 +17,7 @@ rotated first and removed second.
 ## Stored data is carried forward (check: safety.data-forward)
 
 Data in production is sacred. A change to a stored shape must carry every
-stored record forward, and the proof is a test. `.claude/safety.json` lists the
+stored record forward, and the proof is a test. `.forger/safety.json` lists the
 `migration_paths` that define stored shapes and the `data_test_paths` where the
 proof lives; a diff that touches the first without touching the second fails.
 Rewrite both lists to match your tree. Prefer expand, migrate, contract over one

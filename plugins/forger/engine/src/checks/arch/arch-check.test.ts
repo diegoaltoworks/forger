@@ -34,7 +34,7 @@ const MAP = JSON.stringify({
 describe('runArchCheck', () => {
   test('a fixture with one forbidden import reports exactly it', () => {
     const root = repo({
-      '.claude/architecture.json': MAP,
+      '.forger/architecture.json': MAP,
       'src/core/decide.ts': "import {read} from '../shell/read';\nexport const d = read;",
       'src/core/other.ts': "import {d} from './decide';",
       'src/shell/read.ts': "import {d} from '../core/decide';\nexport const read = 1;",
@@ -45,7 +45,7 @@ describe('runArchCheck', () => {
 
   test('a new, not yet committed file is read too', () => {
     const root = repo({
-      '.claude/architecture.json': MAP,
+      '.forger/architecture.json': MAP,
       'src/core/a.ts': "import '../shell/s';",
       'src/shell/s.ts': '',
     });
@@ -55,7 +55,7 @@ describe('runArchCheck', () => {
 
   test('only files git lists are read', () => {
     const root = repo({
-      '.claude/architecture.json': MAP,
+      '.forger/architecture.json': MAP,
       'src/core/a.ts': "import '../shell/s';",
       'src/shell/s.ts': '',
     });
@@ -67,14 +67,14 @@ describe('runArchCheck', () => {
   });
 
   test('a malformed layer map is an error', () => {
-    expect(() => runArchCheck(repo({'.claude/architecture.json': '{}'}), () => '')).toThrow('layers');
+    expect(() => runArchCheck(repo({'.forger/architecture.json': '{}'}), () => '')).toThrow('layers');
   });
 });
 
 describe('runArchCheck modules', () => {
   test('reports a missing README and an internal import', () => {
     const root = repo({
-      '.claude/architecture.json': JSON.stringify({layers: [], modules: {paths: ['src/*']}}),
+      '.forger/architecture.json': JSON.stringify({layers: [], modules: {paths: ['src/*']}}),
       'src/a/index.ts': '',
       'src/a/inner.ts': '',
       'src/b/index.ts': "import '../a/inner';",
@@ -97,6 +97,6 @@ describe('the shipped architecture pack', () => {
 
   test('the starter layer map parses and passes', () => {
     const starter = readFileSync(join(pack.dir, 'files/architecture.json'), 'utf-8');
-    expect(runArchCheck(repo({'.claude/architecture.json': starter}), () => '')).toEqual([]);
+    expect(runArchCheck(repo({'.forger/architecture.json': starter}), () => '')).toEqual([]);
   });
 });

@@ -181,7 +181,7 @@ describe('checkAvoidedTerms', () => {
   test('a code span is not flagged', () => expect(run('use `runner` here')).toEqual([]));
   test('a code fence is not flagged', () => expect(run('```\nrunner\n```')).toEqual([]));
   test('compounds, plurals and paths are not flagged', () => {
-    expect(run('test-runner runners runner.lock .claude/runner.ts')).toEqual([]);
+    expect(run('test-runner runners runner.lock .forger/runner.ts')).toEqual([]);
   });
   test('a sentence ending in the word is flagged', () => expect(run('start the runner.')).toHaveLength(1));
   test('reports the opinion id', () => {

@@ -14,8 +14,8 @@ afterEach(() => {
 function repo(config: string | null): string {
   const root = mkdtempSync(join(tmpdir(), 'forger-ui-'));
   dirs.push(root);
-  mkdirSync(join(root, '.claude'));
-  if (config !== null) writeFileSync(join(root, '.claude', 'ui.json'), config);
+  mkdirSync(join(root, '.forger'));
+  if (config !== null) writeFileSync(join(root, '.forger', 'ui.json'), config);
   return root;
 }
 

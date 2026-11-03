@@ -24,7 +24,7 @@ const good = {
   version: '1.0.0',
   description: 'd',
   detect: [],
-  files: [{source: 'files/a.md', target: '.claude/a.md'}],
+  files: [{source: 'files/a.md', target: '.forger/a.md'}],
   opinions: [
     {id: 'demo.one', rung: 'rule', summary: 's', check: null},
     {id: 'demo.two', rung: 'check', summary: 's', check: 'docs'},

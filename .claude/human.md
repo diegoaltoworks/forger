@@ -5,6 +5,11 @@ clears items.
 
 ## Owner steps
 
+- **Move this repo's loop state to `.forger/`.** Forger's own files still live in
+  `.claude/`, because the loop runs from them. When convenient: stop the engine,
+  run `bun plugins/forger/bin/work.ts migrate`, commit the moves, and restart.
+  Until then every command prints one legacy-layout warning.
+
 - **Scoped GitHub token for the loop.** The machine-wide `gh` account is a
   different one; start the engine with
   `GH_TOKEN=$(gh auth token --user <owner-account>)` in its environment only.

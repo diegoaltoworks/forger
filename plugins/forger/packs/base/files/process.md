@@ -7,7 +7,7 @@ a ticket, and an issue closed by a merged PR is completed. Elsewhere,
 
 This file is the per-repo brain of the work loop. The plugin's engine and
 commands are generic; everything specific to THIS project lives here and in
-`.claude/workloop.config.json`. Fill in every section below.
+`.forger/workloop.config.json`. Fill in every section below.
 
 ## What this repo is
 
@@ -15,7 +15,7 @@ commands are generic; everything specific to THIS project lives here and in
 
 ## The gates
 
-The exact command is in `.claude/workloop.config.json` (`gates`). Never proceed
+The exact command is in `.forger/workloop.config.json` (`gates`). Never proceed
 on red. Describe here anything a gate does not catch that a reviewer should.
 
 ## The tracker

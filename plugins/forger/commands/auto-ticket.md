@@ -10,15 +10,16 @@ ticket; a human normally does not type it. It implements ONE ticket completely -
 code, tests, docs, gates, review, PR, merge - and signals the engine when done.
 
 Everything project-specific (the quality-gate command, the repo's hazards, the
-tracker settings, the doc set) lives in this repo's `.claude/process.md`
-and `.claude/workloop.config.json`. Read them; do not assume another repo's rules.
+tracker settings, the doc set) lives in this repo's `.forger/process.md`
+(`.claude/process.md` in a repo not yet migrated; the prompt names the path)
+and `.forger/workloop.config.json`. Read them; do not assume another repo's rules.
 
 ## Current state
 - **Git status:** !`git status --short`
 - **Branch:** !`git branch --show-current`
 - **Recent commits:** !`git log --oneline -5`
 
-The tracker settings are in `.claude/workloop.config.json`; its conventions are in `.claude/process.md`.
+The tracker settings are in `.forger/workloop.config.json`; its conventions are in `.forger/process.md`.
 
 ## Skill slots
 
@@ -37,18 +38,18 @@ Slots used here: `test_first` (step 4), `diagnose` (step 5), `review` (step 6)
 and `merge_conflicts` (step 8).
 
 ## Read first (in order)
-1. `.claude/process.md` - the workflow rules and the **project gotchas** (REQUIRED)
-2. `.claude/workloop.config.json` - gates, base branch, model roles, tracker
+1. `.forger/process.md` - the workflow rules and the **project gotchas** (REQUIRED)
+2. `.forger/workloop.config.json` - gates, base branch, model roles, tracker
 3. This repo's docs (whatever `process.md` points at: architecture, domain,
    decisions; `GLOSSARY.md` and ADRs if present - use their vocabulary)
-4. `.claude/inbox/*.md` - human instructions
+4. `.forger/inbox/*.md` - human instructions
 5. The backlog: with `tracker.kind` `github` the open issues carrying
-   `tracker.label` are the tickets; otherwise `.claude/backlog.json`
+   `tracker.label` are the tickets; otherwise `.forger/backlog.json`
 
 ## Your task: one full iteration
 
 ### 1. Work order
-Human instructions first: acknowledge new `.claude/inbox/*.md` items (prefix
+Human instructions first: acknowledge new `.forger/inbox/*.md` items (prefix
 with a clock) and add them to the backlog - as an issue with the intake label on GitHub,
 otherwise in `backlog.json` with a priority. Then continue.
 
@@ -116,7 +117,7 @@ Documentation is part of Definition of Done, every iteration:
 - Confirm tests assert what matters, not merely that they pass.
 - With `local` or `none`, set the ticket `status: "completed"` in
   `backlog.json`. On GitHub do not: the merge closing the issue is the status.
-- Update `.claude/inbox/*.md` (clock -> check) for anything you finished.
+- Update `.forger/inbox/*.md` (clock -> check) for anything you finished.
 
 ### 8. Commit + PR
 One `feat:` commit with everything (code + tests + docs, and backlog.json when

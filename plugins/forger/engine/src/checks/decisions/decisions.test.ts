@@ -33,9 +33,9 @@ describe('checkDecisions', () => {
     ['a non-markdown file under docs/adr does not count', [[{path: 'package.json', status: 'modified'}, {path: 'docs/adr/x.png', status: 'added'}], [added]], ['package.json:7:dependency-without-adr']],
     ['a bump needs no ADR', [[{path: 'package.json', status: 'modified'}], [{path: 'package.json', diff: {...none, bumped: ['a']}, lines: {}}]], []],
     ['a removal needs no ADR', [[{path: 'package.json', status: 'modified'}], [{path: 'package.json', diff: {...none, removed: ['a']}, lines: {}}]], []],
-    ['a layer map change with no ADR fails', [[{path: '.claude/architecture.json', status: 'modified'}], []], ['.claude/architecture.json:1:layer-map-without-adr']],
-    ['a layer map change with an ADR passes', [[{path: '.claude/architecture.json', status: 'modified'}, adr], []], []],
-    ['both decisions without an ADR report both', [[{path: '.claude/architecture.json', status: 'modified'}], [added]], ['package.json:7:dependency-without-adr', '.claude/architecture.json:1:layer-map-without-adr']],
+    ['a layer map change with no ADR fails', [[{path: '.forger/architecture.json', status: 'modified'}], []], ['.forger/architecture.json:1:layer-map-without-adr']],
+    ['a layer map change with an ADR passes', [[{path: '.forger/architecture.json', status: 'modified'}, adr], []], []],
+    ['both decisions without an ADR report both', [[{path: '.forger/architecture.json', status: 'modified'}], [added]], ['package.json:7:dependency-without-adr', '.forger/architecture.json:1:layer-map-without-adr']],
     ['an empty diff passes', [[], []], []],
   ];
   for (const [name, args, expected] of cases) {

@@ -141,7 +141,7 @@ describe('rule record', () => {
     expect(out).toContain('---\nname: push-before-slow-steps\ndescription: push as soon as gates are green\ntype: feedback\n---');
     expect(out).toContain('Owner (2026-11-03): "do not lose finished work"');
     expect(out).toContain('**Enforced by:** nothing yet');
-    expect(ruleFilePath(rule.name)).toBe('.claude/rules/push-before-slow-steps.md');
+    expect(ruleFilePath(rule.name)).toBe('.forger/rules/push-before-slow-steps.md');
   });
   test('rejects what cannot be a record', () => {
     expect(ruleProblem(rule)).toBeNull();

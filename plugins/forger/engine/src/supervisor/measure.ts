@@ -188,7 +188,7 @@ export function ruleProblem(r: RuleRecord): string | null {
 }
 
 export function ruleFilePath(name: string): string {
-  return `.claude/rules/${name}.md`;
+  return `.forger/rules/${name}.md`;
 }
 
 /** The record in the shape of templates/rule.md. */

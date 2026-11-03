@@ -5,7 +5,7 @@ turns a served app into screenshots under `docs/screenshots/`.
 
 ## Files
 
-- `ui-config.ts` - `.claude/ui.json` parsed into types, with the defaults. Pure.
+- `ui-config.ts` - `.forger/ui.json` parsed into types, with the defaults. Pure.
 - `plan.ts` - every route x viewport x theme and the deterministic file each
   lands in. Pure.
 - `wireframe.ts` - where a ticket's wireframe lives and the capture config for

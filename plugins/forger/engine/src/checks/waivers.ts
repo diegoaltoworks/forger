@@ -5,7 +5,7 @@
  * error, never a waiver. Matching is pure.
  */
 
-export const WAIVERS_PATH = '.claude/waivers.json';
+export const WAIVERS_PATH = '.forger/waivers.json';
 
 export interface Waiver {
   opinion: string;

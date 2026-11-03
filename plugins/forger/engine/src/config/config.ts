@@ -1,12 +1,14 @@
 /**
  * Work-loop configuration. Everything project-specific lives in the consumer
- * repo's `.claude/workloop.config.json`; this module defines the shape, the
+ * repo's `.forger/workloop.config.json`; this module defines the shape, the
  * defaults, and the merge. `mergeConfig` is pure and is where the tests live;
  * `loadConfig` is the thin I/O wrapper around it.
  */
 
 import {existsSync, readFileSync} from 'fs';
 import {join} from 'path';
+
+import {CONFIG_FILE, FORGER_DIR, detectLayout, toPhysical} from './layout';
 
 export interface Tier {
   /** A role (`fast`, `standard`, `deep`, or one the project defines in `models`) or a literal model id. */
@@ -36,6 +38,8 @@ export interface WorkloopConfig {
     pauseAfterFailure: number;
     maxStallIterations: number;
   };
+  /** The harness that runs the worker: `claude` (default) or `opencode`. */
+  harness: string;
   paths: {
     backlog: string;
     state: string;
@@ -46,6 +50,8 @@ export interface WorkloopConfig {
     lock: string;
     /** Append-only JSON lines, one per terminal event. */
     events: string;
+    /** The project's rules and gotchas, which the worker is told to follow. */
+    process: string;
   };
   /**
    * Where the backlog lives. `github`: issues carrying the intake `label`
@@ -86,6 +92,7 @@ export interface WorkloopConfigInput {
   models?: Record<string, string>;
   model_by_priority?: Record<string, Tier>;
   effort_multiplier?: Record<string, number>;
+  harness?: string;
   limits?: Partial<WorkloopConfig['limits']>;
   paths?: Partial<WorkloopConfig['paths']>;
   tracker?: Partial<WorkloopConfig['tracker']>;
@@ -104,6 +111,7 @@ export const DEFAULT_CONFIG: WorkloopConfig = {
   worker_command: 'forger:auto-ticket',
   gates: '',
   base_branch: 'main',
+  harness: 'claude',
   /**
    * P0 is the foundation. A subtle error there is both expensive and invisible,
    * so those tickets get the stronger model and a wider budget. A cap that
@@ -131,13 +139,14 @@ export const DEFAULT_CONFIG: WorkloopConfig = {
     maxStallIterations: 5,
   },
   paths: {
-    backlog: '.claude/backlog.json',
-    state: '.claude/state.json',
-    log: '.claude/work.log',
-    output: '.claude/output',
-    halt: '.claude/HALT',
-    lock: '.claude/runner.lock',
-    events: '.claude/events.jsonl',
+    backlog: `${FORGER_DIR}/backlog.json`,
+    state: `${FORGER_DIR}/state.json`,
+    log: `${FORGER_DIR}/work.log`,
+    output: `${FORGER_DIR}/output`,
+    halt: `${FORGER_DIR}/HALT`,
+    lock: `${FORGER_DIR}/runner.lock`,
+    events: `${FORGER_DIR}/events.jsonl`,
+    process: `${FORGER_DIR}/process.md`,
   },
   tracker: {kind: 'github', label: 'ready-for-agent', ignore: []},
   local_only: [],
@@ -174,15 +183,23 @@ export function mergeConfig(
   };
 }
 
-/** Read `.claude/workloop.config.json` and merge it over the defaults. */
+/** Resolves every configured path to where this project keeps it (the legacy folder, until migrated). */
+export function resolvePaths(config: WorkloopConfig, projectRoot: string): WorkloopConfig {
+  const layout = detectLayout(projectRoot);
+  const paths = Object.fromEntries(Object.entries(config.paths).map(([k, v]) => [k, toPhysical(layout, v)])) as WorkloopConfig['paths'];
+  return {...config, paths};
+}
+
+/** Read the project's `workloop.config.json`, merge it over the defaults, and resolve its paths. */
 export function loadConfig(projectRoot: string): WorkloopConfig {
-  const file = join(projectRoot, '.claude', 'workloop.config.json');
-  if (!existsSync(file)) return mergeConfig({});
+  const layout = detectLayout(projectRoot);
+  const file = join(projectRoot, layout.dir, CONFIG_FILE);
+  if (!existsSync(file)) return resolvePaths(mergeConfig({}), projectRoot);
   let user: WorkloopConfigInput;
   try {
     user = JSON.parse(readFileSync(file, 'utf-8')) as WorkloopConfigInput;
   } catch (e) {
-    throw new Error(`Invalid .claude/workloop.config.json: ${(e as Error).message}`);
+    throw new Error(`Invalid ${layout.dir}/${CONFIG_FILE}: ${(e as Error).message}`);
   }
-  return mergeConfig(user);
+  return resolvePaths(mergeConfig(user), projectRoot);
 }

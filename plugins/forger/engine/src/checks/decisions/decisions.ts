@@ -5,6 +5,7 @@
  * another ecosystem is a new entry, not a change to the check.
  */
 
+import {toLogical} from '../../config';
 import {ARCH_PATH} from '../arch';
 import type {Finding} from '../waivers';
 
@@ -97,7 +98,7 @@ export function checkDecisions(changes: FileChange[], manifests: ManifestChange[
       });
     }
   }
-  if (changes.some(c => c.path === ARCH_PATH)) {
+  if (changes.some(c => toLogical(c.path) === ARCH_PATH)) {
     findings.push({
       file: ARCH_PATH,
       line: 1,

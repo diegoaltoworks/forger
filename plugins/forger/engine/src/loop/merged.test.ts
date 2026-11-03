@@ -52,33 +52,33 @@ describe('verifyMerged', () => {
 
 describe('dirtyEntries', () => {
   test('skips ignored files and directories, keeps the rest', () => {
-    const porcelain = [' M .claude/state.json', '?? .claude/output/', ' M src/a.ts'].join('\n');
-    expect(dirtyEntries(porcelain, ['.claude/state.json', '.claude/output'])).toEqual([
+    const porcelain = [' M .forger/state.json', '?? .forger/output/', ' M src/a.ts'].join('\n');
+    expect(dirtyEntries(porcelain, ['.forger/state.json', '.forger/output'])).toEqual([
       ' M src/a.ts',
     ]);
   });
 
   test('reads a first line whose leading space the runner trimmed', () => {
-    expect(dirtyEntries('M .claude/work.log', ['.claude/work.log'])).toEqual([]);
+    expect(dirtyEntries('M .forger/work.log', ['.forger/work.log'])).toEqual([]);
   });
 
   test('a rename is judged by its target', () => {
-    expect(dirtyEntries('R  a.ts -> .claude/state.json', ['.claude/state.json'])).toEqual([]);
+    expect(dirtyEntries('R  a.ts -> .forger/state.json', ['.forger/state.json'])).toEqual([]);
   });
 
   test('a sibling that merely shares a prefix is not ignored', () => {
-    expect(dirtyEntries(' M .claude/state.json.bak', ['.claude/state.json'])).toHaveLength(1);
+    expect(dirtyEntries(' M .forger/state.json.bak', ['.forger/state.json'])).toHaveLength(1);
   });
 });
 
 describe('verifyMerged with ignored paths', () => {
   const answers = {
     'git branch --show-current': 'main',
-    'git status --porcelain': ' M .claude/settings.local.json',
+    'git status --porcelain': ' M .forger/settings.local.json',
     'git rev-list --count origin/main..main': '0',
   };
   test('a tree dirty only in ignored files is clean', () => {
-    expect(verifyMerged(stubRunner(answers), 'main', ['.claude/settings.local.json'])).toBeNull();
+    expect(verifyMerged(stubRunner(answers), 'main', ['.forger/settings.local.json'])).toBeNull();
   });
   test('the same tree is dirty when nothing is ignored', () => {
     expect(verifyMerged(stubRunner(answers), 'main')).toBe('working tree is dirty');

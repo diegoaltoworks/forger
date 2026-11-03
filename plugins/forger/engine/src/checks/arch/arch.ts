@@ -8,7 +8,7 @@
 
 import {globToRegExp, type Finding} from '../waivers';
 
-export const ARCH_PATH = '.claude/architecture.json';
+export const ARCH_PATH = '.forger/architecture.json';
 export const ARCH_OPINION = 'architecture.dependency-rule';
 
 export interface Layer {

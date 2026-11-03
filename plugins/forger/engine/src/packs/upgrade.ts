@@ -9,6 +9,7 @@ import {existsSync, mkdirSync, readFileSync, writeFileSync} from 'fs';
 import {dirname, join} from 'path';
 
 import {LOCK_PATH, loadPacks, parseLock, renderLock, sha256, type Lock, type LockedFile, type LockedPack} from './packs';
+import {forgerPath} from '../config';
 
 export type UpgradeAction =
   | 'unchanged' // nothing differs
@@ -63,7 +64,7 @@ function write(path: string, content: string): void {
 }
 
 export function runUpgrade(projectRoot: string, pluginRoot: string): UpgradeResult {
-  const lockPath = join(projectRoot, LOCK_PATH);
+  const lockPath = forgerPath(projectRoot, LOCK_PATH);
   if (!existsSync(lockPath)) throw new Error(`${LOCK_PATH} not found: run setup before upgrading`);
   const lock = parseLock(readFileSync(lockPath, 'utf-8'));
   const available = loadPacks(pluginRoot);
@@ -77,7 +78,7 @@ export function runUpgrade(projectRoot: string, pluginRoot: string): UpgradeResu
 
     for (const f of pack.manifest.files) {
       const upstream = readFileSync(join(pack.dir, f.source), 'utf-8');
-      const target = join(projectRoot, f.target);
+      const target = forgerPath(projectRoot, f.target);
       const lockHash = lockedByPath.get(f.target) ?? null;
       const disk = hashOf(target);
       const action = classify({lock: lockHash, disk, upstream: sha256(upstream)});
@@ -90,7 +91,7 @@ export function runUpgrade(projectRoot: string, pluginRoot: string): UpgradeResu
         next.push({path: f.target, sha256: sha256(upstream)});
       } else if (action === 'conflict') {
         entry.upstreamFile = f.target + UPSTREAM_SUFFIX;
-        write(join(projectRoot, entry.upstreamFile), upstream);
+        write(forgerPath(projectRoot, entry.upstreamFile), upstream);
         next.push({path: f.target, sha256: lockHash as string});
       } else if (lockHash !== null) {
         next.push({path: f.target, sha256: lockHash});

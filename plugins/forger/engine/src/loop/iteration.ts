@@ -83,6 +83,7 @@ export async function runIteration(ctx: IterationContext, iteration: number, cou
     sessionId,
     tier,
     model: resolveModel(tier.model, ctx.config.models),
+    workerCommand: ctx.config.worker_command,
     cwd: ctx.projectRoot,
     timeoutMinutes,
     killGraceSeconds,

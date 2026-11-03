@@ -12,6 +12,7 @@ import {facts} from './facts';
 import {halt, reset, resume, run, status, watch} from './loop';
 import {measure} from './measure';
 import {merge} from './merge';
+import {migrate} from './migrate';
 import {opinions, packs} from './packs';
 import {retro} from './retro';
 import {screenshot} from './screenshot';
@@ -23,6 +24,7 @@ export const COMMANDS: Command[] = [
   run,
   status,
   setup,
+  migrate,
   packs,
   opinions,
   skills,
@@ -57,7 +59,7 @@ Stopping behaviour:
   - Stops if the HALT file exists
   - Stops on maxConsecutiveFailures consecutive failures
 
-Config: .claude/workloop.config.json in the consumer repo (see plugin README).`;
+Config: .forger/workloop.config.json in the consumer repo (see plugin README).`;
 
 export function renderHelp(commands: Command[] = COMMANDS): string {
   return `

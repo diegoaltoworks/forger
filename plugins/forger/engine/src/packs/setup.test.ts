@@ -3,8 +3,9 @@ import {existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync}
 import {tmpdir} from 'os';
 import {join, resolve} from 'path';
 
+import {opencodeHarness} from '../adapters';
 import {sha256} from './packs';
-import {GITIGNORE_LINES, mergeGitignore, renderConfig, runSetup, withCheck} from './setup';
+import {gitignoreLines, mergeGitignore, renderConfig, runSetup, withCheck} from './setup';
 
 const PLUGIN_ROOT = resolve(import.meta.dir, '../../..');
 const dirs: string[] = [];
@@ -63,10 +64,10 @@ describe('renderConfig', () => {
 
 describe('mergeGitignore', () => {
   test('adds only the missing lines, on their own line', () => {
-    const r = mergeGitignore('node_modules\n.claude/HALT', ['.claude/HALT', '.claude/state.json']);
-    expect(r.added).toEqual(['.claude/state.json']);
-    expect(r.kept).toEqual(['.claude/HALT']);
-    expect(r.text).toBe('node_modules\n.claude/HALT\n.claude/state.json\n');
+    const r = mergeGitignore('node_modules\n.forger/HALT', ['.forger/HALT', '.forger/state.json']);
+    expect(r.added).toEqual(['.forger/state.json']);
+    expect(r.kept).toEqual(['.forger/HALT']);
+    expect(r.text).toBe('node_modules\n.forger/HALT\n.forger/state.json\n');
   });
   test('leaves the text untouched when nothing is missing', () => {
     expect(mergeGitignore('a\n', ['a']).text).toBe('a\n');
@@ -78,7 +79,7 @@ describe('runSetup', () => {
     const root = emptyProject();
     const first = runSetup(root, PLUGIN_ROOT, {gates: 'make test'});
     expect(first.files.every(f => f.action === 'written')).toBe(true);
-    expect(first.gitignore.added).toEqual(GITIGNORE_LINES);
+    expect(first.gitignore.added).toEqual(gitignoreLines('.forger'));
     for (const f of first.files) expect(existsSync(join(root, f.path))).toBe(true);
 
     const second = runSetup(root, PLUGIN_ROOT, {gates: 'other'});
@@ -89,15 +90,15 @@ describe('runSetup', () => {
   test('never overwrites a file the project already has', () => {
     const root = emptyProject();
     runSetup(root, PLUGIN_ROOT, {});
-    writeFileSync(join(root, '.claude/process.md'), 'mine');
+    writeFileSync(join(root, '.forger/process.md'), 'mine');
     runSetup(root, PLUGIN_ROOT, {});
-    expect(readFileSync(join(root, '.claude/process.md'), 'utf-8')).toBe('mine');
+    expect(readFileSync(join(root, '.forger/process.md'), 'utf-8')).toBe('mine');
   });
 
   test('the installed process.md carries principle 0 and the default gotchas', () => {
     const root = emptyProject();
     runSetup(root, PLUGIN_ROOT, {});
-    const process = readFileSync(join(root, '.claude/process.md'), 'utf-8');
+    const process = readFileSync(join(root, '.forger/process.md'), 'utf-8');
     expect(process).toContain('Determinism first');
     expect(process).toContain('principle 0');
     expect(process).toContain('Comments say why');
@@ -106,7 +107,7 @@ describe('runSetup', () => {
   test('the gates written into the config include the check', () => {
     const root = emptyProject();
     runSetup(root, PLUGIN_ROOT, {gates: 'make test'});
-    const config = JSON.parse(readFileSync(join(root, '.claude/workloop.config.json'), 'utf-8'));
+    const config = JSON.parse(readFileSync(join(root, '.forger/workloop.config.json'), 'utf-8'));
     expect(config.gates).toStartWith('make test && bun ');
     expect(config.gates).toEndWith('bin/work.ts check');
   });
@@ -115,14 +116,14 @@ describe('runSetup', () => {
     const root = emptyProject();
     runSetup(root, PLUGIN_ROOT, {});
     for (const n of ['ticket', 'pr', 'work-order', 'report', 'retro', 'rule']) {
-      expect(existsSync(join(root, `.claude/templates/${n}.md`))).toBe(true);
+      expect(existsSync(join(root, `.forger/templates/${n}.md`))).toBe(true);
     }
   });
 
   test('writes a lock whose hashes match the installed files, and leaves it alone on a second run', () => {
     const root = emptyProject();
     runSetup(root, PLUGIN_ROOT, {});
-    const lockPath = join(root, '.claude/forger.lock.json');
+    const lockPath = join(root, '.forger/forger.lock.json');
     const lock = JSON.parse(readFileSync(lockPath, 'utf-8'));
     expect(lock.packs.map((p: {id: string}) => p.id)).toEqual(['base']);
     expect(lock.packs[0].files.length).toBeGreaterThan(0);
@@ -137,16 +138,50 @@ describe('runSetup', () => {
 
   test('a file the project already had is not recorded in the lock', () => {
     const root = emptyProject();
-    mkdirSync(join(root, '.claude'));
-    writeFileSync(join(root, '.claude/process.md'), 'mine');
+    mkdirSync(join(root, '.forger'));
+    writeFileSync(join(root, '.forger/process.md'), 'mine');
     runSetup(root, PLUGIN_ROOT, {});
-    const lock = JSON.parse(readFileSync(join(root, '.claude/forger.lock.json'), 'utf-8'));
-    expect(lock.packs[0].files.map((f: {path: string}) => f.path)).not.toContain('.claude/process.md');
+    const lock = JSON.parse(readFileSync(join(root, '.forger/forger.lock.json'), 'utf-8'));
+    expect(lock.packs[0].files.map((f: {path: string}) => f.path)).not.toContain('.forger/process.md');
   });
 
   test('an unknown pack is an error and writes nothing', () => {
     const root = emptyProject();
     expect(() => runSetup(root, PLUGIN_ROOT, {packs: ['nope']})).toThrow('Unknown pack: nope');
+    expect(existsSync(join(root, '.forger'))).toBe(false);
+  });
+});
+
+describe('runSetup layout and harness', () => {
+  test('a fresh setup writes only .forger/ and the gitignore', () => {
+    const root = emptyProject();
+    const result = runSetup(root, PLUGIN_ROOT, {gates: 'make'});
+    expect(result.files.every(f => f.path.startsWith('.forger/'))).toBe(true);
     expect(existsSync(join(root, '.claude'))).toBe(false);
+    expect(JSON.parse(readFileSync(join(root, '.forger/workloop.config.json'), 'utf-8')).harness).toBeUndefined();
+  });
+
+  test('setup in a legacy repo keeps writing where the files already are', () => {
+    const root = emptyProject();
+    mkdirSync(join(root, '.claude'));
+    writeFileSync(join(root, '.claude/workloop.config.json'), '{}');
+    runSetup(root, PLUGIN_ROOT, {});
+    expect(existsSync(join(root, '.claude/process.md'))).toBe(true);
+    expect(existsSync(join(root, '.forger'))).toBe(false);
+    expect(readFileSync(join(root, '.gitignore'), 'utf-8')).toContain('.claude/runner.lock');
+  });
+
+  test('a harness records its id and has its commands installed, once, packaged for it', () => {
+    const root = emptyProject();
+    const first = runSetup(root, PLUGIN_ROOT, {harness: opencodeHarness});
+    expect(JSON.parse(readFileSync(join(root, '.forger/workloop.config.json'), 'utf-8')).harness).toBe('opencode');
+    const command = join(root, '.opencode/commands/forger-auto-ticket.md');
+    const text = readFileSync(command, 'utf-8');
+    expect(text).not.toContain('allowed-tools');
+    expect(text).not.toContain('CLAUDE_PLUGIN_ROOT');
+    expect(text).toContain(PLUGIN_ROOT);
+    expect(first.files.find(f => f.path === '.opencode/commands/forger-auto-ticket.md')?.action).toBe('written');
+    const second = runSetup(root, PLUGIN_ROOT, {harness: opencodeHarness});
+    expect(second.files.every(f => f.action === 'kept')).toBe(true);
   });
 });

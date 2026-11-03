@@ -3,10 +3,12 @@
  * Nothing that already exists is overwritten, so a second run writes nothing.
  */
 
-import {existsSync, mkdirSync, readFileSync, writeFileSync} from 'fs';
+import {existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync} from 'fs';
 import {dirname, join} from 'path';
 
 import {LOCK_PATH, loadPacks, mergeLock, parseLock, renderLock, selectPacks, sha256, type Lock, type LockedFile} from './packs';
+import type {Harness} from '../ports';
+import {CONFIG_FILE, FORGER_DIR, detectLayout, forgerPath} from '../config';
 
 export interface SetupOptions {
   gates?: string;
@@ -16,6 +18,8 @@ export interface SetupOptions {
   skills?: Record<string, string>;
   /** Pack ids to install; defaults to `base`. */
   packs?: string[];
+  /** The harness the worker runs in; its commands are installed where it reads them. */
+  harness?: Harness;
 }
 
 export interface SetupEntry {
@@ -31,14 +35,9 @@ export interface SetupResult {
 const CHECK_MARKER = /\bwork\.ts\s+check\b|\bcheck docs\b/;
 
 /** Per-run files a project never commits. */
-export const GITIGNORE_LINES = [
-  '.claude/state.json',
-  '.claude/work.log',
-  '.claude/output/',
-  '.claude/HALT',
-  '.claude/runner.lock',
-  '.claude/events.jsonl',
-];
+export function gitignoreLines(dir: string): string[] {
+  return ['state.json', 'work.log', 'output/', 'HALT', 'runner.lock', 'events.jsonl'].map(f => `${dir}/${f}`);
+}
 
 /** The gates always end with the check command, run from the plugin that is installed now. */
 export function withCheck(gates: string, checkCommand: string): string {
@@ -54,6 +53,7 @@ export function renderConfig(template: string, opts: SetupOptions, checkCommand:
   config.gates = withCheck(opts.gates ?? config.gates, checkCommand);
   if (opts.baseBranch) config.base_branch = opts.baseBranch;
   if (opts.skills) config.skills = {...opts.skills};
+  if (opts.harness) config.harness = opts.harness.id;
   if (opts.trackerKind) config.tracker = {...config.tracker, kind: opts.trackerKind};
   return JSON.stringify(config, null, 2) + '\n';
 }
@@ -75,6 +75,22 @@ function writeIfAbsent(path: string, content: () => string): 'written' | 'kept' 
   return 'written';
 }
 
+/** The plugin's commands in the harness's format, where it reads them. Derived files, so a changed one is rewritten. */
+function installCommands(projectRoot: string, pluginRoot: string, harness: Harness): SetupEntry[] {
+  const dir = join(pluginRoot, 'commands');
+  const names = existsSync(dir) ? readdirSync(dir).filter(f => f.endsWith('.md')).map(f => f.slice(0, -3)).sort() : [];
+  return names.flatMap((name): SetupEntry[] => {
+    const rel = harness.commandPath(name);
+    if (rel === null) return [];
+    const target = join(projectRoot, rel);
+    const content = harness.packageCommand(readFileSync(join(dir, `${name}.md`), 'utf-8'), pluginRoot);
+    if (existsSync(target) && readFileSync(target, 'utf-8') === content) return [{path: rel, action: 'kept'}];
+    mkdirSync(dirname(target), {recursive: true});
+    writeFileSync(target, content);
+    return [{path: rel, action: 'written'}];
+  });
+}
+
 export function runSetup(projectRoot: string, pluginRoot: string, opts: SetupOptions): SetupResult {
   const templates = join(pluginRoot, 'templates');
   const read = (name: string) => readFileSync(join(templates, name), 'utf-8');
@@ -85,8 +101,8 @@ export function runSetup(projectRoot: string, pluginRoot: string, opts: SetupOpt
 
   const files: SetupEntry[] = [
     {
-      path: '.claude/workloop.config.json',
-      action: writeIfAbsent(join(projectRoot, '.claude/workloop.config.json'), () =>
+      path: `${FORGER_DIR}/${CONFIG_FILE}`,
+      action: writeIfAbsent(forgerPath(projectRoot, `${FORGER_DIR}/${CONFIG_FILE}`), () =>
         renderConfig(read('workloop.config.json'), opts, check)
       ),
     },
@@ -95,14 +111,14 @@ export function runSetup(projectRoot: string, pluginRoot: string, opts: SetupOpt
     const written: LockedFile[] = [];
     for (const f of manifest.files) {
       const content = readFileSync(join(dir, f.source), 'utf-8');
-      const action = writeIfAbsent(join(projectRoot, f.target), () => content);
+      const action = writeIfAbsent(forgerPath(projectRoot, f.target), () => content);
       files.push({path: f.target, action});
       if (action === 'written') written.push({path: f.target, sha256: sha256(content)});
     }
     return {manifest, written};
   });
 
-  const lockPath = join(projectRoot, LOCK_PATH);
+  const lockPath = forgerPath(projectRoot, LOCK_PATH);
   const before: Lock = existsSync(lockPath) ? parseLock(readFileSync(lockPath, 'utf-8')) : {packs: []};
   const lockText = renderLock(mergeLock(before, installs));
   const lockExists = existsSync(lockPath);
@@ -113,8 +129,10 @@ export function runSetup(projectRoot: string, pluginRoot: string, opts: SetupOpt
   }
   files.push({path: LOCK_PATH, action: lockChanged ? 'written' : 'kept'});
 
+  if (opts.harness) files.push(...installCommands(projectRoot, pluginRoot, opts.harness));
+
   const ignorePath = join(projectRoot, '.gitignore');
-  const merged = mergeGitignore(existsSync(ignorePath) ? readFileSync(ignorePath, 'utf-8') : '', GITIGNORE_LINES);
+  const merged = mergeGitignore(existsSync(ignorePath) ? readFileSync(ignorePath, 'utf-8') : '', gitignoreLines(detectLayout(projectRoot).dir));
   if (merged.added.length > 0) writeFileSync(ignorePath, merged.text);
   return {files, gitignore: {added: merged.added, kept: merged.kept}};
 }

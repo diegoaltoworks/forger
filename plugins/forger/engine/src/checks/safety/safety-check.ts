@@ -14,6 +14,7 @@ import {parseNameStatus} from '../decisions';
 import type {CommandRunner} from '../../ports';
 import {SAFETY_PATH, checkDataForward, checkSecrets, isEnvFile, parseAddedLines, parseSafetyConfig, type AddedLine} from './safety';
 import type {Finding} from '../waivers';
+import {forgerPath} from '../../config';
 
 function mergeBase(run: CommandRunner, base: string): string {
   for (const ref of [base, `origin/${base}`]) {
@@ -24,7 +25,7 @@ function mergeBase(run: CommandRunner, base: string): string {
 }
 
 export function runSafetyCheck(projectRoot: string, run: CommandRunner): Finding[] {
-  const configPath = join(projectRoot, SAFETY_PATH);
+  const configPath = forgerPath(projectRoot, SAFETY_PATH);
   if (!existsSync(configPath)) throw new Error(`${SAFETY_PATH} not found; the safety pack's config is required`);
   const config = parseSafetyConfig(readFileSync(configPath, 'utf-8'));
   const mb = mergeBase(run, loadConfig(projectRoot).base_branch);

@@ -77,7 +77,7 @@ function escapeRegExp(text: string): string {
 
 /**
  * Whole-word, case-insensitive match of a model or vendor name. A name inside a
- * path or a dotted/dashed identifier (`.claude/`, `some-claude-thing`) is not prose.
+ * path or a dotted/dashed identifier (`.forger/`, `some-claude-thing`) is not prose.
  */
 export function modelNames(names: string[]): LineRule {
   if (names.length === 0) return () => [];
