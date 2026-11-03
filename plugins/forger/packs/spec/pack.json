@@ -1,0 +1,17 @@
+{
+  "id": "spec",
+  "version": "1.0.0",
+  "description": "Requirements kept checked after merge: tickets name the requirements they satisfy, and check spec decides over a requirement report.",
+  "detect": [],
+  "files": [
+    {"source": "files/spec.md", "target": ".forger/opinions/spec.md"}
+  ],
+  "opinions": [
+    {"id": "spec.ticket-names-requirements", "rung": "check", "summary": "A ticket carries a Satisfies: line naming the requirement IDs it changes; an issue that names none is flagged.", "check": "spec"},
+    {"id": "spec.named-requirements-satisfied", "rung": "check", "summary": "Every requirement the ticket names is satisfied in the report; an unsatisfied MUST fails, a SHOULD warns, and a requirement that cannot be measured is a gap.", "check": "spec"},
+    {"id": "spec.must-never-regresses", "rung": "check", "summary": "A MUST that was satisfied on the base branch is still satisfied.", "check": "spec"},
+    {"id": "spec.validator-not-requirement", "rung": "rule", "summary": "A failing validator means the code or the validator is wrong, never the requirement; a requirement changes only through intake.", "check": null}
+  ],
+  "checks": ["spec"],
+  "slots": []
+}

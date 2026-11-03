@@ -10,6 +10,8 @@ implements them and `cli/` hands the implementations in.
   `capturing` to see one as the other. Pure.
 - `ui.ts` - `AppServer`, `Screenshotter` and `AccessibilityAuditor`, what
   `screenshot` and `check a11y` are written against, and the error for an environment that cannot capture. Types only.
+- `spec.ts` - `SpecProvider` and the normalized requirement report `check spec`
+  decides over. Types only.
 - `agent.ts` - `AgentRunner`, what a worker run is given and what it returns.
   Types only.
 - `harness.ts` - `Harness`, what differs between agent tools: the headless spawn,

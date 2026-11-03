@@ -101,3 +101,11 @@ describe('coverage gaps in the report', () => {
     expect(buildReport([{check: 'docs', findings: []}], []).results[0].gaps).toEqual([]);
   });
 });
+
+describe('buildReport with a spec gap', () => {
+  test('a MUST gap fails; a SHOULD gap leaves the check unmeasured', () => {
+    const must = {file: 'spec', opinion: 'spec.named-requirements-satisfied', modality: 'MUST' as const, detail: 'x'};
+    expect(buildReport([{check: 'spec', findings: [], gaps: [must]}], []).results[0].status).toBe('failed');
+    expect(buildReport([{check: 'spec', findings: [], gaps: [{...must, modality: 'SHOULD'}]}], []).results[0].status).toBe('unmeasured');
+  });
+});

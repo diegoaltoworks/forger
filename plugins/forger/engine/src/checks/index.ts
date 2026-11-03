@@ -8,3 +8,4 @@ export * from './docs';
 export * from './safety';
 export * from './testing';
 export * from './ui';
+export * from './spec';
