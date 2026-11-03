@@ -4,6 +4,7 @@ export * from './decline-io';
 export * from './events';
 export * from './infra';
 export * from './iteration-log';
+export * from './labels';
 export * from './lock';
 export * from './logger';
 export * from './merge';

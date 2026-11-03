@@ -8,9 +8,8 @@
 import {existsSync, readFileSync, unlinkSync, writeFileSync} from 'fs';
 
 import type {CommandRunner} from '../ports';
+import {declineRelabelProblems, listIssueLabels, NEEDS_INFO_LABEL} from './labels';
 import {issueNumber, parseDeclineRecord, type DeclineRecord} from './decline';
-
-export const NEEDS_INFO_LABEL = 'needs-info';
 
 function shellQuote(s: string): string {
   return `'${s.replace(/'/g, `'\\''`)}'`;
@@ -49,6 +48,10 @@ export function leaveQueue(run: CommandRunner, target: DeclineTarget, record: De
     const issue = issueNumber(record.ticket);
     if (issue === null) throw new Error(`"${record.ticket}" is not an issue-<n> ticket, so there is no issue to relabel`);
     for (const cmd of githubDeclineCommands(issue, target.intakeLabel, record)) run(cmd);
+    const problems = declineRelabelProblems(listIssueLabels(run, issue), target.intakeLabel);
+    if (problems.length > 0) {
+      throw new Error(`issue #${issue} was not relabelled: ${problems.join('; ')} (does the label exist? run setup)`);
+    }
     return `issue #${issue} relabelled ${NEEDS_INFO_LABEL}`;
   }
   const data = JSON.parse(readFileSync(target.backlogFile, 'utf-8')) as {features?: Record<string, {status?: string}>};

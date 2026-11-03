@@ -36,6 +36,11 @@ describe('orient', () => {
     expect(p.action).toBe('surface_halt');
     expect(p.reason).toBe('cut off before merge');
   });
+  test('a missing loop label is an anomaly', () => {
+    const p = orient({...base, status: status(), missingLabels: ['needs-info']});
+    expect(p.anomalies.join(' ')).toContain('needs-info');
+    expect(orient({...base, status: status(), missingLabels: []}).anomalies).toEqual([]);
+  });
   test('a dead runner off the base branch is an anomaly', () => {
     const p = orient({...base, branch: 'feat/x', status: status({pid: 9})});
     expect(p.anomalies.length).toBe(2);

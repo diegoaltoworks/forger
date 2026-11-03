@@ -130,7 +130,7 @@ the pick's completion. A decline record for the pick, with nothing built, is
 `decline --ticket <id> --reason blocked|too-large|unclear --detail <text>`: the
 command writes the record and takes the ticket out of the backlog (on GitHub the
 intake label becomes `needs-info` and the detail is commented on the issue), so
-the same ticket is not picked again. A decline counts toward the stall counter,
+the same ticket is not picked again. `decline` reads the issue's labels back and exits non-zero, naming the label, when the relabel did not hold; `setup` creates any loop label the repository lacks, and `orient` reports a missing one as an anomaly. A decline counts toward the stall counter,
 and `limits.maxConsecutiveDeclines` declines in a row halt the loop with a line
 naming each ticket and reason; `report` lists the declined tickets. A record for
 a different ticket is a failure. The iteration log header always prints the engine's pick next to the
