@@ -150,10 +150,11 @@ can reference real numbers. Then:
 - `gh issue create --title "<ticket title>" --label <tracker.label> --body "<body>"`
   with a body of: what to build (end-to-end behaviour), acceptance criteria as
   checkboxes, and a `Blocked by` list.
-- Wire `depends_on` as GitHub's native blocked-by dependency where available
-  (`gh api --method POST repos/<owner>/<repo>/issues/<child>/dependencies/blocked_by -F issue_id=<blocker database id>`;
-  the database id is `gh api repos/<owner>/<repo>/issues/<n> --jq .id`). Fall
-  back to the `Blocked by: #n` line if dependencies are unavailable.
+- Link every issue the body lists under `Blocked by` as a native blocked-by with
+  `link-blockers --issue <n>` (the work command's `bin/work.ts`), after the
+  blockers exist. The backlog reader also treats the body's list as
+  dependencies and reports a mismatch, but the native link is what the tracker
+  shows.
 - Record each number on its ticket as `issue`. Check for an existing issue with
   the same title first; adopt it rather than duplicating.
 

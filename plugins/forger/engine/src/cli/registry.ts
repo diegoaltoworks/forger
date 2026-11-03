@@ -24,6 +24,7 @@ import {setup} from './setup';
 import {skills} from './skills';
 import {slice} from './slice';
 import {orient, report} from './supervisor';
+import {linkBlockersCommand} from './link-blockers';
 import {verify} from './verify';
 import {rebase, worktree} from './worktree';
 
@@ -40,6 +41,7 @@ export const COMMANDS: Command[] = [
   screenshot,
   brand,
   backlog,
+  linkBlockersCommand,
   orient,
   report,
   facts,

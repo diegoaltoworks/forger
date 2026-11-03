@@ -26,6 +26,10 @@ describe('orient', () => {
   test('a live runner is attached to, never doubled', () => {
     expect(orient({...base, status: status({alive: true})}).action).toBe('attach');
   });
+  test('dependencies the text and the tracker disagree on are anomalies', () => {
+    const plan = orient({...base, status: status(), backlogAnomalies: ['#82 lists #81 under Blocked by but it is not linked as blocked-by']});
+    expect(plan.anomalies).toEqual(['#82 lists #81 under Blocked by but it is not linked as blocked-by']);
+  });
   test('no runner and work left starts one', () => {
     expect(orient({...base, status: status()}).action).toBe('start');
   });

@@ -7,6 +7,10 @@ reads; a tracker is an adapter behind it.
 
 - `backlog.ts` - the `Backlog` interface and the pure selection: workable
   tickets, the next pick, the model tier. Pure.
+- `blocked-by.ts` - the issue numbers under a ticket's `Blocked by` heading,
+  and where they disagree with the native blocked-by. Pure.
+- `link-blockers.ts` - links those numbers as native blocked-by, through a
+  `CommandRunner` handed in.
 - `schedule.ts` - which tickets may run together: the Knock-on footprint,
   the folder map, `schedule` for a pair and `pick` over the ordered
   candidates (ADR 0011). Pure, no I/O.
