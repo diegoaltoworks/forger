@@ -1,0 +1,20 @@
+{
+  "id": "testing",
+  "version": "1.0.0",
+  "description": "The testing habits forger's engine relies on: tables for the pure core, fixtures for adapters, fixes with tests, coverage that never drops.",
+  "detect": [],
+  "files": [
+    {"source": "files/testing.md", "target": ".claude/opinions/testing.md"},
+    {"source": "files/testing.json", "target": ".claude/testing.json"}
+  ],
+  "opinions": [
+    {"id": "testing.tables", "rung": "rule", "summary": "The pure core is tested by tables of input and expected output.", "check": null},
+    {"id": "testing.fixtures", "rung": "rule", "summary": "Adapters are tested on recorded real output, never on a live service.", "check": null},
+    {"id": "testing.fix-with-test", "rung": "check", "summary": "A branch with a fix: commit adds or changes a test file.", "check": "tests"},
+    {"id": "testing.no-network", "rung": "check", "summary": "Unit test files do not import network or process-spawning modules.", "check": "tests"},
+    {"id": "testing.behaviour-names", "rung": "rule", "summary": "Tests are named for behaviour, not for the function they call.", "check": null},
+    {"id": "testing.coverage-ratchet", "rung": "check", "summary": "Line coverage never falls below the generated baseline; the baseline only goes up.", "check": "coverage"}
+  ],
+  "checks": ["tests", "coverage"],
+  "slots": []
+}

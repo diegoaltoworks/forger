@@ -25,7 +25,7 @@ step that changes a shape in place.
 
 ## Lockfiles are frozen in the gates
 
-The gates install with the frozen-lockfile flag of your package manager, so a
+The gates install with the frozen-lockfile flag of your dependency installer, so a
 dependency never changes underneath a green run. A lockfile that would change is
 a failed gate, fixed by committing the lockfile deliberately.
 

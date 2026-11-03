@@ -56,15 +56,29 @@
     },
     {
       "id": "safety",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "files": [
         {
           "path": ".claude/opinions/safety.md",
-          "sha256": "a2b0fc95082c0a1eda1e27cdf1f73139d2061bd322eea1f5d4968635d03a930d"
+          "sha256": "a15654faf8593762468c89b637385ae8deaf95dfa64c4d3abc56c5655687671b"
         },
         {
           "path": ".claude/safety.json",
           "sha256": "67c256049a81bbb8a88f80fb86e923f02c7f99413a469de2e9ecdbb23493d315"
+        }
+      ]
+    },
+    {
+      "id": "testing",
+      "version": "1.0.0",
+      "files": [
+        {
+          "path": ".claude/opinions/testing.md",
+          "sha256": "05ef79162a37ae61aa5e48bc01b9fbd0e49eb2dab7658244851103b67ca41d9b"
+        },
+        {
+          "path": ".claude/testing.json",
+          "sha256": "c80ecd63e389ec0d08908b3a91c1bd100237a21dbb067cc31b389b160f5a8d37"
         }
       ]
     }

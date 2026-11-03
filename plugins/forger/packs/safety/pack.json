@@ -1,6 +1,6 @@
 {
   "id": "safety",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Nothing secret in the repo, and stored data carried forward: secrets and migrations checked by check safety.",
   "detect": [],
   "files": [

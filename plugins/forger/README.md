@@ -207,6 +207,9 @@ bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts check [--json]       # every check the ins
 bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts check arch [--json]  # with the architecture pack: imports that cross a forbidden edge of .claude/architecture.json
 bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts check decisions [--json]  # with the architecture pack: a new dependency or layer-map change needs an ADR in the diff
 bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts check safety [--json]  # with the safety pack: added secrets and env files, and stored-shape changes with no test
+bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts check tests [--json]  # with the testing pack: a fix: commit needs a test change; unit tests may not import network or process modules
+bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts check coverage [--json]  # with the testing pack: line coverage must not fall below the generated baseline
+bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts check coverage --update  # raise the baseline to the current coverage; never lowers it
 bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts check docs [--json]  # writing rules: ASCII punctuation, no emails or home paths, no hard-coded skill calls in commands or templates, optional .forger-denylist; with the docs pack also links, anchors, images, mermaid blocks and avoided glossary terms
 bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts resume             # clear a HALT
 ```
