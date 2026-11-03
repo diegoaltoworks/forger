@@ -3,7 +3,7 @@ import {existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync} from 'fs';
 import {tmpdir} from 'os';
 import {join} from 'path';
 
-import type {PRD} from './backlog';
+import {type BacklogData, backlogFrom} from './backlog';
 import type {ClaudeResult, RunClaudeOptions} from './claude';
 import {mergeConfig} from './config';
 import {AutomationRunner} from './runner';
@@ -14,7 +14,7 @@ afterEach(() => {
   for (const d of dirs.splice(0)) rmSync(d, {recursive: true, force: true});
 });
 
-const backlog: PRD = {
+const backlog: BacklogData = {
   features: {
     the_ticket: {priority: 'P1', status: 'not_started', depends_on: []},
   },
@@ -53,7 +53,7 @@ function sceneRunner(scene: GitScene, spawned: () => boolean) {
 function runnerWith(
   result: ClaudeResult,
   scene: GitScene = {},
-  prd: PRD = backlog
+  data: BacklogData = backlog
 ): {
   runner: AutomationRunner;
   root: string;
@@ -63,13 +63,12 @@ function runnerWith(
   dirs.push(root);
   const calls: RunClaudeOptions[] = [];
   const config = mergeConfig({limits: {timeoutMinutes: 7, killGraceSeconds: 11, maxStallIterations: 2}});
-  const runner = new AutomationRunner(root, config, {
+  const runner = new AutomationRunner(root, config, backlogFrom(() => data, config), {
     runClaude: async opts => {
       calls.push(opts);
       return result;
     },
     gitRunner: sceneRunner(scene, () => calls.length > 0),
-    loadPRD: () => prd,
     uuid: () => '00000000-0000-0000-0000-000000000000',
   });
   return {runner, root, calls};
@@ -79,7 +78,7 @@ function readState(root: string) {
   return JSON.parse(readFileSync(join(root, '.claude', 'state.json'), 'utf-8'));
 }
 
-const done: PRD = {
+const done: BacklogData = {
   features: {
     the_ticket: {priority: 'P1', status: 'completed', depends_on: []},
     other: {priority: 'P1', status: 'completed', depends_on: []},

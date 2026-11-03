@@ -8,6 +8,8 @@ import {dirname, join} from 'path';
 import {parseArgs} from 'util';
 
 import {loadConfig} from './config';
+import {formatBacklogReport} from './backlog';
+import {fileBacklog} from './file-backlog';
 import {AutomationRunner} from './runner';
 
 /** Nearest ancestor directory containing a `.claude` folder. */
@@ -27,6 +29,7 @@ Usage (run from the consumer repo root):
   run [N]          Run N iterations (default: 1)
   run --continuous Run until all tasks complete
   status           Show current status
+  backlog [--json] Workable tickets in order, remaining count and next pick
   reset            Reset state to start fresh
   watch            Live status display
   resume           Clear HALT and resume
@@ -47,6 +50,7 @@ export async function main(argv: string[] = process.argv.slice(2)): Promise<void
     options: {
       iterations: {type: 'string', short: 'n', default: '1'},
       continuous: {type: 'boolean', default: false},
+      json: {type: 'boolean', default: false},
       help: {type: 'boolean', short: 'h', default: false},
     },
     allowPositionals: true,
@@ -60,7 +64,8 @@ export async function main(argv: string[] = process.argv.slice(2)): Promise<void
   const command = positionals[0] || 'status';
   const projectRoot = findProjectRoot();
   const config = loadConfig(projectRoot);
-  const runner = new AutomationRunner(projectRoot, config);
+  const backlog = fileBacklog(join(projectRoot, config.paths.backlog), config);
+  const runner = new AutomationRunner(projectRoot, config, backlog);
 
   switch (command) {
     case 'run': {
@@ -71,6 +76,11 @@ export async function main(argv: string[] = process.argv.slice(2)): Promise<void
     case 'status':
       runner.showStatus();
       break;
+    case 'backlog': {
+      const report = backlog.report();
+      console.log(values.json ? JSON.stringify(report) : formatBacklogReport(report));
+      break;
+    }
     case 'reset':
       runner.resetState();
       break;

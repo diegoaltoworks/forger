@@ -1,14 +1,15 @@
 /**
  * Backlog selection. These are the decisions that decide what the loop does
  * next - which ticket is workable, how much is left, what model/budget a ticket
- * gets - and they are all pure functions over a parsed backlog plus the config.
- * The runner does the file I/O and hands the parsed object in, so every rule
- * here is unit-testable without a filesystem.
+ * gets - and they are all pure functions over the backlog's tickets plus the
+ * config. Where the tickets come from is behind the Backlog interface; an
+ * implementation only supplies a loader, so every rule here is unit-testable
+ * without a filesystem or a tracker.
  */
 
 import type {Tier, WorkloopConfig} from './config';
 
-export interface PRDFeature {
+export interface Ticket {
   status: string;
   priority?: string;
   /** Tracker issue number (GitHub) this ticket is published as. Set when config.tracker.kind is `github`. */
@@ -22,27 +23,28 @@ export interface PRDFeature {
   [key: string]: unknown;
 }
 
-export interface PRD {
-  features: Record<string, PRDFeature | unknown>;
+/** The tickets as loaded, keyed by ticket id. The file keeps the `features` key. */
+export interface BacklogData {
+  features: Record<string, Ticket | unknown>;
   [key: string]: unknown;
 }
 
 const PRIORITY_ORDER: Record<string, number> = {P0: 0, P1: 1, P2: 2, P3: 3};
 
 /** A ticket belongs to this loop if it has no `repo` or matches config.repo. */
-export function isThisRepo(feature: PRDFeature, config: WorkloopConfig): boolean {
-  if (!feature.repo) return true;
+export function isThisRepo(ticket: Ticket, config: WorkloopConfig): boolean {
+  if (!ticket.repo) return true;
   if (!config.repo) return true;
-  return feature.repo === config.repo;
+  return ticket.repo === config.repo;
 }
 
-function features(prd: PRD | null): Record<string, PRDFeature> {
-  const raw = prd?.features;
+function tickets(data: BacklogData | null): Record<string, Ticket> {
+  const raw = data?.features;
   if (!raw || typeof raw !== 'object') return {};
-  return raw as Record<string, PRDFeature>;
+  return raw as Record<string, Ticket>;
 }
 
-function isObjectFeature(data: unknown): data is PRDFeature {
+function isTicket(data: unknown): data is Ticket {
   return typeof data === 'object' && data !== null;
 }
 
@@ -53,22 +55,23 @@ function isObjectFeature(data: unknown): data is PRDFeature {
  * start.
  */
 export function workableTasks(
-  prd: PRD | null,
+  data: BacklogData | null,
   config: WorkloopConfig
-): Array<{priority: number; name: string}> {
-  const feats = features(prd);
-  const isCompleted = (id: string): boolean => feats[id]?.status === 'completed';
+): Array<{priority: number; label: string; name: string}> {
+  const all = tickets(data);
+  const isCompleted = (id: string): boolean => all[id]?.status === 'completed';
 
-  const candidates: Array<{priority: number; name: string}> = [];
-  for (const [name, data] of Object.entries(feats)) {
-    if (!isObjectFeature(data)) continue;
-    if (data.status !== 'not_started') continue;
-    if (!isThisRepo(data, config)) continue;
+  const candidates: Array<{priority: number; label: string; name: string}> = [];
+  for (const [name, ticket] of Object.entries(all)) {
+    if (!isTicket(ticket)) continue;
+    if (ticket.status !== 'not_started') continue;
+    if (!isThisRepo(ticket, config)) continue;
 
-    const deps = Array.isArray(data.depends_on) ? data.depends_on : [];
+    const deps = Array.isArray(ticket.depends_on) ? ticket.depends_on : [];
     if (!deps.every(isCompleted)) continue;
 
-    candidates.push({priority: PRIORITY_ORDER[data.priority || 'P3'] ?? 3, name});
+    const label = ticket.priority || 'P3';
+    candidates.push({priority: PRIORITY_ORDER[label] ?? 3, label, name});
   }
 
   candidates.sort((a, b) => a.priority - b.priority);
@@ -81,40 +84,89 @@ export function workableTasks(
  * with a linear dependency chain the workable count sits at 1 indefinitely,
  * which would read as no progress and halt a healthy loop.
  */
-export function remainingTasks(prd: PRD | null, config: WorkloopConfig): number {
-  return Object.values(features(prd)).filter(
-    f => isObjectFeature(f) && f.status === 'not_started' && isThisRepo(f, config)
+export function remainingTasks(data: BacklogData | null, config: WorkloopConfig): number {
+  return Object.values(tickets(data)).filter(
+    f => isTicket(f) && f.status === 'not_started' && isThisRepo(f, config)
   ).length;
 }
 
-export function workableCount(prd: PRD | null, config: WorkloopConfig): number {
-  return workableTasks(prd, config).length;
+export function workableCount(data: BacklogData | null, config: WorkloopConfig): number {
+  return workableTasks(data, config).length;
 }
 
-export function nextTaskName(prd: PRD | null, config: WorkloopConfig): string | null {
-  return workableTasks(prd, config)[0]?.name ?? null;
+export function nextTaskName(data: BacklogData | null, config: WorkloopConfig): string | null {
+  return workableTasks(data, config)[0]?.name ?? null;
 }
 
 /** Model and budget for a ticket, by priority and scaled by declared effort. */
 export function tierFor(
-  prd: PRD | null,
+  data: BacklogData | null,
   config: WorkloopConfig,
   taskName: string | null
 ): Tier {
   const mbp = config.model_by_priority;
   if (!taskName) return mbp.default;
-  const feature = features(prd)[taskName];
-  const priority = typeof feature?.priority === 'string' ? feature.priority : '';
+  const ticket = tickets(data)[taskName];
+  const priority = typeof ticket?.priority === 'string' ? ticket.priority : '';
   const tier = mbp[priority] ?? mbp.default;
-  const effort = typeof feature?.effort === 'string' ? feature.effort : '';
+  const effort = typeof ticket?.effort === 'string' ? ticket.effort : '';
   const multiplier = config.effort_multiplier[effort] ?? 1;
   return {model: tier.model, budget: tier.budget * multiplier};
 }
 
-export function isTicketCompleted(prd: PRD | null, taskName: string): boolean {
-  return features(prd)[taskName]?.status === 'completed';
+export function isTicketCompleted(data: BacklogData | null, taskName: string): boolean {
+  return tickets(data)[taskName]?.status === 'completed';
 }
 
-export function hasTicket(prd: PRD | null, taskName: string): boolean {
-  return isObjectFeature(features(prd)[taskName]);
+export function hasTicket(data: BacklogData | null, taskName: string): boolean {
+  return isTicket(tickets(data)[taskName]);
+}
+
+/**
+ * What `backlog --json` prints: the workable tickets in order, what is left,
+ * and the next pick. A ticket with no priority reads as P3, which is how it
+ * is ordered; any other label is shown as written.
+ */
+export interface BacklogReport {
+  workable: Array<{id: string; priority: string}>;
+  remaining: number;
+  next: string | null;
+}
+
+export function backlogReport(data: BacklogData | null, config: WorkloopConfig): BacklogReport {
+  const workable = workableTasks(data, config).map(t => ({id: t.name, priority: t.label}));
+  return {workable, remaining: remainingTasks(data, config), next: workable[0]?.id ?? null};
+}
+
+export function formatBacklogReport(report: BacklogReport): string {
+  const lines = report.workable.map(t => `${t.priority} ${t.id}`);
+  lines.push(`Remaining: ${report.remaining}  Next: ${report.next ?? 'none'}`);
+  return lines.join('\n');
+}
+
+/**
+ * The backlog as the runner sees it. Every call reads afresh, because the
+ * worker edits ticket statuses while the engine is running.
+ */
+export interface Backlog {
+  remaining(): number;
+  workableCount(): number;
+  next(): string | null;
+  tier(ticket: string | null): Tier;
+  isCompleted(ticket: string): boolean;
+  has(ticket: string): boolean;
+  report(): BacklogReport;
+}
+
+/** A Backlog over any loader; implementations differ only in where the tickets come from. */
+export function backlogFrom(load: () => BacklogData | null, config: WorkloopConfig): Backlog {
+  return {
+    remaining: () => remainingTasks(load(), config),
+    workableCount: () => workableCount(load(), config),
+    next: () => nextTaskName(load(), config),
+    tier: ticket => tierFor(load(), config, ticket),
+    isCompleted: ticket => isTicketCompleted(load(), ticket),
+    has: ticket => hasTicket(load(), ticket),
+    report: () => backlogReport(load(), config),
+  };
 }

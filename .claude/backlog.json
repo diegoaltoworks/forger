@@ -64,7 +64,7 @@
     },
     "backlog_interface": {
       "priority": "P0",
-      "status": "not_started",
+      "status": "completed",
       "type": "feature",
       "depends_on": [
         "engine_outcome_from_facts"
