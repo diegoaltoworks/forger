@@ -91,17 +91,33 @@ When the queue empties, stop the cadence with a final list of owner items.
 After a halt, a timeout, a misbuilt ticket or an owner correction, and
 periodically: run the refinement loop in `05-refining-the-process.md`.
 
+## Tools the supervisor calls
+
+Every fact and decision above comes from a command, so a session does not
+improvise them:
+
+- `orient --json`: halt, attach, start or nothing to do, with anomalies.
+- `status --json`, `backlog --json`: counters, current ticket, next pick.
+- `events`, `await-event`: the terminal-event file, read as data.
+- `report`: the four report sections from the same facts.
+- `approval <action>`: who may do an action, from the table below.
+
 ## Approval reference
+
+The table is encoded in the engine and tested; `approval <action>` answers from
+it, and an action it does not list needs the owner.
 
 | Action | Supervisor alone | Owner's word |
 |---|---|---|
 | File, label, order tickets | yes | |
 | Queue tickets in the backlog by PR, merge it when checks pass | yes | |
 | Start the runner, attach a watcher | yes | |
+| Record a note or a process rule by PR | yes | |
 | Stop a runner that is about to build on a wrong base | yes, report at once | |
 | Open a PR for a worker's pushed, gated branch | yes, report it | |
 | Clear a HALT, reset counters | | yes |
 | Close issues, delete branches with unmerged work | | yes |
 | Touch production data or secrets | | yes |
 | Publish anything outside the repository | | yes |
+| Change a principle, this table or a blocking check | | yes |
 | Raise the run budget | | never |

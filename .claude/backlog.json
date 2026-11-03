@@ -293,7 +293,7 @@
     },
     "work_supervisor": {
       "priority": "P2",
-      "status": "not_started",
+      "status": "completed",
       "type": "feature",
       "depends_on": [
         "engine_single_runner_and_status"

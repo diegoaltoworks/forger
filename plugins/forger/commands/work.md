@@ -18,73 +18,81 @@ show me where it's already at."
 
 ## 0. Locate the config
 
-Read `.claude/workloop.config.json` in the current repo. It defines the paths
-(`state`, `log`, `backlog`, `halt`) and the ticket/model settings. If it is
-missing, tell the user this repo is not set up for the loop yet and point them at
-`/forger:setup` - then stop.
+Read `.claude/workloop.config.json` in the current repo. If it is missing, tell
+the user this repo is not set up yet and point them at `/forger:setup` - then
+stop. Every command below runs from the repo root as
+`bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts <command>`; call it `work` here.
 
-The engine ships with the plugin at `${CLAUDE_PLUGIN_ROOT}/bin/work.ts`. Every
-invocation below runs from the repo root so the engine finds `.claude/`.
+## 1. Orient from facts
 
-## 1. Report current state (always, before doing anything else)
+- `work orient --json` decides what to do: `surface_halt`, `attach`, `start` or
+  `nothing_to_do`, with the reason and any anomalies (a dead pid in the lock, a
+  checkout that is not on the base branch while no runner is alive).
+- `work status --json` and `work backlog --json` hold the counters, the current
+  ticket, the next pick and what remains.
+- If `tracker.kind` is `github`, open intake issues are already in the backlog
+  report; mention any that are not yet adopted.
 
-- Run the engine's status: `bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts status`
-- Read the `backlog` and `state` files named in the config and summarise:
-  completed tickets, in-progress ticket, remaining count, last error.
-- If `tracker.kind` is `github`, also count open issues carrying `tracker.label`
-  that are not yet in the backlog (`gh issue list --label <label> --state open`,
-  ignoring any labelled `wayfinder:*`). They are intake the worker will adopt on
-  its next iteration; mention them.
-- If the `halt` file exists, **surface why (read it) and stop** - do NOT clear a
-  HALT automatically. Tell the user how to resume
-  (`bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts resume`) and what to check first. A
-  HALT usually means a ticket finished on a branch but was cut off before the
-  merge; clearing it blindly can march the loop past unmerged work.
+Act on the action, never on your own reading of a label:
 
-## 2. Is a runner already alive?
+- `surface_halt`: read the reason and stop. Do not clear a HALT. Tell the owner
+  to look for a pushed branch with no merged PR first, then `work resume`.
+- `attach`: a runner is alive. Do not start a second one; go to step 3.
+- `nothing_to_do`: say so and suggest `/forger:plan`. Stop.
+- `start`: go to step 2.
 
-Check: `pgrep -af "work.ts run"` (match the engine, not this command).
+## 2. Start exactly one runner
 
-- **If a runner is alive:** do NOT start a second one. Say it is already running,
-  report the current ticket and remaining count from step 1, then go to step 4 to
-  attach a monitor. This is the idempotent path.
-- **If nothing is running and remaining == 0 and there is no intake:** the
-  backlog is empty. Tell the user there is nothing to do and suggest
-  `/forger:plan` to plan and queue the next work. Stop.
-- **If nothing is running and there is remaining work or intake:** go to step 3.
+Run `work run --continuous` detached, with the loop's scoped identity in its
+environment only. The engine refuses a second runner while the lock holder is
+alive, so a repeated start is harmless. Confirm with `work status --json` that
+`runner.alive` is true and record `runner.pid`; that is the runner's own pid,
+not the launcher's.
 
-## 3. Start the loop (background)
+## 3. Watch the event file
 
-Start the continuous runner detached so it survives this turn and the user can
-keep working:
+Terminal events (completed, halted, stalled, timed_out, too_many_failures,
+runner_gone) are JSON lines in the file at `paths.events`. Do not tail the log
+or match a process name.
 
-```
-bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts run --continuous
-```
+- `work events --json` lists them; remember how many you have seen.
+- `work await-event --seen <n>` blocks until one past that arrives, prints it,
+  and exits 2 on its timeout. Run it in the background; it reads a file, so
+  there is no command-line pattern for it to match.
 
-Run it in the background. Confirm it started (re-check `pgrep`), and report which
-ticket it is beginning with.
+On each event, and on each tick, verify from facts: `git branch --show-current`
+and `git log` for the real branch and its commits, `gh pr list` and CI logs for
+the PR, and `work report --json` for the rest. A ticket marked completed with
+nothing merged is not done. A worker that timed out after pushing has made
+progress.
 
-## 4. Arm the monitor and hand back
+## 4. Approval policy
 
-Watch the `log` file for terminal signals and notify the user when the loop ends.
-Cover BOTH outcomes - silence is not success:
+Ask `work approval <action>`; it prints `alone`, `alone_and_report`, `owner` or
+`never`, and an action the table does not list is `owner`. The table is in
+`docs/04-supervising.md`.
 
-- Success: `All tasks completed!`
-- Abnormal: `Created HALT file` / `Stalled` / `Too many consecutive failures` /
-  `timed out`
+Alone: file, label and order tickets; queue them in the backlog by PR and merge
+it when checks pass; start the runner and attach a watcher; record notes and
+process rules by PR; open a PR for a worker's pushed, gated branch (report it);
+stop a runner about to build on a wrong base (report at once).
 
-Use a background watcher that ends when a terminal line appears, e.g. tail the
-log and grep for the alternation above, or poll the `state` file until
-`status` is `completed` or `halted`. Do **not** match on a process-name pattern
-that also matches your own watcher command, or it can never terminate.
+Owner's word: clear a HALT or reset counters; close issues or delete branches
+with unmerged work; touch production data or secrets; publish outside the
+repository; change a principle, the approval table or a blocking check. Never:
+raise the run budget.
 
-When it ends, report: the outcome, which tickets completed this run, the final
-remaining count, and - if halted - the reason and the recovery step. Then stop.
+## 5. Report
+
+`work report` prints the four sections: merged, in progress (the real branch),
+next, and waiting on you, each owner item with a recommendation and its reason.
+Send it in plain words (see `templates/report.md`), and add what it means for a
+user to each merged item. Interrupt at once for a halt, a timeout or anything
+that touches production.
 
 ## Rules
 
 - Supervise; never implement. The workers do the tickets.
-- One runner at a time - always `pgrep` before starting.
-- Never clear a HALT without the user deciding to.
+- One runner at a time; the lock enforces it, `work orient` reports it.
+- Never clear a HALT without the owner deciding to.
 - Report both success and failure; a quiet loop is not a finished loop.
