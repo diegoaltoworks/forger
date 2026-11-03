@@ -12,6 +12,7 @@ export type AutomationStatus =
   | 'ready'
   | 'running'
   | 'completed'
+  | 'merged-red'
   | 'partial'
   | 'failed'
   | 'timeout'

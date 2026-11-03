@@ -6,7 +6,7 @@
 
 import type {Finding} from '../waivers';
 
-export type RuleName = 'non-ascii' | 'email' | 'home-path' | 'denylist' | 'third-party-skills' | 'model-agnostic';
+export type RuleName = 'non-ascii' | 'email' | 'home-path' | 'denylist' | 'third-party-skills' | 'model-agnostic' | 'raw-merge';
 
 export interface Violation {
   file: string;
@@ -25,6 +25,7 @@ export const RULE_OPINION: Record<RuleName, string> = {
   denylist: 'base.nothing-personal',
   'third-party-skills': 'base.no-hard-coded-skills',
   'model-agnostic': 'base.model-agnostic',
+  'raw-merge': 'base.merge-through-tool',
 };
 
 type LineRule = (line: string) => string[];
@@ -55,6 +56,20 @@ const ADAPTER_DOCS = [/^plugins\/forger\/README\.md$/, /(^|\/)adapters\/README\.
 export function isAdapterDoc(file: string): boolean {
   return ADAPTER_DOCS.some(r => r.test(file));
 }
+
+/**
+ * A command file is a worker's instructions. A merge it spells out with `gh`
+ * runs on the worker's reading of CI; `merge --pr` waits for the checks and
+ * refuses a red PR, so a command merges only through that tool.
+ */
+const COMMAND_FILE = /(^|\/)commands\/[^/]+\.md$/;
+const RAW_MERGE = /\bgh\s+pr\s+merge\b/g;
+
+export function isCommandFile(file: string): boolean {
+  return COMMAND_FILE.test(file);
+}
+
+const rawMerge: LineRule = line => (line.match(RAW_MERGE) ?? []).map(() => 'raw `gh pr merge`; merge through `work.ts merge --pr <n>`, which waits for CI and refuses red');
 
 function escapeRegExp(text: string): string {
   return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -109,6 +124,7 @@ export function checkText(file: string, text: string, terms: string[] = [], name
     ['denylist', denylist(terms)],
   ];
   if (isShipped(file)) rules.push(['third-party-skills', thirdPartySkills]);
+  if (isCommandFile(file)) rules.push(['raw-merge', rawMerge]);
   if (file.endsWith('.md') && !isAdapterDoc(file)) rules.push(['model-agnostic', modelNames(names)]);
   const out: Violation[] = [];
   text.split('\n').forEach((line, i) => {

@@ -7,7 +7,7 @@ an action, and the measures and retro records the refinement loop runs on.
 ## Files
 
 - `facts.ts` - branch, clean tree, issue to closing PR to merge, a PR's CI
-  conclusion. Pure over an injected `CommandRunner`; read-only commands only.
+  conclusion (folded by the loop's `pr-checks.ts`). Pure over an injected `CommandRunner`; read-only commands only.
 - `supervisor.ts` - orient, report and approval. Pure.
 - `measure.ts` - measures from iteration logs, budgets, events and CI runs;
   rule records and upstream drafts. Pure.

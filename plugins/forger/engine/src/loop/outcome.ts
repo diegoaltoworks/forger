@@ -7,6 +7,8 @@
  */
 
 import type {Claim} from './claim';
+import type {TerminalEventKind} from './events';
+import type {PrFact} from './pr-checks';
 import type {AutomationStatus} from './state';
 
 export interface RunFacts {
@@ -32,6 +34,8 @@ export interface RunFacts {
   unclean: string | null;
   /** The platform failed the run (login, billing, network); null if it did not. */
   infraError: string | null;
+  /** The worker's PR and its CI result; null when there is none to read. */
+  pr: PrFact | null;
 }
 
 export interface Outcome {
@@ -43,6 +47,22 @@ export interface Outcome {
   error: string | null;
   warning: string | null;
   halt: string | null;
+  /** The terminal event the halt is recorded as; the runner's default when absent. */
+  haltKind?: TerminalEventKind;
+}
+
+/**
+ * Why a merge counts as red: read after the run, the merged PR's checks failed
+ * or are still running, so it merged before CI had passed. Null for a green
+ * merge, or when there is no PR to read.
+ */
+export function redMerge(pr: PrFact | null, baseBranch: string): string | null {
+  if (!pr || pr.checks_ok) return null;
+  const why =
+    pr.checks === 'failure'
+      ? `failing check${pr.failing_checks.length === 1 ? '' : 's'}: ${pr.failing_checks.join(', ') || 'unnamed'}`
+      : 'checks still pending';
+  return `PR #${pr.number} merged into ${baseBranch} with ${why}. ${baseBranch} may be red; fix it before more work lands.`;
 }
 
 function timeoutText(f: RunFacts): string {
@@ -62,6 +82,11 @@ function divergence(f: RunFacts): string {
 }
 
 export function decideOutcome(f: RunFacts): Outcome {
+  const red = f.merged ? redMerge(f.pr, f.baseBranch) : null;
+  if (red) {
+    return {status: 'merged-red', result: 'failure', merged: true, error: red, warning: null, halt: red, haltKind: 'merged_red'};
+  }
+
   if (f.merged) {
     const notes: string[] = [];
     if (f.timedOut) notes.push('merged, then timed out');

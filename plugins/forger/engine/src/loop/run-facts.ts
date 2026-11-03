@@ -11,11 +11,14 @@
  *   worker that merged usually deletes its branch and returns to base, leaving
  *   no other local trace of which ticket it took.
  * - pushed: the branch exists on the remote.
+ * - pr: the branch's PR and its CI result, so a merge made on red checks is
+ *   told from a green one.
  *
  * The parsers are pure; the git calls go through the injectable CommandRunner.
  */
 
 import type {CommandRunner} from '../ports';
+import {ciConfigured, viewPr, type PrFact} from './pr-checks';
 
 export interface RunSnapshot {
   baseSha: string;
@@ -26,6 +29,7 @@ export interface GitRunFacts {
   merged: boolean;
   branch: string | null;
   pushed: boolean;
+  pr: PrFact | null;
 }
 
 function lines(out: string): string[] {
@@ -85,12 +89,12 @@ export function gatherFacts(
 
   const pushed = branch !== null && run(`git ls-remote --heads origin ${branch}`) !== '';
 
-  const prState = branch ? run(`gh pr view ${branch} --json state --jq .state`) : '';
+  const pr = branch ? viewPr(run, branch, ciConfigured(run, baseBranch)) : null;
   const baseMoved =
     before.baseSha !== '' &&
     after !== '' &&
     after !== before.baseSha &&
     run(`git merge-base --is-ancestor ${before.baseSha} ${after} && echo yes`) === 'yes';
 
-  return {merged: mergedFrom(prState, baseMoved), branch, pushed};
+  return {merged: mergedFrom(pr?.state ?? '', baseMoved), branch, pushed, pr};
 }

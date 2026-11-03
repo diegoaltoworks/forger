@@ -243,16 +243,18 @@ bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts check coverage --update  # raise the basel
 bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts check ui [--json]  # with the ui pack: a branch that changes ui.paths must update files under docs/screenshots/, and UI files hold no raw colour literal outside ui.tokens
 bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts check a11y [--json]  # with the ui pack: serve the app and fail on serious or critical axe violations on every route, viewport and theme; exit 2 when Playwright, axe-core or the app is unavailable
 bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts screenshot [--json] [--wireframe <ticket>]  # --wireframe serves docs/design/ and captures <ticket>/index.html next to it; with the ui pack: start the app, capture every route x viewport x theme into docs/screenshots/, stop it; exit 2 when Playwright or the app is unavailable
-bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts check docs [--json]  # writing rules: ASCII punctuation, no emails or home paths, no hard-coded skill calls in commands or templates, optional .forger-denylist; with the docs pack also links, anchors, images, mermaid blocks and avoided glossary terms
+bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts check docs [--json]  # writing rules: ASCII punctuation, no emails or home paths, no hard-coded skill calls in commands or templates, no raw `gh pr merge` in a command file, optional .forger-denylist; with the docs pack also links, anchors, images, mermaid blocks and avoided glossary terms
 bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts resume             # clear a HALT
 ```
 
 Each run's outcome is decided from git, not from the worker's exit code or its
 own completion signal: the base branch moved on the remote (merged), the
 worker's branch is on the remote (pushed), or neither. A run that merged and
-then timed out is a success; a run that claimed completion and merged nothing
-is a failure; a ticket the backlog reads `completed` with nothing merged halts
-the loop for recovery. The ticket a run is held to is the one the worker took,
+then timed out is a success; a merge whose PR checks had failed or not finished
+is `merged-red`, never a success, and halts the loop naming the PR and the
+failing check; a run that claimed completion and merged nothing is a failure; a
+ticket the backlog reads `completed` with nothing merged halts the loop for
+recovery. The ticket a run is held to is the one the worker took,
 read from its branch, which the log names when it differs from the engine's
 pick.
 

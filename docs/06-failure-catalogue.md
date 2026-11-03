@@ -53,6 +53,28 @@ recovered, and where the lasting fix belongs: **E** the engine, **S** a skill
   pushed, nothing) before it is counted; a merge is a success whatever the
   exit.
 
+### A red merge counted as completed
+
+- **Seen:** a worker squash-merged its PR seconds after CI started, before the
+  run finished; the run failed `check arch` on an import in a new test file, and
+  the base branch went red. The engine counted the iteration as merged and
+  completed, and the next ticket started on red.
+- **Cause, checks:** `check arch` and `check docs` read only the files git
+  tracks. The new test file was untracked when the worker ran the gates, so they
+  passed locally on a tree that failed in CI once the file was committed.
+- **Cause, worker:** the merge step was prose (watch the checks, read `facts`,
+  then merge); the worker merged without waiting.
+- **Cause, engine:** the outcome read whether a PR merged, never whether its
+  checks had passed.
+- **Recovered by:** the supervisor wrote a HALT; a later PR fixed the import.
+- **Fix:** E: the checks scan untracked files too, so the local gates see what
+  CI will. A worker merges only through `merge --pr <n>`, which waits for every
+  check and refuses a red PR, and `check docs` fails a command file that spells
+  out a raw merge. The outcome reads the merged PR's checks: a merge on failing
+  or pending checks is `merged-red`, never completed, and halts the loop naming
+  the PR and the failing check. S: read a gate's exit status, not the tail of
+  its output, and run the gates again after the last edit.
+
 ### Adopting new work looks like a stall
 
 - **Seen:** a run finished one ticket and adopted one new issue; the remaining

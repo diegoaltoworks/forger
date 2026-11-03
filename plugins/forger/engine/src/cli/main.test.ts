@@ -242,7 +242,7 @@ describe('check', () => {
     const report = JSON.parse(await capture(['check', '--json'], () => 'a.md'));
     expect(report).toEqual({
       ok: true,
-      results: [{check: 'docs', opinions: ['base.ascii-punctuation', 'base.nothing-personal', 'base.no-hard-coded-skills', 'base.model-agnostic'], status: 'passed', violations: [], waived: []}],
+      results: [{check: 'docs', opinions: ['base.ascii-punctuation', 'base.nothing-personal', 'base.no-hard-coded-skills', 'base.model-agnostic', 'base.merge-through-tool'], status: 'passed', violations: [], waived: []}],
       waivers: [],
       staleWaivers: [],
     });
@@ -253,7 +253,7 @@ describe('check', () => {
     installed();
     const out = await capture(['check', '--summary'], () => 'a.md');
     expect(out).toContain('## forger check: passed');
-    expect(out).toContain('| docs | `base.ascii-punctuation`, `base.nothing-personal`, `base.no-hard-coded-skills`, `base.model-agnostic` | passed | 0 | 0 |');
+    expect(out).toContain('| docs | `base.ascii-punctuation`, `base.nothing-personal`, `base.no-hard-coded-skills`, `base.model-agnostic`, `base.merge-through-tool` | passed | 0 | 0 |');
   });
 
   test('one violation: failed, carries the opinion id, exit 1', async () => {
@@ -377,6 +377,25 @@ describe('supervisor commands', () => {
     const out = JSON.parse(await capture(['facts', '--json', '--issue', '4'], run));
     expect(out.branch).toBe('main');
     expect(out.issue).toEqual({number: 4, state: 'OPEN', closing_pr: null});
+  });
+
+  test('merge refuses a PR with a failing check and exits 1, without merging', async () => {
+    process.chdir(projectWith({a: {status: 'not_started'}}));
+    const calls: string[] = [];
+    const run: CommandRunner = cmd => {
+      calls.push(cmd);
+      return cmd.startsWith('gh pr view 9')
+        ? JSON.stringify({number: 9, state: 'OPEN', statusCheckRollup: [{__typename: 'CheckRun', name: 'gates', status: 'COMPLETED', conclusion: 'FAILURE'}]})
+        : '';
+    };
+    try {
+      const out = JSON.parse(await capture(['merge', '--pr', '9', '--json'], run));
+      expect(out).toEqual({pr: 9, merged: false, checks: 'failure', failing_checks: ['gates'], reason: 'failing checks: gates'});
+      expect(process.exitCode).toBe(1);
+      expect(calls.some(c => c.startsWith('gh pr merge'))).toBe(false);
+    } finally {
+      process.exitCode = 0;
+    }
   });
 
   test('orient surfaces a halt with the reason from the HALT file', async () => {

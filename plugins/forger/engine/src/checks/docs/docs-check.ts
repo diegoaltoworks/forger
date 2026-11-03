@@ -1,7 +1,7 @@
 /**
- * `check docs`: runs the writing rules over every tracked text file. The list
- * comes from git so untracked and ignored files (the denylist itself, build
- * output) are never scanned. The docs pack's content rules (links, images,
+ * `check docs`: runs the writing rules over every text file git tracks or
+ * would track (see `projectFiles`), so ignored files (the denylist itself,
+ * build output) are never scanned. The docs pack's content rules (links, images,
  * diagrams, glossary terms) run on Markdown files only when that pack is installed.
  */
 
@@ -11,6 +11,7 @@ import {join} from 'path';
 import {checkAvoidedTerms, checkDiagrams, checkLinks, parseGlossaryAvoid, type AvoidedTerm, type LinkWorld} from './docs-content';
 import {loadConfig} from '../../config';
 import type {CommandRunner} from '../../ports';
+import {projectFiles} from '../files';
 import {checkText, parseDenylist} from './docs-rules';
 import {LOCK_PATH, parseLock} from '../../packs';
 import type {Finding} from '../waivers';
@@ -42,7 +43,7 @@ export function runDocsCheck(projectRoot: string, run: CommandRunner, packs: str
   const denyFile = join(projectRoot, '.forger-denylist');
   const terms = existsSync(denyFile) ? parseDenylist(readFileSync(denyFile, 'utf-8')) : [];
   const names = loadConfig(projectRoot).model_names;
-  const files = run('git ls-files').split('\n').filter(f => f !== '' && !SKIP.some(s => s.test(f)));
+  const files = projectFiles(run).filter(f => !SKIP.some(s => s.test(f)));
 
   const glossary = join(projectRoot, GLOSSARY);
   const content =

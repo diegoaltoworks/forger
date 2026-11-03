@@ -5,24 +5,10 @@
  * injectable CommandRunner, so nothing here can move HEAD or touch files.
  */
 
-import {dirtyEntries} from '../loop';
+import {ciConfigured as hasCi, dirtyEntries, viewPr as readPr, type PrFact} from '../loop';
 import type {CommandRunner} from '../ports';
 
-/**
- * A PR's CI result. `none` means the repo has no CI configured, so the local
- * gates are the only assertion; checks not yet registered on a repo that has CI
- * are `pending`, never `none`.
- */
-export type ChecksConclusion = 'success' | 'failure' | 'pending' | 'none';
-
-export interface PrFact {
-  number: number;
-  state: string;
-  merged: boolean;
-  checks: ChecksConclusion;
-  /** True when CI allows a merge: every check passed, or the repo has none. */
-  checks_ok: boolean;
-}
+export {checksConclusion, parsePr, type ChecksConclusion, type PrFact} from '../loop';
 
 export interface IssueFact {
   number: number;
@@ -58,51 +44,6 @@ export function closingPrNumber(issueJson: string): number | null {
   return nums.length === 0 ? null : Math.max(...nums);
 }
 
-interface RollupEntry {
-  __typename?: string;
-  status?: string | null;
-  conclusion?: string | null;
-  state?: string | null;
-}
-
-const PASSING = new Set(['SUCCESS', 'NEUTRAL', 'SKIPPED']);
-
-/**
- * Folds `gh pr view --json statusCheckRollup` into one conclusion. Check runs
- * carry `status` and `conclusion`; commit statuses carry `state`. Any failure
- * wins over pending, and pending over success.
- */
-export function checksConclusion(rollup: unknown, ciConfigured: boolean): ChecksConclusion {
-  const entries = Array.isArray(rollup) ? (rollup as RollupEntry[]) : [];
-  if (entries.length === 0) return ciConfigured ? 'pending' : 'none';
-  let pending = false;
-  for (const e of entries) {
-    const isStatus = e.__typename === 'StatusContext' || (e.state != null && e.status == null);
-    if (isStatus) {
-      const state = (e.state ?? '').toUpperCase();
-      if (state === 'SUCCESS') continue;
-      if (state === 'PENDING' || state === 'EXPECTED') pending = true;
-      else return 'failure';
-      continue;
-    }
-    if ((e.status ?? '').toUpperCase() !== 'COMPLETED') {
-      pending = true;
-      continue;
-    }
-    if (!PASSING.has((e.conclusion ?? '').toUpperCase())) return 'failure';
-  }
-  return pending ? 'pending' : 'success';
-}
-
-export function parsePr(prJson: string, ciConfigured = false): PrFact | null {
-  const p = parseJson(prJson) as {number?: number; state?: string; mergedAt?: string | null; statusCheckRollup?: unknown} | null;
-  if (!p || typeof p.number !== 'number' || typeof p.state !== 'string') return null;
-  const checks = checksConclusion(p.statusCheckRollup, ciConfigured);
-  return {number: p.number, state: p.state, merged: p.state === 'MERGED' || Boolean(p.mergedAt), checks, checks_ok: checks === 'success' || checks === 'none'};
-}
-
-const PR_FIELDS = 'number,state,mergedAt,statusCheckRollup';
-
 export function gatherLoopFacts(
   run: CommandRunner,
   opts: {baseBranch: string; ignore: string[]; issue?: number; pr?: number}
@@ -117,9 +58,8 @@ export function gatherLoopFacts(
     origin_base_head: head === '' ? null : head,
   };
   if (opts.issue === undefined && opts.pr === undefined) return facts;
-  // HEAD too: the PR that adds a repo's first workflow has CI before its base does.
-  const ciConfigured = [`origin/${opts.baseBranch}`, 'HEAD'].some(ref => run(`git ls-tree -r --name-only ${ref} -- .github/workflows`).trim() !== '');
-  const viewPr = (n: number) => parsePr(run(`gh pr view ${n} --json ${PR_FIELDS}`), ciConfigured);
+  const ci = hasCi(run, opts.baseBranch);
+  const viewPr = (n: number) => readPr(run, n, ci);
   if (opts.issue !== undefined) {
     const issueJson = run(`gh issue view ${opts.issue} --json state,closedByPullRequestsReferences`);
     const state = (parseJson(issueJson) as {state?: string} | null)?.state ?? 'UNKNOWN';

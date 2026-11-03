@@ -43,7 +43,17 @@ describe('runArchCheck', () => {
     expect(out.map(f => [f.file, f.line, f.opinion])).toEqual([['src/core/decide.ts', 1, ARCH_OPINION]]);
   });
 
-  test('only tracked files are read', () => {
+  test('a new, not yet committed file is read too', () => {
+    const root = repo({
+      '.claude/architecture.json': MAP,
+      'src/core/a.ts': "import '../shell/s';",
+      'src/shell/s.ts': '',
+    });
+    const run = (cmd: string) => (cmd === 'git ls-files --others --exclude-standard' ? 'src/core/a.ts' : 'src/shell/s.ts');
+    expect(runArchCheck(root, run).map(f => f.file)).toEqual(['src/core/a.ts']);
+  });
+
+  test('only files git lists are read', () => {
     const root = repo({
       '.claude/architecture.json': MAP,
       'src/core/a.ts': "import '../shell/s';",

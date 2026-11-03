@@ -14,7 +14,10 @@ Pure:
 - `prompt.ts` - the per-iteration prompt.
 - `iteration-log.ts` - the per-iteration log text.
 - `status-report.ts` - the machine-readable status a supervisor acts on.
+- `pr-checks.ts` - a PR's CI result folded from its check rollup.
 - `merged.ts`, `run-facts.ts` - git facts, through an injected `CommandRunner`.
+- `merge.ts` - merge a PR only once every check passed; the decision is pure,
+  the waiting reads the PR through an injected `CommandRunner`.
 
 Touch the world (their own files, the terminal, the clock):
 
