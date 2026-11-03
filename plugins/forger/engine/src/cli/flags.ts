@@ -49,6 +49,7 @@ export const FLAGS = {
   file: {type: 'string'},
   section: {type: 'string', multiple: true},
   fix: {type: 'boolean', default: false},
+  state: {type: 'boolean', default: false},
   wireframe: {type: 'string'},
   lesson: {type: 'string'},
   evidence: {type: 'string', multiple: true},

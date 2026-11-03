@@ -13,7 +13,7 @@ import {join} from 'path';
 
 import {execCapture} from './exec';
 import {decideLease, leaseFor} from '../loop';
-import {eventDay, type LeaseClaim, type LeaseRequest, type StateStore} from '../ports';
+import {eventDay, type LeaseClaim, type LeaseRequest, type StateBranch, type StateStore} from '../ports';
 
 export interface GitStateOptions {
   /** The repository whose remote carries the state branch. */
@@ -30,7 +30,7 @@ const EVENTS = 'events/';
 
 const q = (s: string) => `'${s.replace(/'/g, `'\\''`)}'`;
 
-export function gitStateStore(opts: GitStateOptions): StateStore {
+export function gitStateStore(opts: GitStateOptions): StateStore & StateBranch {
   const remote = opts.remote ?? 'origin';
   const branch = opts.branch ?? 'forger-state';
   if (!/^[A-Za-z0-9._\/-]+$/.test(branch)) throw new Error(`forger: unusable state branch name "${branch}"`);
@@ -104,6 +104,9 @@ export function gitStateStore(opts: GitStateOptions): StateStore {
   }
 
   return {
+    exists: () => fetchTip() !== null,
+    readLease: () => parse(blob(fetchTip(), LEASE)),
+    seed: (files, message) => (fetchTip() === null ? push(null, files, message) : false),
     readState: () => blob(fetchTip(), STATE),
     writeState(text) {
       if (!update('state', () => ({[STATE]: text}))) throw new Error('forger: could not write the state branch');
