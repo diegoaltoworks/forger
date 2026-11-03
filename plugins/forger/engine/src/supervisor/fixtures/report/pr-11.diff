@@ -1,0 +1,51 @@
+--- a/README.md
++++ b/README.md
+@@ -5,6 +5,7 @@
+ context
+-old
+-old
++new
++new
++new
+ context
+ context
+ context
+--- a/src/a.ts
++++ b/src/a.ts
+@@ -20,0 +21,3 @@
++line
++line
++line
+--- /dev/null
++++ b/src/b.ts
+@@ -0,0 +1,30 @@
++line
++line
++line
++line
++line
++line
++line
++line
++line
++line
++line
++line
++line
++line
++line
++line
++line
++line
++line
++line
++line
++line
++line
++line
++line
++line
++line
++line
++line
++line

@@ -1,10 +1,42 @@
-import {existsSync, readFileSync} from 'fs';
+import {existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync} from 'fs';
 import {join} from 'path';
 
 import {handedOver, listRepoLabels, loopLabels, missingLabels, readAllVerdicts} from '../loop';
-import {buildReport, formatReport, orient as orientPlan} from '../supervisor';
+import {buildReport, formatReport, mergedInPeriod, orient as orientPlan, proposedAdrs, reportPeriod, waitingIssues, OWNER_LABELS, type AdrText, type MergedPrFact, type OwnerItem, type WaitingIssue} from '../supervisor';
 import type {Command, CommandContext} from './command';
 import {gatherMeasures} from './measure';
+
+const LAST_REPORT = 'last-report.json';
+
+function lastReportAt(file: string): string | null {
+  try {
+    return (JSON.parse(readFileSync(file, 'utf-8')) as {at?: string}).at ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/** Open issues parked for the owner and Proposed ADRs; the tracker read fails soft into one item saying so. */
+function ownerWaiting(ctx: CommandContext): OwnerItem[] {
+  const out: OwnerItem[] = [];
+  try {
+    const run = ctx.run();
+    const issues: WaitingIssue[] = [];
+    for (const label of OWNER_LABELS) {
+      const raw = JSON.parse(run(`gh issue list --state open --label ${label} --limit 100 --json number,title,labels,body`)) as {number: number; title: string; labels: {name: string}[]; body: string}[];
+      for (const i of raw) if (!issues.some(x => x.number === i.number)) issues.push({number: i.number, title: i.title, labels: i.labels.map(l => l.name), body: i.body ?? ''});
+    }
+    out.push(...waitingIssues(issues));
+  } catch {
+    out.push({question: 'The issues waiting on you could not be read from the tracker', recommendation: 'run `gh issue list --label needs-info` yourself', because: 'gh failed or is offline, so this list may be incomplete'});
+  }
+  const dir = join(ctx.projectRoot, 'docs/adr');
+  if (existsSync(dir)) {
+    const adrs: AdrText[] = readdirSync(dir).filter(f => /^\d.*\.md$/.test(f)).map(name => ({name, text: readFileSync(join(dir, name), 'utf-8')}));
+    out.push(...proposedAdrs(adrs));
+  }
+  return out;
+}
 
 function supervise(which: 'orient' | 'report') {
   return (ctx: CommandContext): void => {
@@ -28,7 +60,21 @@ function supervise(which: 'orient' | 'report') {
       branch,
       baseBranch: config.base_branch,
     });
+    const marker = join(projectRoot, config.paths.output, LAST_REPORT);
+    const period = reportPeriod(values.since, lastReportAt(marker));
+    let merged: string[] | undefined;
+    if (which === 'report') {
+      try {
+        const prs = (JSON.parse(ctx.run()('gh pr list --state merged --limit 200 --json number,title,mergedAt')) as MergedPrFact[]);
+        merged = mergedInPeriod(prs, period);
+      } catch {
+        merged = undefined;
+      }
+    }
     const out = which === 'orient' ? plan : buildReport({
+          ownerWaiting: ownerWaiting(ctx),
+          merged,
+          period,
           status,
           measures: gatherMeasures(ctx),
           plan,
@@ -36,6 +82,10 @@ function supervise(which: 'orient' | 'report') {
           baseBranch: config.base_branch,
           handedOver: handedOver(readAllVerdicts(join(projectRoot, config.paths.verdicts)), config.limits.maxVerifyRounds),
         });
+    if (which === 'report' && values.since === undefined) {
+      mkdirSync(join(projectRoot, config.paths.output), {recursive: true});
+      writeFileSync(marker, JSON.stringify({at: new Date().toISOString()}));
+    }
     if (values.json) console.log(JSON.stringify(out));
     else if (which === 'report') console.log(formatReport(out as ReturnType<typeof buildReport>));
     else console.log([`${plan.action}: ${plan.reason}`, ...plan.anomalies.map(a => `! ${a}`)].join('\n'));
@@ -53,7 +103,7 @@ export const orient: Command = {
 export const report: Command = {
   name: 'report',
   needs: 'loop',
-  flags: ['json'],
-  help: '  report [--json]  Merged, in progress (real branch), next, waiting on the owner; cost per merged ticket, rework rate, escaped defects, owner interventions',
+  flags: ['json', 'since'],
+  help: '  report [--json] [--since DATE]  Merged since the last report (or --since), in progress (real branch), next, waiting on the owner (needs-info, needs-human, needs-triage issues and Proposed ADRs); cost per merged ticket, rework rate, escaped defects, owner interventions',
   run: supervise('report'),
 };

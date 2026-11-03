@@ -6,6 +6,7 @@
 
 import type {HandedOver, StatusReport} from '../loop';
 import type {Measures} from './measure';
+import {type Period} from './waiting';
 import {buildReportMeasures, formatReportMeasures, type ReportMeasures} from './report-measures';
 
 export type OrientAction = 'surface_halt' | 'attach' | 'start' | 'nothing_to_do';
@@ -106,10 +107,18 @@ export interface ReportInputs {
   baseBranch: string;
   /** Tickets whose verification ran out of rounds. */
   handedOver?: HandedOver[];
+  /** Issues and proposed ADRs that wait on the owner's decision. */
+  ownerWaiting?: OwnerItem[];
+  /** What merged in the period; absent when the tracker could not be read. */
+  merged?: string[];
+  period?: Period;
 }
 
 export interface Report {
-  merged: string[];
+  /** The period the merges and measures cover. */
+  period: Period;
+  /** Merges inside the period; null when the tracker could not be read. */
+  merged: string[] | null;
   in_progress: Array<{ticket: string; branch: string}>;
   declined: Array<{ticket: string; reason: string}>;
   handed_over: Array<{ticket: string; pr: number; criteria: string[]}>;
@@ -135,9 +144,11 @@ export function buildReport(i: ReportInputs): Report {
       because: 'a runner built on the wrong base wastes a whole ticket',
     });
   }
+  waiting.push(...(i.ownerWaiting ?? []));
   const inProgress = s.current_ticket && s.runner.alive ? [{ticket: s.current_ticket, branch: i.branch}] : [];
   return {
-    merged: s.completed_tasks,
+    period: i.period ?? {since: null, source: 'none'},
+    merged: i.merged ?? null,
     in_progress: inProgress,
     declined: s.declined,
     handed_over: (i.handedOver ?? []).map(h => ({
@@ -154,8 +165,8 @@ export function buildReport(i: ReportInputs): Report {
 export function formatReport(r: Report): string {
   const list = (items: string[]): string[] => (items.length ? items.map(t => `- ${t}`) : ['- none']);
   return [
-    '**Merged**',
-    ...list(r.merged),
+    `**Merged** ${r.period.since === null ? '(whole history)' : `(since ${r.period.since})`}`,
+    ...(r.merged === null ? ['- unknown: the merged pull requests could not be read'] : list(r.merged)),
     '',
     '**In progress**',
     ...list(r.in_progress.map(p => `${p.ticket} on branch \`${p.branch || 'detached'}\``)),

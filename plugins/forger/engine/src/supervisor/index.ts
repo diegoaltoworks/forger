@@ -6,3 +6,4 @@ export * from './comparison';
 export * from './cost';
 export * from './rework';
 export * from './report-measures';
+export * from './waiting';

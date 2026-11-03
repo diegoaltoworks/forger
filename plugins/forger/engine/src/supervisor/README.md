@@ -19,6 +19,7 @@ an action, and the measures and retro records the refinement loop runs on.
   as one JSON document, and the per-measure delta between two reports. Pure.
 - `rework.ts` - rework inside a window of later merges, escaped defects and
   pick-versus-built mismatch over merged PRs (ADR 0013). Pure.
+- `waiting.ts` - what waits on the owner (parked issues, Proposed ADRs with their stated recommendation) and the report period with its merges. Pure.
 - `*.json` - recorded `gh` output the tests replay.
 
 ## Entry point

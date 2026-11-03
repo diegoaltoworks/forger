@@ -15,7 +15,8 @@ export interface ReportMeasures {
   /** Share of merged PRs reworked inside the window; null when the tracker could not be read. */
   rework_rate: number | null;
   escaped_defects: number | null;
-  owner_interventions: {total: number; by_event: Record<string, number>};
+  /** A null total cannot be counted from the inputs present; `unknown_reason` says why. */
+  owner_interventions: {total: number | null; by_event: Record<string, number>; unknown_reason: string | null};
 }
 
 export function buildReportMeasures(m: Measures): ReportMeasures {
@@ -28,7 +29,9 @@ export function buildReportMeasures(m: Measures): ReportMeasures {
     merged_prs: c === null ? null : c.merged,
     rework_rate: c === null ? null : c.rework_rate,
     escaped_defects: c === null ? null : c.escaped_defects.length,
-    owner_interventions: {total: m.owner_interventions.total, by_event: {...m.owner_interventions.by_event}},
+    owner_interventions: m.interventions_unknown === null
+      ? {total: m.owner_interventions.total, by_event: {...m.owner_interventions.by_event}, unknown_reason: null}
+      : {total: null, by_event: {}, unknown_reason: m.interventions_unknown},
   };
 }
 
@@ -41,6 +44,8 @@ export function formatReportMeasures(r: ReportMeasures): string[] {
     `- cost per merged ticket: ${cost}${unknown}`,
     `- rework rate: ${pct(r.rework_rate)}`,
     `- escaped defects: ${r.escaped_defects ?? 'unknown'}`,
-    `- owner interventions: ${r.owner_interventions.total}${events.length > 0 ? ` (${events.join(', ')})` : ''}`,
+    r.owner_interventions.total === null
+      ? `- owner interventions: unknown (${r.owner_interventions.unknown_reason})`
+      : `- owner interventions: ${r.owner_interventions.total}${events.length > 0 ? ` (${events.join(', ')})` : ''}`,
   ];
 }

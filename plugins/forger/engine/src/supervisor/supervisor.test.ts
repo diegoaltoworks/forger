@@ -77,8 +77,8 @@ describe('approval policy', () => {
 describe('report', () => {
   test('in progress carries the real branch only while a runner works', () => {
     const live = status({alive: true, ticket: 't1', done: ['t0']});
-    const r = buildReport({status: live, plan: orient({...base, branch: 'feat/t1', status: live}), branch: 'feat/t1', baseBranch: 'main'});
-    expect(r.merged).toEqual(['t0']);
+    const r = buildReport({status: live, plan: orient({...base, branch: 'feat/t1', status: live}), branch: 'feat/t1', baseBranch: 'main', merged: ['#1 t0']});
+    expect(r.merged).toEqual(['#1 t0']);
     expect(r.in_progress).toEqual([{ticket: 't1', branch: 'feat/t1'}]);
     expect(r.next).toEqual(['next-one']);
     expect(r.waiting_on_owner).toEqual([]);
@@ -109,7 +109,7 @@ describe('report', () => {
     const input = {status: s, plan: orient({...base, status: s}), branch: 'main', baseBranch: 'main'};
     expect(buildReport(input).measures).toBeNull();
     expect(formatReport(buildReport(input))).not.toContain('**Measures**');
-    const m = {tickets: [], owner_interventions: {total: 0, by_event: {}}, change_rework: null} as unknown as Measures;
+    const m = {tickets: [], owner_interventions: {total: 0, by_event: {}}, interventions_unknown: null, change_rework: null} as unknown as Measures;
     const r = buildReport({...input, measures: m});
     expect(r.measures?.owner_interventions.total).toBe(0);
     expect(formatReport(r)).toContain('**Measures**');

@@ -66,6 +66,8 @@ export interface Measures {
   rework: {redone_tickets: number};
   /** Events that stop the loop until a person acts (ADR 0012). */
   owner_interventions: {total: number; by_event: Record<string, number>};
+  /** Why the count above cannot be trusted (events missing for runs in the window); null when it can. */
+  interventions_unknown: string | null;
   /** Rework and escaped defects over merged PRs (ADR 0013); null when the tracker could not be read. */
   change_rework: ReworkMeasures | null;
   events: Record<string, number>;
@@ -99,11 +101,25 @@ export function parseIterationLog(text: string): IterationRecord | null {
   };
 }
 
-/** The `Ticket: <id> [<model>, $<cap>] session <id>` lines of the work log, in order; the session is optional. */
+/**
+ * The `Ticket: <id> [<model>, $<cap>]` lines of the work log, in order. The
+ * session is the full id the line carries, or else the shortened id of the
+ * `(session: <prefix>...)` line just before it, which older logs wrote alone.
+ */
 export function parseBudgets(workLog: string): BudgetRecord[] {
   const out: BudgetRecord[] = [];
-  for (const m of workLog.matchAll(/Ticket: (\S+) \[([^,\]]+), \$([0-9.]+)\](?: session ([0-9a-f-]+))?/g)) {
-    out.push({ticket: m[1], model: m[2], budgetUsd: Number(m[3]), ...(m[4] === undefined ? {} : {sessionId: m[4]})});
+  let prefix: string | undefined;
+  for (const line of workLog.split('\n')) {
+    const s = /\(session: ([0-9a-f-]+)(?:\.\.\.)?\)/.exec(line);
+    if (s !== null) {
+      prefix = s[1];
+      continue;
+    }
+    const m = /Ticket: (\S+) \[([^,\]]+), \$([0-9.]+)\](?: session ([0-9a-f-]+))?/.exec(line);
+    if (m === null) continue;
+    const sessionId = m[4] ?? prefix;
+    out.push({ticket: m[1], model: m[2], budgetUsd: Number(m[3]), ...(sessionId === undefined ? {} : {sessionId})});
+    prefix = undefined;
   }
   return out;
 }
@@ -214,6 +230,17 @@ export function ticketCost(records: BudgetRecord[], costs: Record<string, number
   return total;
 }
 
+/**
+ * Why interventions cannot be counted: a run in the window with no event at
+ * all means the events file did not cover it, so a zero would be a guess.
+ */
+export function eventsGap(windowed: IterationRecord[], events: {iteration: number}[]): string | null {
+  const seen = new Set(events.map(e => e.iteration));
+  const missing = new Set(windowed.filter(it => !seen.has(it.iteration)).map(it => it.iteration));
+  if (missing.size === 0) return null;
+  return `the events file has no record of ${missing.size} of ${windowed.length} run(s) in the period`;
+}
+
 export function computeMeasures(inputs: MeasureInputs): Measures {
   const sorted = [...inputs.iterations].sort((a, b) => a.iteration - b.iteration);
   const windowed = inputs.last === null ? sorted : sorted.slice(-Math.max(inputs.last, 0));
@@ -275,6 +302,7 @@ export function computeMeasures(inputs: MeasureInputs): Measures {
     merged: {tickets: rework.merged},
     rework: {redone_tickets: rework.redone},
     owner_interventions: {total: Object.values(interventions).reduce((a, b) => a + b, 0), by_event: interventions},
+    interventions_unknown: eventsGap(windowed, inputs.events),
     change_rework: inputs.changes === undefined ? null : computeRework(inputs.changes),
     events,
     tickets: [...perTicket.values()],
@@ -303,7 +331,7 @@ export function formatMeasures(m: Measures): string {
     `pick: off-pick ${pct(m.pick.off_pick_share)} (${m.pick.off_pick}), declined ${pct(m.pick.declined_share)} (${m.pick.declined})`,
     `verification: blocked ${pct(m.verification.blocked_share)} (${m.verification.blocked} of ${m.verification.verified}), passed then failed ${pct(m.verification.passed_then_failed_share)} (${m.verification.passed_then_failed} of ${m.verification.passed})`,
     ...formatParallel(m.parallel),
-    `merged tickets: ${m.merged.tickets}, redone ${m.rework.redone_tickets}, owner interventions ${m.owner_interventions.total}`,
+    `merged tickets: ${m.merged.tickets}, redone ${m.rework.redone_tickets}, owner interventions ${m.interventions_unknown === null ? m.owner_interventions.total : `unknown (${m.interventions_unknown})`}`,
     ...(m.change_rework === null ? ['rework and escaped defects: unknown'] : formatRework(m.change_rework)),
     `events: ${Object.entries(m.events).map(([k, v]) => `${k} ${v}`).join(', ') || 'none'}`,
     'tickets:',
