@@ -1,5 +1,6 @@
 export * from './checks';
 export * from './ci';
+export * from './gaps';
 export * from './waivers';
 export * from './arch';
 export * from './decisions';

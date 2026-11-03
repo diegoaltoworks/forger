@@ -46,10 +46,12 @@ flowchart LR
     C --> V[violations with opinion ids]
     W[waivers.json] --> M{match by id and path}
     V --> M
-    M --> R[passed, failed or waived]
+    M --> R[passed, failed, waived or unmeasured]
 ```
 
 Read it left to right: `check` takes the checks that the locked packs declare, in lock order, runs each, and matches every violation against the waivers by opinion id and path glob. A check is `passed` with no violations, `waived` when every violation is covered, and `failed` otherwise; any failed check makes the exit code non-zero.
+
+A check can also report a coverage gap: something it could not measure. A gap is neither a pass nor a failure, so a check with an open gap is `unmeasured`, never `passed`. The requirement's modality sets the severity: a MUST gap fails the check, a SHOULD gap warns, a MAY gap informs. A waiver matches a gap by opinion id and path like any finding, so a SHOULD is a waivable warning and a MUST stays failed until an approver signs a waiver. `check --json` lists gaps apart from violations, per check and as one flat list. The mapping is a pure function with table tests.
 
 `.forger/waivers.json` is how a project switches an opinion off in the open. Each entry names the opinion, a path glob, a reason and who approved it; an entry missing the reason or the approver is an error, not a waiver. A waiver that matches no violation is reported as stale, so it gets deleted once it is no longer needed.
 

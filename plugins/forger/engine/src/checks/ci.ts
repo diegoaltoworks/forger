@@ -9,7 +9,7 @@ import type {CheckReport, CheckStatus} from './checks';
 
 export const WORKFLOW_PATH = '.github/workflows/ci.yml';
 
-const STATUS_CELL: Record<CheckStatus, string> = {passed: 'passed', failed: '**failed**', waived: 'waived'};
+const STATUS_CELL: Record<CheckStatus, string> = {passed: 'passed', failed: '**failed**', waived: 'waived', unmeasured: 'unmeasured'};
 
 function cell(text: string): string {
   return text.replace(/\|/g, '\\|').replace(/\n/g, ' ');
@@ -29,6 +29,8 @@ export function formatSummary(report: CheckReport): string {
   }
   const failures = report.results.flatMap(r => r.violations.map(v => `- \`${v.file}:${v.line}\` ${v.opinion}: ${cell(v.detail)}`));
   if (failures.length > 0) lines.push('', '### Open findings', '', ...failures);
+  const gaps = report.gaps.filter(g => !g.waiver).map(g => `- \`${g.file}\` ${g.opinion} (${g.modality}, ${g.severity}): ${cell(g.detail)}`);
+  if (gaps.length > 0) lines.push('', '### Coverage gaps', '', ...gaps);
   lines.push('', '### Waivers in force', '');
   if (report.waivers.length === 0) lines.push('None.');
   else {

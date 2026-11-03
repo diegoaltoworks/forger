@@ -242,7 +242,8 @@ describe('check', () => {
     const report = JSON.parse(await capture(['check', '--json'], () => 'a.md'));
     expect(report).toEqual({
       ok: true,
-      results: [{check: 'docs', opinions: ['base.ascii-punctuation', 'base.nothing-personal', 'base.no-hard-coded-skills', 'base.model-agnostic', 'base.merge-through-tool'], status: 'passed', violations: [], waived: []}],
+      gaps: [],
+      results: [{check: 'docs', opinions: ['base.ascii-punctuation', 'base.nothing-personal', 'base.no-hard-coded-skills', 'base.model-agnostic', 'base.merge-through-tool'], status: 'passed', violations: [], waived: [], gaps: []}],
       waivers: [],
       staleWaivers: [],
     });
