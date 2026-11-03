@@ -6,7 +6,7 @@ import {join} from 'path';
 
 import {execRunner} from '../adapters';
 import {main} from '../cli';
-import {runDecisionsCheck} from '../checks/decisions';
+import {runDecisionsCheck} from '../checks';
 import {MigrateRefused, planMoves, runMigrate, trackedNames} from './migrate';
 
 const dirs: string[] = [];
