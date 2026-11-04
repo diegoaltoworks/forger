@@ -1,0 +1,1 @@
+A recorded verifier reply for a PR whose empty-state screenshot shows a "Showing links tagged" banner and a "Clear filter" button with no filter active. The eval in `verifier-eval.test.ts` holds the reply to the issue and expects a block.

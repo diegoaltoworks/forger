@@ -222,3 +222,58 @@ describe('evidenceResolves', () => {
     expect(ok('command', '  ')).toBe(false);
   });
 });
+
+describe('screenshot evidence', () => {
+  const body = '## Acceptance\n- [ ] the page lists links\n\n## UI states\n- empty: no banner, no clear-filter button\n- filled: the links are listed\n\n## Docs\n- none\n';
+  const shot = 'docs/screenshots/empty.png';
+  function withScreenshots(names: string) {
+    const f = fixture();
+    const run: CommandRunner = cmd => {
+      if (cmd.startsWith('gh issue view')) return body;
+      if (cmd.includes('--name-only')) return names;
+      return f.run(cmd);
+    };
+    return {...f, run};
+  }
+
+  test('a named UI state with no changed screenshot is cannot_tell and the verifier is not asked about it', async () => {
+    const f = withScreenshots('src/a.ts\n');
+    const out = JSON.stringify({verdict: [{criterion: 'c1', verdict: 'met', evidence: [{kind: 'command', ref: 'bun test'}]}]});
+    const record = await verifyPr(f.run, f.agentSaying(out), f.opts);
+    expect(record.entries.map(e => [e.criterion, e.verdict])).toEqual([['c1', 'met'], ['u1', 'cannot_tell'], ['u2', 'cannot_tell']]);
+    expect(record.decision).toBe('unclear');
+    expect(f.prompts[0]).not.toContain('u1:');
+  });
+
+  test('a fixture PR whose empty-state screenshot shows a banner is blocked', async () => {
+    const f = withScreenshots(`${shot}\n`);
+    const out = JSON.stringify({
+      verdict: [
+        {criterion: 'c1', verdict: 'met', evidence: [{kind: 'command', ref: 'bun test'}]},
+        {criterion: 'u1', verdict: 'not_met', evidence: [{kind: 'screenshot', ref: shot}]},
+        {criterion: 'u2', verdict: 'cannot_tell', evidence: []},
+      ],
+    });
+    const runWithTree: CommandRunner = cmd => {
+      const dir = /^git worktree add --detach '([^']+)'/.exec(cmd)?.[1];
+      if (dir) {
+        mkdirSync(join(dir, 'docs/screenshots'), {recursive: true});
+        writeFileSync(join(dir, shot), 'png');
+        return '';
+      }
+      return f.run(cmd);
+    };
+    const record = await verifyPr(runWithTree, f.agentSaying(out), f.opts);
+    expect(record.entries.find(e => e.criterion === 'u1')?.verdict).toBe('not_met');
+    expect(record.decision).toBe('block');
+    expect(f.prompts[0]).toContain(`- ${shot}`);
+    expect(f.prompts[0]).toContain('u1: empty: no banner, no clear-filter button (UI state)');
+  });
+
+  test('screenshot evidence must be an image under docs/screenshots/', () => {
+    const root = tmp();
+    writeFileSync(join(root, 'other.png'), 'x');
+    expect(evidenceResolves(() => '', root, {kind: 'screenshot', ref: 'other.png'})).toBe(false);
+    expect(evidenceResolves(() => '', root, {kind: 'screenshot', ref: 'docs/screenshots/../../other.png'})).toBe(false);
+  });
+});
