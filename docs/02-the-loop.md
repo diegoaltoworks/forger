@@ -241,6 +241,15 @@ rebase), and each slot reports the skill, file or built-in step chosen and the
 reason. A project's `.forger/pipeline.json` overlay can disable a stage, add a
 slot or replace a gate; it cannot reorder. The design is ADR 0016.
 
+### Output contracts
+
+Each slot's result has a contract, and `contract --slot <slot> --file <path>`
+checks it with a pure validator over the parsed result plus facts the command
+gathers (the diff's paths, the ticket's criteria, the gates command). A result
+that fails is handled by a fixed policy, not by the worker's judgement: retry the
+same skill once with the problems shown, then the built-in step, then a decline
+with reason `unclear`. Each attempt is a `contract_attempt` event.
+
 ## Bounding the verify loop
 
 `handover --pr <n> --json` reads the PR's verdict records and says the next move.
