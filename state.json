@@ -97,7 +97,10 @@
       "ticket": "issue-154",
       "pid": null,
       "session_id": "8bf27601-ebe0-4891-a3b4-925d60d1aeea",
-      "snapshot": null,
+      "snapshot": {
+        "baseSha": "",
+        "reflogLength": 1
+      },
       "started_at": "2026-11-04T06:07:30.115Z"
     }
   ],
