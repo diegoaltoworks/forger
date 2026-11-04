@@ -40,3 +40,17 @@ reader finds first. A mermaid block that does not parse renders as an error.
 The check catches both before a merge. Diagram parsing is structural: the
 diagram type is known, flowchart brackets and quotes balance, arrows have both
 ends and subgraphs close.
+
+## READMEs are a launch pad in Simplified Technical English
+
+Every `README.md` states its purpose first and is written to the measurable
+rules of ASD-STE100 (ADR 0017). The check enforces these:
+
+- The first paragraph after the H1 is one or two sentences: what this is and who it is for.
+- A step is at most 20 words, a descriptive sentence at most 25, a paragraph at most 6 sentences.
+- Use the active voice. A passive construction is a warning, not a failure.
+- No transient facts: no counts of files, tests, lines or modules, no dates, no "currently", "recently" or "new", no version number in prose.
+
+Code blocks, code spans and tables are skipped. A README that cannot meet a
+rule carries a waiver. The check cannot enforce the controlled dictionary or
+whether the purpose is a good one; the writer and the reviewer keep that.

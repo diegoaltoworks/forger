@@ -61,7 +61,7 @@ A check can also report a coverage gap: something it could not measure. A gap is
 
 ## The docs pack
 
-The `docs` pack holds the docs habits: Markdown in the repository, a diagram and a reading sentence for every concept, a page that shows each feature, decisions as ADRs. Four of its opinions are enforced by `check docs`, each under its own opinion id so a waiver can target one:
+The `docs` pack holds the docs habits: Markdown in the repository, a diagram and a reading sentence for every concept, a page that shows each feature, decisions as ADRs. Its check opinions are enforced by `check docs`, each under its own opinion id so a waiver can target one:
 
 | Opinion | What the check flags |
 |---|---|
@@ -69,8 +69,12 @@ The `docs` pack holds the docs habits: Markdown in the repository, a diagram and
 | `docs.images-resolve` | an image link that points at no file in the repository |
 | `docs.diagrams-parse` | a mermaid block with an unknown type, unbalanced brackets or quotes, an arrow with a missing end, or an unclosed subgraph |
 | `docs.glossary-terms` | a word from a glossary `_Avoid_:` list, used in prose |
+| `docs.readme-purpose-first` | a README whose first paragraph after the H1 is missing or longer than two sentences |
+| `docs.readme-short-sentences` | a README step over 20 words, a sentence over 25, or a paragraph over 6 sentences |
+| `docs.readme-active-voice` | a passive construction in a README; a warning on stderr, never a failure |
+| `docs.readme-no-transient` | a count of things, a date, "currently", "recently", "new" or a version number in README prose |
 
-Read the table as a list of ways docs rot quietly. Code spans and fences are never prose, so quoting an avoided word in backticks is fine. A word that is only wrong in one sense carries a parenthetical in the glossary, such as `user (when meaning the owner)`, and is not enforced because a pattern cannot tell the senses apart. Diagram parsing is structural rather than a full mermaid parse: it needs no browser or extra dependency and covers the mistakes that break a render, but it does not validate the grammar of every diagram type.
+Read the table as a list of ways docs rot quietly. Code spans and fences are never prose, so quoting an avoided word in backticks is fine. A word that is only wrong in one sense carries a parenthetical in the glossary, such as `user (when meaning the owner)`, and is not enforced because a pattern cannot tell the senses apart. The README rules are the measurable part of ASD-STE100 Simplified Technical English (ADR 0017). Code, tables and quotes are skipped, and READMEs under `node_modules` and `fixtures` are not checked. Diagram parsing is structural rather than a full mermaid parse: it needs no browser or extra dependency and covers the mistakes that break a render, but it does not validate the grammar of every diagram type.
 
 ## The architecture pack
 
