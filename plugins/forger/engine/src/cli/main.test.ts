@@ -451,6 +451,19 @@ describe('skills --json', () => {
     expect(out.forbid).toContain('mattpocock-skills:wayfinder');
     expect(out.preamble).toContain('Do not commit');
   });
+  test('a flavour resolves against a bare install, without the plugin prefix', async () => {
+    const root = realpathSync(mkdtempSync(join(tmpdir(), 'forger-cli-')));
+    dirs.push(root);
+    mkdirSync(join(root, '.forger'));
+    writeFileSync(join(root, '.forger', 'workloop.config.json'), JSON.stringify({tracker: {kind: 'local'}, flavour: 'agent-skills@1'}));
+    process.chdir(root);
+    const out = JSON.parse(await capture(['skills', '--json'], undefined, () => ['interview-me', 'test-driven-development', 'code-review-and-quality']));
+    const by = Object.fromEntries(out.slots.map((s: {slot: string}) => [s.slot, s]));
+    expect(by.interview).toMatchObject({invoke: 'skill', installed: true});
+    expect(by.test_first).toMatchObject({invoke: 'skill', installed: true});
+    expect(by.review).toMatchObject({invoke: 'skill', installed: true});
+    expect(by.diagnose).toMatchObject({skill: null, installed: false});
+  });
   test('--presets lists the presets whose collection is installed', async () => {
     process.chdir(projectWith({}));
     const hit = JSON.parse(await capture(['skills', '--presets', '--json'], undefined, () => ['mattpocock-skills:tdd']));
@@ -483,7 +496,7 @@ describe('setup --flavour', () => {
     const out = JSON.parse(await capture(['setup', '--json', '--preset', 'mattpocock-skills'], undefined, () => ['mattpocock-skills:tdd']));
     expect(out.presets).toEqual(['mattpocock-skills']);
     const config = JSON.parse(readFileSync(join(root, '.forger', 'workloop.config.json'), 'utf-8'));
-    expect(config.flavour).toBe('mattpocock-skills@1');
+    expect(config.flavour).toBe('mattpocock-skills@2');
     expect(config.skills).toEqual({});
   });
   test('--flavour is the same as --preset', async () => {
@@ -492,7 +505,7 @@ describe('setup --flavour', () => {
     mkdirSync(join(root, '.forger'));
     process.chdir(root);
     await capture(['setup', '--json', '--flavour', 'mattpocock-skills'], undefined, () => []);
-    expect(JSON.parse(readFileSync(join(root, '.forger', 'workloop.config.json'), 'utf-8')).flavour).toBe('mattpocock-skills@1');
+    expect(JSON.parse(readFileSync(join(root, '.forger', 'workloop.config.json'), 'utf-8')).flavour).toBe('mattpocock-skills@2');
   });
   test('an unknown preset fails without writing', async () => {
     const root = realpathSync(mkdtempSync(join(tmpdir(), 'forger-cli-')));

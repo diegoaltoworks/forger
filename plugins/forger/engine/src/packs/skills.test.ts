@@ -147,7 +147,7 @@ describe('shipped presets', () => {
     expect(presets.length).toBeGreaterThan(0);
     for (const p of presets) {
       expect(Object.keys(p.skills).every(k => slots.has(k))).toBe(true);
-      expect(Object.values(p.skills).every(v => typeof v === 'string' && v.startsWith(`${p.collection}:`))).toBe(true);
+      expect(Object.values(p.skills).every(v => (typeof v === 'string' ? v.startsWith(`${p.collection}:`) : typeof v.file === 'string'))).toBe(true);
     }
   });
   test('every alias is a skill the preset maps, and forbidden skills are not mapped', () => {

@@ -31,7 +31,8 @@ Then ask about skills. List the flavours whose skill collection is installed:
 bun "${CLAUDE_PLUGIN_ROOT}/bin/work.ts" skills --presets --json
 ```
 For each one, offer to use it as the flavour; an empty list means ask
-nothing. The user can add a flavour of their own in `.forger/flavours/` or map
+nothing. When two or more are listed, also offer the `mixed` flavour, which takes the
+strongest fit per slot across the collections. The user can add a flavour of their own in `.forger/flavours/` or map
 slots by hand later in `.forger/workloop.config.json`.
 
 Then ask about packs. List the ones the repo's own facts call for:

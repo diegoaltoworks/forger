@@ -6,7 +6,7 @@
  */
 
 import {existsSync, readdirSync, readFileSync} from 'fs';
-import {isAbsolute, join} from 'path';
+import {basename, dirname, isAbsolute, join} from 'path';
 
 import type {SkillMapping} from '../config';
 
@@ -97,9 +97,15 @@ function resolveName(skill: string, have: ReadonlySet<string>, presets: readonly
   return known && have.has(bare) ? bare : null;
 }
 
+/** A directory of copied-in skills, where a skill sits at `<name>/SKILL.md` whatever its source layout. */
+function isBareRoot(root: string): boolean {
+  const [parent, leaf] = root.split(/[\\/]/).slice(-2);
+  return parent === '.claude' && leaf === 'skills';
+}
+
 function resolveFile(file: string, env: ResolveEnv): {path: string | null; exists: boolean} {
   const exists = env.exists ?? existsSync;
-  const candidates = isAbsolute(file) ? [file] : (env.roots ?? []).map(r => join(r, file));
+  const candidates = isAbsolute(file) ? [file] : (env.roots ?? []).map(r => (isBareRoot(r) ? join(r, basename(dirname(file)), 'SKILL.md') : join(r, file)));
   const found = candidates.find(exists);
   return {path: found ?? candidates[0] ?? null, exists: found !== undefined};
 }
@@ -216,6 +222,31 @@ function skillDirs(dir: string): string[] {
     .map(e => e.name);
 }
 
+/** Directories holding skills: the conventional `skills/` plus a manifest `skills` string. */
+function pluginSkillDirs(install: string): string[] {
+  const m = readManifest(install);
+  return [join(install, 'skills'), ...(typeof m.skills === 'string' ? [join(install, m.skills)] : [])];
+}
+
+/**
+ * A plugin may list each skill directory in its manifest, nested under categories, so a skill
+ * can live below `skills/<category>/`; the conventional scan alone would miss them.
+ */
+function manifestSkillPaths(install: string): string[] {
+  const m = readManifest(install);
+  return Array.isArray(m.skills) ? m.skills.filter((p): p is string => typeof p === 'string').map(p => join(install, p)) : [];
+}
+
+function readManifest(install: string): {skills?: unknown} {
+  const file = join(install, '.claude-plugin', 'plugin.json');
+  if (!existsSync(file)) return {};
+  try {
+    return JSON.parse(readFileSync(file, 'utf-8')) as {skills?: unknown};
+  } catch {
+    return {};
+  }
+}
+
 /**
  * Plugin skills are `<plugin>:<skill>`; user and project skills are bare names.
  * The plugin list is Claude Code's own record of what is installed.
@@ -237,7 +268,8 @@ export function listInstalledSkills(home: string, projectRoot: string): string[]
       const plugin = key.split('@')[0];
       for (const install of installs) {
         if (!install.installPath) continue;
-        for (const name of skillDirs(join(install.installPath, 'skills'))) out.add(`${plugin}:${name}`);
+        for (const dir of pluginSkillDirs(install.installPath)) for (const name of skillDirs(dir)) out.add(`${plugin}:${name}`);
+        for (const dir of manifestSkillPaths(install.installPath)) if (existsSync(join(dir, 'SKILL.md'))) out.add(`${plugin}:${basename(dir)}`);
       }
     }
   }
@@ -246,12 +278,13 @@ export function listInstalledSkills(home: string, projectRoot: string): string[]
 
 /** Install directories of the plugins Claude Code has recorded; a file slot's relative path is looked up under each. */
 export function listCollectionRoots(home: string): string[] {
+  const bare = join(home, '.claude', 'skills');
   const record = join(home, '.claude', 'plugins', 'installed_plugins.json');
-  if (!existsSync(record)) return [];
+  if (!existsSync(record)) return [bare];
   try {
     const plugins = (JSON.parse(readFileSync(record, 'utf-8')) as {plugins?: Record<string, Array<{installPath?: string}>>}).plugins ?? {};
-    return Object.values(plugins).flatMap(installs => installs.map(i => i.installPath).filter((p): p is string => !!p));
+    return [...Object.values(plugins).flatMap(installs => installs.map(i => i.installPath).filter((p): p is string => !!p)), bare];
   } catch {
-    return [];
+    return [bare];
   }
 }
