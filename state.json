@@ -116,7 +116,10 @@
       "ticket": "issue-232",
       "pid": null,
       "session_id": "e3541d53-9186-4f2e-ad5e-6b8dc77e3c97",
-      "snapshot": null,
+      "snapshot": {
+        "baseSha": "",
+        "reflogLength": 1
+      },
       "started_at": "2026-11-04T23:54:16.937Z",
       "plan": {
         "stages": [
