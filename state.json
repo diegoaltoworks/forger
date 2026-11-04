@@ -1,8 +1,8 @@
 {
   "iteration": 109,
-  "status": "running",
-  "last_completed_at": "2026-11-04T08:17:53.494Z",
-  "completed_iterations": 98,
+  "status": "completed",
+  "last_completed_at": "2026-11-04T22:37:01.492Z",
+  "completed_iterations": 99,
   "failed_iterations": 5,
   "consecutive_failures": 0,
   "completed_tasks": [
@@ -103,21 +103,11 @@
     "issue-184",
     "issue-189",
     "issue-190",
-    "issue-193"
+    "issue-193",
+    "issue-229"
   ],
-  "in_flight": [
-    {
-      "ticket": "issue-229",
-      "pid": null,
-      "session_id": "8a3bc99b-9c18-4bbb-bfc1-d34da0d2e769",
-      "snapshot": {
-        "baseSha": "",
-        "reflogLength": 1
-      },
-      "started_at": "2026-11-04T22:30:45.621Z"
-    }
-  ],
-  "last_error": "Agent signaled stop - blocked or no actionable work",
+  "in_flight": [],
+  "last_error": null,
   "stall_count": 0,
   "declined_tasks": [
     {
