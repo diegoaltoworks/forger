@@ -37,3 +37,4 @@
 {"event":"picked","at":"2026-11-04T22:45:36.448Z","iteration":111,"ticket":"issue-198","reason":null}
 {"event":"picked","at":"2026-11-04T22:49:35.625Z","iteration":112,"ticket":"issue-208","reason":null}
 {"event":"picked","at":"2026-11-04T23:14:54.665Z","iteration":113,"ticket":"issue-208","reason":null}
+{"event":"unverified","at":"2026-11-04T23:16:05.835Z","iteration":113,"ticket":null,"reason":"PR #240 merged into main with no verdict recorded for its head. Nothing independent checked it; review what landed before more work does."}
