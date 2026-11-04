@@ -13,3 +13,4 @@
 {"event":"lease_takeover","at":"2026-11-04T07:05:35.931Z","iteration":96,"ticket":null,"reason":"took over the lease from Diego-X1:1504837:ac6c85df on Diego-X1"}
 {"event":"picked","at":"2026-11-04T07:05:49.486Z","iteration":97,"ticket":"issue-150","reason":null}
 {"event":"picked","at":"2026-11-04T07:05:58.547Z","iteration":98,"ticket":"issue-157","reason":null}
+{"event":"worker_denied","at":"2026-11-04T07:09:05.651Z","iteration":98,"ticket":"issue-157","reason":"merge: gh pr merge 214 --squash --delete-branch 2>&1 | tail -3; gh pr view 214 --json state -q .state"}
