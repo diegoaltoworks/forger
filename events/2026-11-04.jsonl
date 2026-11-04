@@ -43,3 +43,4 @@
 {"event":"unverified","at":"2026-11-04T23:25:14.989Z","iteration":114,"ticket":null,"reason":"PR #242 merged into main with no verdict recorded for its head. Nothing independent checked it; review what landed before more work does."}
 {"event":"halt_cleared","at":"2026-11-04T23:26:00.831Z","iteration":114,"ticket":null,"reason":"PR #242 merged into main with no verdict recorded for its head. Nothing independent checked it; review what landed before more work does."}
 {"event":"picked","at":"2026-11-04T23:26:30.027Z","iteration":115,"ticket":"issue-208","reason":null}
+{"event":"picked","at":"2026-11-04T23:27:33.685Z","iteration":116,"ticket":"issue-213","reason":null}
