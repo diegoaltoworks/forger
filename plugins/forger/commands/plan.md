@@ -76,6 +76,35 @@ own words and confirm it.
 This scope bounds step 3: "nothing left to decide" means nothing left to decide
 **for this goal**, not for the project.
 
+## 2b. Detect creative intent
+
+Classify the request with the tool, passing the owner's words in `--request`:
+
+```
+bun "${CLAUDE_PLUGIN_ROOT}/bin/work.ts" intent --request "<the owner's words>" --json
+```
+
+`intent: "product"`: skip the rest of this step. `intent: "creative"`: tell the
+owner which signals matched, then run the creative-brief round before step 3.
+Ask the whole round at once, numbered, with no recommended answer:
+
+1. References: links or names of works to take as touchstones.
+2. Mood: a few words for the feel.
+3. The one moment the audience must feel.
+4. Who plays or watches, and for how long.
+5. Playful or serious, and how far.
+6. What must stay true: numbers, brand, facts.
+
+Record the owner's answers verbatim; the plan doc keeps them under "Brief,
+verbatim". Read every reference as intent (feel, charm, readability), never as
+a spec: do not turn "think <X>" into X's hardware limits or palette. Write down
+how you read each one, for the owner to correct.
+
+For every creative choice later in the interview (look, interaction model,
+tone) offer two or three contrasting options, each with a preview (a sketch, a
+palette, a short sample of copy or a described moment of play), and let the
+owner pick or mix. Do not give one recommended answer for a creative choice.
+
 ## 3. Grill until the plan is clear
 
 Run the interview in the `interview` slot, or yourself when it is `builtin`, in this shape:
@@ -114,9 +143,11 @@ than stalling.
 
 When the user is ready, **write it down** - clarity is the deliverable, not just
 tickets. Create or update a short planning doc (e.g. `docs/plan-<slug>.md`)
-capturing: the goal, what is in and out of scope, the build order, and any open
+capturing (from `${CLAUDE_PLUGIN_ROOT}/templates/plan-doc.md`): the goal, what is in and out of scope, the build order, and any open
 questions/blockers. Keep it durable and qualitative - no counts, dates, or
-transient specifics. Decisions recorded as ADRs are linked
+transient specifics. When the intent is creative, the doc opens with the
+sections "Brief, verbatim" and "Interpretation of references"; drop them
+otherwise. Decisions recorded as ADRs are linked
 from the plan, not restated in it; a decision lives in one place.
 
 ## 5. Draft the tickets

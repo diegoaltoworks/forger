@@ -39,6 +39,26 @@ in one line ("Design review: none"), so its absence is a decision, not an oversi
 The sections a project needs grow with the project. Each one above was added
 after a gap cost something; see `05-refining-the-process.md`.
 
+## A creative brief
+
+A request about look, feel or play (a demo, a game, a pitch, "think <X>") has
+creative intent, which `work intent --request <text> --json` detects and
+explains with its signals. `/forger:plan` then runs a creative-brief round before
+the usual questions and records the owner's answers in the plan doc:
+
+- **Brief, verbatim.** The owner's words, unedited, at the top of the plan doc.
+  Tickets quote it, and review judges the build against it, not against a
+  tidied summary.
+- **Interpretation of references.** Each reference (a *reference* in the
+  glossary) is read for feel, charm and readability, not copied as a spec. The
+  plan states the reading so the owner can correct it before any ticket is cut.
+- **Contrasting options.** A creative choice (look, interaction model, tone) is
+  put as two or three different options with a preview each, never as one
+  recommended answer. A tidy default is how a faithful but lifeless build happens.
+
+A creative ticket carries the brief as its owner request and names the moment
+the audience must feel as acceptance.
+
 ## Labels
 
 | Label | Means |

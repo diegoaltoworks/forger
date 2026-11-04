@@ -15,6 +15,7 @@ import {facts} from './facts';
 import {halt, reset, resume, run, status, watch} from './loop';
 import {handover} from './handover';
 import {hook} from './hook';
+import {intent} from './intent';
 import {measure} from './measure';
 import {merge} from './merge';
 import {migrate} from './migrate';
@@ -45,6 +46,7 @@ export const COMMANDS: Command[] = [
   contract,
   check,
   slice,
+  intent,
   screenshot,
   brand,
   backlog,
