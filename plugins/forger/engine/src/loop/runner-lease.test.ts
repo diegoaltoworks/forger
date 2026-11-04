@@ -91,4 +91,67 @@ describe('AutomationRunner with the state local', () => {
     });
     expect(await runner.run(1)).toBe(false);
   });
+
+  test('a stop signal releases the lease and exits, before the run ends', async () => {
+    const dir = join(root, String(n++));
+    mkdirSync(dir);
+    const stateStore = memoryStateStore();
+    const handlers: Array<() => void> = [];
+    const exits: number[] = [];
+    let during: unknown = 'unread';
+    const backlog = backlogFrom(() => {
+      handlers[0]?.();
+      during = stateStore.lease;
+      return done;
+    }, config);
+    const runner = new AutomationRunner(dir, config, backlog, {
+      stateStore,
+      lease: {self: 'h:1:aa', host: 'h', ttlSeconds: 900},
+      gitRunner: () => '',
+      now: () => T0,
+      pid: process.pid,
+      sleep: async () => {},
+      onSignal: (_signal, handler) => handlers.push(handler),
+      exit: code => void exits.push(code),
+    });
+    await runner.run(1);
+    expect(handlers.length).toBe(2);
+    expect(during).toBe(null);
+    expect(exits).toEqual([143]);
+  });
+
+  test('takes over this host\'s lease for a dead pid, and says so', async () => {
+    const dir = join(root, String(n++));
+    mkdirSync(dir);
+    const stateStore = memoryStateStore();
+    stateStore.claimLease({self: 'h:111:aa', host: 'h', ttlSeconds: 900, now: new Date(T0)});
+    const runner = new AutomationRunner(dir, config, backlogFrom(() => done, config), {
+      stateStore,
+      lease: {self: 'h:222:bb', host: 'h', ttlSeconds: 900},
+      isAlive: () => false,
+      gitRunner: () => '',
+      now: () => T0 + 5000,
+      pid: process.pid,
+      sleep: async () => {},
+    });
+    expect(await runner.run(1)).toBe(true);
+    expect(stateStore.readEvents()).toContain('lease_takeover');
+  });
+
+  test('refuses a live lease from another host even when its pid looks dead here', async () => {
+    const dir = join(root, String(n++));
+    mkdirSync(dir);
+    const stateStore = memoryStateStore();
+    stateStore.claimLease({self: 'other:111:aa', host: 'other', ttlSeconds: 900, now: new Date(T0)});
+    const runner = new AutomationRunner(dir, config, backlogFrom(() => done, config), {
+      stateStore,
+      lease: {self: 'h:222:bb', host: 'h', ttlSeconds: 900},
+      isAlive: () => false,
+      gitRunner: () => '',
+      now: () => T0 + 5000,
+      pid: process.pid,
+      sleep: async () => {},
+    });
+    expect(await runner.run(1)).toBe(false);
+  });
 });

@@ -25,7 +25,7 @@ export function memoryStateStore(): StateStore & {lease: Lease | null} {
         .map(d => days.get(d))
         .join(''),
     claimLease(req: LeaseRequest): LeaseClaim {
-      const decision = decideLease(store.lease, req.self, req.now);
+      const decision = decideLease(store.lease, req.self, req.now, req.isAlive && {host: req.host, isAlive: req.isAlive});
       if (decision.action === 'refuse') {
         return {ok: false, reason: 'held', holder: decision.holder, expiresAt: decision.expiresAt};
       }
@@ -33,6 +33,7 @@ export function memoryStateStore(): StateStore & {lease: Lease | null} {
       store.lease = lease;
       return decision.action === 'takeover' ? {ok: true, ...decision, lease} : {ok: true, action: decision.action, lease};
     },
+    readLease: () => store.lease,
     releaseLease(self: string) {
       if (store.lease?.holder === self) store.lease = null;
     },

@@ -35,7 +35,7 @@ export function localStateStore(paths: LocalStatePaths): StateStore {
     readEvents: () => (existsSync(paths.events) ? readFileSync(paths.events, 'utf-8') : ''),
     claimLease(req: LeaseRequest): LeaseClaim {
       const existing = readJson(paths.lease);
-      const decision = decideLease(existing, req.self, req.now);
+      const decision = decideLease(existing, req.self, req.now, req.isAlive && {host: req.host, isAlive: req.isAlive});
       if (decision.action === 'refuse') {
         return {ok: false, reason: 'held', holder: decision.holder, expiresAt: decision.expiresAt};
       }
@@ -43,6 +43,7 @@ export function localStateStore(paths: LocalStatePaths): StateStore {
       writeFileSync(paths.lease, JSON.stringify(lease, null, 2));
       return decision.action === 'takeover' ? {ok: true, ...decision, lease} : {ok: true, action: decision.action, lease};
     },
+    readLease: () => readJson(paths.lease),
     releaseLease(self) {
       const existing = readJson(paths.lease) as {holder?: string} | null;
       if (existing?.holder === self) unlinkSync(paths.lease);

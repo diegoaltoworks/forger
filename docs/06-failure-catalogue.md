@@ -503,3 +503,15 @@ recovered, and where the lasting fix belongs: **E** the engine, **S** a skill
 - **Seen:** a before-and-after comparison used `git stash`; a shell glob error
   popped an unrelated old stash into the working tree.
 - **Fix:** P: compare in a separate worktree, never with the stash.
+
+### A stopped engine keeps the state-branch lease
+
+- **Seen:** an engine run as a user service was stopped with SIGTERM and started
+  again moments later. The new engine was refused: the lease still named the
+  stopped engine and ran until its expiry. `orient` said `start` and mentioned
+  only the dead pid in the lock.
+- **Recovered by:** waiting for the lease to expire.
+- **Fix:** E: the engine releases the lease on SIGTERM and SIGINT; a lease this
+  machine holds for a dead pid is taken over at once and logged, while a lease
+  from another machine is left until it expires. `orient` reports the lease and
+  does not return `start` while another machine holds a live one.

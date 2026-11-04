@@ -27,17 +27,51 @@ function parseLease(value: unknown): Lease | null {
   return {holder, host, acquired_at, renewed_at, ttl_seconds};
 }
 
+/** What tells a lease held by this machine's dead engine from a live one. */
+export interface LocalProbe {
+  host: string;
+  isAlive: (pid: number) => boolean;
+}
+
+/** The pid inside a holder id of the form `host:pid:nonce`, or null when it has another shape. */
+export function holderPid(holder: string): number | null {
+  const m = /:(\d+):[^:]*$/.exec(holder);
+  return m ? Number(m[1]) : null;
+}
+
+/** True when this machine holds the lease for a pid that is gone: the holder cannot renew it. */
+function heldByDeadLocal(lease: Lease, local: LocalProbe | undefined): boolean {
+  if (!local || lease.host !== local.host) return false;
+  const pid = holderPid(lease.holder);
+  return pid !== null && !local.isAlive(pid);
+}
+
+export type LeaseView =
+  | {state: 'none'}
+  | {state: 'own' | 'live_elsewhere' | 'stale_local' | 'expired'; holder: string; host: string; expires_at: string};
+
+/** What `orient` reports about the stored lease, seen from this machine. */
+export function viewLease(lease: unknown, now: Date, local: LocalProbe): LeaseView {
+  const current = parseLease(lease);
+  if (current === null) return {state: 'none'};
+  const expiresMs = Date.parse(current.renewed_at) + current.ttl_seconds * 1000;
+  const base = {holder: current.holder, host: current.host, expires_at: new Date(expiresMs).toISOString()};
+  if (now.getTime() >= expiresMs) return {state: 'expired', ...base};
+  if (heldByDeadLocal(current, local)) return {state: 'stale_local', ...base};
+  return {state: current.host === local.host ? 'own' : 'live_elsewhere', ...base};
+}
+
 /**
  * A lease is live while now - renewed_at < ttl_seconds. A missing or malformed
  * record holds nobody, so it is acquired rather than refused: a corrupt file
  * must not lock the loop out for good.
  */
-export function decideLease(lease: unknown, self: string, now: Date): LeaseDecision {
+export function decideLease(lease: unknown, self: string, now: Date, local?: LocalProbe): LeaseDecision {
   const current = parseLease(lease);
   if (current === null) return {action: 'acquire'};
   if (current.holder === self) return {action: 'renew'};
   const expiresMs = Date.parse(current.renewed_at) + current.ttl_seconds * 1000;
-  if (now.getTime() < expiresMs) {
+  if (now.getTime() < expiresMs && !heldByDeadLocal(current, local)) {
     return {action: 'refuse', holder: current.holder, expiresAt: new Date(expiresMs).toISOString()};
   }
   return {action: 'takeover', previousHolder: current.holder, previousHost: current.host};

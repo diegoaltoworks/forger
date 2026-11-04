@@ -34,6 +34,20 @@ describe('orient', () => {
   test('no runner and work left starts one', () => {
     expect(orient({...base, status: status()}).action).toBe('start');
   });
+  test('a live lease held elsewhere is the reason not to start', () => {
+    const lease = {state: 'live_elsewhere', holder: 'desk:9:aa', host: 'desk', expires_at: '2026-01-01T00:25:00.000Z'} as const;
+    const plan = orient({...base, status: status(), lease});
+    expect(plan.action).toBe('nothing_to_do');
+    expect(plan.lease).toEqual(lease);
+    expect(plan.reason).toContain('desk');
+    expect(plan.reason).toContain('2026-01-01T00:25:00.000Z');
+  });
+  test('a stale local lease is an anomaly and the loop still starts', () => {
+    const lease = {state: 'stale_local', holder: 'me:9:aa', host: 'me', expires_at: '2026-01-01T00:25:00.000Z'} as const;
+    const plan = orient({...base, status: status(), lease});
+    expect(plan.action).toBe('start');
+    expect(plan.anomalies.join('\n')).toContain('me:9:aa');
+  });
   test('an empty backlog is nothing to do', () => {
     expect(orient({...base, status: status({remaining: 0})}).action).toBe('nothing_to_do');
   });

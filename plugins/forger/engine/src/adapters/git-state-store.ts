@@ -131,7 +131,7 @@ export function gitStateStore(opts: GitStateOptions): StateStore & StateBranch {
       let result: LeaseClaim = {ok: false, reason: 'lost'};
       const ok = update('lease', read => {
         const existing = parse(read(LEASE));
-        const decision = decideLease(existing, req.self, req.now);
+        const decision = decideLease(existing, req.self, req.now, req.isAlive && {host: req.host, isAlive: req.isAlive});
         if (decision.action === 'refuse') {
           result = {ok: false, reason: 'held', holder: decision.holder, expiresAt: decision.expiresAt};
           return null;
