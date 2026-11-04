@@ -163,6 +163,20 @@ read, or breaks the validator's rules, is recorded `cannot_tell` for every
 criterion. The record sits in `verdicts/` keyed by the PR and its head commit,
 so a later push leaves it stale. The command exits 1 unless every criterion is met.
 
+On a GitHub tracker `verify` also publishes the verdict as the commit status
+`forger/verify` on the PR head: `success` for a pass, `failure` for a block or
+an unclear verdict, with the decision as its description. The verifier's own
+gate input leaves that status out, so it never judges its previous verdict. A
+status is bound to the commit, so a push after a pass leaves the new head
+without one until `verify` runs again. `setup` adds `forger/verify` to the base
+branch's required checks: a branch with other required checks keeps them, and an
+unprotected one gets a protection that requires only this check and applies to
+administrators, since a worker usually holds the owner's token. GitHub then
+refuses a merge that skipped `verify`, rather than the engine finding it after
+the code reached the base branch. When the token cannot change the protection,
+`setup` says so and the owner adds the check by hand; `orient` reports a base
+branch that does not require it.
+
 ## Skill slots in the loop
 
 Each point of judgement is a skill slot with a built-in step (`skills --json`

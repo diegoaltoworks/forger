@@ -357,6 +357,44 @@ describe('setup creates the loop labels', () => {
   });
 });
 
+describe('setup requires the forger/verify check', () => {
+  function inRepo(): void {
+    const root = realpathSync(mkdtempSync(join(tmpdir(), 'forger-cli-protect-')));
+    dirs.push(root);
+    process.chdir(root);
+  }
+
+  test('adds it to the base branch required checks on a GitHub tracker', async () => {
+    inRepo();
+    const calls: string[] = [];
+    const run: CommandRunner = cmd => {
+      calls.push(cmd);
+      return cmd.endsWith('/protection/required_status_checks') ? JSON.stringify({contexts: ['gates']}) : '';
+    };
+    const out = JSON.parse(await capture(['setup', '--json'], run));
+    expect(out.verify_check).toEqual({required: true, added: true});
+    expect(calls).toContain("gh api -X POST repos/{owner}/{repo}/branches/main/protection/required_status_checks/contexts -f 'contexts[]=forger/verify'");
+  });
+
+  test('reports it when the token cannot change the protection', async () => {
+    inRepo();
+    const run: CommandRunner = cmd => {
+      if (cmd.includes('/protection')) throw new Error('gh: Must have admin rights to Repository. (HTTP 403)');
+      return '';
+    };
+    const out = JSON.parse(await capture(['setup', '--json'], run));
+    expect(out.verify_check).toMatchObject({required: false, added: false, error: expect.stringContaining('admin rights')});
+  });
+
+  test('a local tracker leaves the protection alone', async () => {
+    inRepo();
+    const calls: string[] = [];
+    const out = JSON.parse(await capture(['setup', '--json', '--tracker', 'local'], cmd => (calls.push(cmd), '')));
+    expect(out.verify_check).toBeUndefined();
+    expect(calls.some(c => c.includes('/protection'))).toBe(false);
+  });
+});
+
 describe('skills --json', () => {
   test('resolves each slot from the config against the installed skills', async () => {
     const root = projectWith({});

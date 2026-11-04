@@ -4,7 +4,7 @@
  * (`commands/work.md`) calls these through the CLI and keeps only judgement.
  */
 
-import type {HandedOver, StatusReport} from '../loop';
+import {missingVerifyStatusAnomaly, type HandedOver, type StatusReport} from '../loop';
 import type {Measures} from './measure';
 import {type Period} from './waiting';
 import {buildReportMeasures, formatReportMeasures, type ReportMeasures} from './report-measures';
@@ -22,6 +22,8 @@ export interface OrientInputs {
   missingLabels?: string[];
   /** Dependencies the tickets' text and the tracker disagree on; undefined when not read. */
   backlogAnomalies?: string[];
+  /** Whether the base branch requires the `forger/verify` check; undefined or null when not known. */
+  requiresVerify?: boolean | null;
 }
 
 export interface OrientPlan {
@@ -49,6 +51,7 @@ export function orient(i: OrientInputs): OrientPlan {
   for (const label of i.missingLabels ?? []) {
     anomalies.push(`the label "${label}" the loop relies on does not exist on GitHub; run setup to create it`);
   }
+  if (i.requiresVerify === false) anomalies.push(missingVerifyStatusAnomaly(i.baseBranch));
   anomalies.push(...(i.backlogAnomalies ?? []));
   if (s.halted) {
     return {action: 'surface_halt', reason: i.haltReason?.trim() || s.last_error || 'halted, no reason recorded', anomalies};

@@ -13,7 +13,7 @@ import {agentFor, execCapture, gitStateStore, localStateFor, execRunner, findHar
 import type {Backlog} from '../backlog';
 import {detectLayout, isProjectRoot, legacyWarning, loadConfig, type WorkloopConfig} from '../config';
 import {AutomationRunner, DEFAULT_LEASE_TTL_SECONDS, GhTrackerHalt, type LeaseSettings} from '../loop';
-import type {StateStore} from '../ports';
+import {capturing, type StateStore} from '../ports';
 import {listCollectionRoots, listInstalledSkills} from '../packs';
 import {STAGES, type CliDeps, type CommandContext, type Stage} from './command';
 import {FLAGS} from './flags';
@@ -45,6 +45,7 @@ function contextFor(base: Pick<CommandContext, 'values' | 'positionals' | 'deps'
   const ctx: CommandContext = {
     ...base,
     run: () => base.deps.run ?? execRunner(ctx.projectRoot),
+    capture: () => (base.deps.run ? capturing(base.deps.run) : execCapture(ctx.projectRoot)),
     get projectRoot() {
       return (root ??= findProjectRoot());
     },

@@ -27,6 +27,7 @@ export * from './verdict';
 export * from './verdict-store';
 export * from './verify';
 export * from './verify-input';
+export * from './verify-status';
 export * from './worktree';
 export * from './parallel';
 export * from './lease';
