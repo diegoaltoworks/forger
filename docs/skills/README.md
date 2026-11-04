@@ -33,7 +33,7 @@ bun plugins/forger/bin/work.ts pipeline --json --issue 150
 
 ```mermaid
 flowchart LR
-    I[intake: interview, glossary, design] --> P[plan]
+    I[intake: interview, glossary, prototype on creative intent, design] --> P[plan]
     P --> B[build: test_first, diagnose on red]
     B --> R[review: review]
     R --> K[risk: risk]
@@ -57,6 +57,7 @@ An empty cell means the collection has no genuine fit and forger's own step runs
 |---|---|---|---|---|
 | intake | interview | `interview-me` | `grilling` | - |
 | intake | glossary | `documentation-and-adrs` | `domain-modeling` | - |
+| intake | prototype | - | - | - |
 | intake | design | - | - | - |
 | build | test_first | `test-driven-development` | `tdd` | `tdd` (file) |
 | build | diagnose | `debugging-and-error-recovery` | `diagnosing-bugs` | - |

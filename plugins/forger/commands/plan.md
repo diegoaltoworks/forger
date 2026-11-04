@@ -30,7 +30,7 @@ each. The pipeline says which slots run in which stage and what fills each:
 bun "${CLAUDE_PLUGIN_ROOT}/bin/work.ts" pipeline --json --stage <id>
 ```
 
-The stage is `intake`: it holds the slots of steps 3 to 5.
+The stage is `intake`: it holds the slots of steps 2b to 5.
 
 For a slot, read `invoke`. `skill`: invoke the skill named in `target`. `file`:
 read the file at `target` and follow it. `builtin`: do the step yourself as written
@@ -105,6 +105,25 @@ tone) offer two or three contrasting options, each with a preview (a sketch, a
 palette, a short sample of copy or a described moment of play), and let the
 owner pick or mix. Do not give one recommended answer for a creative choice.
 
+### Prototype first (creative intent only)
+
+After the brief round, run the `prototype` slot. It has an `on` of
+`creative_intent`: skip it for a product request. Before any ticket exists it
+builds two or three throwaway single-file concepts that differ on the axis the
+brief leaves open (watch versus play, palette, tone), each runnable by opening
+one HTML file, under `docs/progress/prototype/`. Check the result:
+
+```
+bun "${CLAUDE_PLUGIN_ROOT}/bin/work.ts" contract --slot prototype --file <path> --json
+```
+
+Show the owner every concept and let them pick one, or a mix of named parts;
+offer no recommendation. Record the pick and why, in their words, in the plan
+doc under "Prototype pick". Archive the chosen concept under `docs/progress/`
+as the reference and name its path in the `reuse` of every visual ticket.
+Prototype code is never merged into the product source: tickets rebuild it on
+the project's architecture.
+
 ## 3. Grill until the plan is clear
 
 Run the interview in the `interview` slot, or yourself when it is `builtin`, in this shape:
@@ -146,8 +165,8 @@ tickets. Create or update a short planning doc (e.g. `docs/plan-<slug>.md`)
 capturing (from `${CLAUDE_PLUGIN_ROOT}/templates/plan-doc.md`): the goal, what is in and out of scope, the build order, and any open
 questions/blockers. Keep it durable and qualitative - no counts, dates, or
 transient specifics. When the intent is creative, the doc opens with the
-sections "Brief, verbatim" and "Interpretation of references"; drop them
-otherwise. Decisions recorded as ADRs are linked
+sections "Brief, verbatim" and "Interpretation of references" and carries
+"Prototype pick"; drop them otherwise. Decisions recorded as ADRs are linked
 from the plan, not restated in it; a decision lives in one place.
 
 ## 5. Draft the tickets

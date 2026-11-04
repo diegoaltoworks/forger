@@ -14,6 +14,8 @@ describe('contractSuffix', () => {
     glossary_entries:
       'When you finish, write your result to r/glossary.json as JSON in this shape: [{"term":"text","file":"path"},{"adr":"text","file":"path"}]. Each file is in your changes and, for a term, contains it.',
     wireframe: 'When you finish, write your result to r/design.json as JSON in this shape: {"html":"path.html","png":"path.png"}. Both files exist; capture the png with the screenshot command.',
+    concepts:
+      'When you finish, write your result to r/prototype.json as JSON in this shape: [{"path":"docs/progress/prototype/a.html","axis":"watch vs play","pitch":"one line"}]. Give two or three concepts, each a single HTML file that exists and opens on its own. Each concept names the axis it varies; the pitch is one line.',
     tests_written:
       'When you finish, write your result to r/test_first.json as JSON in this shape: [{"criterion":"c1","file":"path","test":"test name"},{"criterion":"c2","waived":"reason"}]. Name every acceptance criterion of the ticket, or waive it with a reason. Each file is a test file in your changes.',
     diagnosis:
@@ -30,7 +32,7 @@ describe('contractSuffix', () => {
       'When you finish, write your result to r/retro.json as JSON in this shape: [{"lesson":"text","rung":"check|test|tool|doc","target":"path"}]. Each proposal names a rung of the refinement ladder and a target path.',
   };
   const slotOf: Record<string, string> = {
-    decisions: 'interview', glossary_entries: 'glossary', wireframe: 'design', tests_written: 'test_first', diagnosis: 'diagnose',
+    decisions: 'interview', glossary_entries: 'glossary', wireframe: 'design', concepts: 'prototype', tests_written: 'test_first', diagnosis: 'diagnose',
     review_findings: 'review', risk_report: 'risk', pr_body: 'pr_body', rebase_clean: 'merge_conflicts', verdict: 'verify', retro_proposals: 'retro',
   };
 

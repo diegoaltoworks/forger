@@ -29,6 +29,11 @@ export const SHAPES: Readonly<Record<ContractName, Shape>> = {
     example: {html: 'path.html', png: 'path.png'},
     rules: ['Both files exist; capture the png with the screenshot command.'],
   },
+  concepts: {
+    format: 'json',
+    example: [{path: 'docs/progress/prototype/a.html', axis: 'watch vs play', pitch: 'one line'}],
+    rules: ['Give two or three concepts, each a single HTML file that exists and opens on its own.', 'Each concept names the axis it varies; the pitch is one line.'],
+  },
   tests_written: {
     format: 'json',
     example: [{criterion: 'c1', file: 'path', test: 'test name'}, {criterion: 'c2', waived: 'reason'}],

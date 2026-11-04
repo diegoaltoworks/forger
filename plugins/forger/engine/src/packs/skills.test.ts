@@ -20,11 +20,12 @@ function skill(dir: string, name: string): void {
   writeFileSync(join(dir, name, 'SKILL.md'), '---\nname: x\n---\n');
 }
 
-describe('the three stage slots', () => {
+describe('the slots that name their output', () => {
   test.each([
     ['risk', 'auto-ticket', 'risk_report'],
     ['pr_body', 'auto-ticket', 'pr_body'],
     ['retro', 'retro', 'retro_proposals'],
+    ['prototype', 'plan', 'concepts'],
   ])('%s is used by %s and names its output %s', (slot, usedBy, output) => {
     const def = SLOTS.find(s => s.slot === slot);
     expect(def).toMatchObject({usedBy, output});

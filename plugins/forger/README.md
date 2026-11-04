@@ -116,6 +116,7 @@ judgement work are named **skill slots**, and each has a built-in forger step:
 |---|---|---|
 | `interview` | `plan` | numbered rounds of open decisions, each with a recommendation |
 | `glossary` | `plan` | terms into `GLOSSARY.md`, decisions into `docs/adr/` |
+| `prototype` | `plan` | creative intent only: two or three throwaway single-file HTML concepts that differ on the axis the brief leaves open; the owner's pick is recorded in the plan doc and the chosen one archived under `docs/progress/` |
 | `design` | `plan` | a grey-box HTML wireframe under `docs/design/<ticket>/`, captured by `screenshot --wireframe` (with the ui pack) |
 | `test_first` | `auto-ticket` | failing test, then pass, then refactor |
 | `review` | `auto-ticket` | the diff against the base, on standards and spec |
@@ -186,7 +187,7 @@ bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts contract --slot review --file <path> [--is
 ```
 
 It prints `{ok, problems}` (plus `next` when not ok) and exits 1 unless the
-result is ok. The contracts are `decisions`, `glossary_entries`, `wireframe`,
+result is ok. The contracts are `decisions`, `glossary_entries`, `wireframe`, `concepts`,
 `tests_written`, `diagnosis`, `review_findings`, `risk_report`, `pr_body`,
 `rebase_clean`, `verdict` and `retro_proposals`. Each validator is a pure
 function over the parsed result and facts the command gathers: the diff's paths,

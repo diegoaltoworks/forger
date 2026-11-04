@@ -26,6 +26,7 @@ export const SLOTS: readonly SlotDefinition[] = [
   {slot: 'interview', usedBy: 'plan', builtin: 'Ask the open decisions in numbered rounds, each with a recommended answer'},
   {slot: 'glossary', usedBy: 'plan', builtin: 'Record new terms in GLOSSARY.md and decisions in docs/adr/'},
   {slot: 'design', usedBy: 'plan', builtin: 'Write a static grey-box HTML wireframe to docs/design/<ticket>/index.html, capture it with screenshot --wireframe, link both'},
+  {slot: 'prototype', usedBy: 'plan', output: 'concepts', builtinFile: 'skills/prototype/SKILL.md', builtin: 'Build two or three throwaway single-file HTML concepts that differ on the axis the brief leaves open'},
   {slot: 'test_first', usedBy: 'auto-ticket', builtinFile: 'skills/test_first/SKILL.md', builtin: 'Write the failing test, make it pass, then refactor'},
   {slot: 'review', usedBy: 'auto-ticket', builtinFile: 'skills/review/SKILL.md', builtin: 'Review the diff against the base on standards and spec'},
   {slot: 'diagnose', usedBy: 'auto-ticket', builtinFile: 'skills/diagnose/SKILL.md', builtin: 'Reproduce the red gate, form one hypothesis, test it'},
