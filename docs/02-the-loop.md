@@ -213,9 +213,12 @@ verifier, and a `met` on a state with no resolving screenshot is demoted to
 
 The engine does not take a `met` on the verifier's word. The verifier runs the
 commands it cites through `run-logged`, which appends each command with its exit
-code and output to a log the engine owns, and every citation is then checked
-against what the engine recorded in the copy: a `file` exists and the line is
-within it, a `test` appears in a recorded run and passed, a `command` is in the
+code and output to a log the engine owns. It clears the variables under which a
+test tool prints failures only, so a passed test shows in the log. Every
+citation is then checked against what the engine recorded in the copy: a `file`
+exists and the line is within it, a `test` appears in a recorded run and passed
+(cited as the run reported it, or as `describe > test` with the enclosing
+describes in order and the last part the test's own name), a `command` is in the
 log with exit 0, a `screenshot` exists under `docs/screenshots/`. A `met` with a
 citation that does not check out becomes `cannot_tell`, and the verifier is asked
 once more about those criteria with the failed citations named. Every

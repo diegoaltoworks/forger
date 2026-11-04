@@ -24,3 +24,17 @@ export function parseCommandLog(text: string): CommandRun[] {
   }
   return runs;
 }
+
+/**
+ * Variables under which a test runner switches to an agent mode that prints
+ * failures only. With them set, the log holds no passed test, and no test the
+ * verifier cites could check out.
+ */
+export const QUIET_TEST_ENV = ['CLAUDECODE', 'REPL_ID', 'AGENT'];
+
+/** The environment a logged command runs in: the caller's, without the quiet-output switches. */
+export function loggedEnv(env: Record<string, string | undefined>): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const [k, v] of Object.entries(env)) if (v !== undefined && !QUIET_TEST_ENV.includes(k)) out[k] = v;
+  return out;
+}

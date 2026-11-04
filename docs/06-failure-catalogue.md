@@ -297,6 +297,19 @@ recovered, and where the lasting fix belongs: **E** the engine, **S** a skill
 - **Fix:** E: #193: `cannot_tell` must name what was missing, and the engine
   re-checks the evidence behind every `met`.
 
+### Test evidence never checks out, so a passing PR is unclear
+
+- **Seen:** the verifier cited tests by their full name, `describe > test`. The
+  describe and the test sit on different lines of the test file, so a lookup for
+  the whole string found nothing; every `met` became `cannot_tell` with
+  `no_test`, both rounds were `unclear`, and the loop halted on tests that exist
+  and pass. A test tool started under an agent also prints failures only, so a
+  log of its run holds no passed test to check a citation against.
+- **Fix:** E: #229: a test reference holds when a recorded passed test's name
+  holds it as written, or when its ` > ` parts appear in order with the last part
+  the test's own name; `run-logged` clears the quiet-output variables; the
+  verifier input states the reference form.
+
 ### The verifier passes a screen that is visibly wrong
 
 - **Seen:** an empty list showed a filter banner with no filter active; a

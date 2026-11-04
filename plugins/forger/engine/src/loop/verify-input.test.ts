@@ -20,6 +20,10 @@ describe('buildVerifierInput', () => {
     expect(text).toContain('failure (gates)');
   });
 
+  test('states the form a test reference takes', () => {
+    expect(text).toContain('"describe > test" for a test inside a describe');
+  });
+
   test('has no way to carry the PR body, the commit messages or a transcript', () => {
     expect(buildVerifierInput.length).toBe(1);
     expect(text).not.toContain('Closes #');
