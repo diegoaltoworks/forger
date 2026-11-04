@@ -8,7 +8,7 @@ implements them and `cli/` hands the implementations in.
 
 - `command.ts` - `CommandRunner`, `CapturingRunner`, `CommandResult`, and
   `capturing` to see one as the other. Pure.
-- `ui.ts` - `AppServer`, `Screenshotter` and `AccessibilityAuditor`, what
+- `ui.ts` - `AppServer`, `Screenshotter`, `Recorder`, `GifEncoder` and `AccessibilityAuditor`, what
   `screenshot` and `check a11y` are written against, and the error for an environment that cannot capture. Types only.
 - `spec.ts` - `SpecProvider` and the normalized requirement report `check spec`
   decides over, and `SpecOutputError`. Types only.

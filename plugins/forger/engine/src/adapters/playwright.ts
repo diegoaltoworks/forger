@@ -4,11 +4,13 @@
  * project without it gets the command that adds it.
  */
 
-import {mkdirSync} from 'fs';
+import {spawn} from 'child_process';
+import {mkdirSync, mkdtempSync, rmSync} from 'fs';
 import {createRequire} from 'module';
+import {tmpdir} from 'os';
 import {dirname, join} from 'path';
 
-import {UiInfrastructureError, type AccessibilityAuditor, type AuditRequest, type AuditedPage, type AxeResults, type Screenshotter, type ShotRequest} from '../ports';
+import {UiInfrastructureError, type AccessibilityAuditor, type AuditRequest, type AuditedPage, type AxeResults, type CaptureStep, type GifEncoder, type Recorder, type RecordRequest, type Screenshotter, type ShotRequest} from '../ports';
 
 export const PLAYWRIGHT_HINT = 'Playwright is not installed in this project; add it with `bun add -d playwright && bunx playwright install chromium`';
 
@@ -18,12 +20,21 @@ interface PlaywrightPage {
   addScriptTag(opts: {content: string}): Promise<unknown>;
   evaluate(expression: string): Promise<unknown>;
 }
+/** What the recorder drives, on the same page object the screenshotter gets. */
+interface RecordingPage extends PlaywrightPage {
+  waitForSelector(selector: string): Promise<unknown>;
+  click(selector: string): Promise<unknown>;
+  tap(selector: string): Promise<unknown>;
+  waitForTimeout(ms: number): Promise<unknown>;
+  keyboard: {press(key: string): Promise<unknown>};
+  video?(): {saveAs(path: string): Promise<unknown>} | null;
+}
 interface PlaywrightContext {
   newPage(): Promise<PlaywrightPage>;
   close(): Promise<void>;
 }
 interface PlaywrightBrowser {
-  newContext(opts: {viewport: {width: number; height: number}; colorScheme: 'light' | 'dark'}): Promise<PlaywrightContext>;
+  newContext(opts: {viewport: {width: number; height: number}; colorScheme: 'light' | 'dark'; hasTouch?: boolean; recordVideo?: {dir: string; size: {width: number; height: number}}}): Promise<PlaywrightContext>;
   close(): Promise<void>;
 }
 interface PlaywrightModule {
@@ -112,6 +123,72 @@ export function playwrightScreenshotter(projectRoot: string, load: (root: string
       } finally {
         await browser.close();
       }
+    },
+  };
+}
+
+async function perform(page: RecordingPage, step: CaptureStep): Promise<void> {
+  if ('wait' in step) await page.waitForSelector(step.wait);
+  else if ('key' in step) await page.keyboard.press(step.key);
+  else if ('click' in step) await page.click(step.click);
+  else if ('tap' in step) await page.tap(step.tap);
+  else await page.waitForTimeout(step.pause);
+}
+
+/**
+ * Plays the steps on a page whose context records video. The recording is the
+ * evidence, so a script that outruns its maximum fails rather than ships a
+ * truncated or endless clip.
+ */
+export function playwrightRecorder(projectRoot: string, load: (root: string) => PlaywrightModule = loadPlaywright): Recorder {
+  return {
+    async record(request: RecordRequest) {
+      const {chromium} = load(projectRoot);
+      const browser = await launch(chromium);
+      const scratch = mkdtempSync(join(tmpdir(), 'forger-video-'));
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      try {
+        const size = {width: request.width, height: request.height};
+        const context = await browser.newContext({viewport: size, colorScheme: 'light', hasTouch: true, recordVideo: {dir: scratch, size}});
+        try {
+          const page = (await context.newPage()) as RecordingPage;
+          const script = (async () => {
+            await page.goto(request.url, {waitUntil: 'networkidle'});
+            for (const step of request.steps) await perform(page, step);
+          })();
+          const limit = new Promise<never>((_, reject) => {
+            timer = setTimeout(() => reject(new Error(`the capture ran past its maximum of ${request.maxSeconds} seconds`)), request.maxSeconds * 1000);
+          });
+          script.catch(() => {});
+          await Promise.race([script, limit]);
+          const video = page.video?.();
+          await context.close();
+          if (video === undefined || video === null) throw new Error('Playwright recorded no video');
+          mkdirSync(dirname(request.file), {recursive: true});
+          await video.saveAs(request.file);
+        } finally {
+          await context.close().catch(() => {});
+        }
+      } finally {
+        if (timer !== undefined) clearTimeout(timer);
+        await browser.close();
+        rmSync(scratch, {recursive: true, force: true});
+      }
+    },
+  };
+}
+
+/** GIF conversion through the project machine's own ffmpeg; its absence is reported, not thrown. */
+export function ffmpegGifEncoder(bin = 'ffmpeg'): GifEncoder {
+  return {
+    encode(video, gif) {
+      return new Promise((resolve, reject) => {
+        const child = spawn(bin, ['-y', '-loglevel', 'error', '-i', video, '-vf', 'fps=12,scale=iw:-1:flags=lanczos', gif], {stdio: ['ignore', 'ignore', 'pipe']});
+        let err = '';
+        child.stderr.on('data', d => (err += String(d)));
+        child.on('error', e => ((e as {code?: string}).code === 'ENOENT' ? resolve(false) : reject(e)));
+        child.on('close', code => (code === 0 ? resolve(true) : reject(new Error(`ffmpeg failed (${code}): ${err.trim()}`))));
+      });
     },
   };
 }

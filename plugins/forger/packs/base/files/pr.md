@@ -12,6 +12,10 @@ Closes #<n>
 
 <Links to the files under docs/screenshots/ updated at the head commit, or "none".>
 
+## Captures
+
+<Links to the videos or GIFs under docs/screenshots/ updated at the head commit for interactive or animated work, or "none".>
+
 ## Languages to review
 
 <The languages and the wording changed, or "none".>

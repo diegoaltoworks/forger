@@ -42,4 +42,38 @@ describe('parseUiConfig', () => {
   test('rejects text that is not JSON', () => {
     expect(() => parseUiConfig('{')).toThrow('not valid JSON');
   });
+
+  describe('captures', () => {
+    const cap = {name: 'play', steps: [{wait: '#start'}, {click: '#start'}, {key: 'ArrowRight'}, {tap: '#b'}, {pause: 500}]};
+    const parse = (c: unknown) => parseUiConfig(JSON.stringify({...base, captures: c}));
+
+    test('a file without captures has none', () => expect(parseUiConfig(JSON.stringify(base)).captures).toEqual([]));
+
+    test('fills the route, the first viewport and the default length', () => {
+      expect(parse([cap]).captures).toEqual([{name: 'play', route: '/', viewport: 'phone', steps: cap.steps, max_seconds: 15}]);
+    });
+
+    test('keeps what is declared', () => {
+      const [c] = parse([{...cap, route: '/game', viewport: 'desktop', max_seconds: 30}]).captures;
+      expect(c).toMatchObject({route: '/game', viewport: 'desktop', max_seconds: 30});
+    });
+
+    const bad: Array<[string, unknown, string]> = [
+      ['not a list', {}, '"captures" must be a list'],
+      ['a bad name', [{...cap, name: 'Play it'}], 'lowercase words'],
+      ['a duplicate name', [cap, cap], 'names must be unique'],
+      ['a route without a slash', [{...cap, route: 'game'}], 'must start with "/"'],
+      ['an unknown viewport', [{...cap, viewport: 'tv'}], 'not one of the declared viewports'],
+      ['no steps', [{...cap, steps: []}], 'non-empty list'],
+      ['an unknown step', [{...cap, steps: [{hover: '#a'}]}], 'exactly one of'],
+      ['a step with two kinds', [{...cap, steps: [{wait: '#a', click: '#a'}]}], 'exactly one of'],
+      ['an empty selector', [{...cap, steps: [{click: ' '}]}], 'non-empty string'],
+      ['a bad pause', [{...cap, steps: [{pause: 0}]}], 'positive integer of milliseconds'],
+      ['a bad length', [{...cap, max_seconds: 0}], 'max_seconds'],
+      ['pauses longer than the maximum', [{...cap, max_seconds: 1, steps: [{pause: 1500}]}], 'more than its max_seconds'],
+    ];
+    for (const [name, value, message] of bad) {
+      test(`rejects ${name}`, () => expect(() => parse(value)).toThrow(message));
+    }
+  });
 });

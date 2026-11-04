@@ -1,9 +1,9 @@
 import {existsSync, readFileSync} from 'fs';
 import {join} from 'path';
 
-import {playwrightScreenshotter, shellAppServer, staticAppServer} from '../adapters';
+import {ffmpegGifEncoder, playwrightRecorder, playwrightScreenshotter, shellAppServer, staticAppServer} from '../adapters';
 import {UiInfrastructureError} from '../ports';
-import {UI_PATH, UiConfigError, WireframeError, parseUiConfig, runScreenshots, wireframePlan} from '../ui';
+import {UI_PATH, UiConfigError, WireframeError, parseUiConfig, runRecording, runScreenshots, wireframePlan} from '../ui';
 import type {Command} from './command';
 import {forgerPath} from '../config';
 
@@ -18,11 +18,13 @@ async function freePort(): Promise<number> {
 export const screenshot: Command = {
   name: 'screenshot',
   needs: 'root',
-  flags: ['json', 'wireframe'],
-  help: `  screenshot [--json] [--wireframe <ticket>]
+  flags: ['json', 'wireframe', 'capture'],
+  help: `  screenshot [--json] [--wireframe <ticket>] [--capture <name>]
                    Start the app (ui.start), capture every route x viewport x theme into
                    docs/screenshots/, stop it (exit 2 when Playwright or the app is unavailable).
-                   --wireframe serves docs/design/ and captures <ticket>/index.html into docs/design/<ticket>/`,
+                   --wireframe serves docs/design/ and captures <ticket>/index.html into docs/design/<ticket>/
+                   --capture runs the scripted interaction declared under "captures" in ui.json and records it
+                   as docs/screenshots/<name>.webm, plus a .gif when ffmpeg is installed (exit 2 with how to add it when not)`,
   async run({values, projectRoot}) {
     const fail = (message: string, code: number, infrastructure: boolean): void => {
       console.error(values.json ? JSON.stringify({ok: false, infrastructure, error: message}) : message);
@@ -34,7 +36,10 @@ export const screenshot: Command = {
       const config = parseUiConfig(readFileSync(path, 'utf-8'));
       const shooter = playwrightScreenshotter(projectRoot);
       let report;
-      if (values.wireframe === undefined) {
+      if (values.capture !== undefined) {
+        if (values.wireframe !== undefined) return fail('--capture and --wireframe cannot be combined', 1, false);
+        report = await runRecording(config, values.capture, projectRoot, shellAppServer(projectRoot), playwrightRecorder(projectRoot), ffmpegGifEncoder());
+      } else if (values.wireframe === undefined) {
         report = await runScreenshots(config, projectRoot, shellAppServer(projectRoot), shooter);
       } else {
         const port = await freePort();

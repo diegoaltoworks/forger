@@ -14,6 +14,9 @@ describe('checkUiEvidence', () => {
     ['a UI change with a new screenshot', [add('src/App.tsx'), add('docs/screenshots/index-phone-light.png')], 0],
     ['a UI change with an updated screenshot', [add('public/x.css'), {path: 'docs/screenshots/a.png', status: 'modified'}], 0],
     ['a UI change whose only screenshot change is a deletion', [add('src/App.tsx'), {path: 'docs/screenshots/a.png', status: 'deleted'}], 1],
+    ['a UI change with a new capture video', [add('src/App.tsx'), add('docs/screenshots/play.webm')], 0],
+    ['a UI change with an updated capture gif', [add('src/App.tsx'), {path: 'docs/screenshots/play.gif', status: 'modified'}], 0],
+    ['a UI change whose only capture change is a deletion', [add('src/App.tsx'), {path: 'docs/screenshots/play.webm', status: 'deleted'}], 1],
     ['a screenshot alone is not a UI change', [add('docs/screenshots/a.png')], 0],
     ['a deleted UI file still needs evidence', [{path: 'src/Old.tsx', status: 'deleted'}], 1],
   ];

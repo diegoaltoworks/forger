@@ -55,6 +55,7 @@ export const FLAGS = {
   fix: {type: 'boolean', default: false},
   state: {type: 'boolean', default: false},
   wireframe: {type: 'string'},
+  capture: {type: 'string'},
   lesson: {type: 'string'},
   request: {type: 'string'},
   evidence: {type: 'string', multiple: true},

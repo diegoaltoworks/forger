@@ -12,6 +12,9 @@ turns a served app into screenshots under `docs/screenshots/`.
   it (the `design` slot's built-in step). Pure.
 - `capture.ts` - starts the app, waits for it, captures, stops it. Written
   against the `AppServer` and `Screenshotter` ports; touches nothing itself.
+- `record.ts` - plans and runs one declared capture. It starts the app, records
+  the steps as video, encodes a GIF and stops the app. It uses the `AppServer`,
+  `Recorder` and `GifEncoder` ports.
 
 ## Entry point
 
