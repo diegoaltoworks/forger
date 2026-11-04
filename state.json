@@ -98,7 +98,10 @@
       "ticket": "issue-205",
       "pid": null,
       "session_id": "ff9b064f-2449-4069-aa8c-a205e93d546f",
-      "snapshot": null,
+      "snapshot": {
+        "baseSha": "608716ade6dc765d2ad81227535c5325dfedbf52",
+        "reflogLength": 430
+      },
       "started_at": "2026-11-04T06:35:17.224Z"
     }
   ],
