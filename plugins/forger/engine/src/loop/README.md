@@ -29,6 +29,10 @@ Pure:
 - `verify-input.ts` - what the verifier is given (criteria, diff and gate result,
   never the worker's claims), the tier it runs on, and its reply read into a
   verdict record: invalid output is recorded `cannot_tell` for every criterion.
+- `verdict-store.ts` - reading verdict records, and their one home: the main
+  checkout's `paths.verdicts`, found through the git directory a worktree shares
+  with it, so a record outlives the worktree. A merged head with no record counts
+  as passed when it carries a `forger/verify` status of success.
 - `worktree.ts` - a worktree per ticket and the rebase of its branch on the base
   (ADR 0011): names are pure, the git calls go through an injected capturing `CommandRunner`.
 - `parallel.ts` - the parts of the parallel loop that decide or compose (ADR 0011):

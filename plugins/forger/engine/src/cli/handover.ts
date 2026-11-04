@@ -1,6 +1,4 @@
-import {join} from 'path';
-
-import {handedOver, handOver, issueNumber, nextMove, openLabel, parseCriteria, readAllVerdicts, readVerdicts} from '../loop';
+import {handedOver, handOver, issueNumber, nextMove, openLabel, parseCriteria, readAllVerdicts, readVerdicts, verdictsHome} from '../loop';
 import type {Command} from './command';
 
 export const handover: Command = {
@@ -13,7 +11,7 @@ export const handover: Command = {
                    exit 1 on a hand-over). --list reports the tickets handed over`,
   run(ctx) {
     const {values, config, projectRoot} = ctx;
-    const dir = join(projectRoot, config.paths.verdicts);
+    const dir = verdictsHome(ctx.run(), projectRoot, config.paths.verdicts);
     const max = config.limits.maxVerifyRounds;
     const json = !!values.json;
 

@@ -34,6 +34,8 @@ interface GitScene {
   prCheck?: string;
   /** The decision recorded for the PR head; absent means a passing one, 'none' means no record. */
   verdict?: 'pass' | 'block' | 'none';
+  /** The state of the `forger/verify` commit status on the PR head; absent means none is set. */
+  verifyStatus?: 'SUCCESS' | 'FAILURE';
 }
 
 /**
@@ -56,7 +58,10 @@ function sceneRunner(scene: GitScene, spawned: () => boolean) {
         number: 75,
         headRefOid: 'head75',
         state: after && scene.merge ? 'MERGED' : 'OPEN',
-        statusCheckRollup: [{__typename: 'CheckRun', name: 'gates', status: 'COMPLETED', conclusion: scene.prCheck}],
+        statusCheckRollup: [
+          {__typename: 'CheckRun', name: 'gates', status: 'COMPLETED', conclusion: scene.prCheck},
+          ...(scene.verifyStatus ? [{__typename: 'StatusContext', context: 'forger/verify', state: scene.verifyStatus}] : []),
+        ],
       });
     }
     if (scene.branch && cmd === `git ls-remote --heads origin ${scene.branch}`) {
@@ -311,6 +316,28 @@ describe('AutomationRunner outcome from facts', () => {
     expect(state.last_error).toContain('PR #75 merged into main with no verdict recorded for its head');
     const events = readFileSync(join(root, '.forger', 'events.jsonl'), 'utf-8').trim().split('\n').map(l => JSON.parse(l));
     expect(events.map(e => e.event)).toEqual(['unverified']);
+  });
+
+  test('a merge whose verdict record is gone but whose head carries a passing forger/verify status counts as verified', async () => {
+    const {runner, root} = runnerWith(
+      {exitCode: 0, signal: null, output: '<process>complete</process>', timedOut: false},
+      {merge: true, branch: 'feat/the_ticket', prCheck: 'SUCCESS', verdict: 'none', verifyStatus: 'SUCCESS'},
+      done
+    );
+    expect(await runner.runIteration(1)).toBe(true);
+    expect(readState(root).completed_tasks).toEqual(['the_ticket']);
+    expect(existsSync(join(root, '.forger', 'HALT'))).toBe(false);
+  });
+
+  test('a failing forger/verify status with no record never counts as completed', async () => {
+    const {runner, root} = runnerWith(
+      {exitCode: 0, signal: null, output: '<process>complete</process>', timedOut: false},
+      {merge: true, branch: 'feat/the_ticket', prCheck: 'SUCCESS', verdict: 'none', verifyStatus: 'FAILURE'},
+      done
+    );
+    expect(await runner.runIteration(1)).toBe(false);
+    expect(readState(root).completed_tasks).toEqual([]);
+    expect(existsSync(join(root, '.forger', 'HALT'))).toBe(true);
   });
 
   test('stalls by merges: runs without a merge halt the loop', async () => {

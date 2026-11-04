@@ -276,6 +276,19 @@ recovered, and where the lasting fix belongs: **E** the engine, **S** a skill
 - **Fix:** E: #205: an awaited, checked prompt write; failure only on a non-zero
   exit; infrastructure errors kept out of the failure count.
 
+### A verified merge halts as unverified
+
+- **Seen:** with workers side by side, the loop halted `unverified` on a PR
+  whose head had a passing verdict: `forger/verify` was `success` on that head
+  and `merge` had merged it.
+- **Cause:** `verify` and `merge` kept verdicts under the checkout they ran in,
+  which was the worker's worktree. The worktree was removed after the run, and
+  the engine's outcome check found no verdict for the head.
+- **Fix:** E: #241: verdicts have one home, the main checkout's
+  `paths.verdicts`, found from the git directory a worktree shares with it. The
+  outcome check also counts a `forger/verify` status of `success` on the merged
+  head as a passing verdict. A merge with neither still halts `unverified`.
+
 ## The verifier
 
 ### The verifier cannot run the code it judges

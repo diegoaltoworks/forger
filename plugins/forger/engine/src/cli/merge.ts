@@ -1,6 +1,4 @@
-import {join} from 'path';
-
-import {mergePr} from '../loop';
+import {mergePr, verdictsHome} from '../loop';
 import type {Command} from './command';
 
 export const merge: Command = {
@@ -22,7 +20,7 @@ export const merge: Command = {
     const r = await mergePr(ctx.run(), {
       pr,
       baseBranch: config.base_branch,
-      verdictsDir: join(ctx.projectRoot, config.paths.verdicts),
+      verdictsDir: verdictsHome(ctx.run(), ctx.projectRoot, config.paths.verdicts),
       timeoutMs: parseInt(values.timeout as string, 10) * 1000,
     });
     if (!r.merged) process.exitCode = 1;

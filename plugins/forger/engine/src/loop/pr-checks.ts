@@ -6,6 +6,7 @@
  */
 
 import type {CommandRunner} from '../ports';
+import {VERIFY_STATUS_CONTEXT} from './verify-status';
 
 /**
  * `none` means the repo has no CI configured, so the local gates are the only
@@ -25,6 +26,8 @@ export interface PrFact {
   failing_checks: string[];
   /** The head commit the PR stands at; null when gh did not report it. */
   head: string | null;
+  /** True when the head carries a `forger/verify` status of success, which only a passing `verify` sets. */
+  verify_passed?: boolean;
 }
 
 interface RollupEntry {
@@ -71,6 +74,11 @@ export function failingChecks(rollup: unknown): string[] {
     .map(e => e.name ?? e.context ?? 'unnamed check');
 }
 
+/** The rollup lists the statuses of the PR head only, so a pass for an earlier head never shows here. */
+export function verifyStatusPassed(rollup: unknown): boolean {
+  return entries(rollup).some(e => e.context === VERIFY_STATUS_CONTEXT && entryResult(e) === 'passed');
+}
+
 function parseJson(text: string): unknown {
   try {
     return JSON.parse(text);
@@ -91,6 +99,7 @@ export function parsePr(prJson: string, ciConfigured = false): PrFact | null {
     checks_ok: checks === 'success' || checks === 'none',
     failing_checks: failingChecks(p.statusCheckRollup),
     head: typeof p.headRefOid === 'string' && p.headRefOid !== '' ? p.headRefOid : null,
+    ...(verifyStatusPassed(p.statusCheckRollup) ? {verify_passed: true} : {}),
   };
 }
 
