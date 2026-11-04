@@ -1,7 +1,6 @@
 {
   "iteration": 88,
-  "status": "halted",
-  "started_at": "2026-11-03T16:10:36.874Z",
+  "status": "ready",
   "last_completed_at": "2026-11-03T16:10:31.870Z",
   "completed_iterations": 82,
   "failed_iterations": 0,
@@ -90,10 +89,9 @@
     "issue-123",
     "issue-124"
   ],
-  "current_task": null,
+  "in_flight": [],
   "last_error": "Agent signaled stop - blocked or no actionable work",
-  "session_id": "224b6cae-1d4e-4790-b2ba-8f455b2f2d96",
-  "stall_count": 1,
+  "stall_count": 0,
   "declined_tasks": [
     {
       "ticket": "issue-81",
@@ -122,6 +120,5 @@
     }
   ],
   "consecutive_declines": 0,
-  "snapshot": null,
   "last_remaining_count": 12
 }
