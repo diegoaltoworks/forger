@@ -32,7 +32,7 @@ export function buildVerifierInput(input: VerifierInput): string {
       : input.gate.checks;
   return [
     'You are the verifier. Decide, for each acceptance criterion below, whether the built result in the current directory meets it.',
-    'The current directory is a read-only checkout of the change. Do not edit anything.',
+    'The current directory is a writable, disposable copy of the change with its dependencies installed: run the tests and the gates in it, and write whatever they need. It is thrown away afterwards, so nothing you write counts. Do not push, and do not change the pull request.',
     'For each criterion answer "met", "not_met" or "cannot_tell". "met" and "not_met" need evidence: a file with line (kind "file", ref "path:line"), a command you ran (kind "command"), or a test name (kind "test"). If you cannot tell, say cannot_tell; do not guess.',
     'Reply with one JSON object and nothing after it: {"verdict":[{"criterion":"c1","verdict":"met","evidence":[{"kind":"file","ref":"src/a.ts:10"}]}]}. Judge every criterion exactly once, using the ids below.',
     ...(shots.length > 0

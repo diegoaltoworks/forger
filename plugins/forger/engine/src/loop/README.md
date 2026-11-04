@@ -43,7 +43,7 @@ Pure:
 
 Touch the world (their own files, the terminal, the clock):
 
-- `verify.ts` - `verify --pr`: a read-only checkout of the PR head, the verifier
+- `verify.ts` - `verify --pr`: a writable throwaway copy of the PR head with dependencies installed, the verifier
   run through the `AgentRunner`, the record written per PR and head commit.
 
 - `runner.ts` - the outer loop: lock, halt, stall and failure limits, status and

@@ -192,7 +192,13 @@ checkout, are allowed.
 criteria, the diff against the base and the gate result for the PR head, and
 nothing else: never the worker's transcript, the PR body or the commit
 messages. The verifier runs through the same agent seam as a worker, in a
-read-only checkout of the head, on the `verifier` tier of the config. That tier
+writable, throwaway copy of the head, on the `verifier` tier of the config.
+Before the model starts, the engine installs dependencies in that copy: the
+`verify.setup` command if the config has one, otherwise the install step of
+`gates`. The model can then run the tests and the gates itself. A setup that
+fails is reported as an infrastructure error and records no verdict, so it is
+never mistaken for `cannot_tell` on a criterion. The engine never pushes or
+changes the PR from the verifier, and the copy is removed afterwards. That tier
 defaults to one other than the default worker tier where `model_by_priority`
 has one, so the verifier does not share the worker's blind spots.
 

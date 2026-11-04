@@ -3,7 +3,7 @@ import {randomUUID} from 'crypto';
 
 import {agentFor, findHarness, slcrProvider} from '../adapters';
 import {resolveModel} from '../config';
-import {verifierTier, verifyPr} from '../loop';
+import {setupCommand, verifierTier, verifyPr} from '../loop';
 import type {Command} from './command';
 
 export const verify: Command = {
@@ -31,6 +31,7 @@ export const verify: Command = {
         backlogFile: join(projectRoot, config.paths.backlog),
         verdictsDir: join(projectRoot, config.paths.verdicts),
         tier,
+        setup: setupCommand(config.verify.setup, config.gates),
         model: resolveModel(tier.model, config.models),
         verifierCommand: 'forger:verify',
         timeoutMinutes: config.limits.timeoutMinutes,

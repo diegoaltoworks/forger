@@ -38,6 +38,12 @@ export interface WorkloopConfig {
    * worker's blind spots.
    */
   verifier: Tier | null;
+  /**
+   * What the engine runs in the verifier's throwaway copy of the PR head before the model starts.
+   * `setup` is a shell command; null uses the install step of `gates` (the leading `cd` and
+   * install segments), and nothing when the gates have none.
+   */
+  verify: {setup: string | null};
   limits: {
     timeoutMinutes: number;
     /** Seconds between SIGTERM and SIGKILL to the worker's process group on timeout. */
@@ -128,6 +134,7 @@ export interface WorkloopConfigInput {
   model_by_priority?: Record<string, Tier>;
   effort_multiplier?: Record<string, number>;
   verifier?: Tier | null;
+  verify?: Partial<WorkloopConfig['verify']>;
   harness?: string;
   parallelism?: number;
   limits?: Partial<WorkloopConfig['limits']>;
@@ -165,6 +172,7 @@ export const DEFAULT_CONFIG: WorkloopConfig = {
     default: {model: 'standard', budget: 18.0},
   },
   verifier: null,
+  verify: {setup: null},
   /** Budget multiplier by declared effort; a truncated large ticket is worst. */
   effort_multiplier: {
     small: 1,
@@ -243,6 +251,7 @@ export function mergeConfig(
       ...base.effort_multiplier,
       ...(user.effort_multiplier ?? {}),
     },
+    verify: {...base.verify, ...(user.verify ?? {})},
     limits: {...base.limits, ...(user.limits ?? {})},
     paths: {...base.paths, ...(user.paths ?? {})},
     tracker: {...base.tracker, ...(user.tracker ?? {})},
