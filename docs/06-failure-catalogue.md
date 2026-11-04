@@ -227,12 +227,82 @@ recovered, and where the lasting fix belongs: **E** the engine, **S** a skill
   S: the supervisor compares the work order with `backlog --json` before it
   believes the exit (roadmap: the work supervisor).
 
+### Two workers start together and one gets no prompt
+
+- **Seen:** the first run with two workers halted within a minute. The first
+  worker exited at once with "Input must be provided either through stdin or as
+  a prompt argument"; its retries failed on git's "Preparing worktree" progress
+  line, logged as an error; the third failure halted the loop and ended the
+  healthy second worker.
+- **Cause:** the prompt write to the worker's stdin was not awaited or checked,
+  stderr output was read as failure, and infrastructure errors counted toward
+  the consecutive-failure limit.
+- **Recovered by:** the owner clearing the HALT.
+- **Fix:** E: #205: an awaited, checked prompt write; failure only on a non-zero
+  exit; infrastructure errors kept out of the failure count.
+
+## The verifier
+
+### The verifier cannot run the code it judges
+
+- **Seen:** the verifier answered `cannot_tell` on "a test reproduces the bug"
+  and "gates green", because its checkout was read-only and the install failed.
+  On another repository it copied the checkout to a temporary directory on its
+  own initiative; the result depended on what it thought of.
+- **Recovered by:** the supervisor running the gates on the PR head in a
+  separate worktree and posting the result on the PR for the owner.
+- **Fix:** E: #190: a writable copy with dependencies installed and the gates,
+  `check` and `screenshot` already run, so the model judges criteria, not
+  whether the tests pass.
+
+### The verifier answers "can't tell" with no reason
+
+- **Seen:** a criterion came back `cannot_tell` with no evidence and no reason,
+  and the loop handed the owner a halt with nothing to act on.
+- **Fix:** E: #193: `cannot_tell` must name what was missing, and the engine
+  re-checks the evidence behind every `met`.
+
+### The verifier passes a screen that is visibly wrong
+
+- **Seen:** an empty list showed a filter banner with no filter active; a
+  "desert" preset rendered green; a 3D view was cut off at the bottom. Gates,
+  checks and the verifier passed each; a person looking at the screenshots
+  caught them.
+- **Cause:** screenshots were taken but nothing compared them with the ticket's
+  UI states.
+- **Fix:** E: #189 (the verifier checks screenshots against the UI states), #194
+  (mechanical assertions per state), #195 (approved baselines).
+
+### A UI state the screenshot tool cannot reach
+
+- **Seen:** a fix for an empty-state bug was refused twice because its ticket
+  asked for a screenshot of the filtered list, and `screenshot` captures routes
+  only.
+- **Recovered by:** the owner waiving the screenshot criterion.
+- **Fix:** E: #191: named states in `ui.json`, with steps run before capture.
+
+### A vague or unsourced criterion decides the outcome
+
+- **Seen:** "relief sharpens" was read one way by the worker and another by the
+  verifier. A threshold the supervisor set without a source was tighter than the
+  reference data's own error, and blocked correct work.
+- **Recovered by:** restating both criteria with measured, sourced thresholds;
+  the reworked PRs passed.
+- **Fix:** E: #196: `check ticket` refuses a criterion that is not a test, a
+  command with its result, a sourced number or a named UI state. S: spikes record
+  a thresholds table with sources, and build tickets cite it.
+
 ## Running the loop
 
 ### The engine dies with the session
 
 - **Seen:** an engine started with `setsid nohup` died when the supervising
-  session restarted.
+  session restarted. Seen again with several loops: the engines and the
+  supervisor's watchers ended in the same second while the workers ran on,
+  orphaned, and finished with no engine to verify their PRs.
+- **Recovered by:** waiting for each orphaned worker to exit, then starting the
+  engine as a user service (`systemd-run --user --unit=forger-loop-<repo>`),
+  which no session owns.
 - **Fix:** E: a documented detached start (a service unit, or a supervisor
   outside the session). Toward the cloud roadmap item, state that does not live
   on one laptop.
@@ -250,6 +320,16 @@ recovered, and where the lasting fix belongs: **E** the engine, **S** a skill
   reported a halt that was not there.
 - **Fix:** S: watch the HALT file's existence and lines written after the watcher
   started. E: a terminal-event file the watcher can poll.
+
+### A watcher's pipe holds back the event that matters
+
+- **Seen:** a hand-built watcher piped the event file through `cut`, which
+  buffered its output; a loop halted and the supervisor did not hear of it until
+  it looked. Another watcher polled `status` without the loop's token and read
+  every repository as missing.
+- **Fix:** S: watch with `await-event` alone, one per loop, with the loop's
+  identity in its environment; no shell pipelines. E: #199: `watch --repos`
+  follows several loops with unbuffered, tagged lines.
 
 ### A supervisor kills its own shell
 
@@ -329,6 +409,33 @@ recovered, and where the lasting fix belongs: **E** the engine, **S** a skill
   and failed unrelated tests.
 - **Fix:** P: one test run at a time; S: never start a second commit while a
   hook's test run is going.
+
+### Setup misreads a new repository
+
+- **Seen:** every new demo repository hit a setup bug: `~/.claude` taken as the
+  project root, an absolute home path written into the gates, `bun test` and
+  pytest in `pyproject.toml` not detected, and coverage left without the lcov
+  report the testing pack reads.
+- **Recovered by:** creating `.forger` before setup, rewriting the gates with
+  `$HOME`, and adding the coverage flags by hand.
+- **Fix:** E: #183, #184, #185, #186, and #197: setup run against sample
+  projects in CI, so a setup bug fails a PR.
+
+### Branch protection lost when a repository moves
+
+- **Seen:** moving the demo repositories to an organisation dropped their branch
+  protection, so the required gates check was gone until it was put back.
+- **Fix:** S: after a transfer, re-apply protection and read it back before any
+  loop starts. E: `orient` reports a base branch that does not require
+  `forger/verify` (#187); the same check covers the gates check.
+
+### A guard that matches text refuses harmless commands
+
+- **Seen:** a stopgap hook that refused hand merges matched the merge command
+  anywhere in the command line, and refused an issue comment whose body quoted
+  it.
+- **Fix:** E: #192's hook tests the parsed program and arguments, split on `&&`,
+  `;` and `|`, with `env` and assignments stripped. S: post long text from a file.
 
 ### An old stash popped by a shell error
 
