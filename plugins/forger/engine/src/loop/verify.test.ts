@@ -4,7 +4,7 @@ import {tmpdir} from 'os';
 import {join} from 'path';
 
 import type {AgentRunner, CapturingRunner, CommandRunner} from '../ports';
-import {evidenceResolves, verdictFile, verifyPr, type VerifyOptions} from './verify';
+import {evidenceResolves, installStep, setupCommand, verdictFile, verifyPr, VerifyInfraError, type VerifyOptions} from './verify';
 
 const dirs: string[] = [];
 afterEach(() => {
@@ -45,6 +45,7 @@ function fixture() {
     backlogFile: '',
     verdictsDir: verdicts,
     tier: {model: 'deep', budget: 1},
+    setup: null,
     model: 'opus',
     verifierCommand: 'forger:verify',
     timeoutMinutes: 1,
@@ -76,15 +77,65 @@ describe('verifyPr', () => {
     expect(existsSync(verdictFile(f.verdicts, 5, 'deadbeef'))).toBe(true);
   });
 
-  test('runs in a detached checkout of the head, made read-only, and removes it', async () => {
+  test('runs in a detached, writable checkout of the head, and removes it', async () => {
     const f = fixture();
     await verifyPr(f.run, f.agentSaying('x'), f.opts);
     const add = f.calls.findIndex(c => c.startsWith('git worktree add --detach'));
     expect(add).toBeGreaterThan(-1);
     expect(f.calls[add]).toContain('deadbeef');
     expect(f.calls[add]).toContain(f.cwds[0]);
-    expect(f.calls.some(c => c.startsWith('chmod -R a-w'))).toBe(true);
+    expect(f.calls.some(c => c.startsWith('chmod'))).toBe(false);
     expect(f.calls.some(c => c.startsWith('git worktree remove --force'))).toBe(true);
+  });
+
+  test('the setup runs in the copy before the model starts', async () => {
+    const f = fixture();
+    const order: string[] = [];
+    const run: CommandRunner = cmd => {
+      if (cmd.includes('bun install')) order.push('setup');
+      return f.run(cmd);
+    };
+    const agent: AgentRunner = {
+      async run(o) {
+        order.push('agent');
+        return f.agentSaying('x').run(o);
+      },
+    };
+    await verifyPr(run, agent, {...f.opts, setup: 'bun install --frozen-lockfile'});
+    expect(order).toEqual(['setup', 'agent']);
+    const setup = f.calls.find(c => c.includes('bun install'));
+    expect(setup).toContain(`cd '${f.cwds[0]}' && bun install`);
+  });
+
+  test('a failed setup is an infrastructure error: no model run, no record, the copy removed', async () => {
+    const f = fixture();
+    const run: CommandRunner = cmd => {
+      if (cmd.includes('bun install')) throw new Error('EROFS');
+      return f.run(cmd);
+    };
+    const err = await verifyPr(run, f.agentSaying('x'), {...f.opts, setup: 'bun install'}).catch(e => e);
+    expect(err).toBeInstanceOf(VerifyInfraError);
+    expect(err.message).toContain('infrastructure error');
+    expect(f.prompts).toEqual([]);
+    expect(existsSync(verdictFile(f.verdicts, 5, 'deadbeef'))).toBe(false);
+    expect(f.calls.some(c => c.startsWith('git worktree remove --force'))).toBe(true);
+  });
+
+  test('the engine never pushes or changes the PR while verifying', async () => {
+    const f = fixture();
+    await verifyPr(f.run, f.agentSaying('x'), {...f.opts, setup: 'bun install'});
+    const forbidden = /git push|gh pr (edit|merge|close|comment|review|ready)|gh api .*-X (POST|PATCH|PUT|DELETE)/;
+    expect(f.calls.filter(c => forbidden.test(c))).toEqual([]);
+    expect(f.prompts[0]).toContain('Do not push');
+    expect(f.prompts[0]).toContain('writable');
+  });
+
+  test('the setup is the configured command, else the gates install step', () => {
+    expect(setupCommand('make deps', 'cd a && bun install')).toBe('make deps');
+    expect(setupCommand(null, 'cd a && bun install --frozen-lockfile && bun run check && cd .. && x check')).toBe('cd a && bun install --frozen-lockfile');
+    expect(setupCommand(null, 'bun test')).toBeNull();
+    expect(installStep('npm ci && npm test')).toBe('npm ci');
+    expect(setupCommand('  ', '')).toBeNull();
   });
 
   describe('the forger/verify status', () => {

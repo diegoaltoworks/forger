@@ -25,6 +25,8 @@ export interface VerifyOptions {
   /** Directory holding the verdict records. */
   verdictsDir: string;
   tier: Tier;
+  /** The shell command that installs dependencies in the copy; null when there is nothing to install. */
+  setup: string | null;
   model: string;
   /** The command the harness is asked to run; it carries the verifier's prompt. */
   verifierCommand: string;
@@ -54,6 +56,27 @@ export function changedScreenshots(nameOnly: string): string[] {
 /** A UI state the ticket names while the PR changed no screenshot cannot be seen, so it is cannot_tell. */
 export function unseenStates(states: Criterion[]): CheckedEntry[] {
   return states.map(c => ({criterion: c.id, verdict: 'cannot_tell', evidence: [], demoted: 'the PR changed no screenshot under docs/screenshots/'}));
+}
+
+/** The install step of a gates command: its segments up to and including the first that installs. Pure. */
+export function installStep(gates: string): string | null {
+  const parts = gates.split('&&').map(p => p.trim()).filter(Boolean);
+  const at = parts.findIndex(p => /\binstall\b|\bci\b/.test(p));
+  return at === -1 ? null : parts.slice(0, at + 1).join(' && ');
+}
+
+/** What runs in the verifier's copy before the model starts: the configured command, else the gates' install step. Pure. */
+export function setupCommand(setup: string | null | undefined, gates: string): string | null {
+  const configured = setup?.trim();
+  return configured ? configured : installStep(gates);
+}
+
+/** The verifier could not be set up to run: an infrastructure fault, never a verdict on the ticket's criteria. */
+export class VerifyInfraError extends Error {
+  constructor(message: string) {
+    super(`infrastructure error: ${message}`);
+    this.name = 'VerifyInfraError';
+  }
 }
 
 export function verdictFile(dir: string, pr: number, head: string): string {
@@ -121,6 +144,13 @@ export async function verifyPr(run: CommandRunner, agent: AgentRunner, opts: Ver
   const dir = mkdtempSync(join(tmpdir(), `forger-verify-${opts.pr}-`));
   run(`git worktree add --detach ${shellQuote(dir)} ${head}`);
   try {
+    if (opts.setup) {
+      try {
+        run(`cd ${shellQuote(dir)} && ${opts.setup}`);
+      } catch (e) {
+        throw new VerifyInfraError(`setup failed in the verifier's copy (${opts.setup}): ${(e as Error).message}`);
+      }
+    }
     let report: SpecReport | null = null;
     try {
       report = opts.specReport?.(dir) ?? null;
@@ -136,8 +166,6 @@ export async function verifyPr(run: CommandRunner, agent: AgentRunner, opts: Ver
     if (remaining.length === 0) {
       return writeRecord(opts, {...subject, verifier: 'spec-check', ...mergeEntries(criteria, mechanical, []), problems: []});
     }
-    // Read-only so the verifier cannot edit what it judges.
-    run(`chmod -R a-w ${shellQuote(dir)}`);
     const prompt = buildVerifierInput({criteria: remaining, diff: run(`gh pr diff ${opts.pr}`), gate: {checks: pr.checks, failing_checks: pr.failing_checks}, screenshots});
     const result = await agent.run({
       prompt,
@@ -152,7 +180,6 @@ export async function verifyPr(run: CommandRunner, agent: AgentRunner, opts: Ver
     const judged = recordVerdict(subject, remaining, result.output, e => evidenceResolves(run, dir, e));
     return writeRecord(opts, {...judged, ...mergeEntries(criteria, mechanical, judged.entries), problems: judged.problems});
   } finally {
-    run(`chmod -R u+w ${shellQuote(dir)}`);
     run(`git worktree remove --force ${shellQuote(dir)}`);
   }
 }
