@@ -42,7 +42,7 @@ describe('buildStatus', () => {
         max_stall_iterations: 5,
       },
       current_ticket: 'a',
-      in_flight: [{ticket: 'a', pid: 91, session_id: 's1', started_at: 't0', alive: true}],
+      in_flight: [{ticket: 'a', pid: 91, session_id: 's1', started_at: 't0', alive: true, plan: null}],
       next_pick: 'b',
       remaining: 4,
       workable: 2,

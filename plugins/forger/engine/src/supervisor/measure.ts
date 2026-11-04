@@ -5,6 +5,7 @@
  */
 
 import type {ScheduleRecord, TerminalEvent, VerdictRecord} from '../loop';
+import {formatStoredPlan, parsePlanLine, type StoredPlan} from '../pipeline';
 import {computeRework, formatRework, type ReworkInputs, type ReworkMeasures} from './rework';
 import {computeParallelMeasures, type ParallelMeasures} from './parallel-measures';
 
@@ -19,6 +20,8 @@ export interface IterationRecord {
   status: string | null;
   startedAt?: string | null;
   parallelism?: number | null;
+  /** The pipeline plan the run started with; absent in a log written before plans were kept. */
+  plan?: StoredPlan;
 }
 
 export interface BudgetRecord {
@@ -42,6 +45,8 @@ export interface TicketMeasure {
   /** What the ticket's sessions spent, from their transcripts; null unless every session has a known cost. */
   cost_usd: number | null;
   ci_rounds: number | null;
+  /** The pipeline plan of the ticket's latest run that recorded one. */
+  plan?: StoredPlan;
 }
 
 export interface Measures {
@@ -92,7 +97,9 @@ export function parseIterationLog(text: string): IterationRecord | null {
     else if (outcome === 'exited with code 0') cause = 'ok';
     else if (outcome.startsWith('exited with code')) cause = 'nonzero_exit';
   }
+  const plan = parsePlanLine(field('plan'));
   return {
+    ...(plan ? {plan} : {}),
     iteration: Number(head[1]),
     ticket: ticket === null || ticket === 'none picked' ? null : ticket,
     elapsedSeconds: elapsed === null ? 0 : parseInt(elapsed, 10) || 0,
@@ -280,6 +287,7 @@ export function computeMeasures(inputs: MeasureInputs): Measures {
     const t = perTicket.get(it.ticket) ?? {ticket: it.ticket, runs: 0, seconds: 0, budget_cap_usd: null, cost_usd: null, ci_rounds: null};
     t.runs += 1;
     t.seconds += it.elapsedSeconds;
+    if (it.plan) t.plan = it.plan;
     perTicket.set(it.ticket, t);
   }
   for (const t of perTicket.values()) {
@@ -341,7 +349,7 @@ export function formatMeasures(m: Measures): string {
     ...m.tickets.map(
       t =>
         `  ${t.ticket}: ${t.runs} run(s), ${t.seconds}s, cap ${t.budget_cap_usd === null ? 'unknown' : `$${t.budget_cap_usd}`}, cost ${t.cost_usd === null ? 'unknown' : `$${t.cost_usd.toFixed(2)}`}, CI rounds ${t.ci_rounds ?? 'unknown'}`
-    ),
+    ).flatMap((line, i) => [line, ...formatStoredPlan(m.tickets[i].plan).map(p => `    plan ${p}`)]),
   ];
   return lines.join('\n');
 }

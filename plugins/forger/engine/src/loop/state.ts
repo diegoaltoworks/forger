@@ -7,6 +7,7 @@
 import {existsSync, readFileSync, unlinkSync, writeFileSync} from 'fs';
 
 import type {StateStore} from '../ports';
+import type {StoredPlan} from '../pipeline';
 import type {DeclineEntry} from './decline';
 import {decideHalt, statusBody} from './halt-label';
 import type {TrackerHalt} from './halt-tracker';
@@ -37,6 +38,8 @@ export interface InFlightRun {
   /** Git position when the run began; closes out an orphan from facts. */
   snapshot: RunSnapshot | null;
   started_at: string;
+  /** The resolved pipeline plan the run started with; absent in a run stored before plans were kept. */
+  plan?: StoredPlan | null;
 }
 
 export interface AutomationState {

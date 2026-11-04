@@ -104,6 +104,15 @@ describe('computeMeasures', () => {
     last: null,
   };
 
+  test('a ticket carries the plan of its latest run that kept one, and the report shows it', () => {
+    const early = {stages: [{id: 'build', slots: [{slot: 'test_first', invoke: 'builtin' as const, target: null}]}]};
+    const late = {stages: [{id: 'build', slots: [{slot: 'test_first', invoke: 'skill' as const, target: 'tdd'}]}]};
+    const m = computeMeasures({...base, iterations: [{...its[0], plan: early}, {...its[1], plan: late}, its[2]]});
+    const alpha = m.tickets.find(t => t.ticket === 'alpha_ticket');
+    expect(alpha?.plan).toEqual(late);
+    expect(m.tickets.find(t => t.ticket === 'beta')?.plan).toBeUndefined();
+    expect(formatMeasures(m)).toContain('    plan build: test_first=skill tdd');
+  });
   test('counts runs and failures by cause', () => {
     const m = computeMeasures(base);
     expect(m.runs).toEqual({total: 4, ok: 2, failed: 2, by_cause: {timeout: 1, signal: 1}});

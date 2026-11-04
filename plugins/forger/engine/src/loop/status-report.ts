@@ -4,6 +4,7 @@
  * inputs.
  */
 
+import type {StoredPlan} from '../pipeline';
 import {declinedTickets, type DeclineReason} from './decline';
 import {currentTicket, type AutomationState} from './state';
 
@@ -29,6 +30,8 @@ export interface InFlightStatus {
   started_at: string;
   /** False when the run has no known pid or the pid is gone. */
   alive: boolean;
+  /** The pipeline plan the run started with; null when none was recorded. */
+  plan: StoredPlan | null;
 }
 
 export interface StatusReport {
@@ -78,6 +81,7 @@ export function buildStatus(i: StatusInputs): StatusReport {
       session_id: r.session_id,
       started_at: r.started_at,
       alive: r.pid !== null && i.isAlive(r.pid),
+      plan: r.plan ?? null,
     })),
     next_pick: i.next,
     remaining: i.remaining,

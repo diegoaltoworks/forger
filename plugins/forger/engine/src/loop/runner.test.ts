@@ -7,6 +7,8 @@ import {type BacklogData, backlogFrom} from '../backlog';
 import type {AgentResult, AgentRunOptions} from '../ports';
 import {localStateFor, memoryStateStore} from '../adapters';
 import {mergeConfig} from '../config';
+import type {StoredPlan} from '../pipeline';
+import {parseIterationLog} from '../supervisor';
 import {RATE_LIMIT_MARGIN_MS, RateLimitError} from './infra';
 import {AutomationRunner, WATCH_BACKLOG_EVERY} from './runner';
 import {defaultState} from './state';
@@ -67,7 +69,8 @@ function sceneRunner(scene: GitScene, spawned: () => boolean) {
 function runnerWith(
   result: AgentResult,
   scene: GitScene = {},
-  data: BacklogData = backlog
+  data: BacklogData = backlog,
+  resolvePlan?: (ticket: string | null) => StoredPlan | null
 ): {
   runner: AutomationRunner;
   root: string;
@@ -89,6 +92,7 @@ function runnerWith(
     }},
     gitRunner: sceneRunner(scene, () => calls.length > 0),
     uuid: () => '00000000-0000-0000-0000-000000000000',
+    resolvePlan,
   });
   return {runner, root, calls};
 }
@@ -109,6 +113,24 @@ function iterationLog(root: string, n: number): string {
 }
 
 describe('AutomationRunner iteration log', () => {
+  test('stores the resolved plan with the run and in the iteration log', async () => {
+    const plan: StoredPlan = {stages: [{id: 'build', slots: [{slot: 'test_first', invoke: 'builtin', target: null}]}]};
+    const asked: Array<string | null> = [];
+    const {runner, root} = runnerWith({exitCode: 0, signal: null, output: '', timedOut: false}, {}, backlog, t => {
+      asked.push(t);
+      return plan;
+    });
+    await runner.runIteration(1);
+    expect(asked).toEqual(['the_ticket']);
+    expect(parseIterationLog(iterationLog(root, 1))?.plan).toEqual(plan);
+  });
+
+  test('a run with no plan resolver writes no plan line', async () => {
+    const {runner, root} = runnerWith({exitCode: 0, signal: null, output: '', timedOut: false});
+    await runner.runIteration(1);
+    expect(iterationLog(root, 1)).not.toContain('plan:');
+  });
+
   test('passes the timeout and kill grace from config to the worker spawn', async () => {
     const {runner, calls} = runnerWith({
       exitCode: 0,

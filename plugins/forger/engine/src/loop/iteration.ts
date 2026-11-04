@@ -17,6 +17,7 @@ import type {EventKind, TerminalEventKind} from './events';
 import {declineUpdate, type DeclineEntry} from './decline';
 import {clearDeclineRecord, readDeclineRecord} from './decline-io';
 import {classifyExit} from './infra';
+import type {StoredPlan} from '../pipeline';
 import {formatIterationLog} from './iteration-log';
 import type {Logger} from './logger';
 import {verifyMerged} from './merged';
@@ -43,6 +44,8 @@ export interface IterationContext {
   refreshBacklog(): Promise<void>;
   emit(kind: EventKind, iteration: number, ticket: string | null, reason: string | null): void;
   halt(reason: string, kind?: TerminalEventKind): void;
+  /** The pipeline plan for a ticket; absent or null leaves the run without one. */
+  resolvePlan?(ticket: string | null): StoredPlan | null;
 }
 
 /**
@@ -92,7 +95,8 @@ export async function runIteration(
   // afterwards records the *next* not-started ticket instead of the one just
   // implemented, so completed_tasks would lag a ticket behind.
   const attemptedTask = placement ? placement.ticket : ctx.backlog.next();
-  updateRun(state, sessionId, {ticket: attemptedTask});
+  const plan = ctx.resolvePlan?.(attemptedTask) ?? null;
+  updateRun(state, sessionId, {ticket: attemptedTask, plan});
   ctx.store.save(state);
   if (attemptedTask) ctx.emit('picked', iteration, attemptedTask, null);
 
@@ -154,6 +158,7 @@ export async function runIteration(
     output: result.output,
     startedAt,
     parallelism: ctx.config.parallelism,
+    plan,
   };
   writeFileSync(outputFile, formatIterationLog(logFacts));
   ctx.logger.log('INFO', `Claude finished in ${duration}s (exit: ${result.exitCode})`);

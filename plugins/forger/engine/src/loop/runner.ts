@@ -16,6 +16,7 @@ import {type AutomationState, currentTicket, LoopStore} from './state';
 import type {TrackerHalt} from './halt-tracker';
 import {Logger, colors} from './logger';
 import {RateLimitError, rateLimitWaitMs} from './infra';
+import type {StoredPlan} from '../pipeline';
 import {type IterationContext, type Placement, closeOrphan, runIteration} from './iteration';
 import {conflictAfterAttempt, finishWorktree, folderMapFrom, inWorktree} from './parallel';
 import {createWorktree, worktreePath} from './worktree';
@@ -55,6 +56,8 @@ export interface RunnerDeps {
   /** The `halted` label on the pinned loop issue; omitted when the tracker is not GitHub. */
   haltTracker?: TrackerHalt;
   sleep?: (ms: number) => Promise<void>;
+  /** The pipeline plan for a ticket, stored with the run; a failure to resolve leaves the run without one. */
+  resolvePlan?: (ticket: string | null) => StoredPlan | null;
 }
 
 /** How often a parallel loop looks for a finished worker or a HALT when none has finished. */
@@ -141,6 +144,7 @@ export class AutomationRunner {
       refreshBacklog: () => this.refreshBacklog(),
       emit: (kind, iteration, ticket, reason) => this.emit(kind, iteration, ticket, reason),
       halt: (reason, kind) => this.halt(reason, kind),
+      resolvePlan: deps.resolvePlan,
     };
   }
 

@@ -24,20 +24,20 @@ The tracker settings are in `.forger/workloop.config.json`; its conventions are 
 ## Skill slots
 
 Some steps below are skill slots: the project may plug an installed skill into
-each. Resolve them once, up front:
+each. The pipeline says which slots run in which stage and what fills each:
 
 ```
-bun "${CLAUDE_PLUGIN_ROOT}/bin/work.ts" skills --json
+bun "${CLAUDE_PLUGIN_ROOT}/bin/work.ts" pipeline --json --stage <id> --issue <n>
 ```
 
-For a slot, read `invoke`. `skill`: invoke the skill named in `skill`. `file`:
-read the file at `path` and follow it. `builtin`: do the step yourself as written
-here, as you also do when the tool fails. Start every `skill` or `file` slot
-with the report's `preamble`, verbatim, and never invoke a skill listed in
-`forbid`. Never name or choose a skill yourself.
+Ask for the stage you are in: `build` (steps 4 and 5), `review` and `risk` (step 6), `pr` (step 8).
 
-Slots used here: `test_first` (step 4), `diagnose` (step 5), `review` (step 6),
-`risk` (step 6), `pr_body` and `merge_conflicts` (step 8).
+For a slot, read `invoke`. `skill`: invoke the skill named in `target`. `file`:
+read the file at `target` and follow it. `builtin`: do the step yourself as written
+here, as you also do when the tool fails. A slot with `on` runs only when that
+event happens. Start every step whose `invoke` is `skill` or `file` with the `preamble` of
+`bun "${CLAUDE_PLUGIN_ROOT}/bin/work.ts" skills --json`, verbatim, and never
+invoke a skill listed in its `forbid`. Never name or choose a skill yourself.
 
 ## Read first (in order)
 1. `.forger/process.md` - the workflow rules and the **project gotchas** (REQUIRED)
