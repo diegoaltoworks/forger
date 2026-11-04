@@ -98,7 +98,10 @@
       "ticket": "issue-156",
       "pid": null,
       "session_id": "8155977c-9046-4d5f-9cce-74f31a24a3a4",
-      "snapshot": null,
+      "snapshot": {
+        "baseSha": "",
+        "reflogLength": 1
+      },
       "started_at": "2026-11-04T06:16:10.737Z"
     }
   ],
