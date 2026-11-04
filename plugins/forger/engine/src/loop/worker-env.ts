@@ -9,8 +9,16 @@ export const WORKER_ROLE_VAR = 'FORGER_ROLE';
 export const WORKER_TICKET_VAR = 'FORGER_TICKET';
 export const WORKER_ITERATION_VAR = 'FORGER_ITERATION';
 
-export function workerEnv(ticket: string | null, iteration: number): Record<string, string> {
-  return {[WORKER_ROLE_VAR]: 'worker', [WORKER_TICKET_VAR]: ticket ?? '', [WORKER_ITERATION_VAR]: String(iteration)};
+/** The plugin's root, which the gates setup writes name instead of a machine path. */
+export const PLUGIN_ROOT_VAR = 'FORGER_PLUGIN_ROOT';
+
+export function workerEnv(ticket: string | null, iteration: number, pluginRoot?: string): Record<string, string> {
+  return {
+    [WORKER_ROLE_VAR]: 'worker',
+    [WORKER_TICKET_VAR]: ticket ?? '',
+    [WORKER_ITERATION_VAR]: String(iteration),
+    ...(pluginRoot ? {[PLUGIN_ROOT_VAR]: pluginRoot} : {}),
+  };
 }
 
 export interface WorkerIdentity {

@@ -10,6 +10,7 @@ import {dirname, join} from 'path';
 
 import {LOCK_PATH, loadPacks, parseLock, renderLock, sha256, type Lock, type LockedFile, type LockedPack} from './packs';
 import {forgerPath, loadConfig} from '../config';
+import {relocatableGates} from './setup';
 import {newerFlavour, parseFlavourRef, shippedFlavour} from '../pipeline';
 
 export type UpgradeAction =
@@ -58,6 +59,8 @@ export interface UpgradeResult {
   files: UpgradeEntry[];
   /** Set when the config's flavour is pinned to a version older than the plugin's. */
   flavour?: FlavourUpgrade;
+  /** Set when the config's gates named the plugin by absolute path and now name it by variable. */
+  gates?: 'rewritten';
   /** Files the owner has to decide about. */
   review: string[];
 }
@@ -77,6 +80,25 @@ function newerFlavourPin(projectRoot: string, pluginRoot: string): FlavourUpgrad
   const ref = parseFlavourRef(loadConfig(projectRoot).flavour);
   const available = newerFlavour(ref, shippedFlavour(pluginRoot, ref.name));
   return available === null || ref.version === null ? undefined : {name: ref.name, pinned: ref.version, available};
+}
+
+/** Rewrites an absolute check command in the config's gates, leaving the rest of the file as it is. */
+function relocateGates(projectRoot: string): boolean {
+  const path = forgerPath(projectRoot, '.forger/workloop.config.json');
+  if (!existsSync(path)) return false;
+  const text = readFileSync(path, 'utf-8');
+  let gates: unknown;
+  try {
+    gates = (JSON.parse(text) as {gates?: unknown}).gates;
+  } catch {
+    return false;
+  }
+  if (typeof gates !== 'string') return false;
+  const next = relocatableGates(gates);
+  if (next === gates) return false;
+  const literal = JSON.stringify(gates);
+  write(path, text.includes(literal) ? text.replace(literal, () => JSON.stringify(next)) : JSON.stringify({...JSON.parse(text), gates: next}, null, 2) + '\n');
+  return true;
 }
 
 export function runUpgrade(projectRoot: string, pluginRoot: string): UpgradeResult {
@@ -130,13 +152,15 @@ export function runUpgrade(projectRoot: string, pluginRoot: string): UpgradeResu
   if (readFileSync(lockPath, 'utf-8') !== text) write(lockPath, text);
 
   const flavour = newerFlavourPin(projectRoot, pluginRoot);
+  const relocated = relocateGates(projectRoot);
 
   const review = files.filter(f => f.action === 'conflict' || f.action === 'removed' || f.action === 'deleted').map(f => f.path);
-  return {files, review, ...(flavour ? {flavour} : {})};
+  return {files, review, ...(flavour ? {flavour} : {}), ...(relocated ? {gates: 'rewritten' as const} : {})};
 }
 
 export function formatUpgrade(result: UpgradeResult): string {
   const lines = result.files.filter(f => f.action !== 'unchanged').map(f => `${f.action.padEnd(14)} ${f.path}${f.upstreamFile ? ` (pack version in ${f.upstreamFile})` : ''}`);
+  if (result.gates) lines.push('rewritten      gates in the config now name the plugin by variable');
   if (result.flavour) lines.push(`flavour        ${result.flavour.name}@${result.flavour.available} is available (config pins @${result.flavour.pinned}); change "flavour" in the config to take it`);
   return lines.length === 0 ? 'already up to date' : lines.join('\n');
 }

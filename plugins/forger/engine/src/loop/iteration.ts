@@ -46,6 +46,8 @@ export interface IterationContext {
   halt(reason: string, kind?: TerminalEventKind): void;
   /** The pipeline plan for a ticket; absent or null leaves the run without one. */
   resolvePlan?(ticket: string | null): StoredPlan | null;
+  /** Exported to the worker, whose gates name it. */
+  pluginRoot?: string;
 }
 
 /**
@@ -126,7 +128,7 @@ export async function runIteration(
     model: resolveModel(tier.model, ctx.config.models),
     workerCommand: ctx.config.worker_command,
     cwd: root,
-    env: workerEnv(attemptedTask, iteration),
+    env: workerEnv(attemptedTask, iteration, ctx.pluginRoot),
     timeoutMinutes,
     killGraceSeconds,
     abort: placement?.abort,
