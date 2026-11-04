@@ -26,6 +26,12 @@ describe('classifyCriterion', () => {
     expect(classifyCriterion('The "loading" UI state has a screenshot under docs/screenshots').form).toBe('ui');
   });
 
+  test('a citation of a thresholds row from the spike template passes', () => {
+    const v = classifyCriterion('Slope error is within the `slope` row of the thresholds table in the spike');
+    expect(v.ok).toBe(true);
+    expect(v.form).toBe('number');
+  });
+
   test('a subjective word fails even beside a checkable form', () => {
     expect(classifyCriterion('`bun run check` exits 0 and is fast').ok).toBe(false);
   });

@@ -37,6 +37,8 @@ const UNITS = '(?:deg|degrees?|ms|milliseconds?|seconds?|s|min|px|%|percent|kb|m
 const NUMBER_WITH_UNIT = new RegExp(`(?<![\\w.])\\d+(?:\\.\\d+)?\\s?${UNITS}(?![\\w])`, 'i');
 const SOURCE = /\b(?:source|spike|thresholds?\s+(?:row|table)|adr[\s-]*\d+|per\s+(?:the\s+)?(?:adr|spec|standard|datasheet|reference)|cited|citation)\b|https?:\/\/|docs\/adr\//i;
 const TEST = /\b(?:tested|unit test|test(?:s)? (?:in|at|named|called|asserts?|that|for|passes?|fails?)|named test|[\w./-]+\.(?:test|spec)\.\w+)\b|`[^`]*(?:test|spec)[^`]*`|\btest\b.*\b(?:passes|pass|fails|asserts)\b|\b(?:passes|pass|fails|asserts)\b.*\btest\b/i;
+/** A citation of a spike's thresholds row: the row carries the value, unit and source. */
+const THRESHOLD_ROW = /\bthresholds?\s+(?:table|row)s?\b.*\brow\b|\brow\b.*\bthresholds?\s+(?:table|row)s?\b|\bthresholds?\s+row\b/i;
 const EXPECTED = /\b(?:exit(?:s|ed)?(?:\s+code)?|output|prints?|returns?|reports?|non-zero|zero|passes|fails|refuses|accepts|rejects)\b/i;
 const BACKTICKED_COMMAND = /`[^`]*\s[^`]*`/;
 const GATES = /\bgates?\b.*\b(?:green|pass(?:es)?)\b/i;
@@ -70,7 +72,7 @@ export function classifyCriterion(text: string, options: CriterionOptions = {}):
   if (named || (UI_STATE.test(text) && /["`']/.test(text))) form = 'ui';
   else if (TEST.test(text)) form = 'test';
   else if ((BACKTICKED_COMMAND.test(text) && EXPECTED.test(text)) || GATES.test(text)) form = 'command';
-  else if (hasNumber && sourced) form = 'number';
+  else if ((hasNumber && sourced) || THRESHOLD_ROW.test(text)) form = 'number';
   if (form === null) {
     return fail(hasNumber ? 'gives a number with a unit but no source; cite a spike thresholds row, an ADR or a reference' : 'is not one of the four checkable forms: a named test, a command with its expected result, a number with a unit and a source, or a named UI state');
   }
