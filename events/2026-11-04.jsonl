@@ -9,3 +9,4 @@
 {"event":"halt_cleared","at":"2026-11-04T06:34:40.583Z","iteration":94,"ticket":null,"reason":"Nothing merged or pushed, exit code 143"}
 {"event":"picked","at":"2026-11-04T06:35:20.922Z","iteration":95,"ticket":"issue-205","reason":null}
 {"event":"picked","at":"2026-11-04T06:46:15.563Z","iteration":96,"ticket":"issue-156","reason":null}
+{"event":"worker_denied","at":"2026-11-04T06:50:59.574Z","iteration":96,"ticket":"issue-156","reason":"push-base: cd /home/diego/work/forger/plugins/forger/engine && bun install --frozen-lockfile >/dev/null 2>&1; bun run check >/tmp/c3 2>&1; echo engine=$?; cd ../../.. && bun plugins/forger/bin/work.ts check >/tmp/c4 2>&1; echo check=$?; git push -q -f -u origin feat/issue-156 2>&1 | tail -1"}
