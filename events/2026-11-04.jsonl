@@ -33,3 +33,4 @@
 {"event":"picked","at":"2026-11-04T22:30:50.160Z","iteration":109,"ticket":"issue-229","reason":null}
 {"event":"picked","at":"2026-11-04T22:37:13.555Z","iteration":110,"ticket":"issue-197","reason":null}
 {"event":"halted","at":"2026-11-04T22:38:17.665Z","iteration":110,"ticket":null,"reason":"#197 needs #185 and #186 merged first."}
+{"event":"halt_cleared","at":"2026-11-04T22:43:11.073Z","iteration":110,"ticket":null,"reason":"#197 needs #185 and #186 merged first."}
