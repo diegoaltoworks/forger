@@ -94,7 +94,10 @@
       "ticket": "issue-187",
       "pid": null,
       "session_id": "4df620d4-ad73-4eac-a6c3-470e10aab0d4",
-      "snapshot": null,
+      "snapshot": {
+        "baseSha": "",
+        "reflogLength": 1
+      },
       "started_at": "2026-11-04T05:36:38.483Z"
     }
   ],
