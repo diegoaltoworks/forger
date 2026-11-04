@@ -113,7 +113,10 @@
       "ticket": "issue-220",
       "pid": null,
       "session_id": "1363c53f-5021-4e27-9175-1c5c8a774a84",
-      "snapshot": null,
+      "snapshot": {
+        "baseSha": "",
+        "reflogLength": 1
+      },
       "started_at": "2026-11-04T23:34:22.987Z",
       "plan": {
         "stages": [
