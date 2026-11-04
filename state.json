@@ -1,5 +1,5 @@
 {
-  "iteration": 97,
+  "iteration": 98,
   "status": "running",
   "last_completed_at": "2026-11-04T06:54:08.109Z",
   "completed_iterations": 88,
@@ -105,6 +105,13 @@
         "reflogLength": 1
       },
       "started_at": "2026-11-04T07:05:45.826Z"
+    },
+    {
+      "ticket": null,
+      "pid": null,
+      "session_id": "03ace8ba-ab92-483c-8d97-0efc8fbb8d3f",
+      "snapshot": null,
+      "started_at": "2026-11-04T07:05:54.921Z"
     }
   ],
   "last_error": null,
