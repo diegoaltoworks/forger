@@ -7,7 +7,7 @@
  */
 
 import {existsSync} from 'fs';
-import {join} from 'path';
+import {dirname, join} from 'path';
 
 export const FORGER_DIR = '.forger';
 export const LEGACY_DIR = '.claude';
@@ -59,9 +59,31 @@ export function detectLayout(projectRoot: string): Layout {
   });
 }
 
-/** Whether a directory is a project root for forger: it holds either folder. */
+/** Whether a directory is a project root for forger: it holds `.forger/`, or a legacy `.claude/` with a forger config. */
 export function isProjectRoot(dir: string): boolean {
-  return existsSync(join(dir, FORGER_DIR)) || existsSync(join(dir, LEGACY_DIR));
+  return existsSync(join(dir, FORGER_DIR)) || existsSync(join(dir, LEGACY_DIR, CONFIG_FILE));
+}
+
+export interface RootFacts {
+  /** The git top-level of the start directory, or null outside a repository. */
+  gitTop: string | null;
+  /** The user's home directory: it holds `.claude/` for the harness, so it is never a root. */
+  home: string;
+  isRoot: (dir: string) => boolean;
+}
+
+/**
+ * Pure: inside a repository the root is its git top-level, whatever sits above
+ * it. Outside one, the nearest ancestor that is a project root, never home.
+ */
+export function resolveProjectRoot(start: string, facts: RootFacts): string | null {
+  if (facts.gitTop !== null) return facts.gitTop === facts.home ? null : facts.gitTop;
+  let dir = start;
+  for (;;) {
+    if (dir !== facts.home && facts.isRoot(dir)) return dir;
+    if (dir === dirname(dir)) return null;
+    dir = dirname(dir);
+  }
 }
 
 /** Pure: a logical `.forger/x` path as the layout stores it. Other paths are returned as they are. */

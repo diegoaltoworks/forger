@@ -5,7 +5,7 @@ import {join} from 'path';
 
 import {claudeHooks, execRunner, gitStateStore} from '../adapters';
 import {renderHookPolicy} from '../hooks';
-import {main} from './main';
+import {findProjectRoot, main} from './main';
 import type {CommandRunner} from '../ports';
 
 const dirs: string[] = [];
@@ -1015,5 +1015,16 @@ describe('reading state from the state branch', () => {
   test('--from rejects an unknown home', async () => {
     process.chdir(cloneWithRemoteState());
     await expect(capture(['status', '--json', '--from', 'cloud'])).rejects.toThrow('--from must be local or branch');
+  });
+});
+
+describe('findProjectRoot', () => {
+  test('a repository without .forger is the root even under a directory holding .claude', () => {
+    const outer = realpathSync(mkdtempSync(join(tmpdir(), 'forger-root-')));
+    dirs.push(outer);
+    mkdirSync(join(outer, '.claude'));
+    mkdirSync(join(outer, 'repo', 'src'), {recursive: true});
+    Bun.spawnSync(['git', 'init', '-q'], {cwd: join(outer, 'repo')});
+    expect(findProjectRoot(join(outer, 'repo', 'src'), outer)).toBe(join(outer, 'repo'));
   });
 });

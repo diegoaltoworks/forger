@@ -6,7 +6,7 @@ real `CommandRunner` and agent spawn from `adapters/` are handed to the core.
 
 ## Files
 
-- `main.ts` - `main` and `findProjectRoot`; builds the command context. Touches
+- `main.ts` - `main` and `findProjectRoot` (the git top-level, else the nearest forger folder, never home); builds the command context. Touches
   the world (cwd, home, files).
 - `registry.ts` - every command in usage order; the usage text is generated
   from it. Pure.
