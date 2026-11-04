@@ -1,6 +1,6 @@
 {
-  "iteration": 113,
-  "status": "ready",
+  "iteration": 114,
+  "status": "running",
   "last_completed_at": "2026-11-04T23:14:42.792Z",
   "completed_iterations": 101,
   "failed_iterations": 6,
@@ -107,7 +107,15 @@
     "issue-229",
     "issue-198"
   ],
-  "in_flight": [],
+  "in_flight": [
+    {
+      "ticket": null,
+      "pid": null,
+      "session_id": "d415840f-ea37-46fe-be93-6b307573ffe1",
+      "snapshot": null,
+      "started_at": "2026-11-04T23:17:55.094Z"
+    }
+  ],
   "last_error": "PR #240 merged into main with no verdict recorded for its head. Nothing independent checked it; review what landed before more work does.",
   "stall_count": 0,
   "declined_tasks": [
