@@ -5,16 +5,18 @@
  * sits here behind the injected runner and agent.
  */
 
-import {existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync} from 'fs';
+import {existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync} from 'fs';
 import {tmpdir} from 'os';
-import {isAbsolute, join, normalize} from 'path';
+import {join} from 'path';
 
 import type {Tier} from '../config';
 import type {AgentRunner, CapturingRunner, CommandRunner, SpecReport} from '../ports';
 import {issueNumber} from './decline';
 import {PR_FIELDS, parsePr} from './pr-checks';
 import {mergeEntries, partitionCriteria} from './mechanical';
-import {parseCriteria, parseUiStates, type CheckedEntry, type Criterion, type Evidence} from './verdict';
+import {evidenceHolds, failedCitations, SCREENSHOTS_DIR, type CommandRun, type CopyRecord} from './evidence-check';
+import {parseCommandLog} from './run-logged';
+import {EVIDENCE_DEMOTION, parseCriteria, parseUiStates, reduceVerdict, type CheckedEntry, type Criterion} from './verdict';
 import {buildVerifierInput, recordVerdict, type VerdictRecord} from './verify-input';
 import {setVerifyStatus, withoutVerifyStatus, type VerifyStatusOutcome} from './verify-status';
 
@@ -37,13 +39,13 @@ export interface VerifyOptions {
   specReport?: (checkoutDir: string) => SpecReport | null;
   /** Sets the `forger/verify` status on the head; on a GitHub tracker the verdict is published only when given. */
   capture?: CapturingRunner;
+  /** The command prefix that records a command in the copy's log (`run-logged --file <log>` is appended); absent when no log is kept. */
+  runLogged?: string;
   now?: () => Date;
 }
 
 /** The record as written, plus what publishing it as a commit status did. */
 export type VerifyResult = VerdictRecord & {status?: VerifyStatusOutcome};
-
-const SCREENSHOTS_DIR = 'docs/screenshots/';
 
 /** The images a PR changed under docs/screenshots/, from `gh pr diff --name-only`. */
 export function changedScreenshots(nameOnly: string): string[] {
@@ -55,7 +57,7 @@ export function changedScreenshots(nameOnly: string): string[] {
 
 /** A UI state the ticket names while the PR changed no screenshot cannot be seen, so it is cannot_tell. */
 export function unseenStates(states: Criterion[]): CheckedEntry[] {
-  return states.map(c => ({criterion: c.id, verdict: 'cannot_tell', evidence: [], demoted: 'the PR changed no screenshot under docs/screenshots/'}));
+  return states.map(c => ({criterion: c.id, verdict: 'cannot_tell', missing: 'no_state', evidence: [], demoted: 'the PR changed no screenshot under docs/screenshots/'}));
 }
 
 /** The install step of a gates command: its segments up to and including the first that installs. Pure. */
@@ -101,31 +103,16 @@ function criteriaFor(run: CommandRunner, opts: VerifyOptions, ticket: string): {
   return {criteria: texts.map((text, i) => ({id: `c${i + 1}`, text})), uiStates: []};
 }
 
-/** Whether a piece of evidence points at something in the checkout. A command is taken as cited: the verifier ran it, and the validator does not re-run it. */
-export function evidenceResolves(run: CommandRunner, root: string, e: Evidence): boolean {
-  const ref = (e.ref ?? '').trim();
-  if (ref === '') return false;
-  if (e.kind === 'command') return true;
-  // Only the engine's own spec check is evidence of kind check; a verifier cannot claim it.
-  if (e.kind === 'check') return false;
-  if (e.kind === 'screenshot') {
-    const rel = normalize(ref);
-    return rel.startsWith(SCREENSHOTS_DIR) && existsSync(join(root, rel));
-  }
-  if (e.kind === 'test') {
-    try {
-      return run(`git -C ${shellQuote(root)} grep -F -l -e ${shellQuote(ref)}`).trim() !== '';
-    } catch {
-      return false;
-    }
-  }
-  const m = /^(.*?)(?::(\d+))?$/.exec(ref);
-  const path = normalize(m?.[1] ?? ref);
-  if (isAbsolute(path) || path.startsWith('..')) return false;
-  const file = join(root, path);
-  if (!existsSync(file)) return false;
-  if (!m?.[2]) return true;
-  return parseInt(m[2], 10) >= 1 && parseInt(m[2], 10) <= readFileSync(file, 'utf-8').split('\n').length;
+/** What the engine recorded in the verifier's copy: its files, and the commands run through the log. */
+export function copyRecord(root: string, commands: CommandRun[]): CopyRecord {
+  return {
+    commands,
+    fileLines(path) {
+      const file = join(root, path);
+      if (!existsSync(file) || !statSync(file).isFile()) return null;
+      return readFileSync(file, 'utf-8').split('\n').length;
+    },
+  };
 }
 
 export async function verifyPr(run: CommandRunner, agent: AgentRunner, opts: VerifyOptions): Promise<VerifyResult> {
@@ -142,6 +129,8 @@ export async function verifyPr(run: CommandRunner, agent: AgentRunner, opts: Ver
 
   run(`git fetch origin pull/${opts.pr}/head`);
   const dir = mkdtempSync(join(tmpdir(), `forger-verify-${opts.pr}-`));
+  const log = `${dir}.commands.jsonl`;
+  const runLogged = opts.runLogged ? `${opts.runLogged} --file ${shellQuote(log)}` : undefined;
   run(`git worktree add --detach ${shellQuote(dir)} ${head}`);
   try {
     if (opts.setup) {
@@ -166,20 +155,38 @@ export async function verifyPr(run: CommandRunner, agent: AgentRunner, opts: Ver
     if (remaining.length === 0) {
       return writeRecord(opts, {...subject, verifier: 'spec-check', ...mergeEntries(criteria, mechanical, []), problems: []});
     }
-    const prompt = buildVerifierInput({criteria: remaining, diff: run(`gh pr diff ${opts.pr}`), gate: {checks: pr.checks, failing_checks: pr.failing_checks}, screenshots});
-    const result = await agent.run({
-      prompt,
-      sessionId: opts.sessionId,
-      tier: opts.tier,
-      model: opts.model,
-      workerCommand: opts.verifierCommand,
-      cwd: dir,
-      timeoutMinutes: opts.timeoutMinutes,
-      killGraceSeconds: opts.killGraceSeconds,
-    });
-    const judged = recordVerdict(subject, remaining, result.output, e => evidenceResolves(run, dir, e));
+    const diff = run(`gh pr diff ${opts.pr}`);
+    const gate = {checks: pr.checks, failing_checks: pr.failing_checks};
+    const ask = async (criteriaAsked: Criterion[], failed?: {criterion: string; citations: string[]}[]) => {
+      const result = await agent.run({
+        prompt: buildVerifierInput({criteria: criteriaAsked, diff, gate, screenshots, runLogged, failedCitations: failed}),
+        sessionId: opts.sessionId,
+        tier: opts.tier,
+        model: opts.model,
+        workerCommand: opts.verifierCommand,
+        cwd: dir,
+        timeoutMinutes: opts.timeoutMinutes,
+        killGraceSeconds: opts.killGraceSeconds,
+      });
+      const record = copyRecord(dir, existsSync(log) ? parseCommandLog(readFileSync(log, 'utf-8')) : []);
+      const holds = (e: Parameters<typeof evidenceHolds>[1]) => evidenceHolds(record, e);
+      return {holds, judged: recordVerdict(subject, criteriaAsked, result.output, holds)};
+    };
+    const first = await ask(remaining);
+    let judged = first.judged;
+    const redo = judged.problems.length === 0 ? judged.entries.filter(e => e.demoted?.startsWith(EVIDENCE_DEMOTION)) : [];
+    if (redo.length > 0) {
+      const failed = redo.map(e => ({criterion: e.criterion, citations: failedCitations(e.evidence, first.holds)}));
+      const second = await ask(remaining.filter(c => redo.some(e => e.criterion === c.id)), failed);
+      if (second.judged.problems.length === 0) {
+        const again = new Map(second.judged.entries.map(e => [e.criterion, e]));
+        judged = {...judged, entries: judged.entries.map(e => again.get(e.criterion) ?? e)};
+        judged = {...judged, decision: reduceVerdict(judged.entries)};
+      }
+    }
     return writeRecord(opts, {...judged, ...mergeEntries(criteria, mechanical, judged.entries), problems: judged.problems});
   } finally {
+    rmSync(log, {force: true});
     run(`git worktree remove --force ${shellQuote(dir)}`);
   }
 }

@@ -60,7 +60,7 @@ describe('extractVerdict', () => {
 describe('recordVerdict', () => {
   const ev = [{kind: 'test', ref: 'real'}];
   test('valid output is recorded as judged, with the head', () => {
-    const out = JSON.stringify({verdict: [{criterion: 'c1', verdict: 'met', evidence: ev}, {criterion: 'c2', verdict: 'cannot_tell', evidence: []}]});
+    const out = JSON.stringify({verdict: [{criterion: 'c1', verdict: 'met', evidence: ev}, {criterion: 'c2', verdict: 'cannot_tell', missing: 'no_data', evidence: []}]});
     const r = recordVerdict(subject, criteria, out, resolves);
     expect(r.head).toBe('abc123');
     expect(r.pr).toBe(7);

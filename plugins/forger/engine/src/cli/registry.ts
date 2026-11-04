@@ -22,6 +22,7 @@ import {opinions, packs} from './packs';
 import {pipeline} from './pipeline';
 import {prBody} from './pr-body';
 import {retro} from './retro';
+import {runLogged} from './run-logged';
 import {screenshot} from './screenshot';
 import {setup} from './setup';
 import {skills} from './skills';
@@ -52,6 +53,7 @@ export const COMMANDS: Command[] = [
   facts,
   merge,
   verify,
+  runLogged,
   decline,
   prBody,
   worktree,

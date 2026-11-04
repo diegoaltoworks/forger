@@ -211,8 +211,20 @@ verifier, and a `met` on a state with no resolving screenshot is demoted to
 `cannot_tell`, so a defect the image shows (a banner with no filter active) is
 `not_met` and blocks the merge.
 
+The engine does not take a `met` on the verifier's word. The verifier runs the
+commands it cites through `run-logged`, which appends each command with its exit
+code and output to a log the engine owns, and every citation is then checked
+against what the engine recorded in the copy: a `file` exists and the line is
+within it, a `test` appears in a recorded run and passed, a `command` is in the
+log with exit 0, a `screenshot` exists under `docs/screenshots/`. A `met` with a
+citation that does not check out becomes `cannot_tell`, and the verifier is asked
+once more about those criteria with the failed citations named. Every
+`cannot_tell` carries `missing`, one of `no_state`, `no_test`, `no_data`,
+`infra`, `ambiguous_criterion`; an answer without it is rejected. The handover
+comment and the supervisor report name it, so the owner sees what to supply.
+
 The output is validated by the verdict validator. Valid output is recorded as
-judged, an unresolvable `met` demoted to `cannot_tell`; output that cannot be
+judged, an unconfirmed `met` demoted to `cannot_tell`; output that cannot be
 read, or breaks the validator's rules, is recorded `cannot_tell` for every
 criterion. The record sits in `verdicts/` keyed by the PR and its head commit,
 so a later push leaves it stale. The command exits 1 unless every criterion is met.

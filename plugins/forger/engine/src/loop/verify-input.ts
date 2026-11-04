@@ -21,6 +21,10 @@ export interface VerifierInput {
   gate: GateResult;
   /** Images the PR changed under docs/screenshots/; empty when it changed none. */
   screenshots?: string[];
+  /** The command prefix that records a command in the copy's log; absent when no log is kept. */
+  runLogged?: string;
+  /** Citations of the previous round that did not check out, per criterion; present in the second round. */
+  failedCitations?: {criterion: string; citations: string[]}[];
 }
 
 export function buildVerifierInput(input: VerifierInput): string {
@@ -34,7 +38,12 @@ export function buildVerifierInput(input: VerifierInput): string {
     'You are the verifier. Decide, for each acceptance criterion below, whether the built result in the current directory meets it.',
     'The current directory is a writable, disposable copy of the change with its dependencies installed: run the tests and the gates in it, and write whatever they need. It is thrown away afterwards, so nothing you write counts. Do not push, and do not change the pull request.',
     'For each criterion answer "met", "not_met" or "cannot_tell". "met" and "not_met" need evidence: a file with line (kind "file", ref "path:line"), a command you ran (kind "command"), or a test name (kind "test"). If you cannot tell, say cannot_tell; do not guess.',
-    'Reply with one JSON object and nothing after it: {"verdict":[{"criterion":"c1","verdict":"met","evidence":[{"kind":"file","ref":"src/a.ts:10"}]}]}. Judge every criterion exactly once, using the ids below.',
+    'The engine checks every piece of evidence against what it recorded in the copy: a file must exist and the line be in it, a test must appear passed in a recorded run, a command must be in the command log with exit 0, a screenshot must exist. A "met" whose evidence does not check out is turned into "cannot_tell". Every "cannot_tell" must carry "missing", one of: no_state (no screenshot or state shows it), no_test (no test covers it), no_data (nothing to observe it with), infra (the environment failed), ambiguous_criterion (the criterion cannot be decided as written); an answer without it is rejected.',
+    ...(input.runLogged ? [`Run every command you cite through ${input.runLogged} -- <command>, which records it; a command run any other way is not in the log. Cite the command exactly as you passed it.`] : []),
+    'Reply with one JSON object and nothing after it: {"verdict":[{"criterion":"c1","verdict":"met","evidence":[{"kind":"file","ref":"src/a.ts:10"}]},{"criterion":"c2","verdict":"cannot_tell","missing":"no_test","evidence":[]}]}. Judge every criterion exactly once, using the ids below.',
+    ...(input.failedCitations && input.failedCitations.length > 0
+      ? ['', '## Second round', 'Your previous answer cited evidence the engine could not confirm. Re-judge these criteria and fix or replace the citations:', ...input.failedCitations.map(f => `- ${f.criterion}: ${f.citations.join('; ')}`)]
+      : []),
     ...(shots.length > 0
       ? [
           'The change includes screenshots. Open each one and look at it. Judge a UI state, and any criterion about what is visible, from the image itself: if the image shows a defect (a banner or button that should not be there, text with a missing value, content that is absent), the answer is "not_met". Cite the image as evidence of kind "screenshot", ref the path. A UI state that no screenshot shows is "cannot_tell", never "met".',
@@ -122,6 +131,6 @@ export function recordVerdict(
   const entries: CheckedEntry[] =
     checked && problems.length === 0
       ? checked.entries
-      : criteria.map(c => ({criterion: c.id, verdict: 'cannot_tell', evidence: [], demoted: 'the verifier output was invalid'}));
+      : criteria.map(c => ({criterion: c.id, verdict: 'cannot_tell', missing: 'infra', evidence: [], demoted: 'the verifier output was invalid'}));
   return {...subject, decision: reduceVerdict(entries), entries, problems};
 }

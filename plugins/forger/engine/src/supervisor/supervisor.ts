@@ -4,7 +4,7 @@
  * (`commands/work.md`) calls these through the CLI and keeps only judgement.
  */
 
-import {missingVerifyStatusAnomaly, type HandedOver, type StatusReport} from '../loop';
+import {missingVerifyStatusAnomaly, openLabel, type HandedOver, type StatusReport} from '../loop';
 import type {Measures} from './measure';
 import {type Period} from './waiting';
 import {buildReportMeasures, formatReportMeasures, type ReportMeasures} from './report-measures';
@@ -177,7 +177,7 @@ export function buildReport(i: ReportInputs): Report {
     handed_over: (i.handedOver ?? []).map(h => ({
       ticket: h.ticket,
       pr: h.pr,
-      criteria: h.open.map(o => `${o.criterion} ${o.verdict}`),
+      criteria: h.open.map(openLabel),
     })),
     next: s.next_pick ? [s.next_pick] : [],
     waiting_on_owner: waiting,

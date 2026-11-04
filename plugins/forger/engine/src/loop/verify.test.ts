@@ -4,7 +4,7 @@ import {tmpdir} from 'os';
 import {join} from 'path';
 
 import type {AgentRunner, CapturingRunner, CommandRunner} from '../ports';
-import {evidenceResolves, installStep, setupCommand, verdictFile, verifyPr, VerifyInfraError, type VerifyOptions} from './verify';
+import {installStep, setupCommand, verdictFile, verifyPr, VerifyInfraError, type VerifyOptions} from './verify';
 
 const dirs: string[] = [];
 afterEach(() => {
@@ -36,6 +36,7 @@ function fixture() {
     async run(o) {
       prompts.push(o.prompt);
       cwds.push(o.cwd);
+      writeFileSync(`${o.cwd}.commands.jsonl`, JSON.stringify({command: 'bun test', exit: 0, output: '(pass) a real test\n'}) + '\n');
       return {exitCode: 0, signal: null, output, timedOut: false};
     },
   });
@@ -59,7 +60,7 @@ function fixture() {
 describe('verifyPr', () => {
   test('valid output is recorded against the head commit; the prompt holds the criteria and the diff, not the PR body', async () => {
     const f = fixture();
-    const out = JSON.stringify({verdict: [{criterion: 'c1', verdict: 'met', evidence: [{kind: 'command', ref: 'bun test'}]}, {criterion: 'c2', verdict: 'cannot_tell', evidence: []}]});
+    const out = JSON.stringify({verdict: [{criterion: 'c1', verdict: 'met', evidence: [{kind: 'command', ref: 'bun test'}]}, {criterion: 'c2', verdict: 'cannot_tell', missing: 'no_test', evidence: []}]});
     const record = await verifyPr(f.run, f.agentSaying(out), f.opts);
     expect(record.head).toBe('deadbeef');
     expect(record.ticket).toBe('issue-9');
@@ -225,10 +226,6 @@ describe('verifyPr', () => {
       await verifyPr(run, f.agentSaying('x'), {...f.opts, specReport: () => { throw new Error('boom'); }});
       expect(f.prompts[0]).toContain('c1: refuses a failed check');
     });
-
-    test('a verifier cannot claim the spec check as its evidence', () => {
-      expect(evidenceResolves(() => '', '/nowhere', {kind: 'check', ref: 'spec:R-1'})).toBe(false);
-    });
   });
 
   test('refuses a branch that names no ticket', async () => {
@@ -248,29 +245,54 @@ describe('verifyPr', () => {
     const root = tmp();
     const file = join(root, 'backlog.json');
     writeFileSync(file, JSON.stringify({features: {'issue-9': {acceptance_criteria: ['only one']}}}));
-    const out = JSON.stringify({verdict: [{criterion: 'c1', verdict: 'cannot_tell', evidence: []}]});
+    const out = JSON.stringify({verdict: [{criterion: 'c1', verdict: 'cannot_tell', missing: 'no_test', evidence: []}]});
     const record = await verifyPr(f.run, f.agentSaying(out), {...f.opts, trackerKind: 'local', backlogFile: file});
     expect(record.entries.map(e => e.criterion)).toEqual(['c1']);
   });
 });
 
-describe('evidenceResolves', () => {
-  const run: CommandRunner = c => (c.includes("'a real test'") ? 'src/a.test.ts\n' : '');
-  test('files, lines, tests and commands', () => {
-    const root = tmp();
-    mkdirSync(join(root, 'src'));
-    writeFileSync(join(root, 'src', 'a.ts'), 'one\ntwo\n');
-    const ok = (kind: 'file' | 'test' | 'command', ref: string) => evidenceResolves(run, root, {kind, ref});
-    expect(ok('file', 'src/a.ts')).toBe(true);
-    expect(ok('file', 'src/a.ts:2')).toBe(true);
-    expect(ok('file', 'src/a.ts:99')).toBe(false);
-    expect(ok('file', 'src/missing.ts:1')).toBe(false);
-    expect(ok('file', '../outside.ts')).toBe(false);
-    expect(ok('file', '/etc/passwd')).toBe(false);
-    expect(ok('test', 'a real test')).toBe(true);
-    expect(ok('test', 'no such test')).toBe(false);
-    expect(ok('command', 'bun test')).toBe(true);
-    expect(ok('command', '  ')).toBe(false);
+describe('evidence the engine could not confirm', () => {
+  const unrun = JSON.stringify({verdict: [{criterion: 'c1', verdict: 'met', evidence: [{kind: 'command', ref: 'bun run never-ran'}]}, {criterion: 'c2', verdict: 'met', evidence: [{kind: 'command', ref: 'bun test'}]}]});
+  const fixed = JSON.stringify({verdict: [{criterion: 'c1', verdict: 'met', evidence: [{kind: 'command', ref: 'bun test'}]}]});
+
+  function twoAnswers(first: string, second: string) {
+    const f = fixture();
+    const answers = [first, second];
+    const agent: AgentRunner = {async run(o) { return f.agentSaying(answers.shift() ?? second).run(o); }};
+    return {...f, agent};
+  }
+
+  test('a met citing an unrun command is downgraded and re-asked with the citation named', async () => {
+    const f = twoAnswers(unrun, fixed);
+    const record = await verifyPr(f.run, f.agent, f.opts);
+    expect(f.prompts).toHaveLength(2);
+    expect(f.prompts[1]).toContain('## Second round');
+    expect(f.prompts[1]).toContain('c1: command bun run never-ran');
+    expect(f.prompts[1]).toContain('c1: first');
+    expect(f.prompts[1]).not.toContain('c2: second');
+    expect(record.decision).toBe('pass');
+  });
+
+  test('when the second round cannot back it either, it stays cannot_tell and names what was missing', async () => {
+    const f = twoAnswers(unrun, unrun);
+    const record = await verifyPr(f.run, f.agent, f.opts);
+    const c1 = record.entries.find(e => e.criterion === 'c1');
+    expect(c1?.verdict).toBe('cannot_tell');
+    expect(c1?.missing).toBe('no_data');
+    expect(record.decision).toBe('unclear');
+  });
+
+  test('a clean first answer is not re-asked', async () => {
+    const f = fixture();
+    await verifyPr(f.run, f.agentSaying(JSON.stringify({verdict: [{criterion: 'c1', verdict: 'met', evidence: [{kind: 'command', ref: 'bun test'}]}, {criterion: 'c2', verdict: 'met', evidence: [{kind: 'command', ref: 'bun test'}]}]})), f.opts);
+    expect(f.prompts).toHaveLength(1);
+  });
+
+  test('the prompt tells the verifier to run commands through the logger when one is configured', async () => {
+    const f = fixture();
+    await verifyPr(f.run, f.agentSaying('x'), {...f.opts, runLogged: 'forger run-logged'});
+    expect(f.prompts[0]).toContain('forger run-logged --file');
+    expect(f.prompts[0]).toContain('"missing"');
   });
 });
 
@@ -302,7 +324,7 @@ describe('screenshot evidence', () => {
       verdict: [
         {criterion: 'c1', verdict: 'met', evidence: [{kind: 'command', ref: 'bun test'}]},
         {criterion: 'u1', verdict: 'not_met', evidence: [{kind: 'screenshot', ref: shot}]},
-        {criterion: 'u2', verdict: 'cannot_tell', evidence: []},
+        {criterion: 'u2', verdict: 'cannot_tell', missing: 'no_state', evidence: []},
       ],
     });
     const runWithTree: CommandRunner = cmd => {
@@ -319,12 +341,5 @@ describe('screenshot evidence', () => {
     expect(record.decision).toBe('block');
     expect(f.prompts[0]).toContain(`- ${shot}`);
     expect(f.prompts[0]).toContain('u1: empty: no banner, no clear-filter button (UI state)');
-  });
-
-  test('screenshot evidence must be an image under docs/screenshots/', () => {
-    const root = tmp();
-    writeFileSync(join(root, 'other.png'), 'x');
-    expect(evidenceResolves(() => '', root, {kind: 'screenshot', ref: 'other.png'})).toBe(false);
-    expect(evidenceResolves(() => '', root, {kind: 'screenshot', ref: 'docs/screenshots/../../other.png'})).toBe(false);
   });
 });
