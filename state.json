@@ -109,11 +109,110 @@
   ],
   "in_flight": [
     {
-      "ticket": null,
+      "ticket": "issue-208",
       "pid": null,
       "session_id": "0a7052bf-e615-4291-8479-bea23228edf7",
       "snapshot": null,
-      "started_at": "2026-11-04T23:14:49.908Z"
+      "started_at": "2026-11-04T23:14:49.908Z",
+      "plan": {
+        "stages": [
+          {
+            "id": "intake",
+            "slots": [
+              {
+                "slot": "interview",
+                "invoke": "builtin",
+                "target": "Ask the open decisions in numbered rounds, each with a recommended answer"
+              },
+              {
+                "slot": "glossary",
+                "invoke": "builtin",
+                "target": "Record new terms in GLOSSARY.md and decisions in docs/adr/"
+              }
+            ]
+          },
+          {
+            "id": "plan",
+            "slots": []
+          },
+          {
+            "id": "build",
+            "slots": [
+              {
+                "slot": "test_first",
+                "invoke": "file",
+                "target": "/home/diego/work/forger/plugins/forger/skills/test_first/SKILL.md"
+              },
+              {
+                "slot": "diagnose",
+                "invoke": "file",
+                "target": "/home/diego/work/forger/plugins/forger/skills/diagnose/SKILL.md",
+                "on": "gate_red"
+              }
+            ]
+          },
+          {
+            "id": "review",
+            "slots": [
+              {
+                "slot": "review",
+                "invoke": "file",
+                "target": "/home/diego/work/forger/plugins/forger/skills/review/SKILL.md"
+              }
+            ]
+          },
+          {
+            "id": "risk",
+            "slots": [
+              {
+                "slot": "risk",
+                "invoke": "builtin",
+                "target": "List what the change touches beyond the diff and run the tests for it"
+              }
+            ]
+          },
+          {
+            "id": "pr",
+            "slots": [
+              {
+                "slot": "pr_body",
+                "invoke": "builtin",
+                "target": "Write the PR body by docs/03-tickets.md"
+              },
+              {
+                "slot": "merge_conflicts",
+                "invoke": "builtin",
+                "target": "Resolve the conflict by hand and re-run the gates",
+                "on": "rebase_conflict"
+              }
+            ]
+          },
+          {
+            "id": "verify",
+            "slots": [
+              {
+                "slot": "verify",
+                "invoke": "builtin",
+                "target": null
+              }
+            ]
+          },
+          {
+            "id": "merge",
+            "slots": []
+          },
+          {
+            "id": "retro",
+            "slots": [
+              {
+                "slot": "retro",
+                "invoke": "builtin",
+                "target": "Walk the retro steps: capture, cause, form, write, land"
+              }
+            ]
+          }
+        ]
+      }
     }
   ],
   "last_error": null,
