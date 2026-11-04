@@ -169,6 +169,28 @@ stage, add a slot to a stage or replace a stage's gate:
 An overlay key that names no stage, or any other key, is reported under
 `problems` and the command exits 1.
 
+### Output contracts
+
+Every slot leaves a result in a named shape, and `contract` checks it:
+
+```bash
+bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts contract --slot review --file <path> [--issue N] [--ticket ID --attempt N] --json
+```
+
+It prints `{ok, problems}` (plus `next` when not ok) and exits 1 unless the
+result is ok. The contracts are `decisions`, `glossary_entries`, `wireframe`,
+`tests_written`, `diagnosis`, `review_findings`, `risk_report`, `pr_body`,
+`rebase_clean`, `verdict` and `retro_proposals`. Each validator is a pure
+function over the parsed result and facts the command gathers: the diff's paths,
+the ticket's acceptance criteria, the gates command. `verdict`, `pr_body` and
+`rebase_clean` go through the loop's own validators.
+
+When a result fails, `next` says what to do: retry the same skill once with the
+problems shown, then run the built-in step, then decline the ticket with reason
+`unclear`. With `--ticket` each attempt is recorded as a `contract_attempt`
+event. The contract suffix, one string per contract generated from its shape,
+tells a skill where to write its result and in what shape.
+
 Every `skill` or `file` invocation starts with the engine-owned `preamble`: the
 intent is the ticket and its spec, never ask the owner (an open question is a
 decline), do not commit, push, merge or open pull requests (forger does), and do
@@ -290,6 +312,7 @@ bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts run --continuous   # the loop
 bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts status [--json]      # where it's at: runner pid and liveness, halt, counters, current ticket, next pick
 bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts backlog --json     # workable tickets, remaining, next pick
 bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts skills [--json] [--presets]  # each skill slot's configured skill, whether installed, and the built-in fallback; --presets lists offered presets
+bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts contract --slot SLOT --file PATH [--issue N] [--json]  # check a slot's result against its output contract; exit 1 unless ok
 bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts pipeline [--issue N] [--stage ID] [--json]  # the pipeline resolved for a ticket: each stage's slots, the skill or built-in chosen and why, the gate
 bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts migrate [--json]      # move a legacy .claude/ layout to .forger/ (git mv where tracked; refuses while an engine holds the lock; safe to repeat)
 bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts packs [--json]        # available packs and which are installed
