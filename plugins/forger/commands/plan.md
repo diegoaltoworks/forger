@@ -24,19 +24,20 @@ there are enough well-formed tickets to hand to `/forger:work`.
 ## Skill slots
 
 Some steps below are skill slots: the project may plug an installed skill into
-each. Resolve them once, up front:
+each. The pipeline says which slots run in which stage and what fills each:
 
 ```
-bun "${CLAUDE_PLUGIN_ROOT}/bin/work.ts" skills --json
+bun "${CLAUDE_PLUGIN_ROOT}/bin/work.ts" pipeline --json --stage <id>
 ```
 
-For a slot, read `invoke`. `skill`: invoke the skill named in `skill`. `file`:
-read the file at `path` and follow it. `builtin`: do the step yourself as written
-here, as you also do when the tool fails. Start every `skill` or `file` slot
-with the report's `preamble`, verbatim, and never invoke a skill listed in
-`forbid`. Never name or choose a skill yourself.
+The stage is `intake`: it holds the slots of steps 3 to 5.
 
-Slots used here: `interview` (step 3), `glossary` (steps 3 and 4) and `design` (step 5).
+For a slot, read `invoke`. `skill`: invoke the skill named in `target`. `file`:
+read the file at `target` and follow it. `builtin`: do the step yourself as written
+here, as you also do when the tool fails. A slot with `on` runs only when that
+event happens. Start every step whose `invoke` is `skill` or `file` with the `preamble` of
+`bun "${CLAUDE_PLUGIN_ROOT}/bin/work.ts" skills --json`, verbatim, and never
+invoke a skill listed in its `forbid`. Never name or choose a skill yourself.
 
 ## 1. Ground yourself (before asking anything)
 

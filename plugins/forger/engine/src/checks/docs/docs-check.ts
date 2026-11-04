@@ -12,6 +12,7 @@ import {checkAvoidedTerms, checkDiagrams, checkLinks, parseGlossaryAvoid, type A
 import {loadConfig} from '../../config';
 import type {CommandRunner} from '../../ports';
 import {projectFiles} from '../files';
+import {checkCommandSlots, slotsByCommand, type DefinitionShape} from './docs-slots';
 import {checkText, parseDenylist} from './docs-rules';
 import {LOCK_PATH, parseLock} from '../../packs';
 import type {Finding} from '../waivers';
@@ -27,6 +28,15 @@ export function installedPackIds(projectRoot: string): string[] {
 }
 
 const GLOSSARY = 'GLOSSARY.md';
+const COMMAND_FILE = /^plugins\/forger\/commands\/[^/]+\.md$/;
+const DEFINITION = 'plugins/forger/pipeline/default.json';
+
+/** The slots per command of the definition the plugin ships; null in a project that does not carry the plugin. */
+function shippedSlots(projectRoot: string): Record<string, string[]> | null {
+  const path = join(projectRoot, DEFINITION);
+  if (!existsSync(path)) return null;
+  return slotsByCommand(JSON.parse(readFileSync(path, 'utf-8')) as DefinitionShape);
+}
 
 function contentRules(projectRoot: string, avoided: AvoidedTerm[]): (file: string, text: string) => Finding[] {
   const world: LinkWorld = {
@@ -52,6 +62,7 @@ export function runDocsCheck(projectRoot: string, run: CommandRunner, packs: str
       ? contentRules(projectRoot, existsSync(glossary) ? parseGlossaryAvoid(readFileSync(glossary, 'utf-8')) : [])
       : null;
 
+  const slots = shippedSlots(projectRoot);
   const out: Finding[] = [];
   for (const file of files) {
     const path = join(projectRoot, file);
@@ -61,6 +72,7 @@ export function runDocsCheck(projectRoot: string, run: CommandRunner, packs: str
     const text = buf.toString('utf-8');
     out.push(...checkText(file, text, terms, names));
     if (content && file.endsWith('.md')) out.push(...content(file, text));
+    if (slots && COMMAND_FILE.test(file)) out.push(...checkCommandSlots(file, text, slots));
   }
   return out;
 }

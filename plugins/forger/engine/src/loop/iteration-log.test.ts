@@ -1,5 +1,6 @@
 import {describe, expect, test} from 'bun:test';
 
+import {parseIterationLog} from '../supervisor';
 import {formatIterationLog} from './iteration-log';
 
 const base = {
@@ -12,6 +13,17 @@ const base = {
   timeoutMinutes: 45,
   output: 'worker output\n',
 };
+
+describe('formatIterationLog plan', () => {
+  const plan = {stages: [{id: 'build', slots: [{slot: 'test_first', invoke: 'builtin' as const, target: null}]}]};
+
+  test('a stored plan is one parseable line, and an old log has none', () => {
+    const log = formatIterationLog({...base, plan});
+    expect(log).toContain(`plan: ${JSON.stringify(plan)}\n`);
+    expect(parseIterationLog(log)?.plan).toEqual(plan);
+    expect(parseIterationLog(formatIterationLog(base))?.plan).toBeUndefined();
+  });
+});
 
 describe('formatIterationLog', () => {
   test('a finished run gets a header, then the captured output verbatim', () => {

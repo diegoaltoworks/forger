@@ -244,6 +244,19 @@ rebase), and each slot reports the skill, file or built-in step chosen and the
 reason. A project's `.forger/pipeline.json` overlay can disable a stage, add a
 slot or replace a gate; it cannot reorder. The design is ADR 0016.
 
+The commands read their stage's slots from `pipeline --json --stage <id>` and
+keep only their judgement prose. `check docs` fails a shipped command file that
+names a slot none of its stages has, so the prose and the definition cannot
+drift. With no mapping and no overlay every slot resolves to its built-in step,
+as before.
+
+### The plan a run kept
+
+The plan resolved for the ticket is stored with the run: in the in-flight run of
+the state (shown by `status --json`) and as a `plan:` line of the iteration log,
+which `measure` reads back per ticket. A run stored before plans were kept has
+none and reads as it always did.
+
 ### Output contracts
 
 Each slot's result has a contract, and `contract --slot <slot> --file <path>`

@@ -111,6 +111,9 @@ When the backlog empties, stop the cadence with a final list of owner items.
 After a halt, a timeout, a misbuilt ticket or an owner correction, and
 periodically: run the refinement loop in `05-refining-the-process.md`.
 
+To see which skill ran in which slot of a run, read its `plan` in `status --json`
+while it is in flight, or the per-ticket plan lines of `measure` afterwards.
+
 ## Tools the supervisor calls
 
 Every fact and decision above comes from a command, so a session does not

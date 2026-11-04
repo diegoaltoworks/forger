@@ -18,6 +18,7 @@ import {listCollectionRoots, listInstalledSkills} from '../packs';
 import {STAGES, type CliDeps, type CommandContext, type Stage} from './command';
 import {FLAGS} from './flags';
 import {openBacklog} from './open-backlog';
+import {storedPlanFor} from './pipeline';
 import {findCommand, renderHelp} from './registry';
 
 /** Nearest ancestor directory holding forger's folder (or the legacy one). */
@@ -67,7 +68,7 @@ function contextFor(base: Pick<CommandContext, 'values' | 'positionals' | 'deps'
       return (store ??= from === 'branch' ? gitStateStore({repo: ctx.projectRoot, branch: ctx.config.state.branch}) : localStateFor(ctx.projectRoot, ctx.config));
     },
     get runner() {
-      return (runner ??= new AutomationRunner(ctx.projectRoot, ctx.config, ctx.backlog, {stateStore: ctx.stateStore, lease: leaseSettingsFor(ctx.config), gitRunner: execRunner(ctx.projectRoot), gitCapture: execCapture(ctx.projectRoot), agent: agentFor(findHarness(ctx.config.harness)), haltTracker: ctx.config.tracker.kind === 'github' ? new GhTrackerHalt(execRunner(ctx.projectRoot)) : undefined}));
+      return (runner ??= new AutomationRunner(ctx.projectRoot, ctx.config, ctx.backlog, {stateStore: ctx.stateStore, lease: leaseSettingsFor(ctx.config), gitRunner: execRunner(ctx.projectRoot), gitCapture: execCapture(ctx.projectRoot), agent: agentFor(findHarness(ctx.config.harness)), resolvePlan: ticket => storedPlanFor(ctx, ticket), haltTracker: ctx.config.tracker.kind === 'github' ? new GhTrackerHalt(execRunner(ctx.projectRoot)) : undefined}));
     },
   };
   return ctx;

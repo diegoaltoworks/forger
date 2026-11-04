@@ -38,6 +38,16 @@ describe('stallUpdate', () => {
   });
 });
 
+describe('migrateState plan', () => {
+  test('an in-flight run stored without a plan reads as it was, and one with a plan keeps it', () => {
+    const run = {ticket: 'a', pid: 1, session_id: 's', snapshot: null, started_at: 't'};
+    const plan = {stages: []};
+    const s = migrateState({in_flight: [run, {...run, session_id: 's2', plan}]});
+    expect(s.in_flight[0].plan).toBeUndefined();
+    expect(s.in_flight[1].plan).toEqual(plan);
+  });
+});
+
 describe('migrateState', () => {
   const legacy = {
     iteration: 7,
