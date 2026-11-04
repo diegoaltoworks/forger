@@ -1,6 +1,6 @@
 {
-  "iteration": 110,
-  "status": "ready",
+  "iteration": 111,
+  "status": "running",
   "last_completed_at": "2026-11-04T22:37:01.492Z",
   "completed_iterations": 99,
   "failed_iterations": 5,
@@ -106,7 +106,15 @@
     "issue-193",
     "issue-229"
   ],
-  "in_flight": [],
+  "in_flight": [
+    {
+      "ticket": null,
+      "pid": null,
+      "session_id": "70ea6b5d-8844-4966-a815-42bc57371e62",
+      "snapshot": null,
+      "started_at": "2026-11-04T22:45:31.946Z"
+    }
+  ],
   "last_error": "#197 needs #185 and #186 merged first.",
   "stall_count": 0,
   "declined_tasks": [
