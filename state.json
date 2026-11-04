@@ -107,7 +107,7 @@
     "issue-229"
   ],
   "in_flight": [],
-  "last_error": null,
+  "last_error": "#197 needs #185 and #186 merged first.",
   "stall_count": 1,
   "declined_tasks": [
     {
