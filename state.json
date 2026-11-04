@@ -1,6 +1,6 @@
 {
   "iteration": 94,
-  "status": "running",
+  "status": "halted",
   "last_completed_at": "2026-11-04T06:16:03.883Z",
   "completed_iterations": 86,
   "failed_iterations": 3,
@@ -105,7 +105,7 @@
       "started_at": "2026-11-04T06:16:19.510Z"
     }
   ],
-  "last_error": "worktree for issue-156: Preparing worktree (new branch 'feat/issue-156')",
+  "last_error": "Too many consecutive failures (3)",
   "stall_count": 1,
   "declined_tasks": [
     {
