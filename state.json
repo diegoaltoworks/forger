@@ -1,10 +1,10 @@
 {
   "iteration": 100,
-  "status": "halted",
+  "status": "ready",
   "last_completed_at": "2026-11-04T07:20:42.689Z",
   "completed_iterations": 91,
   "failed_iterations": 5,
-  "consecutive_failures": 1,
+  "consecutive_failures": 0,
   "completed_tasks": [
     "engine_timeout_kills_group",
     "engine_outcome_from_facts",
@@ -100,7 +100,7 @@
   ],
   "in_flight": [],
   "last_error": "Nothing merged or pushed, exit code 143",
-  "stall_count": 1,
+  "stall_count": 0,
   "declined_tasks": [
     {
       "ticket": "issue-81",
