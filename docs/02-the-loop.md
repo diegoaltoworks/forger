@@ -230,6 +230,17 @@ slots cover the stages around it, each with a named output:
 
 An unmapped slot runs its built-in step, so nothing changes until a project maps one.
 
+## The stages as data
+
+The order of the stages, the slots each runs and the gate after each is a
+definition (`plugins/forger/pipeline/default.json`), not prose in the command
+files. `pipeline --json` resolves it for one ticket: a slot with a `when` runs
+only for the tickets whose labels and knock-on paths match, a slot with an `on`
+runs only when that event happens in the stage (a red gate, a conflicting
+rebase), and each slot reports the skill, file or built-in step chosen and the
+reason. A project's `.forger/pipeline.json` overlay can disable a stage, add a
+slot or replace a gate; it cannot reorder. The design is ADR 0016.
+
 ## Bounding the verify loop
 
 `handover --pr <n> --json` reads the PR's verdict records and says the next move.

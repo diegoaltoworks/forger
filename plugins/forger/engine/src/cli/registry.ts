@@ -18,6 +18,7 @@ import {measure} from './measure';
 import {merge} from './merge';
 import {migrate} from './migrate';
 import {opinions, packs} from './packs';
+import {pipeline} from './pipeline';
 import {prBody} from './pr-body';
 import {retro} from './retro';
 import {screenshot} from './screenshot';
@@ -37,6 +38,7 @@ export const COMMANDS: Command[] = [
   packs,
   opinions,
   skills,
+  pipeline,
   check,
   slice,
   screenshot,

@@ -146,6 +146,29 @@ which reports for every slot how it is invoked (`invoke`: `skill`, `file` or
 `builtin`), the resolved `path` of a file slot, and whether it is present. It
 also reports the `preamble` and the `forbid` list.
 
+### The pipeline as data
+
+The stages and their order are a definition shipped with the plugin
+(`pipeline/default.json`): for each stage its command, inputs, slots (each with
+the contract name of its output, an optional `on` event and an optional `when`
+condition on the ticket's labels and knock-on paths) and the gate after it.
+`pipeline --json [--issue N] [--stage ID]` resolves it for a ticket against the
+`skills` mapping and what is installed, and gives the reason for every choice.
+
+A project may add `.forger/pipeline.json`, an overlay that can only disable a
+stage, add a slot to a stage or replace a stage's gate:
+
+```json
+{
+  "disable": ["risk"],
+  "add": [{"stage": "review", "slot": {"slot": "review_security", "contract": "review_findings"}}],
+  "gates": {"build": "make test"}
+}
+```
+
+An overlay key that names no stage, or any other key, is reported under
+`problems` and the command exits 1.
+
 Every `skill` or `file` invocation starts with the engine-owned `preamble`: the
 intent is the ticket and its spec, never ask the owner (an open question is a
 decline), do not commit, push, merge or open pull requests (forger does), and do
@@ -267,6 +290,7 @@ bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts run --continuous   # the loop
 bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts status [--json]      # where it's at: runner pid and liveness, halt, counters, current ticket, next pick
 bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts backlog --json     # workable tickets, remaining, next pick
 bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts skills [--json] [--presets]  # each skill slot's configured skill, whether installed, and the built-in fallback; --presets lists offered presets
+bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts pipeline [--issue N] [--stage ID] [--json]  # the pipeline resolved for a ticket: each stage's slots, the skill or built-in chosen and why, the gate
 bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts migrate [--json]      # move a legacy .claude/ layout to .forger/ (git mv where tracked; refuses while an engine holds the lock; safe to repeat)
 bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts packs [--json]        # available packs and which are installed
 bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts packs --detect [--json]  # packs the repo's own facts suggest, with the matching rules
