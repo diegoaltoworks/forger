@@ -3,7 +3,7 @@ import {existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, 
 import {tmpdir} from 'os';
 import {join} from 'path';
 
-import type {AgentRunner, CommandRunner} from '../ports';
+import type {AgentRunner, CapturingRunner, CommandRunner} from '../ports';
 import {evidenceResolves, verdictFile, verifyPr, type VerifyOptions} from './verify';
 
 const dirs: string[] = [];
@@ -85,6 +85,60 @@ describe('verifyPr', () => {
     expect(f.calls[add]).toContain(f.cwds[0]);
     expect(f.calls.some(c => c.startsWith('chmod -R a-w'))).toBe(true);
     expect(f.calls.some(c => c.startsWith('git worktree remove --force'))).toBe(true);
+  });
+
+  describe('the forger/verify status', () => {
+    const met = (ids: string[]) => JSON.stringify({verdict: ids.map(criterion => ({criterion, verdict: 'met', evidence: [{kind: 'command', ref: 'bun test'}]}))});
+    const blocked = JSON.stringify({verdict: [{criterion: 'c1', verdict: 'not_met', evidence: [{kind: 'command', ref: 'bun test'}]}, {criterion: 'c2', verdict: 'met', evidence: [{kind: 'command', ref: 'bun test'}]}]});
+    function withCapture() {
+      const f = fixture();
+      const statuses: string[] = [];
+      const capture: CapturingRunner = cmd => {
+        statuses.push(cmd);
+        return {stdout: '', stderr: '', exitCode: 0};
+      };
+      return {...f, statuses, opts: {...f.opts, capture}};
+    }
+
+    test.each([
+      ['pass', met(['c1', 'c2']), 'success'],
+      ['block', blocked, 'failure'],
+      ['unclear', 'not json', 'failure'],
+    ])('a %s verdict sets it on the head commit, after the record is written', async (decision, output, state) => {
+      const f = withCapture();
+      const record = await verifyPr(f.run, f.agentSaying(output), f.opts);
+      expect(record.decision).toBe(decision as 'pass');
+      expect(record.status).toEqual({context: 'forger/verify', state: state as 'success'});
+      expect(f.statuses).toEqual([expect.stringContaining(`statuses/deadbeef -f state=${state} -f context='forger/verify'`)]);
+      expect(JSON.parse(readFileSync(verdictFile(f.verdicts, 5, 'deadbeef'), 'utf-8')).status).toBeUndefined();
+    });
+
+    test('a refused status is reported on the result and the verdict still stands', async () => {
+      const f = fixture();
+      const capture: CapturingRunner = () => ({stdout: '', stderr: 'gh: Resource not accessible (HTTP 403)', exitCode: 1});
+      const record = await verifyPr(f.run, f.agentSaying(met(['c1', 'c2'])), {...f.opts, capture});
+      expect(record.decision).toBe('pass');
+      expect(record.status?.error).toContain('HTTP 403');
+      expect(existsSync(verdictFile(f.verdicts, 5, 'deadbeef'))).toBe(true);
+    });
+
+    test('off GitHub no status is set', async () => {
+      const f = withCapture();
+      const root = tmp();
+      const file = join(root, 'backlog.json');
+      writeFileSync(file, JSON.stringify({features: {'issue-9': {acceptance_criteria: ['only one']}}}));
+      const record = await verifyPr(f.run, f.agentSaying(met(['c1'])), {...f.opts, trackerKind: 'local', backlogFile: file});
+      expect(record.status).toBeUndefined();
+      expect(f.statuses).toEqual([]);
+    });
+
+    test('the previous verdict status is not part of the gate the verifier sees', async () => {
+      const f = fixture();
+      const rollup = [{__typename: 'StatusContext', context: 'forger/verify', state: 'FAILURE'}];
+      const run: CommandRunner = c => (c.startsWith('gh pr view') ? JSON.stringify({...JSON.parse(view), statusCheckRollup: rollup}) : f.run(c));
+      await verifyPr(run, f.agentSaying('x'), f.opts);
+      expect(f.prompts[0]).not.toContain('forger/verify');
+    });
   });
 
   describe('criteria bound to a satisfied requirement', () => {

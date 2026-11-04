@@ -10,12 +10,13 @@ import {tmpdir} from 'os';
 import {isAbsolute, join, normalize} from 'path';
 
 import type {Tier} from '../config';
-import type {AgentRunner, CommandRunner, SpecReport} from '../ports';
+import type {AgentRunner, CapturingRunner, CommandRunner, SpecReport} from '../ports';
 import {issueNumber} from './decline';
 import {PR_FIELDS, parsePr} from './pr-checks';
 import {mergeEntries, partitionCriteria} from './mechanical';
 import {parseCriteria, type Criterion, type Evidence} from './verdict';
 import {buildVerifierInput, recordVerdict, type VerdictRecord} from './verify-input';
+import {setVerifyStatus, withoutVerifyStatus, type VerifyStatusOutcome} from './verify-status';
 
 export interface VerifyOptions {
   pr: number;
@@ -32,8 +33,13 @@ export interface VerifyOptions {
   sessionId: string;
   /** The spec report of the head checkout; null or absent when there is no spec to bind criteria to. */
   specReport?: (checkoutDir: string) => SpecReport | null;
+  /** Sets the `forger/verify` status on the head; on a GitHub tracker the verdict is published only when given. */
+  capture?: CapturingRunner;
   now?: () => Date;
 }
+
+/** The record as written, plus what publishing it as a commit status did. */
+export type VerifyResult = VerdictRecord & {status?: VerifyStatusOutcome};
 
 export function verdictFile(dir: string, pr: number, head: string): string {
   return join(dir, `pr-${pr}-${head}.json`);
@@ -79,9 +85,9 @@ export function evidenceResolves(run: CommandRunner, root: string, e: Evidence):
   return parseInt(m[2], 10) >= 1 && parseInt(m[2], 10) <= readFileSync(file, 'utf-8').split('\n').length;
 }
 
-export async function verifyPr(run: CommandRunner, agent: AgentRunner, opts: VerifyOptions): Promise<VerdictRecord> {
-  const view = JSON.parse(run(`gh pr view ${opts.pr} --json ${PR_FIELDS},headRefName`)) as {headRefOid?: string; headRefName?: string};
-  const pr = parsePr(JSON.stringify(view));
+export async function verifyPr(run: CommandRunner, agent: AgentRunner, opts: VerifyOptions): Promise<VerifyResult> {
+  const view = JSON.parse(run(`gh pr view ${opts.pr} --json ${PR_FIELDS},headRefName`)) as {headRefOid?: string; headRefName?: string; statusCheckRollup?: unknown};
+  const pr = parsePr(JSON.stringify({...view, statusCheckRollup: withoutVerifyStatus(view.statusCheckRollup)}));
   if (!pr || !view.headRefOid) throw new Error(`cannot read PR #${opts.pr}`);
   const head = view.headRefOid;
   const ticket = /^feat\/(issue-\d+)$/.exec(view.headRefName ?? '')?.[1];
@@ -126,8 +132,9 @@ export async function verifyPr(run: CommandRunner, agent: AgentRunner, opts: Ver
   }
 }
 
-function writeRecord(opts: VerifyOptions, record: VerdictRecord): VerdictRecord {
+function writeRecord(opts: VerifyOptions, record: VerdictRecord): VerifyResult {
   mkdirSync(opts.verdictsDir, {recursive: true});
   writeFileSync(verdictFile(opts.verdictsDir, record.pr, record.head), JSON.stringify(record, null, 2) + '\n');
-  return record;
+  if (opts.trackerKind !== 'github' || !opts.capture) return record;
+  return {...record, status: setVerifyStatus(opts.capture, record.head, record.decision)};
 }

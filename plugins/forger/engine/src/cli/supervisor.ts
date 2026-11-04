@@ -1,7 +1,7 @@
 import {existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync} from 'fs';
 import {join} from 'path';
 
-import {decideHalt, GhTrackerHalt, handedOver, listRepoLabels, loopLabels, missingLabels, readAllVerdicts} from '../loop';
+import {decideHalt, GhTrackerHalt, requiresVerifyStatus, handedOver, listRepoLabels, loopLabels, missingLabels, readAllVerdicts} from '../loop';
 import {buildReport, formatReport, mergedInPeriod, orient as orientPlan, proposedAdrs, reportPeriod, waitingIssues, OWNER_LABELS, type AdrText, type MergedPrFact, type OwnerItem, type WaitingIssue} from '../supervisor';
 import type {Command, CommandContext} from './command';
 import {gatherMeasures} from './measure';
@@ -50,7 +50,9 @@ function supervise(which: 'orient' | 'report') {
     const haltFile = join(projectRoot, config.paths.halt);
     const branch = ctx.run()('git branch --show-current');
     let missing: string[] | undefined;
+    let requiresVerify: boolean | null | undefined;
     if (config.tracker.kind === 'github') {
+      requiresVerify = requiresVerifyStatus(ctx.capture(), config.base_branch);
       try {
         missing = missingLabels(loopLabels(config.tracker.label), listRepoLabels(ctx.run())).map(l => l.name);
       } catch {
@@ -60,6 +62,7 @@ function supervise(which: 'orient' | 'report') {
     const plan = orientPlan({
       backlogAnomalies: ctx.backlog.report().anomalies,
       missingLabels: missing,
+      requiresVerify,
       status,
       haltReason: haltReasonOf(
         existsSync(haltFile) ? readFileSync(haltFile, 'utf-8') : null,

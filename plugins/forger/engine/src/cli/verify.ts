@@ -13,7 +13,8 @@ export const verify: Command = {
   help: `  verify --pr N [--json]
                    Run a fresh-context verifier on the PR's head (the ticket's criteria, the diff and
                    the gate result, never the worker's claims) and record its verdict per criterion
-                   (exit 1 unless every criterion is met)`,
+                   (exit 1 unless every criterion is met); on GitHub it also sets the forger/verify
+                   status on the head: success for a pass, failure otherwise`,
   async run(ctx) {
     const {values, config, projectRoot} = ctx;
     const pr = parseInt((values.pr as string | undefined) ?? '', 10);
@@ -35,13 +36,15 @@ export const verify: Command = {
         timeoutMinutes: config.limits.timeoutMinutes,
         killGraceSeconds: config.limits.killGraceSeconds,
         sessionId: randomUUID(),
+        capture: ctx.capture(),
         specReport: dir => slcrProvider({projectRoot: dir, baseBranch: config.base_branch}).report('head'),
       });
       if (record.decision !== 'pass') process.exitCode = 1;
+      if (record.status?.error) console.error(`verify: the verdict is recorded but the ${record.status.context} status was not set: ${record.status.error}`);
       console.log(
         values.json
           ? JSON.stringify(record)
-          : `PR #${record.pr} at ${record.head.slice(0, 7)}: ${record.decision}\n${record.entries.map(e => `  ${e.criterion}: ${e.verdict}`).join('\n')}`
+          : `PR #${record.pr} at ${record.head.slice(0, 7)}: ${record.decision}${record.status && !record.status.error ? ` (${record.status.context}: ${record.status.state})` : ''}\n${record.entries.map(e => `  ${e.criterion}: ${e.verdict}`).join('\n')}`
       );
     } catch (e) {
       console.error(`verify: ${(e as Error).message}`);

@@ -47,6 +47,12 @@ describe('orient', () => {
     expect(p.anomalies.join(' ')).toContain('needs-info');
     expect(orient({...base, status: status(), missingLabels: []}).anomalies).toEqual([]);
   });
+  test('a base branch that does not require forger/verify is an anomaly; unknown is not', () => {
+    const p = orient({...base, status: status(), requiresVerify: false});
+    expect(p.anomalies.join(' ')).toContain('does not require the forger/verify check');
+    expect(orient({...base, status: status(), requiresVerify: true}).anomalies).toEqual([]);
+    expect(orient({...base, status: status(), requiresVerify: null}).anomalies).toEqual([]);
+  });
   test('a dead runner off the base branch is an anomaly', () => {
     const p = orient({...base, branch: 'feat/x', status: status({pid: 9})});
     expect(p.anomalies.length).toBe(2);
