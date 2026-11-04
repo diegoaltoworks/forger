@@ -58,6 +58,8 @@ export interface RunnerDeps {
   sleep?: (ms: number) => Promise<void>;
   /** The pipeline plan for a ticket, stored with the run; a failure to resolve leaves the run without one. */
   resolvePlan?: (ticket: string | null) => StoredPlan | null;
+  /** The plugin the engine runs from; workers get it as `FORGER_PLUGIN_ROOT`, which the committed gates name. */
+  pluginRoot?: string;
 }
 
 /** How often a parallel loop looks for a finished worker or a HALT when none has finished. */
@@ -145,6 +147,7 @@ export class AutomationRunner {
       emit: (kind, iteration, ticket, reason) => this.emit(kind, iteration, ticket, reason),
       halt: (reason, kind) => this.halt(reason, kind),
       resolvePlan: deps.resolvePlan,
+      pluginRoot: deps.pluginRoot,
     };
   }
 

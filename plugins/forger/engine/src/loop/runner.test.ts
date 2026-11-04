@@ -112,6 +112,24 @@ function iterationLog(root: string, n: number): string {
   return readFileSync(join(root, '.forger', 'output', `iteration-${n}.log`), 'utf-8');
 }
 
+describe('AutomationRunner worker environment', () => {
+  test('the worker, whose gates run the check, gets the plugin root', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'forger-runner-'));
+    dirs.push(root);
+    const calls: AgentRunOptions[] = [];
+    const config = mergeConfig({});
+    const runner = new AutomationRunner(root, config, backlogFrom(() => backlog, config), {
+      stateStore: localStateFor(root, config),
+      agent: {run: async opts => (calls.push(opts), {exitCode: 0, signal: null, output: '', timedOut: false})},
+      gitRunner: sceneRunner({}, () => calls.length > 0),
+      pluginRoot: '/opt/plugin',
+    });
+    await runner.runIteration(1);
+    expect(calls[0].env?.FORGER_PLUGIN_ROOT).toBe('/opt/plugin');
+    expect(calls[0].env?.FORGER_ROLE).toBe('worker');
+  });
+});
+
 describe('AutomationRunner iteration log', () => {
   test('stores the resolved plan with the run and in the iteration log', async () => {
     const plan: StoredPlan = {stages: [{id: 'build', slots: [{slot: 'test_first', invoke: 'builtin', target: null}]}]};

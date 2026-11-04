@@ -37,7 +37,7 @@ export interface SetupResult {
 const CHECK_MARKER = /\bwork\.ts\s+check\b|\bcheck docs\b/;
 
 /** The engine exports the plugin's root under this name to the processes that run the gates. */
-export const PLUGIN_ROOT_VAR = 'FORGER_PLUGIN_ROOT';
+export const PLUGIN_ROOT_VAR = 'FORGER_PLUGIN_ROOT'; // same name as loop/worker-env.ts, which exports it
 
 /** The check command the gates end with: it names the variable, so the committed line holds no machine path. */
 export const CHECK_COMMAND = 'bun "$' + PLUGIN_ROOT_VAR + '/bin/work.ts" check';
