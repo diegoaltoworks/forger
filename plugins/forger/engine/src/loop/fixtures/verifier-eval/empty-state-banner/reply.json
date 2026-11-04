@@ -1,0 +1,5 @@
+{"verdict":[
+  {"criterion":"c1","verdict":"met","evidence":[{"kind":"command","ref":"bun test"}]},
+  {"criterion":"u1","verdict":"not_met","evidence":[{"kind":"screenshot","ref":"docs/screenshots/empty.png"}]},
+  {"criterion":"u2","verdict":"met","evidence":[{"kind":"screenshot","ref":"docs/screenshots/filled.png"}]}
+]}

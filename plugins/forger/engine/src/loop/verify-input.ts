@@ -19,10 +19,13 @@ export interface VerifierInput {
   criteria: Criterion[];
   diff: string;
   gate: GateResult;
+  /** Images the PR changed under docs/screenshots/; empty when it changed none. */
+  screenshots?: string[];
 }
 
 export function buildVerifierInput(input: VerifierInput): string {
-  const criteria = input.criteria.map(c => `- ${c.id}: ${c.text}`).join('\n');
+  const criteria = input.criteria.map(c => `- ${c.id}: ${c.text}${c.ui ? ' (UI state)' : ''}`).join('\n');
+  const shots = input.screenshots ?? [];
   const gate =
     input.gate.checks === 'failure'
       ? `failure (${input.gate.failing_checks.join(', ') || 'unnamed'})`
@@ -32,6 +35,14 @@ export function buildVerifierInput(input: VerifierInput): string {
     'The current directory is a read-only checkout of the change. Do not edit anything.',
     'For each criterion answer "met", "not_met" or "cannot_tell". "met" and "not_met" need evidence: a file with line (kind "file", ref "path:line"), a command you ran (kind "command"), or a test name (kind "test"). If you cannot tell, say cannot_tell; do not guess.',
     'Reply with one JSON object and nothing after it: {"verdict":[{"criterion":"c1","verdict":"met","evidence":[{"kind":"file","ref":"src/a.ts:10"}]}]}. Judge every criterion exactly once, using the ids below.',
+    ...(shots.length > 0
+      ? [
+          'The change includes screenshots. Open each one and look at it. Judge a UI state, and any criterion about what is visible, from the image itself: if the image shows a defect (a banner or button that should not be there, text with a missing value, content that is absent), the answer is "not_met". Cite the image as evidence of kind "screenshot", ref the path. A UI state that no screenshot shows is "cannot_tell", never "met".',
+          '',
+          '## Changed screenshots',
+          ...shots.map(s => `- ${s}`),
+        ]
+      : []),
     '',
     '## Acceptance criteria',
     criteria,

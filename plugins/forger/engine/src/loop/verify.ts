@@ -14,7 +14,7 @@ import type {AgentRunner, CapturingRunner, CommandRunner, SpecReport} from '../p
 import {issueNumber} from './decline';
 import {PR_FIELDS, parsePr} from './pr-checks';
 import {mergeEntries, partitionCriteria} from './mechanical';
-import {parseCriteria, type Criterion, type Evidence} from './verdict';
+import {parseCriteria, parseUiStates, type CheckedEntry, type Criterion, type Evidence} from './verdict';
 import {buildVerifierInput, recordVerdict, type VerdictRecord} from './verify-input';
 import {setVerifyStatus, withoutVerifyStatus, type VerifyStatusOutcome} from './verify-status';
 
@@ -41,6 +41,21 @@ export interface VerifyOptions {
 /** The record as written, plus what publishing it as a commit status did. */
 export type VerifyResult = VerdictRecord & {status?: VerifyStatusOutcome};
 
+const SCREENSHOTS_DIR = 'docs/screenshots/';
+
+/** The images a PR changed under docs/screenshots/, from `gh pr diff --name-only`. */
+export function changedScreenshots(nameOnly: string): string[] {
+  return nameOnly
+    .split(/\r?\n/)
+    .map(l => l.trim())
+    .filter(l => l.startsWith(SCREENSHOTS_DIR) && /\.(png|jpe?g|gif|webp)$/i.test(l));
+}
+
+/** A UI state the ticket names while the PR changed no screenshot cannot be seen, so it is cannot_tell. */
+export function unseenStates(states: Criterion[]): CheckedEntry[] {
+  return states.map(c => ({criterion: c.id, verdict: 'cannot_tell', evidence: [], demoted: 'the PR changed no screenshot under docs/screenshots/'}));
+}
+
 export function verdictFile(dir: string, pr: number, head: string): string {
   return join(dir, `pr-${pr}-${head}.json`);
 }
@@ -50,16 +65,17 @@ function shellQuote(s: string): string {
 }
 
 /** The ticket's criteria: the issue's Acceptance section on GitHub, `acceptance_criteria` in a file backlog. */
-function criteriaFor(run: CommandRunner, opts: VerifyOptions, ticket: string): Criterion[] {
+function criteriaFor(run: CommandRunner, opts: VerifyOptions, ticket: string): {criteria: Criterion[]; uiStates: Criterion[]} {
   if (opts.trackerKind === 'github') {
     const issue = issueNumber(ticket);
     if (issue === null) throw new Error(`"${ticket}" is not an issue-<n> ticket`);
-    return parseCriteria(run(`gh issue view ${issue} --json body --jq .body`));
+    const body = run(`gh issue view ${issue} --json body --jq .body`);
+    return {criteria: parseCriteria(body), uiStates: parseUiStates(body)};
   }
   const data = JSON.parse(readFileSync(opts.backlogFile, 'utf-8')) as {features?: Record<string, {acceptance_criteria?: string[]}>};
   const texts = data.features?.[ticket]?.acceptance_criteria;
   if (!texts) throw new Error(`"${ticket}" is not in the backlog`);
-  return texts.map((text, i) => ({id: `c${i + 1}`, text}));
+  return {criteria: texts.map((text, i) => ({id: `c${i + 1}`, text})), uiStates: []};
 }
 
 /** Whether a piece of evidence points at something in the checkout. A command is taken as cited: the verifier ran it, and the validator does not re-run it. */
@@ -69,6 +85,10 @@ export function evidenceResolves(run: CommandRunner, root: string, e: Evidence):
   if (e.kind === 'command') return true;
   // Only the engine's own spec check is evidence of kind check; a verifier cannot claim it.
   if (e.kind === 'check') return false;
+  if (e.kind === 'screenshot') {
+    const rel = normalize(ref);
+    return rel.startsWith(SCREENSHOTS_DIR) && existsSync(join(root, rel));
+  }
   if (e.kind === 'test') {
     try {
       return run(`git -C ${shellQuote(root)} grep -F -l -e ${shellQuote(ref)}`).trim() !== '';
@@ -93,8 +113,9 @@ export async function verifyPr(run: CommandRunner, agent: AgentRunner, opts: Ver
   const ticket = /^feat\/(issue-\d+)$/.exec(view.headRefName ?? '')?.[1];
   if (!ticket) throw new Error(`cannot tell the ticket from branch "${view.headRefName ?? ''}"; expected feat/issue-<n>`);
 
-  const criteria = criteriaFor(run, opts, ticket);
-  if (criteria.length === 0) throw new Error(`${ticket} has no acceptance criteria to verify`);
+  const {criteria: acceptance, uiStates} = criteriaFor(run, opts, ticket);
+  const criteria = [...acceptance, ...uiStates];
+  if (acceptance.length === 0) throw new Error(`${ticket} has no acceptance criteria to verify`);
 
   run(`git fetch origin pull/${opts.pr}/head`);
   const dir = mkdtempSync(join(tmpdir(), `forger-verify-${opts.pr}-`));
@@ -106,14 +127,18 @@ export async function verifyPr(run: CommandRunner, agent: AgentRunner, opts: Ver
     } catch {
       // an unreadable spec decides nothing; every criterion stays with the verifier
     }
-    const {mechanical, remaining} = partitionCriteria(criteria, report);
+    const screenshots = uiStates.length > 0 ? changedScreenshots(run(`gh pr diff ${opts.pr} --name-only`)) : [];
+    const unseen = screenshots.length === 0 ? uiStates : [];
+    const {mechanical: specDecided, remaining: toJudge} = partitionCriteria(criteria, report);
+    const mechanical = [...specDecided, ...unseenStates(unseen)];
+    const remaining = toJudge.filter(c => !unseen.includes(c));
     const subject = {pr: opts.pr, head, ticket, verifier: opts.model, at: (opts.now?.() ?? new Date()).toISOString()};
     if (remaining.length === 0) {
       return writeRecord(opts, {...subject, verifier: 'spec-check', ...mergeEntries(criteria, mechanical, []), problems: []});
     }
     // Read-only so the verifier cannot edit what it judges.
     run(`chmod -R a-w ${shellQuote(dir)}`);
-    const prompt = buildVerifierInput({criteria: remaining, diff: run(`gh pr diff ${opts.pr}`), gate: {checks: pr.checks, failing_checks: pr.failing_checks}});
+    const prompt = buildVerifierInput({criteria: remaining, diff: run(`gh pr diff ${opts.pr}`), gate: {checks: pr.checks, failing_checks: pr.failing_checks}, screenshots});
     const result = await agent.run({
       prompt,
       sessionId: opts.sessionId,

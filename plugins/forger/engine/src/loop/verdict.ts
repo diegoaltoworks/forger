@@ -7,17 +7,19 @@
 
 export type Judgement = 'met' | 'not_met' | 'cannot_tell';
 export type Decision = 'pass' | 'block' | 'unclear';
-export type EvidenceKind = 'file' | 'command' | 'test' | 'check';
+export type EvidenceKind = 'file' | 'command' | 'test' | 'check' | 'screenshot';
 
 export interface Evidence {
   kind: EvidenceKind;
-  /** A file with line, a command, or a test name. */
+  /** A file with line, a command, a test name, or (kind screenshot) a path under docs/screenshots/. */
   ref: string;
 }
 
 export interface Criterion {
   id: string;
   text: string;
+  /** A UI state the ticket names: `met` needs a screenshot that shows it. */
+  ui?: boolean;
 }
 
 export interface VerdictEntry {
@@ -66,6 +68,24 @@ export function parseCriteria(body: string): Criterion[] {
   return (hasSection ? inSection : all).map((text, i) => ({id: `c${i + 1}`, text}));
 }
 
+const BULLET = /^\s*[-*]\s+(?:\[[ xX]\]\s+)?(.+?)\s*$/;
+
+/** The bullets of the issue's "UI states" section as criteria `u1`, `u2`...; "none" names no state. */
+export function parseUiStates(body: string): Criterion[] {
+  const texts: string[] = [];
+  let inSection = false;
+  for (const line of body.split(/\r?\n/)) {
+    const heading = HEADING.exec(line);
+    if (heading) {
+      inSection = /^ui states\b/i.test(heading[1]);
+      continue;
+    }
+    const item = inSection ? BULLET.exec(line) : null;
+    if (item && !/^none\.?$/i.test(item[1])) texts.push(item[1]);
+  }
+  return texts.map((text, i) => ({id: `u${i + 1}`, text, ui: true}));
+}
+
 const JUDGEMENTS: readonly Judgement[] = ['met', 'not_met', 'cannot_tell'];
 
 /** Hold a verdict to the ticket's criteria. `resolves` says whether one piece of evidence points at something real. */
@@ -93,7 +113,7 @@ export function checkVerdict(
       problems.push(`criterion ${entry.criterion} has an unknown verdict "${entry.verdict}"`);
       continue;
     }
-    entries.push(settle(entry, resolves, problems));
+    entries.push(settle(entry, criteria.find(c => c.id === entry.criterion)?.ui === true, resolves, problems));
   }
 
   for (const c of criteria) {
@@ -105,12 +125,15 @@ export function checkVerdict(
   return {problems, entries};
 }
 
-function settle(entry: VerdictEntry, resolves: (e: Evidence) => boolean, problems: string[]): CheckedEntry {
+function settle(entry: VerdictEntry, ui: boolean, resolves: (e: Evidence) => boolean, problems: string[]): CheckedEntry {
   if (entry.verdict === 'cannot_tell') return {...entry};
   const evidence = entry.evidence ?? [];
   if (evidence.length === 0) {
     problems.push(`criterion ${entry.criterion} is ${entry.verdict} without evidence`);
     return {...entry};
+  }
+  if (ui && entry.verdict === 'met' && !evidence.some(e => e.kind === 'screenshot' && resolves(e))) {
+    return {...entry, verdict: 'cannot_tell', demoted: 'no screenshot shows this state'};
   }
   if (evidence.some(e => resolves(e))) return {...entry};
   if (entry.verdict === 'met') {

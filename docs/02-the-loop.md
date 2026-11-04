@@ -196,6 +196,15 @@ read-only checkout of the head, on the `verifier` tier of the config. That tier
 defaults to one other than the default worker tier where `model_by_priority`
 has one, so the verifier does not share the worker's blind spots.
 
+When the PR changes images under `docs/screenshots/`, the verifier opens each
+one and checks it against the ticket's "UI states" section and any criterion
+about what is visible. Each state is an entry in the verdict, judged from the
+image and cited as evidence of kind `screenshot`. A state the ticket names while
+the PR changes no screenshot is recorded `cannot_tell` without asking the
+verifier, and a `met` on a state with no resolving screenshot is demoted to
+`cannot_tell`, so a defect the image shows (a banner with no filter active) is
+`not_met` and blocks the merge.
+
 The output is validated by the verdict validator. Valid output is recorded as
 judged, an unresolvable `met` demoted to `cannot_tell`; output that cannot be
 read, or breaks the validator's rules, is recorded `cannot_tell` for every

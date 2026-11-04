@@ -1,6 +1,6 @@
 import {describe, expect, test} from 'bun:test';
 
-import {checkVerdict, parseCriteria, reduceVerdict, type Criterion, type Evidence, type VerdictEntry} from './verdict';
+import {checkVerdict, parseCriteria, parseUiStates, reduceVerdict, type Criterion, type Evidence, type VerdictEntry} from './verdict';
 
 const criteria: Criterion[] = [
   {id: 'c1', text: 'one'},
@@ -99,5 +99,38 @@ describe('checkVerdict and reduceVerdict', () => {
 
   test('entries come back in criterion order', () => {
     expect(run([e('c2', 'met'), e('c1', 'met')]).entries.map(x => x.criterion)).toEqual(['c1', 'c2']);
+  });
+});
+
+describe('UI states', () => {
+  const body = '## Acceptance\n- [ ] a\n\n## UI states\n- empty: no banner\n- [ ] filled: listed\n\n## Docs\n- not a state\n';
+  const states = parseUiStates(body);
+  const seen = (e: {kind: string; ref: string}) => e.ref.length > 0;
+
+  test('parses the bullets of the UI states section only; "none" names no state', () => {
+    expect(states).toEqual([
+      {id: 'u1', text: 'empty: no banner', ui: true},
+      {id: 'u2', text: 'filled: listed', ui: true},
+    ]);
+    expect(parseUiStates('## UI states\nnone\n- none\n')).toEqual([]);
+    expect(parseUiStates('## Acceptance\n- [ ] a\n')).toEqual([]);
+  });
+
+  test('met on a UI state without a screenshot is demoted to cannot_tell', () => {
+    const r = checkVerdict(states, [
+      {criterion: 'u1', verdict: 'met', evidence: [{kind: 'file', ref: 'src/a.ts'}]},
+      {criterion: 'u2', verdict: 'met', evidence: [{kind: 'screenshot', ref: 'docs/screenshots/a.png'}]},
+    ], seen);
+    expect(r.problems).toEqual([]);
+    expect(r.entries.map(e => e.verdict)).toEqual(['cannot_tell', 'met']);
+    expect(r.entries[0].demoted).toContain('screenshot');
+  });
+
+  test('not_met on a screenshot blocks', () => {
+    const r = checkVerdict(states, [
+      {criterion: 'u1', verdict: 'not_met', evidence: [{kind: 'screenshot', ref: 'docs/screenshots/a.png'}]},
+      {criterion: 'u2', verdict: 'cannot_tell', evidence: []},
+    ], seen);
+    expect(reduceVerdict(r.entries)).toBe('block');
   });
 });
