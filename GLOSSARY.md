@@ -51,3 +51,7 @@ _Avoid_: bundle, module
 **Lock**:
 `.forger/forger.lock.json`: each installed pack's id and version and the hash of every file as it was installed. Written by `setup`, never by hand.
 _Avoid_: manifest (that is the pack's own file)
+
+**Hook policy**:
+`.forger/hooks.json`: the boundaries the harness hook enforces on a worker. The default rules ship on and a project may add deny rules of its own; a dropped default needs a waiver.
+_Avoid_: guard list, blocklist

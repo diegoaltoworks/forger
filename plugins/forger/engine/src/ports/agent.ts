@@ -26,6 +26,8 @@ export interface AgentRunOptions {
   /** The worker command to run, without the leading slash (`forger:auto-ticket`). */
   workerCommand: string;
   cwd: string;
+  /** Added to the worker's environment: the engine names the worker's role and ticket there, for its hook. */
+  env?: Record<string, string>;
   timeoutMinutes: number;
   killGraceSeconds: number;
   /** Ends the worker's process group (SIGTERM, then SIGKILL after the grace) when aborted, as the loop does on HALT. */

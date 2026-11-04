@@ -13,6 +13,7 @@ import {awaitEventCommand, events} from './events';
 import {facts} from './facts';
 import {halt, reset, resume, run, status, watch} from './loop';
 import {handover} from './handover';
+import {hook} from './hook';
 import {measure} from './measure';
 import {merge} from './merge';
 import {migrate} from './migrate';
@@ -55,6 +56,7 @@ export const COMMANDS: Command[] = [
   approval,
   events,
   awaitEventCommand,
+  hook,
   measure,
   retro,
   reset,

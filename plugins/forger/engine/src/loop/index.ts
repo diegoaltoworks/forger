@@ -31,3 +31,4 @@ export * from './verify-status';
 export * from './worktree';
 export * from './parallel';
 export * from './lease';
+export * from './worker-env';

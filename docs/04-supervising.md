@@ -77,6 +77,11 @@ The base branch should require the `forger/verify` status that `verify` sets,
 so GitHub refuses such a merge before it lands; `orient` reports a base branch
 that does not, and `setup` adds the check when its token can change the branch
 protection.
+The worker's hook records each call it refused as a `worker_denied` event, with
+the ticket, the rule and the command. It is a mid-run event: `events --json`
+lists it and `await-event` wakes on it, but the run goes on. Report it; denials
+repeated on one ticket mean the ticket or the process tells the worker to do
+something it may not.
 A ticket whose verification ran out of rounds carries `needs-human`; The report's
 **Handed over** section (and `handover --list`) names it with the criteria at fault.
 
@@ -134,8 +139,9 @@ improvise them:
 While an engine is alive the supervisor never checks out, switches, resets,
 stashes, pulls, merges or commits in the loop's working tree; the worker owns
 it, and a changed HEAD can move the worker off its branch. Verification reads
-`facts --json`. A test fails if `commands/work.md` contains a state-changing git
-command.
+`facts --json`. The harness hook enforces it: while an engine holds the lock, a
+state-changing git command in the loop's checkout is refused before it runs,
+and read-only git is allowed (see the hook layer in `02-the-loop.md`).
 
 ## Approval reference
 

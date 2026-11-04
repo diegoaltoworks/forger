@@ -7,6 +7,7 @@ import {
   runCoverageCheck,
   runDecisionsCheck,
   runDocsCheck,
+  runHooksCheck,
   runSafetyCheck,
   runSpecDecision,
   loadUiConfig,
@@ -15,12 +16,23 @@ import {
   runUiCheck,
   updateCoverageBaseline,
 } from '../checks';
-import {playwrightAuditor, shellAppServer} from '../adapters';
+import {findHarness, playwrightAuditor, shellAppServer} from '../adapters';
+import {loadConfig} from '../config';
+import type {Harness} from '../ports';
 import {UiInfrastructureError} from '../ports';
 import type {Command} from './command';
 import {specProvider} from './spec-provider';
 
-const SINGLE = {docs: runDocsCheck, arch: runArchCheck, decisions: runDecisionsCheck, safety: runSafetyCheck, tests: runTestsCheck, coverage: runCoverageCheck, ui: runUiCheck};
+/** The project's harness, for the checks that read its settings; an unknown one leaves them nothing to read. */
+function harnessOf(projectRoot: string): Harness | undefined {
+  try {
+    return findHarness(loadConfig(projectRoot).harness);
+  } catch {
+    return undefined;
+  }
+}
+
+const SINGLE = {hooks: (root: string) => runHooksCheck(root, harnessOf(root)), docs: runDocsCheck, arch: runArchCheck, decisions: runDecisionsCheck, safety: runSafetyCheck, tests: runTestsCheck, coverage: runCoverageCheck, ui: runUiCheck};
 
 export const check: Command = {
   name: 'check',
@@ -31,6 +43,7 @@ export const check: Command = {
                    exit non-zero on any unwaived violation; --summary prints the CI job
                    summary in markdown
   check decisions [--json] Fail on a new dependency or layer-map change with no ADR in the diff
+  check hooks [--json] Fail when the hook policy is missing or drops a default rule without a waiver, or the harness's settings do not run the hook
   check safety [--json] Fail on an added secret or a stored-shape change with no test
   check tests [--json] Fail on a fix with no test, or a unit test that imports a network or process module
   check coverage [--json] [--update] Fail when line coverage drops below the baseline; --update raises it
@@ -54,7 +67,7 @@ export const check: Command = {
     }
     if (positionals[1] === undefined) {
       try {
-        const report = runChecks(projectRoot, pluginRoot, ctx.run(), specProvider(ctx));
+        const report = runChecks(projectRoot, pluginRoot, ctx.run(), specProvider(ctx), harnessOf(projectRoot));
         console.log(values.json ? JSON.stringify(report) : values.summary ? formatSummary(report) : formatCheckReport(report));
         if (!report.ok) process.exitCode = 1;
       } catch (e) {
@@ -70,7 +83,7 @@ export const check: Command = {
       return;
     }
     if (!(positionals[1] in SINGLE)) {
-      console.error('Usage: check [--json | --summary] | check docs|arch|decisions|safety|tests|coverage|ui|spec|a11y [--json] | check coverage --update');
+      console.error('Usage: check [--json | --summary] | check docs|arch|decisions|hooks|safety|tests|coverage|ui|spec|a11y [--json] | check coverage --update');
       process.exitCode = 1;
       return;
     }

@@ -33,4 +33,5 @@ export const opencodeHarness: Harness = {
   packageCommand(source, pluginRoot) {
     return stripClaudeFrontmatter(source).replace(/\$\{CLAUDE_PLUGIN_ROOT\}|\$CLAUDE_PLUGIN_ROOT/g, pluginRoot);
   },
+  hooks: null,
 };

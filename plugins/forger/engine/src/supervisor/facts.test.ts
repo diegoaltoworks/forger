@@ -3,7 +3,7 @@ import {readFileSync} from 'fs';
 import {join} from 'path';
 
 import type {CommandRunner} from '../ports';
-import {checksConclusion, closingPrNumber, formatFacts, gatherLoopFacts, mutatingGitLines, parsePr} from './facts';
+import {checksConclusion, closingPrNumber, formatFacts, gatherLoopFacts, parsePr} from './facts';
 
 function stub(answers: Record<string, string>, seen: string[] = []): CommandRunner {
   return cmd => {
@@ -110,18 +110,5 @@ describe('gatherLoopFacts --pr', () => {
     const seen: string[] = [];
     gatherLoopFacts(stub({}, seen), {baseBranch: 'main', ignore: []});
     expect(seen.some(c => c.includes('ls-tree') || c.startsWith('gh '))).toBe(false);
-  });
-});
-
-describe('mutatingGitLines', () => {
-  test('flags state-changing git commands', () => {
-    expect(mutatingGitLines('run `git checkout main`\nok\ngit stash')).toHaveLength(2);
-  });
-  test('reads are fine', () => {
-    expect(mutatingGitLines('git fetch\ngit log\ngit branch --show-current')).toEqual([]);
-  });
-  test('the supervisor command contains no state-changing git command ', () => {
-    const body = readFileSync(join(import.meta.dir, '../../../commands/work.md'), 'utf-8');
-    expect(mutatingGitLines(body)).toEqual([]);
   });
 });

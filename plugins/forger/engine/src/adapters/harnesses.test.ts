@@ -79,3 +79,33 @@ describe('skill harnesses', () => {
     });
   }
 });
+
+import {claudeHooks, HOOK_MATCHER} from './claude-hooks';
+
+describe('hooks', () => {
+  const command = 'bun /plug/bin/work.ts hook';
+  test('claude installs the hook into empty settings and reads it back', () => {
+    const text = claudeHooks.install(null, command);
+    expect(JSON.parse(text)).toEqual({hooks: {PreToolUse: [{matcher: HOOK_MATCHER, hooks: [{type: 'command', command}]}]}});
+    expect(claudeHooks.installed(text)).toBe(true);
+    expect(claudeHooks.installed(null)).toBe(false);
+  });
+  test('the project settings and hooks already there are kept', () => {
+    const before = JSON.stringify({model: 'x', hooks: {PreToolUse: [{matcher: 'Bash', hooks: [{type: 'command', command: 'lint'}]}], Stop: []}});
+    const after = JSON.parse(claudeHooks.install(before, command));
+    expect(after.model).toBe('x');
+    expect(after.hooks.Stop).toEqual([]);
+    expect(after.hooks.PreToolUse.map((e: {hooks: Array<{command: string}>}) => e.hooks[0].command)).toEqual(['lint', command]);
+  });
+  test('settings that already run the hook, by any path, are returned unchanged', () => {
+    const own = JSON.stringify({hooks: {PreToolUse: [{matcher: 'Bash', hooks: [{type: 'command', command: 'bun "$CLAUDE_PROJECT_DIR"/plugins/forger/bin/work.ts hook'}]}]}});
+    expect(claudeHooks.install(own, command)).toBe(own);
+  });
+  test('settings that are not JSON are refused, naming the file', () => {
+    expect(() => claudeHooks.install('{', command)).toThrow('.claude/settings.json is not valid JSON');
+    expect(claudeHooks.installed('{')).toBe(false);
+  });
+  test('only claude has hooks forger installs', () => {
+    expect(HARNESSES.filter(h => h.hooks !== null).map(h => h.id)).toEqual(['claude']);
+  });
+});

@@ -21,4 +21,5 @@ export const codexHarness: Harness = {
   commandPath: name => `.agents/skills/${skillName(name)}/SKILL.md`,
   pluginRootVar: 'FORGER_ROOT',
   packageCommand: (source, pluginRoot, name) => packageAsSkill(source, pluginRoot, skillName(name ?? 'command')),
+  hooks: null,
 };

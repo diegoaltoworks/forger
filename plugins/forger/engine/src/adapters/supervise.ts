@@ -17,6 +17,8 @@ export interface SupervisedOptions {
   command: string;
   args: string[];
   cwd: string;
+  /** Added to the inherited environment. */
+  env?: Record<string, string>;
   input: string;
   timeoutMs: number;
   /** Time between SIGTERM and SIGKILL to the group once the deadline passes. */
@@ -43,7 +45,7 @@ export function runSupervised(opts: SupervisedOptions): Promise<SupervisedResult
   const drainMs = opts.drainMs ?? DEFAULT_DRAIN_MS;
 
   return new Promise(resolve => {
-    const child = spawn(command, args, {cwd, stdio: ['pipe', 'pipe', 'pipe'], detached: true});
+    const child = spawn(command, args, {cwd, env: opts.env ? {...process.env, ...opts.env} : process.env, stdio: ['pipe', 'pipe', 'pipe'], detached: true});
     const pid = child.pid;
 
     let output = '';

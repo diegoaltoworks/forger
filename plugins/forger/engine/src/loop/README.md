@@ -35,6 +35,8 @@ Pure:
   git calls aimed at a worktree, the folder map the scheduling rule reads, the
   conflict check after a worker's one attempt, and the clean-up that drops a
   conflicted branch.
+- `worker-env.ts` - the role, ticket and iteration the engine puts in a worker's
+  environment, and their reading back by the harness hook.
 - `merged.ts`, `run-facts.ts` - git facts, through an injected `CommandRunner`.
 - `merge.ts` - merge a PR only once every check passed; the decision is pure,
   the waiting reads the PR through an injected `CommandRunner`.

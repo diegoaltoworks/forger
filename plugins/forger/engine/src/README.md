@@ -15,6 +15,7 @@ the files inside it.
 | [`ui/`](ui/README.md) | The ui pack's config, the capture matrix and the screenshot run |
 | [`migrate/`](migrate/README.md) | Moving a repo from the legacy layout to `.forger/` |
 | [`packs/`](packs/README.md) | Pack manifests, `setup`, skill slots |
+| [`hooks/`](hooks/README.md) | The harness hook's decision: what a worker or supervisor is refused, and the policy it reads |
 | [`supervisor/`](supervisor/README.md) | Read-only facts, the supervisor's decisions, measures and retro records |
 | [`config/`](config/README.md) | Loading `.forger/workloop.config.json` and its defaults, and the one place that names forger's folder |
 | [`ports/`](ports/README.md) | The types the core is written against and the adapters implement: `CommandRunner`, `AgentRunner`, `Harness`, `AppServer`, `Screenshotter` |

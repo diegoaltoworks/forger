@@ -41,6 +41,8 @@ export const setup: Command = {
                    Install the chosen opinion packs (default base) into .forger/, never overwriting,
                    and record them in .forger/forger.lock.json. On a GitHub tracker it creates the loop
                    labels and makes the base branch require the forger/verify check, when the token can.
+                   It installs forger's tool-call hook into the harness's project settings, keeping
+                   a settings file that already runs it.
                    --harness H sets the harness (claude, opencode, codex, copilot) and installs its commands
                    --upgrade brings installed packs to this plugin's version: untouched files take the
                    new version, refined files are kept, files both sides changed get <file>.upstream`,
@@ -76,6 +78,7 @@ export const setup: Command = {
         trackerKind: values.tracker,
         skills,
         harness,
+        hookHarness: harness ?? findHarness(loadConfig(process.cwd()).harness),
       });
     } catch (e) {
       console.error((e as Error).message);

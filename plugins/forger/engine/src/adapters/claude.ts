@@ -4,6 +4,7 @@
  */
 
 import type {Harness} from '../ports';
+import {claudeHooks} from './claude-hooks';
 
 export const claudeHarness: Harness = {
   id: 'claude',
@@ -17,4 +18,5 @@ export const claudeHarness: Harness = {
   commandPath: () => null,
   pluginRootVar: 'CLAUDE_PLUGIN_ROOT',
   packageCommand: source => source,
+  hooks: claudeHooks,
 };
