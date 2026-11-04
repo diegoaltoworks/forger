@@ -14,6 +14,7 @@ real `CommandRunner` and agent spawn from `adapters/` are handed to the core.
   Pure.
 - `pipeline.ts` - `pipeline --json`: reads the ticket's labels and knock-on through `gh`, hands them to `pipeline/`.
 - `contract.ts` - `contract --slot`: gathers the diff, the ticket's criteria and the gates command, hands them to the validators in `pipeline/`, and records the attempt.
+- `intent.ts` - `intent --request`: reads the repo's manifest dependencies and prints the `intent/` classification.
 - One file per command group (`loop.ts`, `check.ts`, `setup.ts`, `facts.ts`,
   ...) - each handler prints its output and sets the exit code; some read or
   write the files their command names.

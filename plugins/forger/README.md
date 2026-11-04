@@ -58,7 +58,9 @@ intent                         plan                       build
 - **Plan**: `plan` grounds itself in the repo, interviews you in rounds over the
   frontier of open decisions (numbered questions, each with a recommendation),
   then writes a plan doc, ADRs, issues and queued tickets. Vocabulary lives in
-  `GLOSSARY.md`, decisions in `docs/adr/`.
+  `GLOSSARY.md`, decisions in `docs/adr/`. A request with creative intent (found by
+  `work intent`) first gets a creative-brief round: the brief is kept verbatim and
+  creative choices come as contrasting options.
 - **Intake**: anything labelled `ready-for-agent`, from a planner or a human, is
   adopted into the backlog by the planners and by the worker's work order step, with
   blocking edges mapped to `depends_on`. Issues labelled `wayfinder:*` are

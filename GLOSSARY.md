@@ -34,7 +34,16 @@ _Avoid_: PRD, queue
 
 **Work order**:
 The owner's current priority, written by the supervisor, read by every worker first.
-_Avoid_: inbox, brief
+_Avoid_: inbox
+
+**Creative intent**:
+A planning request about how something looks, feels or plays rather than what it does, found by `work intent` from the request text and the repo's dependencies.
+
+**Brief**:
+The owner's creative request, recorded verbatim at the top of the plan doc. Later steps judge the work against it.
+
+**Reference**:
+A work the owner names as a touchstone ("think <X>", "in the style of"). It is read as intent (feel, charm, readability), never as a spec to copy, and the plan states how it was read.
 
 **Skill slot**:
 A named point where a model does judgement work, with a built-in forger step that an installed skill can replace through the `skills` section of the config.
