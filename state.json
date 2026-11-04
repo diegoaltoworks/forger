@@ -1,6 +1,6 @@
 {
   "iteration": 113,
-  "status": "unverified",
+  "status": "halted",
   "last_completed_at": "2026-11-04T23:14:42.792Z",
   "completed_iterations": 101,
   "failed_iterations": 6,
