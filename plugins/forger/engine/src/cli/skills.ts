@@ -13,8 +13,8 @@ export const skills: Command = {
                    --presets lists the presets whose skill collection is installed`,
   run({values, config, pluginRoot, projectRoot, installedSkills, collectionRoots}) {
     const installed = installedSkills();
-    const env = {roots: [...collectionRoots(), pluginRoot], pluginRoot};
     const presets = loadPresets(pluginRoot);
+    const env = {roots: [...collectionRoots(), pluginRoot], pluginRoot, presets};
     const flavourSkills = (): Record<string, SkillMapping> => {
       try {
         return flavourMapping(loadFlavour(pluginRoot, forgerPath(projectRoot, '.forger'), config.flavour), NO_TICKET, installed, env);

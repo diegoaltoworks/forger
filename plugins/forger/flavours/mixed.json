@@ -1,0 +1,19 @@
+{
+  "name": "mixed",
+  "version": 1,
+  "description": "The strongest fit per slot across mattpocock-skills, agent-skills and pstack. A candidate whose collection is not installed loses to the next, and the built-in step is last.",
+  "slots": {
+    "interview": [{"skill": "mattpocock-skills:grilling"}, {"skill": "agent-skills:interview-me"}],
+    "glossary": [{"skill": "mattpocock-skills:domain-modeling"}, {"skill": "agent-skills:documentation-and-adrs"}],
+    "test_first": [{"skill": "mattpocock-skills:tdd"}, {"skill": "agent-skills:test-driven-development"}, {"file": "skills/tdd/SKILL.md"}],
+    "review": [{"skill": "agent-skills:code-review-and-quality"}, {"skill": "mattpocock-skills:code-review"}, {"file": "skills/interrogate/SKILL.md"}],
+    "diagnose": [{"skill": "mattpocock-skills:diagnosing-bugs"}, {"skill": "agent-skills:debugging-and-error-recovery"}],
+    "risk": [
+      {"skill": "agent-skills:security-and-hardening", "when": {"labels_any": ["security"]}},
+      {"file": "skills/blast-radius/SKILL.md"},
+      {"skill": "agent-skills:doubt-driven-development"}
+    ],
+    "pr_body": [{"skill": "mattpocock-skills:pr"}],
+    "retro": [{"file": "skills/engineering/retro/SKILL.md"}, {"file": "skills/reflect/SKILL.md"}]
+  }
+}

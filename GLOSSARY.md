@@ -46,6 +46,15 @@ A named, versioned selection over the skill slots: per slot an ordered list of c
 **Candidate**:
 One skill or file a flavour offers for a slot, with optional conditions on the ticket (labels, paths, installed packs). The first candidate whose conditions hold and which is installed wins.
 
+**Collection**:
+An installed set of third-party skills, such as agent-skills, mattpocock-skills or pstack, that a flavour maps onto the skill slots. Forger takes a collection's skills and never its routers or loops.
+
+**Preset**:
+Another name for a shipped flavour that maps one collection; `setup --preset <name>` is `setup --flavour <name>`.
+
+**File slot**:
+A slot filled by reading a skill's `SKILL.md` and following it, instead of invoking the skill by name. Used for skills that refuse model invocation or that a human invokes.
+
 **Opinion**:
 One rule forger holds about how the work is done, with an id, the why, a rung on the refinement ladder and, when it has one, the check that enforces it.
 _Avoid_: preference, guideline

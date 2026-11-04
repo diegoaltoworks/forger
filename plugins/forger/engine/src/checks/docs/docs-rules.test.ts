@@ -120,6 +120,7 @@ describe('model-agnostic', () => {
     const v = checkText('docs/a.md', 'a Claude session', [], names);
     expect(v.map(x => [x.rule, x.opinion])).toEqual([['model-agnostic', 'base.model-agnostic']]);
     expect(checkText('plugins/forger/README.md', 'a Claude session', [], names)).toEqual([]);
+    expect(checkText('docs/skills/pstack.md', 'a Claude session', [], names)).toEqual([]);
     expect(checkText('plugins/forger/engine/src/adapters/README.md', 'claude', [], names)).toEqual([]);
     expect(checkText('src/a.ts', '// claude', [], names)).toEqual([]);
   });

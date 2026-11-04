@@ -238,15 +238,17 @@ a `skills` map behaves as before.
 reason: which candidate won, or why each one before the built-in did not.
 `skills --json` resolves the flavour for a ticket with no labels and no paths.
 
-**Worked example: the mattpocock-skills collection.** The flavour
-`plugins/forger/flavours/mattpocock-skills.json` maps that collection onto the
-slots it covers. `/forger:setup` offers it when the collection is installed, or
-apply it directly with `setup --flavour mattpocock-skills` (`--preset` is the
+**Shipped collection flavours.** `agent-skills`, `mattpocock-skills` and `pstack`
+each map one collection onto the slots it fits, and `mixed` takes the strongest fit
+per slot across all three. `/forger:setup` offers a flavour when its collection is
+installed, or apply one directly with `setup --flavour <name>` (`--preset` is the
 same). A flavour is a plain file: copy it to map another collection. Besides the
 slot mapping it declares how to find the collection (`collection` and `plugin`
 for a prefixed plugin install, `aliases` for the bare skill names of an install
 without a prefix) and the `forbid` list, so detection and resolution work with or
-without the prefix.
+without the prefix. A skill that refuses model invocation is mapped as a `file`,
+relative to the plugin install. The pages under
+[`docs/skills/`](../../docs/skills/README.md) cover each collection.
 
 **The `design` slot** (ui pack) maps like any other. Examples: a Figma MCP
 server for boards, a prototype skill from an installed collection, or artifacts

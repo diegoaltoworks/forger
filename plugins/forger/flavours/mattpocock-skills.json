@@ -1,13 +1,13 @@
 {
   "name": "mattpocock-skills",
-  "version": 1,
+  "version": 2,
   "collection": "mattpocock-skills",
   "plugin": "mattpocock-skills",
-  "aliases": ["grilling", "domain-modeling", "tdd", "code-review", "diagnosing-bugs"],
+  "aliases": ["grilling", "domain-modeling", "tdd", "code-review", "diagnosing-bugs", "pr"],
   "forbid": [
+    "mattpocock-skills:ask-matt",
     "mattpocock-skills:implement",
     "mattpocock-skills:implement-spec",
-    "mattpocock-skills:retro",
     "mattpocock-skills:to-spec",
     "mattpocock-skills:to-tickets",
     "mattpocock-skills:triage",
@@ -19,6 +19,8 @@
     "glossary": [{"skill": "mattpocock-skills:domain-modeling"}],
     "test_first": [{"skill": "mattpocock-skills:tdd"}],
     "review": [{"skill": "mattpocock-skills:code-review"}],
-    "diagnose": [{"skill": "mattpocock-skills:diagnosing-bugs"}]
+    "diagnose": [{"skill": "mattpocock-skills:diagnosing-bugs"}],
+    "pr_body": [{"skill": "mattpocock-skills:pr"}],
+    "retro": [{"file": "skills/engineering/retro/SKILL.md"}]
   }
 }

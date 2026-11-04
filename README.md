@@ -33,6 +33,26 @@ flowchart LR
 Hexagons are tools: tested commands with machine-readable output that the model
 calls and cannot talk its way around. Rectangles are judgement.
 
+## Skills from the community
+
+Forger carries its own step for every judgement point, and it incorporates the
+skill collections you already use. Install one, pick its flavour, and the loop
+runs its skills at the stages they fit, unattended.
+
+| Collection | What it is | Stance | Slots it fills | Harnesses |
+|---|---|---|---|---|
+| [agent-skills](https://github.com/addyosmani/agent-skills) | A lifecycle pack of process skills with steps, red flags and exit criteria | A human checkpoint at each phase | interview, glossary, test_first, review, diagnose, risk | several, listed on its page |
+| [mattpocock-skills](https://github.com/mattpocock/skills) | Small composable skills from one engineer's daily set | Skills hold discipline, not the process | interview, glossary, test_first, review, diagnose, pr_body, retro | several, listed on its page |
+| [pstack](https://github.com/cursor/plugins/tree/main/pstack) | One engineer's stack: go deep, prove every claim | Verify against the real thing; no planning skills | test_first, review, risk, retro (all by file) | several, listed on its page |
+
+They differ in who holds the process: agent-skills walks a human through phases,
+mattpocock-skills leaves the process to you, and pstack proves claims by running
+them. Forger holds the process, so it takes the skills and never their routers or
+loops. A `mixed` flavour takes the strongest fit per slot across all three.
+
+Pages: [agent-skills](docs/skills/agent-skills.md), [mattpocock-skills](docs/skills/mattpocock-skills.md), [pstack](docs/skills/pstack.md), and
+[automating the skills through the factory](docs/skills/README.md).
+
 The goal is a loop that heals itself, learns and adapts: each lesson climbs from
 a note to a rule, a template, a check and finally a tool, until it holds without
 anyone remembering it, and the process is measured by commands, not claims.
@@ -77,9 +97,8 @@ section of `.forger/workloop.config.json`. The commands never name a skill: they
 ask `skills --json` what each slot resolves to, and fall back to the built-in
 step when a slot is unmapped or its skill is missing.
 
-The mattpocock-skills collection is the worked example: a ready-made preset maps
-it onto the slots, and `/forger:setup` offers it when the collection is
-installed. The slots, the config and the preset are described in
+Each collection above has a ready-made preset (a flavour) that maps it onto the
+slots, and `/forger:setup` offers it when the collection is installed. The slots, the config and the preset are described in
 [`plugins/forger/README.md`](plugins/forger/README.md).
 
 ## Read in this order
