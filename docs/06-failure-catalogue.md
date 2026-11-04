@@ -289,6 +289,19 @@ recovered, and where the lasting fix belongs: **E** the engine, **S** a skill
   outcome check also counts a `forger/verify` status of `success` on the merged
   head as a passing verdict. A merge with neither still halts `unverified`.
 
+### A PR without a ticket branch can never be verified
+
+- **Seen:** a supervisor's docs PR on a branch not named `feat/issue-<n>` was
+  refused by `verify`, so `forger/verify` was never set and the protected base
+  branch would not take the merge, even from the owner. On a local tracker every
+  `feat/<ticket-id>` branch was refused the same way and each ticket halted.
+- **Recovered by:** filing a ticket, pushing the commit to `feat/issue-<n>` and
+  opening a second PR.
+- **Fix:** E: #220: `verify` takes the ticket from `Closes #n` in the body, then
+  the branch (`feat/<ticket-id>` against the backlog on a local tracker). A PR
+  with no ticket is verified against an `## Acceptance` section in its body. A
+  PR with neither is refused, and the message names both fixes.
+
 ## The verifier
 
 ### The verifier cannot run the code it judges

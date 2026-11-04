@@ -18,6 +18,7 @@ import {evidenceHolds, failedCitations, SCREENSHOTS_DIR, type CommandRun, type C
 import {parseCommandLog} from './run-logged';
 import {EVIDENCE_DEMOTION, parseCriteria, parseUiStates, reduceVerdict, type CheckedEntry, type Criterion} from './verdict';
 import {buildVerifierInput, recordVerdict, type VerdictRecord} from './verify-input';
+import {resolveSubject} from './verify-subject';
 import {setVerifyStatus, withoutVerifyStatus, type VerifyStatusOutcome} from './verify-status';
 
 export interface VerifyOptions {
@@ -103,6 +104,15 @@ function criteriaFor(run: CommandRunner, opts: VerifyOptions, ticket: string): {
   return {criteria: texts.map((text, i) => ({id: `c${i + 1}`, text})), uiStates: []};
 }
 
+function inBacklog(file: string, ticket: string): boolean {
+  try {
+    const data = JSON.parse(readFileSync(file, 'utf-8')) as {features?: Record<string, unknown>};
+    return Boolean(data.features && ticket in data.features);
+  } catch {
+    return false;
+  }
+}
+
 /** What the engine recorded in the verifier's copy: its files, and the commands run through the log. */
 export function copyRecord(root: string, commands: CommandRun[]): CopyRecord {
   return {
@@ -116,14 +126,14 @@ export function copyRecord(root: string, commands: CommandRun[]): CopyRecord {
 }
 
 export async function verifyPr(run: CommandRunner, agent: AgentRunner, opts: VerifyOptions): Promise<VerifyResult> {
-  const view = JSON.parse(run(`gh pr view ${opts.pr} --json ${PR_FIELDS},headRefName`)) as {headRefOid?: string; headRefName?: string; statusCheckRollup?: unknown};
+  const view = JSON.parse(run(`gh pr view ${opts.pr} --json ${PR_FIELDS},headRefName,body`)) as {headRefOid?: string; headRefName?: string; body?: string; statusCheckRollup?: unknown};
   const pr = parsePr(JSON.stringify({...view, statusCheckRollup: withoutVerifyStatus(view.statusCheckRollup)}));
   if (!pr || !view.headRefOid) throw new Error(`cannot read PR #${opts.pr}`);
   const head = view.headRefOid;
-  const ticket = /^feat\/(issue-\d+)$/.exec(view.headRefName ?? '')?.[1];
-  if (!ticket) throw new Error(`cannot tell the ticket from branch "${view.headRefName ?? ''}"; expected feat/issue-<n>`);
+  const found = resolveSubject({branch: view.headRefName ?? '', body: view.body ?? '', trackerKind: opts.trackerKind, inBacklog: id => inBacklog(opts.backlogFile, id)});
+  const ticket = found.kind === 'ticket' ? found.ticket : `pr-${opts.pr}`;
 
-  const {criteria: acceptance, uiStates} = criteriaFor(run, opts, ticket);
+  const {criteria: acceptance, uiStates} = found.kind === 'ticket' ? criteriaFor(run, opts, ticket) : {criteria: found.criteria, uiStates: []};
   const criteria = [...acceptance, ...uiStates];
   if (acceptance.length === 0) throw new Error(`${ticket} has no acceptance criteria to verify`);
 
