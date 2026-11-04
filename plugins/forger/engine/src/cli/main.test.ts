@@ -431,7 +431,7 @@ describe('skills --json', () => {
     const out = JSON.parse(await capture(['skills', '--json'], undefined, () => ['c:review']));
     const by = Object.fromEntries(out.slots.map((s: {slot: string}) => [s.slot, s]));
     expect(by.review).toMatchObject({skill: 'c:review', installed: true, invoke: 'skill'});
-    expect(by.diagnose).toMatchObject({skill: 'c:gone', installed: false, invoke: 'builtin'});
+    expect(by.diagnose).toMatchObject({skill: 'c:gone', installed: false, invoke: 'file'});
     expect(by.interview).toMatchObject({skill: null, invoke: 'builtin'});
   });
   test('a file slot is read from a collection root and reported with its path, forbid list and preamble', async () => {
@@ -447,7 +447,7 @@ describe('skills --json', () => {
     const out = JSON.parse(await capture(['skills', '--json'], undefined, () => ['tdd'], () => [coll]));
     const by = Object.fromEntries(out.slots.map((s: {slot: string}) => [s.slot, s]));
     expect(by.review).toMatchObject({invoke: 'file', installed: true, path: join(coll, 'skills', 'r', 'SKILL.md')});
-    expect(by.diagnose).toMatchObject({invoke: 'builtin', installed: false});
+    expect(by.diagnose).toMatchObject({invoke: 'file', installed: false});
     expect(out.forbid).toContain('mattpocock-skills:wayfinder');
     expect(out.preamble).toContain('Do not commit');
   });

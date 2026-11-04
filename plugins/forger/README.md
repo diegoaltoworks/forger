@@ -123,6 +123,12 @@ judgement work are named **skill slots**, and each has a built-in forger step:
 | `pr_body` | `auto-ticket` | write the PR body by `docs/03-tickets.md`; `pr-body` keeps `Closes #<n>` and the review sections |
 | `retro` | `retro` | the retro steps as written |
 
+`test_first`, `review` and `diagnose` ship as full skills under
+`skills/<slot>/SKILL.md`, with steps, red flags, exit criteria and the slot's
+output contract, written for unattended runs. With nothing mapped, `skills --json`
+and `pipeline --json` report them as `invoke: file`; if the file is missing the
+one-line step above runs instead. A project's skills map or flavour still wins.
+
 Map a slot to a skill in the `skills` section of `.forger/workloop.config.json`:
 
 ```json
