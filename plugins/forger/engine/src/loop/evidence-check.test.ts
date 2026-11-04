@@ -1,9 +1,9 @@
 import {describe, expect, test} from 'bun:test';
 
-import {evidenceHolds, failedCitations, testResults, type CopyRecord} from './evidence-check';
-import {logLine, parseCommandLog} from './run-logged';
+import {evidenceHolds, failedCitations, testNameMatches, testResults, type CopyRecord} from './evidence-check';
+import {loggedEnv, logLine, parseCommandLog} from './run-logged';
 
-const output = ['(pass) the engine refuses a red merge [1.2ms]', '(fail) the engine names the head', 'ok 3 - tap style passes', 'not ok 4 - tap style fails'].join('\n');
+const output = ['(pass) the engine refuses a red merge [1.2ms]', '(pass) verify > classifyCriterion > a vague criterion fails [0.4ms]', '(fail) the engine names the head', 'ok 3 - tap style passes', 'not ok 4 - tap style fails'].join('\n');
 const record: CopyRecord = {
   fileLines: p => ({'src/a.ts': 10, 'docs/screenshots/empty.png': 1}[p] ?? null),
   commands: [
@@ -30,6 +30,20 @@ describe('evidenceHolds', () => {
     expect(holds('test', 'names the head')).toBe(false);
     expect(holds('test', 'tap style fails')).toBe(false);
     expect(holds('test', 'never ran')).toBe(false);
+  });
+
+  test('test: a "describe > test" reference holds for the nested test that passed', () => {
+    expect(holds('test', 'verify > classifyCriterion > a vague criterion fails')).toBe(true);
+    expect(holds('test', 'classifyCriterion > a vague criterion fails')).toBe(true);
+    expect(holds('test', 'verify > a vague criterion fails')).toBe(true);
+    expect(holds('test', 'classifyCriterion  >  a vague criterion fails')).toBe(true);
+  });
+
+  test('test: a "describe > test" reference not in the run does not hold', () => {
+    expect(holds('test', 'otherDescribe > a vague criterion fails')).toBe(false);
+    expect(holds('test', 'classifyCriterion > a criterion that never ran')).toBe(false);
+    expect(holds('test', 'classifyCriterion > verify > a vague criterion fails')).toBe(false);
+    expect(holds('test', 'classifyCriterion > the engine names the head')).toBe(false);
   });
 
   test('command: in the log with exit 0', () => {
@@ -59,6 +73,7 @@ test('failedCitations names what does not hold', () => {
 test('testResults reads bun and TAP lines', () => {
   expect(testResults(record.commands)).toEqual([
     {name: 'the engine refuses a red merge', passed: true},
+    {name: 'verify > classifyCriterion > a vague criterion fails', passed: true},
     {name: 'the engine names the head', passed: false},
     {name: 'tap style passes', passed: true},
     {name: 'tap style fails', passed: false},
@@ -68,4 +83,15 @@ test('testResults reads bun and TAP lines', () => {
 test('the command log round-trips and skips a torn line', () => {
   const run = {command: 'bun test', exit: 0, output: 'x'};
   expect(parseCommandLog(logLine(run) + '{"command":"b' + '\n' + logLine({...run, exit: 2}))).toEqual([run, {...run, exit: 2}]);
+});
+
+test('testNameMatches needs the last part to be the test itself', () => {
+  expect(testNameMatches('a > b > c', 'a > c')).toBe(true);
+  expect(testNameMatches('a > b > c', 'a > b')).toBe(true);
+  expect(testNameMatches('a > b > cd', 'a > c')).toBe(false);
+  expect(testNameMatches('a > b > c', 'a > x')).toBe(false);
+});
+
+test('a logged command runs without the switches that hide passed tests', () => {
+  expect(loggedEnv({PATH: '/bin', CLAUDECODE: '1', REPL_ID: 'x', AGENT: '1', AI_AGENT: 'y', GONE: undefined})).toEqual({PATH: '/bin', AI_AGENT: 'y'});
 });

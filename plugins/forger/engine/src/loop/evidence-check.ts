@@ -40,6 +40,24 @@ export function testResults(commands: CommandRun[]): {name: string; passed: bool
 
 const squash = (s: string) => s.trim().replace(/\s+/g, ' ');
 
+const segments = (s: string) => s.split(' > ').map(squash).filter(Boolean);
+
+/**
+ * Whether a reported test name is the one a reference cites: the reference as
+ * written, or its ` > ` parts in order with the last part the test's own name.
+ * Test tools join the describe names and the test name with ` > `, and a
+ * verifier may leave out an enclosing describe.
+ */
+export function testNameMatches(reported: string, ref: string): boolean {
+  if (reported.includes(ref)) return true;
+  const want = segments(ref);
+  const have = segments(reported);
+  if (want.length === 0 || have.length === 0 || want[want.length - 1] !== have[have.length - 1]) return false;
+  let i = 0;
+  for (const part of have.slice(0, -1)) if (i < want.length - 1 && part === want[i]) i++;
+  return i === want.length - 1;
+}
+
 function insideCopy(path: string): string | null {
   const rel = normalize(path);
   return isAbsolute(rel) || rel.startsWith('..') ? null : rel;
@@ -64,7 +82,7 @@ export function evidenceHolds(record: CopyRecord, e: Evidence): boolean {
       return path !== null && path.startsWith(SCREENSHOTS_DIR) && record.fileLines(path) !== null;
     }
     case 'test': {
-      const hits = testResults(record.commands).filter(t => t.name.includes(ref));
+      const hits = testResults(record.commands).filter(t => testNameMatches(t.name, ref));
       return hits.length > 0 && hits.every(t => t.passed);
     }
     case 'command':

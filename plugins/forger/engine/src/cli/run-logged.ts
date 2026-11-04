@@ -1,7 +1,7 @@
 import {spawnSync} from 'child_process';
 import {appendFileSync} from 'fs';
 
-import {logLine} from '../loop';
+import {loggedEnv, logLine} from '../loop';
 import type {Command} from './command';
 
 const MAX_OUTPUT = 200_000;
@@ -22,7 +22,7 @@ export const runLogged: Command = {
       process.exitCode = 1;
       return;
     }
-    const r = spawnSync('sh', ['-c', command], {encoding: 'utf-8', maxBuffer: 256 * 1024 * 1024});
+    const r = spawnSync('sh', ['-c', command], {encoding: 'utf-8', env: loggedEnv(process.env), maxBuffer: 256 * 1024 * 1024});
     const output = `${r.stdout ?? ''}${r.stderr ?? ''}`;
     process.stdout.write(output);
     const exit = r.status ?? 1;
