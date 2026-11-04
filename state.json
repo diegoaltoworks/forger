@@ -106,7 +106,7 @@
     "issue-193"
   ],
   "in_flight": [],
-  "last_error": null,
+  "last_error": "Agent signaled stop - blocked or no actionable work",
   "stall_count": 1,
   "declined_tasks": [
     {
