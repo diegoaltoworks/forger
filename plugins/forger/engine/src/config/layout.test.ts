@@ -4,7 +4,7 @@ import {tmpdir} from 'os';
 import {join} from 'path';
 
 import {loadConfig} from './config';
-import {chooseLayout, detectLayout, forgerPath, legacyWarning, rewriteReferences, toLogical, toPhysical} from './layout';
+import {chooseLayout, detectLayout, forgerPath, isProjectRoot, legacyWarning, resolveProjectRoot, rewriteReferences, toLogical, toPhysical} from './layout';
 
 const dirs: string[] = [];
 afterEach(() => {
@@ -83,5 +83,37 @@ describe('the folder name has one owner', () => {
     };
     walk(src);
     expect(offenders).toEqual([]);
+  });
+});
+
+describe('resolveProjectRoot', () => {
+  const home = '/users/u';
+  /** A fake filesystem: the directories that are project roots. */
+  const facts = (roots: string[], gitTop: string | null) => ({gitTop, home, isRoot: (d: string) => roots.includes(d)});
+
+  test('a repository without .forger is its own root, though a parent holds one', () => {
+    expect(resolveProjectRoot('/users/u/repo/src', facts(['/users/u'], '/users/u/repo'))).toBe('/users/u/repo');
+    expect(resolveProjectRoot('/work/a/b', facts(['/work'], '/work/a'))).toBe('/work/a');
+  });
+
+  test('the home directory is never a root', () => {
+    expect(resolveProjectRoot('/users/u/loose', facts(['/users/u'], null))).toBeNull();
+    expect(resolveProjectRoot('/users/u', facts(['/users/u'], '/users/u'))).toBeNull();
+  });
+
+  test('outside a repository the nearest ancestor project root wins', () => {
+    expect(resolveProjectRoot('/work/p/src', facts(['/work/p', '/work'], null))).toBe('/work/p');
+  });
+
+  test('nothing to find is null', () => {
+    expect(resolveProjectRoot('/tmp/x', facts([], null))).toBeNull();
+  });
+});
+
+describe('isProjectRoot', () => {
+  test('a .claude without a forger config is not a root', () => {
+    expect(isProjectRoot(project({'.claude/settings.json': '{}'}))).toBe(false);
+    expect(isProjectRoot(project({'.claude/workloop.config.json': '{}'}))).toBe(true);
+    expect(isProjectRoot(project({'.forger/x': ''}))).toBe(true);
   });
 });

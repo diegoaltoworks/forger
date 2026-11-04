@@ -6,12 +6,13 @@
  */
 
 import {homedir, hostname} from 'os';
-import {dirname, resolve} from 'path';
+import {realpathSync} from 'fs';
+import {resolve} from 'path';
 import {parseArgs} from 'util';
 
 import {agentFor, execCapture, gitStateStore, localStateFor, execRunner, findHarness} from '../adapters';
 import type {Backlog} from '../backlog';
-import {detectLayout, isProjectRoot, legacyWarning, loadConfig, type WorkloopConfig} from '../config';
+import {detectLayout, isProjectRoot, legacyWarning, loadConfig, resolveProjectRoot, type WorkloopConfig} from '../config';
 import {AutomationRunner, DEFAULT_LEASE_TTL_SECONDS, GhTrackerHalt, type LeaseSettings} from '../loop';
 import {capturing, type StateStore} from '../ports';
 import {listCollectionRoots, listInstalledSkills} from '../packs';
@@ -21,14 +22,18 @@ import {openBacklog} from './open-backlog';
 import {storedPlanFor} from './pipeline';
 import {findCommand, renderHelp} from './registry';
 
-/** Nearest ancestor directory holding forger's folder (or the legacy one). */
-export function findProjectRoot(start: string = process.cwd()): string {
-  let dir = start;
-  while (dir !== dirname(dir)) {
-    if (isProjectRoot(dir)) return dir;
-    dir = dirname(dir);
-  }
-  throw new Error('Could not find a .forger directory in this or any parent directory');
+/** The git top-level of a directory, or null when it is not inside a repository. */
+export function gitTopLevel(dir: string): string | null {
+  const out = Bun.spawnSync(['git', 'rev-parse', '--show-toplevel'], {cwd: dir, stdout: 'pipe', stderr: 'ignore'});
+  const top = out.exitCode === 0 ? out.stdout.toString().trim() : '';
+  return top ? realpathSync(top) : null;
+}
+
+/** The git top-level of `start`; outside a repository, the nearest ancestor holding forger's folder. Never the home directory. */
+export function findProjectRoot(start: string = process.cwd(), home: string = homedir()): string {
+  const root = resolveProjectRoot(start, {gitTop: gitTopLevel(start), home: realpathSync(home), isRoot: isProjectRoot});
+  if (root === null) throw new Error('Could not find a git repository or a .forger directory in this or any parent directory');
+  return root;
 }
 
 /** The lease identity of this engine when the state lives on the branch; none for the local store. */

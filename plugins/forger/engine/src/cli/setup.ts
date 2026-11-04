@@ -5,6 +5,15 @@ import {findHarness} from '../adapters';
 import {formatSetup, formatUpgrade, loadPresets, offerPresets, parsePackList, runSetup, runUpgrade} from '../packs';
 import type {Command, CommandContext} from './command';
 
+/** setup runs before any `.forger/` exists, so outside a repository it acts where it was run. */
+function setupRoot(ctx: CommandContext): string {
+  try {
+    return ctx.projectRoot;
+  } catch {
+    return process.cwd();
+  }
+}
+
 interface LabelOutcome {
   created: string[];
   error?: string;
@@ -12,7 +21,7 @@ interface LabelOutcome {
 
 /** GitHub repositories only; a failure (no gh, no remote) is reported, not fatal, since the files are already installed. */
 function createLabels(ctx: CommandContext): LabelOutcome {
-  const config = loadConfig(process.cwd());
+  const config = loadConfig(setupRoot(ctx));
   if (config.tracker.kind !== 'github') return {created: []};
   try {
     return {created: ensureLabels(ctx.run(), config.tracker.label)};
@@ -23,7 +32,7 @@ function createLabels(ctx: CommandContext): LabelOutcome {
 
 /** GitHub repositories only, and never fatal: a token without admin rights is common, so the gap is reported for the owner to close. */
 function requireVerify(ctx: CommandContext): RequireOutcome | undefined {
-  const config = loadConfig(process.cwd());
+  const config = loadConfig(setupRoot(ctx));
   if (config.tracker.kind !== 'github') return undefined;
   return requireVerifyStatus(ctx.capture(), config.base_branch);
 }
@@ -53,7 +62,7 @@ export const setup: Command = {
     const {values, pluginRoot, installedSkills} = ctx;
     if (values.upgrade) {
       try {
-        const upgrade = runUpgrade(process.cwd(), pluginRoot);
+        const upgrade = runUpgrade(setupRoot(ctx), pluginRoot);
         console.log(values.json ? JSON.stringify(upgrade) : formatUpgrade(upgrade));
       } catch (e) {
         console.error((e as Error).message);
@@ -65,7 +74,7 @@ export const setup: Command = {
     const wanted = (values.flavour ?? values.preset) as string | undefined;
     if (wanted) {
       try {
-        flavour = flavourRef(loadFlavour(pluginRoot, forgerPath(process.cwd(), '.forger'), wanted));
+        flavour = flavourRef(loadFlavour(pluginRoot, forgerPath(setupRoot(ctx), '.forger'), wanted));
       } catch (e) {
         console.error(`Unknown flavour: ${(e as Error).message}`);
         process.exitCode = 1;
@@ -75,14 +84,14 @@ export const setup: Command = {
     let result;
     try {
       const harness = values.harness ? findHarness(values.harness) : undefined;
-      result = runSetup(process.cwd(), pluginRoot, {
+      result = runSetup(setupRoot(ctx), pluginRoot, {
         packs: parsePackList(values.packs),
         gates: values.gates,
         baseBranch: values['base-branch'],
         trackerKind: values.tracker,
         flavour,
         harness,
-        hookHarness: harness ?? findHarness(loadConfig(process.cwd()).harness),
+        hookHarness: harness ?? findHarness(loadConfig(setupRoot(ctx)).harness),
       });
     } catch (e) {
       console.error((e as Error).message);
@@ -100,7 +109,7 @@ export const setup: Command = {
           formatSetup(result, presets),
           ...labels.created.map(l => `label   ${l}`),
           ...(labels.error ? [`! ${labels.error}`] : []),
-          ...formatRequire(verifyCheck, loadConfig(process.cwd()).base_branch),
+          ...formatRequire(verifyCheck, loadConfig(setupRoot(ctx)).base_branch),
         ].join('\n')
       );
   },
