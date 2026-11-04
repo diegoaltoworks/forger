@@ -18,15 +18,17 @@ export interface SlotDefinition {
   builtin: string;
   /** The named output the slot's step must leave, for the pipeline definition to refer to. */
   output?: string;
+  /** A skill file shipped in the plugin, relative to its root; the built-in runs it while the file exists. */
+  builtinFile?: string;
 }
 
 export const SLOTS: readonly SlotDefinition[] = [
   {slot: 'interview', usedBy: 'plan', builtin: 'Ask the open decisions in numbered rounds, each with a recommended answer'},
   {slot: 'glossary', usedBy: 'plan', builtin: 'Record new terms in GLOSSARY.md and decisions in docs/adr/'},
   {slot: 'design', usedBy: 'plan', builtin: 'Write a static grey-box HTML wireframe to docs/design/<ticket>/index.html, capture it with screenshot --wireframe, link both'},
-  {slot: 'test_first', usedBy: 'auto-ticket', builtin: 'Write the failing test, make it pass, then refactor'},
-  {slot: 'review', usedBy: 'auto-ticket', builtin: 'Review the diff against the base on standards and spec'},
-  {slot: 'diagnose', usedBy: 'auto-ticket', builtin: 'Reproduce the red gate, form one hypothesis, test it'},
+  {slot: 'test_first', usedBy: 'auto-ticket', builtinFile: 'skills/test_first/SKILL.md', builtin: 'Write the failing test, make it pass, then refactor'},
+  {slot: 'review', usedBy: 'auto-ticket', builtinFile: 'skills/review/SKILL.md', builtin: 'Review the diff against the base on standards and spec'},
+  {slot: 'diagnose', usedBy: 'auto-ticket', builtinFile: 'skills/diagnose/SKILL.md', builtin: 'Reproduce the red gate, form one hypothesis, test it'},
   {slot: 'merge_conflicts', usedBy: 'auto-ticket', builtin: 'Resolve the conflict by hand and re-run the gates'},
   {slot: 'risk', usedBy: 'auto-ticket', output: 'risk_report', builtin: 'List what the change touches beyond the diff and run the tests for it'},
   {slot: 'pr_body', usedBy: 'auto-ticket', output: 'pr_body', builtin: 'Write the PR body by docs/03-tickets.md'},
@@ -73,6 +75,8 @@ export interface SkillsReport {
 export interface ResolveEnv {
   /** Absolute roots a relative `{file}` is looked up under, in order. */
   roots?: readonly string[];
+  /** The plugin's root, where a slot's `builtinFile` lives. */
+  pluginRoot?: string;
   presets?: readonly Preset[];
   exists?: (path: string) => boolean;
 }
@@ -100,6 +104,16 @@ function resolveFile(file: string, env: ResolveEnv): {path: string | null; exist
   return {path: found ?? candidates[0] ?? null, exists: found !== undefined};
 }
 
+/**
+ * The built-in step of a slot as a file to read and follow, when the slot ships one and it is
+ * present; otherwise the result unchanged, so the one-line step still runs. Pure given `exists`.
+ */
+export function withBuiltinFile<T extends ResolvedSlot>(slot: T, env: ResolveEnv = {}): T {
+  if (slot.invoke !== 'builtin' || !slot.builtinFile || !env.pluginRoot) return slot;
+  const path = join(env.pluginRoot, slot.builtinFile);
+  return (env.exists ?? existsSync)(path) ? {...slot, invoke: 'file', path} : slot;
+}
+
 /** One slot against the project's mapping: the mapped skill or file when present, else the built-in step. */
 export function resolveSlot(def: SlotDefinition, mapping: Record<string, SkillMapping>, have: ReadonlySet<string>, env: ResolveEnv = {}): ResolvedSlot {
   const m = mapping[def.slot];
@@ -117,7 +131,7 @@ export function resolveSlot(def: SlotDefinition, mapping: Record<string, SkillMa
 export function resolveSkills(mapping: Record<string, SkillMapping>, installed: readonly string[], env: ResolveEnv = {}): SkillsReport {
   const have = new Set(installed);
   const presets = env.presets ?? [];
-  const slots = SLOTS.map(def => resolveSlot(def, mapping, have, env));
+  const slots = SLOTS.map(def => withBuiltinFile(resolveSlot(def, mapping, have, env), env));
   const known = new Set(SLOTS.map(s => s.slot));
   const forbid = [...new Set(presets.filter(p => collectionInstalled(p, installed)).flatMap(p => p.forbid ?? []))].sort();
   return {slots, forbid, preamble: UNATTENDED_PREAMBLE, unknown: Object.keys(mapping).filter(k => !known.has(k))};

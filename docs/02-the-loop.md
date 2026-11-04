@@ -229,6 +229,9 @@ slots cover the stages around it, each with a named output:
 - `retro` (output `retro_proposals`) is used by the `retro` command.
 
 An unmapped slot runs its built-in step, so nothing changes until a project maps one.
+For `test_first`, `review` and `diagnose` that step is a skill file forger ships
+(steps, red flags, exit criteria, then the slot's contract); the one-line step
+runs only if the file is missing.
 
 ## The stages as data
 

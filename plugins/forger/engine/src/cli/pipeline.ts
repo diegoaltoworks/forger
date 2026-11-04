@@ -51,6 +51,7 @@ export const pipeline: Command = {
       const ticket = issue === null ? {...NO_TICKET, packs: installedPacks(ctx)} : {...ticketFacts(ctx, issue), packs: installedPacks(ctx)};
       const plan = resolvePipeline(loadDefinition(pluginRoot), loadOverlay(forgerPath(projectRoot, '.forger')), loadFlavour(pluginRoot, forgerPath(projectRoot, '.forger'), config.flavour), config.skills, ctx.installedSkills(), ticket, {
         roots: [...ctx.collectionRoots(), pluginRoot],
+        pluginRoot,
         presets: loadPresets(pluginRoot),
       });
       const stage = values.stage as string | undefined;

@@ -1,6 +1,6 @@
 import type {SkillMapping} from '../config';
 import {globToRegExp} from '../checks';
-import {resolveSlot, SLOTS, type ResolveEnv} from '../packs';
+import {resolveSlot, SLOTS, withBuiltinFile, type ResolvedSlot, type ResolveEnv, type SlotDefinition} from '../packs';
 import {mergeOverlay} from './overlay';
 import {pickCandidate, flavourRef} from './flavour';
 import type {Condition, Definition, Flavour, StageSlot, TicketFacts} from './types';
@@ -58,6 +58,13 @@ function holds(when: Condition | undefined): string {
   return keys.length > 0 ? `; when ${keys.join(' and ')} holds` : '';
 }
 
+/** The path of the slot's shipped skill file when it is present, else null. */
+function builtinFile(def: SlotDefinition, env: ResolveEnv): string | null {
+  const bare: ResolvedSlot = {...def, skill: null, file: null, installed: false, invoke: 'builtin', path: null};
+  const r = withBuiltinFile(bare, env);
+  return r.invoke === 'file' ? r.path : null;
+}
+
 function planSlot(s: StageSlot, flavour: Flavour, overrides: Record<string, SkillMapping>, have: ReadonlySet<string>, ticket: TicketFacts, env: ResolveEnv): PlannedSlot {
   const def = SLOTS.find(d => d.slot === s.slot) ?? {slot: s.slot, usedBy: '', builtin: ''};
   const on = s.on ? {on: s.on} : {};
@@ -69,12 +76,16 @@ function planSlot(s: StageSlot, flavour: Flavour, overrides: Record<string, Skil
     if (r.invoke === 'skill') return {...base, invoke: 'skill', target: r.skill, reason: `skills map${extra}`};
     if (r.invoke === 'file') return {...base, invoke: 'file', target: r.path, reason: `skills map${extra}`};
     const missing = r.file !== null ? `skills map names file ${r.file}, not found` : r.skill !== null ? `skills map names ${r.skill}, not installed` : null;
+    const own = builtinFile(def, env);
+    if (own !== null) return {...base, invoke: 'file', target: own, reason: `builtin file${missing ? `: ${missing}` : ''}${extra}`};
     return {...base, invoke: 'builtin', target, reason: `builtin${missing ? `: ${missing}` : ''}${extra}`};
   }
   const pick = pickCandidate(def, flavour, ticket, have, env);
   const r = pick.resolved;
   if (r?.invoke === 'skill') return {...base, invoke: 'skill', target: r.skill, reason: `${pick.reason}${extra}`};
   if (r?.invoke === 'file') return {...base, invoke: 'file', target: r.path, reason: `${pick.reason}${extra}`};
+  const own = builtinFile(def, env);
+  if (own !== null) return {...base, invoke: 'file', target: own, reason: `builtin file: ${pick.reason}${extra}`};
   return {...base, invoke: 'builtin', target, reason: `builtin: ${pick.reason}${extra}`};
 }
 
