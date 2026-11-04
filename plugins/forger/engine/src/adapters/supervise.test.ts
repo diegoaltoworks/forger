@@ -1,5 +1,5 @@
 import {afterEach, describe, expect, test} from 'bun:test';
-import {mkdtempSync, readFileSync, rmSync} from 'fs';
+import {existsSync, mkdtempSync, readdirSync, readFileSync, rmSync} from 'fs';
 import {tmpdir} from 'os';
 import {join} from 'path';
 
@@ -145,5 +145,43 @@ describe('runSupervised', () => {
     expect(r.exitCode).toBe(1);
     expect(r.timedOut).toBe(false);
     expect(r.output).toContain('Error:');
+  });
+});
+
+describe('runSupervised input delivery', () => {
+  // A worker that, like the claude CLI, gives up when its stdin stays empty.
+  const impatient = ['-c', 'timeout 1 head -c 8 || echo NO-PROMPT'];
+
+  test('two workers started in the same tick both receive their prompt while the event loop is blocked', async () => {
+    const cwd = tmp();
+    const runs = ['prompt-a', 'prompt-b'].map(input => runSupervised({command: 'bash', args: impatient, cwd, input, timeoutMs: 5000, graceMs: 200}));
+    // What the runner does next: synchronous git and gh calls for the next worker.
+    Bun.sleepSync(1500);
+    const [a, b] = await Promise.all(runs);
+    expect(a).toMatchObject({output: 'prompt-a', inputError: null});
+    expect(b).toMatchObject({output: 'prompt-b', inputError: null});
+  });
+
+  test('a prompt that cannot be written starts no worker and says why', async () => {
+    const cwd = tmp();
+    const marker = join(cwd, 'ran');
+    const r = await runSupervised({
+      command: 'bash',
+      args: ['-c', `touch '${marker}'`],
+      cwd,
+      input: 'prompt',
+      timeoutMs: 5000,
+      graceMs: 200,
+      inputDir: join(cwd, 'missing'),
+    });
+    expect(r.exitCode).toBe(1);
+    expect(r.inputError).toContain('the prompt could not be written');
+    expect(existsSync(marker)).toBe(false);
+  });
+
+  test('leaves no input file behind', async () => {
+    const inputDir = tmp();
+    await runSupervised({command: 'bash', args: ['-c', 'cat >/dev/null'], cwd: tmp(), input: 'prompt', timeoutMs: 5000, graceMs: 200, inputDir});
+    expect(readdirSync(inputDir)).toEqual([]);
   });
 });

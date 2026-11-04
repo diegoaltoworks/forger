@@ -157,11 +157,33 @@ recovered, and where the lasting fix belongs: **E** the engine, **S** a skill
   the platform.
 - **Cause:** the engine counted every non-zero exit as a worker failure.
 - **Fix:** E (in place): the exit is classified from its output (authentication,
-  billing, network); an infrastructure error halts at once with its category and
-  is not counted as a worker failure. S: a worker that meets an outside
+  billing, network, a prompt that never reached the worker); an infrastructure
+  error halts at once with its category and is not counted as a worker failure. S: a worker that meets an outside
   failure (a billing limit on CI, a package registry integrity error, an auth
   provider outage, a pull request waiting on an approval only a person can give)
   files a ticket and stops. It does not retry, and the halt is correct.
+
+### A parallel start loses the prompt
+
+- **Seen:** the first run with two workers halted on "too many consecutive
+  failures" within a minute. The first worker said it received no stdin data
+  and refused an empty prompt; the next two attempts logged git's "Preparing
+  worktree" progress line as the error. None of it was the ticket's fault, and
+  the halt then ended the healthy second worker.
+- **Cause:** the prompt was written to the worker's stdin pipe, which the
+  event loop feeds. Starting the second worker runs synchronous git and gh
+  calls that block the loop, long enough for the first worker to stop waiting
+  for its prompt. A retry then failed on the branch the first attempt had left
+  behind, and the error shown was the first line of git's stderr, its progress
+  message, not the `fatal:` line after it. Both counted as worker failures.
+- **Fix:** E (in place): the prompt is written to a file synchronously and the
+  file is the worker's stdin, so a blocked event loop cannot starve it; a
+  prompt that cannot be written, or a worker that reports it got none, is an
+  infrastructure error (delivery). A worktree is failed only by a non-zero
+  exit, its error is git's `fatal:` or `error:` line, and a retry checks out the
+  branch an earlier attempt left. A worktree that cannot be made is an
+  infrastructure error too: it halts at once, naming the cause, and is not
+  counted as a worker failure.
 
 ### The tracker's rate limit reads as a dead tracker
 

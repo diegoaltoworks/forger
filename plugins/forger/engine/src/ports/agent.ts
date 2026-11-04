@@ -12,6 +12,8 @@ export interface SupervisedResult {
   signal: string | null;
   output: string;
   timedOut: boolean;
+  /** Why the prompt did not reach the worker's stdin; null or absent when it did. */
+  inputError?: string | null;
 }
 
 export type AgentResult = SupervisedResult;

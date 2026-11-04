@@ -441,12 +441,10 @@ export class AutomationRunner {
       started++;
       const placed = this.placeWorker(c.id, abort.signal);
       if (typeof placed === 'string') {
-        const state = this.store.load();
-        state.failed_iterations++;
-        state.consecutive_failures++;
-        state.last_error = placed;
-        this.store.save(state);
-        this.logger.log('ERROR', placed);
+        // The engine's own failure, not the ticket's: no count, one named halt.
+        const reason = `Infrastructure error (worktree): ${placed}`;
+        this.logger.log('ERROR', reason);
+        this.halt(reason);
         return;
       }
       const done = this.runIteration(iteration, started > 1, placed)
@@ -492,7 +490,11 @@ export class AutomationRunner {
           const together = [...running.values()].map(r => r.scheduled);
           this.recordVerdicts(candidates, together, map, judged);
           const chosen = pick(candidates, together, parallelism, map, {graph: this.backlog.graph()});
-          for (const c of chosen.slice(0, continuous ? chosen.length : iterations - started)) start(c);
+          for (const c of chosen.slice(0, continuous ? chosen.length : iterations - started)) {
+            if (this.store.isHalted()) break;
+            start(c);
+          }
+          if (this.store.isHalted()) continue;
         }
         if (running.size === 0) {
           this.logger.log('INFO', started >= iterations && !continuous ? `Completed ${iterations} iterations (limit reached)` : 'No workable ticket to start');

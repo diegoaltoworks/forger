@@ -45,8 +45,13 @@ function quote(s: string): string {
   return `'${s.replace(/'/g, `'\\''`)}'`;
 }
 
+/**
+ * The line that says why. Git writes progress ("Preparing worktree ...") to
+ * stderr before its `fatal:`, so the first line is often not the reason.
+ */
 function failure(r: {stderr: string; stdout: string}): string {
-  return (r.stderr || r.stdout || 'command failed').split('\n')[0];
+  const lines = (r.stderr || r.stdout || 'command failed').split('\n').map(l => l.trim()).filter(Boolean);
+  return lines.find(l => /^(fatal|error):/i.test(l)) ?? lines[0] ?? 'command failed';
 }
 
 export interface WorktreeOptions {
@@ -63,7 +68,12 @@ export function createWorktree(run: CapturingRunner, o: WorktreeOptions): Worktr
   if (!validTicket(o.ticket)) return {...base, ok: false, error: `not a usable ticket id: ${o.ticket}`};
   const fetched = run(`git fetch origin ${quote(o.baseBranch)}`);
   if (fetched.exitCode !== 0) return {...base, ok: false, error: `fetch failed: ${failure(fetched)}`};
-  const added = run(`git worktree add -b ${quote(branch)} ${quote(path)} ${quote(`origin/${o.baseBranch}`)}`);
+  // An earlier attempt at the ticket leaves its branch behind (removeWorktree
+  // keeps it), so a retry checks that branch out rather than failing on -b.
+  const exists = run(`git rev-parse --verify --quiet ${quote(`refs/heads/${branch}`)}`).exitCode === 0;
+  const added = exists
+    ? run(`git worktree add ${quote(path)} ${quote(branch)}`)
+    : run(`git worktree add -b ${quote(branch)} ${quote(path)} ${quote(`origin/${o.baseBranch}`)}`);
   if (added.exitCode !== 0) return {...base, ok: false, error: failure(added)};
   return {...base, ok: true, error: null};
 }
