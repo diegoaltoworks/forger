@@ -3,8 +3,8 @@
   "status": "halted",
   "last_completed_at": "2026-11-04T07:20:42.689Z",
   "completed_iterations": 91,
-  "failed_iterations": 4,
-  "consecutive_failures": 0,
+  "failed_iterations": 5,
+  "consecutive_failures": 1,
   "completed_tasks": [
     "engine_timeout_kills_group",
     "engine_outcome_from_facts",
@@ -98,20 +98,9 @@
     "issue-155",
     "issue-150"
   ],
-  "in_flight": [
-    {
-      "ticket": "issue-158",
-      "pid": null,
-      "session_id": "6a0bf0a5-0643-441a-8988-127bcb159818",
-      "snapshot": {
-        "baseSha": "",
-        "reflogLength": 1
-      },
-      "started_at": "2026-11-04T07:19:34.677Z"
-    }
-  ],
-  "last_error": "they need the plugin install root.",
-  "stall_count": 0,
+  "in_flight": [],
+  "last_error": "Nothing merged or pushed, exit code 143",
+  "stall_count": 1,
   "declined_tasks": [
     {
       "ticket": "issue-81",
