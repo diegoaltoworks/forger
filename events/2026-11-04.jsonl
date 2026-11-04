@@ -17,3 +17,4 @@
 {"event":"picked","at":"2026-11-04T07:11:01.626Z","iteration":99,"ticket":"issue-155","reason":null}
 {"event":"picked","at":"2026-11-04T07:19:38.555Z","iteration":100,"ticket":"issue-158","reason":null}
 {"event":"halted","at":"2026-11-04T07:20:50.421Z","iteration":100,"ticket":"issue-158","reason":"they need the plugin install root."}
+{"event":"halt_cleared","at":"2026-11-04T07:36:05.988Z","iteration":100,"ticket":null,"reason":"Nothing merged or pushed, exit code 143"}
