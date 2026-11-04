@@ -9,5 +9,10 @@
     "ignore": [
       "wayfinder:*"
     ]
-  }
+  },
+  "state": {
+    "home": "branch",
+    "branch": "forger-state"
+  },
+  "parallelism": 2
 }
