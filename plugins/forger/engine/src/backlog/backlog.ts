@@ -97,6 +97,42 @@ export function remainingTasks(data: BacklogData | null, config: WorkloopConfig)
   ).length;
 }
 
+/** A remaining ticket the loop cannot start, with each unfinished dependency and its status. */
+export interface BlockedTicket {
+  id: string;
+  blockedBy: Array<{id: string; status: string}>;
+}
+
+/** Remaining tickets whose dependencies are not all completed, in the engine's priority order. */
+export function blockedTickets(data: BacklogData | null, config: WorkloopConfig): BlockedTicket[] {
+  const all = tickets(data);
+  const out: Array<BlockedTicket & {priority: number}> = [];
+  for (const [id, ticket] of Object.entries(all)) {
+    if (!isTicket(ticket) || ticket.status !== 'not_started' || !isThisRepo(ticket, config)) continue;
+    const deps = Array.isArray(ticket.depends_on) ? ticket.depends_on : [];
+    const blockedBy = deps
+      .filter(d => all[d]?.status !== 'completed')
+      .map(d => ({id: d, status: typeof all[d]?.status === 'string' ? (all[d]?.status as string) : 'unknown'}));
+    if (blockedBy.length > 0) out.push({id, blockedBy, priority: PRIORITY_ORDER[ticket.priority || 'P3'] ?? 3});
+  }
+  out.sort((a, b) => a.priority - b.priority);
+  return out.map(({id, blockedBy}) => ({id, blockedBy}));
+}
+
+/** What the loop does before it spawns a worker: a pure function of the backlog report. */
+export type StartDecision = 'spawn' | 'completed' | 'blocked_on_owner';
+
+export function startDecision(report: Pick<BacklogReport, 'remaining' | 'workable'>): StartDecision {
+  if (report.remaining === 0) return 'completed';
+  return report.workable.length === 0 ? 'blocked_on_owner' : 'spawn';
+}
+
+/** One line naming each remaining ticket and what blocks it, for the event and the report. */
+export function describeBlocked(blocked: BlockedTicket[]): string {
+  if (blocked.length === 0) return 'tickets remain but none is workable';
+  return blocked.map(b => `${b.id} blocked by ${b.blockedBy.map(x => `${x.id} (${x.status})`).join(', ')}`).join('; ');
+}
+
 export function workableCount(data: BacklogData | null, config: WorkloopConfig): number {
   return workableTasks(data, config).length;
 }
@@ -190,6 +226,8 @@ export interface Backlog {
   isCompleted(ticket: string): boolean;
   has(ticket: string): boolean;
   report(): BacklogReport;
+  /** The remaining tickets that wait on an unfinished dependency. */
+  blocked(): BlockedTicket[];
   /** Read the tickets now, replacing what was read before. */
   refresh(): void;
 }
@@ -208,6 +246,7 @@ export function backlogFrom(load: () => BacklogData | null, config: WorkloopConf
     isCompleted: ticket => isTicketCompleted(data(), ticket),
     has: ticket => hasTicket(data(), ticket),
     report: () => backlogReport(data(), config),
+    blocked: () => blockedTickets(data(), config),
     refresh: () => {
       read = {data: load()};
     },

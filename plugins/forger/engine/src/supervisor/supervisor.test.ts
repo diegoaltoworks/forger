@@ -37,6 +37,14 @@ describe('orient', () => {
   test('an empty backlog is nothing to do', () => {
     expect(orient({...base, status: status({remaining: 0})}).action).toBe('nothing_to_do');
   });
+  test('tickets left but none workable is nothing to do, with the blockers', () => {
+    const blocked = {...status({remaining: 1}), workable: 0};
+    const plan = orient({...base, status: blocked, blockers: ['issue-150 blocked by issue-156 (needs_human)']});
+    expect(plan.action).toBe('nothing_to_do');
+    expect(plan.blockers).toEqual(['issue-150 blocked by issue-156 (needs_human)']);
+    const report = buildReport({status: blocked, plan, branch: 'main', baseBranch: 'main'});
+    expect(report.waiting_on_owner.map(w => w.question)).toEqual(['Nothing is workable: issue-150 blocked by issue-156 (needs_human)']);
+  });
   test('a halt wins over a live runner and quotes its reason', () => {
     const p = orient({...base, status: status({alive: true, halted: true}), haltReason: ' cut off before merge\n'});
     expect(p.action).toBe('surface_halt');

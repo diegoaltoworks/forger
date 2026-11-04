@@ -605,6 +605,42 @@ describe('AutomationRunner single runner', () => {
   });
 });
 
+describe('AutomationRunner with nothing workable', () => {
+  const fail: AgentResult = {exitCode: 1, signal: null, output: '', timedOut: false};
+  const blockedData: BacklogData = {
+    features: {
+      waiting: {priority: 'P1', status: 'not_started', depends_on: ['owner_call']},
+      owner_call: {priority: 'P1', status: 'needs_human'},
+    },
+  };
+
+  test('spawns no agent, writes no HALT and ends with blocked_on_owner naming the blocker', async () => {
+    const {runner, root, calls} = runnerWith(fail, {}, blockedData);
+    await runner.run(3);
+    expect(calls).toEqual([]);
+    expect(existsSync(join(root, '.forger', 'HALT'))).toBe(false);
+    expect(readState(root).status).not.toBe('halted');
+    const events = eventsOf(root);
+    expect(events.map(e => e.event)).toEqual(['blocked_on_owner']);
+    expect(events[0].reason).toBe('waiting blocked by owner_call (needs_human)');
+  });
+
+  test('the parallel loop ends the same way', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'forger-runner-'));
+    dirs.push(root);
+    const config = mergeConfig({parallelism: 2});
+    const calls: AgentRunOptions[] = [];
+    const runner = new AutomationRunner(root, config, backlogFrom(() => blockedData, config), {
+      stateStore: localStateFor(root, config),
+      agent: {run: async o => (calls.push(o), fail)},
+      gitRunner: () => '',
+    });
+    await runner.run(3);
+    expect(calls).toEqual([]);
+    expect(eventsOf(root).map(e => e.event)).toEqual(['blocked_on_owner']);
+  });
+});
+
 describe('AutomationRunner and a rate-limited backlog', () => {
   const fast = mergeConfig({
     limits: {pauseBetweenIterations: 0, pauseAfterFailure: 0, maxStallIterations: 9},

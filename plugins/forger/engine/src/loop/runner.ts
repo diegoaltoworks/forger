@@ -10,7 +10,7 @@ import {existsSync, mkdirSync, readdirSync, readFileSync} from 'fs';
 import {join} from 'path';
 
 import {forgerPath, type WorkloopConfig} from '../config';
-import {pick, schedule, type Backlog, type FolderMap, type Schedulable} from '../backlog';
+import {describeBlocked, pick, schedule, startDecision, type Backlog, type FolderMap, type Schedulable} from '../backlog';
 import {capturing, type AgentRunner, type CapturingRunner, type CommandRunner, type StateStore} from '../ports';
 import {type AutomationState, currentTicket, LoopStore} from './state';
 import type {TrackerHalt} from './halt-tracker';
@@ -344,9 +344,14 @@ export class AutomationRunner {
 
       const currentState = this.store.load();
 
-      if (remaining === 0) {
+      const decision = startDecision(this.backlog.report());
+      if (decision === 'completed') {
         this.logger.log('SUCCESS', 'All tasks completed!');
         this.emit('completed', currentState.iteration, null, null);
+        break;
+      }
+      if (decision === 'blocked_on_owner') {
+        this.endBlockedOnOwner(currentState.iteration);
         break;
       }
 
@@ -370,6 +375,13 @@ export class AutomationRunner {
 
     this.logger.log('INFO', `Completed ${completed} iterations`);
     this.showStatus();
+  }
+
+  /** Nothing is workable: end the run without a worker and without a HALT. */
+  private endBlockedOnOwner(iteration: number): void {
+    const reason = describeBlocked(this.backlog.blocked());
+    this.logger.log('WARN', `Nothing workable; waiting on the owner: ${reason}`);
+    this.emit('blocked_on_owner', iteration, null, reason);
   }
 
   /** Appends each candidate/running pair the rule judges, once, for the measures. */
@@ -499,6 +511,10 @@ export class AutomationRunner {
             start(c);
           }
           if (this.store.isHalted()) continue;
+        }
+        if (running.size === 0 && startDecision(this.backlog.report()) === 'blocked_on_owner') {
+          this.endBlockedOnOwner(state.iteration);
+          break;
         }
         if (running.size === 0) {
           this.logger.log('INFO', started >= iterations && !continuous ? `Completed ${iterations} iterations (limit reached)` : 'No workable ticket to start');

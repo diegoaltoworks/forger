@@ -38,7 +38,9 @@ Act on the action, never on your own reading of a label:
 - `surface_halt`: read the reason and stop. Do not clear a HALT. Tell the owner
   to look for a pushed branch with no merged PR first, then `work resume`.
 - `attach`: an engine is alive. Do not start a second one; go to step 3.
-- `nothing_to_do`: say so and suggest `/forger:plan`. Stop.
+- `nothing_to_do`: say so and suggest `/forger:plan`. When tickets remain, the
+  plan lists `blockers`: none is workable and each waits on the owner. Name
+  them and stop; the engine ends such a run with `blocked_on_owner`, no HALT.
 - `start`: go to step 2.
 
 ## 2. Start exactly one engine
@@ -51,7 +53,7 @@ not the launcher's.
 
 ## 3. Watch the event file
 
-Terminal events (completed, halted, stalled, timed_out, too_many_failures,
+Terminal events (completed, blocked_on_owner, halted, stalled, timed_out, too_many_failures,
 runner_gone) are JSON lines in the file at `paths.events`. Do not tail the log
 or match a process name.
 
