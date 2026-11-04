@@ -1,6 +1,6 @@
 {
   "iteration": 110,
-  "status": "halted",
+  "status": "ready",
   "last_completed_at": "2026-11-04T22:37:01.492Z",
   "completed_iterations": 99,
   "failed_iterations": 5,
@@ -108,7 +108,7 @@
   ],
   "in_flight": [],
   "last_error": "#197 needs #185 and #186 merged first.",
-  "stall_count": 1,
+  "stall_count": 0,
   "declined_tasks": [
     {
       "ticket": "issue-81",
