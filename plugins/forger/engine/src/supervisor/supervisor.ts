@@ -22,6 +22,8 @@ export interface OrientInputs {
   missingLabels?: string[];
   /** Dependencies the tickets' text and the tracker disagree on; undefined when not read. */
   backlogAnomalies?: string[];
+  /** What blocks each remaining ticket, one line per ticket; undefined when not read. */
+  blockers?: string[];
   /** Whether the base branch requires the `forger/verify` check; undefined or null when not known. */
   requiresVerify?: boolean | null;
 }
@@ -32,6 +34,8 @@ export interface OrientPlan {
   reason: string;
   /** Facts that look wrong and deserve a line in the report. */
   anomalies: string[];
+  /** For nothing_to_do with tickets left: what blocks each of them. */
+  blockers: string[];
 }
 
 /**
@@ -54,15 +58,24 @@ export function orient(i: OrientInputs): OrientPlan {
   if (i.requiresVerify === false) anomalies.push(missingVerifyStatusAnomaly(i.baseBranch));
   anomalies.push(...(i.backlogAnomalies ?? []));
   if (s.halted) {
-    return {action: 'surface_halt', reason: i.haltReason?.trim() || s.last_error || 'halted, no reason recorded', anomalies};
+    return {action: 'surface_halt', reason: i.haltReason?.trim() || s.last_error || 'halted, no reason recorded', anomalies, blockers: []};
   }
   if (s.runner.alive) {
-    return {action: 'attach', reason: `a runner is alive (pid ${s.runner.pid})`, anomalies};
+    return {action: 'attach', reason: `a runner is alive (pid ${s.runner.pid})`, anomalies, blockers: []};
   }
   if (s.remaining === 0) {
-    return {action: 'nothing_to_do', reason: 'the backlog has nothing left; plan the next work', anomalies};
+    return {action: 'nothing_to_do', reason: 'the backlog has nothing left; plan the next work', anomalies, blockers: []};
   }
-  return {action: 'start', reason: `${s.remaining} ticket(s) remain and no runner is alive`, anomalies};
+  if (s.workable === 0) {
+    const blockers = i.blockers ?? [];
+    return {
+      action: 'nothing_to_do',
+      reason: `${s.remaining} ticket(s) remain but none is workable; they wait on the owner`,
+      anomalies,
+      blockers,
+    };
+  }
+  return {action: 'start', reason: `${s.remaining} ticket(s) remain and no runner is alive`, anomalies, blockers: []};
 }
 
 export type Authority = 'alone' | 'alone_and_report' | 'owner' | 'never';
@@ -138,6 +151,13 @@ export function buildReport(i: ReportInputs): Report {
       question: `The loop is halted: ${plan.reason}`,
       recommendation: 'check for a pushed branch with no merged PR, finish or discard it, then resume',
       because: 'clearing a halt blindly can march the loop past unmerged work',
+    });
+  }
+  for (const b of plan.blockers) {
+    waiting.push({
+      question: `Nothing is workable: ${b}`,
+      recommendation: 'unblock the dependency, or take the ticket off the loop',
+      because: 'the loop has stopped without a halt and starts by itself once something is workable',
     });
   }
   for (const a of plan.anomalies) {

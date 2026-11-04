@@ -2,6 +2,7 @@ import {existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync} from 'f
 import {join} from 'path';
 
 import {decideHalt, GhTrackerHalt, requiresVerifyStatus, handedOver, listRepoLabels, loopLabels, missingLabels, readAllVerdicts} from '../loop';
+import {describeBlocked} from '../backlog';
 import {buildReport, formatReport, mergedInPeriod, orient as orientPlan, proposedAdrs, reportPeriod, waitingIssues, OWNER_LABELS, type AdrText, type MergedPrFact, type OwnerItem, type WaitingIssue} from '../supervisor';
 import type {Command, CommandContext} from './command';
 import {gatherMeasures} from './measure';
@@ -61,6 +62,7 @@ function supervise(which: 'orient' | 'report') {
     }
     const plan = orientPlan({
       backlogAnomalies: ctx.backlog.report().anomalies,
+      blockers: ctx.backlog.blocked().map(b => describeBlocked([b])),
       missingLabels: missing,
       requiresVerify,
       status,

@@ -4,6 +4,9 @@ import {mergeConfig} from '../config';
 import type {BacklogData} from './backlog';
 import {
   backlogReport,
+  blockedTickets,
+  describeBlocked,
+  startDecision,
   formatBacklogReport,
   hasTicket,
   isTicketCompleted,
@@ -197,5 +200,43 @@ describe('formatBacklogReport', () => {
     expect(formatBacklogReport({workable: [], remaining: 0, next: null, anomalies: []})).toBe(
       'Remaining: 0  Next: none'
     );
+  });
+});
+
+describe('startDecision', () => {
+  const w = [{id: 'a', priority: 'P1'}];
+  const cases: Array<[string, number, typeof w, string]> = [
+    ['nothing left is completed', 0, [], 'completed'],
+    ['nothing left wins over a stray workable', 0, w, 'completed'],
+    ['work left and none workable is blocked on the owner', 2, [], 'blocked_on_owner'],
+    ['work left and some workable spawns', 2, w, 'spawn'],
+  ];
+  for (const [name, remaining, workable, want] of cases) {
+    test(name, () => {
+      expect(startDecision({remaining, workable})).toBe(want as never);
+    });
+  }
+});
+
+describe('blockedTickets', () => {
+  const data: BacklogData = {
+    features: {
+      a: {status: 'not_started', priority: 'P2', depends_on: ['b']},
+      b: {status: 'needs_human'},
+      c: {status: 'not_started', priority: 'P1', depends_on: ['b', 'gone', 'd']},
+      d: {status: 'completed'},
+      e: {status: 'not_started', depends_on: ['d']},
+    },
+  };
+  test('names each unfinished dependency with its status, in priority order', () => {
+    const blocked = blockedTickets(data, config);
+    expect(blocked).toEqual([
+      {id: 'c', blockedBy: [{id: 'b', status: 'needs_human'}, {id: 'gone', status: 'unknown'}]},
+      {id: 'a', blockedBy: [{id: 'b', status: 'needs_human'}]},
+    ]);
+    expect(describeBlocked(blocked)).toBe('c blocked by b (needs_human), gone (unknown); a blocked by b (needs_human)');
+  });
+  test('says so when nothing names a blocker', () => {
+    expect(describeBlocked([])).toBe('tickets remain but none is workable');
   });
 });
