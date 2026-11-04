@@ -1,6 +1,6 @@
 {
   "iteration": 100,
-  "status": "running",
+  "status": "halted",
   "last_completed_at": "2026-11-04T07:20:42.689Z",
   "completed_iterations": 91,
   "failed_iterations": 4,
@@ -110,7 +110,7 @@
       "started_at": "2026-11-04T07:19:34.677Z"
     }
   ],
-  "last_error": null,
+  "last_error": "they need the plugin install root.",
   "stall_count": 0,
   "declined_tasks": [
     {
