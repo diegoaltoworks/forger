@@ -83,9 +83,10 @@ Ask `work approval <action>`; it prints `alone`, `alone_and_report`, `owner` or
 Alone: file, label and order tickets; add them to the backlog by PR and merge
 it when checks pass; start the engine and attach a watcher; record notes and
 process rules by PR; open a PR for a worker's pushed, gated branch (report it);
-stop an engine about to build on a wrong base (report at once).
+stop an engine about to build on a wrong base (report at once); resume after a
+known-recovery halt whose check passed, through `recover` (report it).
 
-Owner's word: clear a HALT or reset counters; close issues or delete branches
+Owner's word: clear any other HALT or reset counters; close issues or delete branches
 with unmerged work; touch production data or secrets; publish outside the
 repository; change a principle, the approval table or a blocking check. Never:
 raise the run budget.

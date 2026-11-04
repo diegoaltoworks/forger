@@ -589,6 +589,14 @@ describe('supervisor commands', () => {
     expect(JSON.parse(await capture(['events', '--json']))).toEqual([]);
   });
 
+  test('events lists a recovered event, and recover reports no halt when none stands', async () => {
+    const root = projectWith({});
+    process.chdir(root);
+    writeFileSync(join(root, '.forger', 'events.jsonl'), JSON.stringify({event: 'recovered', at: 'T', iteration: 1, ticket: 'a', reason: 'PR #2 verified after the merge: pass'}) + '\n');
+    expect(JSON.parse(await capture(['events', '--json']))).toEqual([expect.objectContaining({event: 'recovered'})]);
+    expect(await capture(['recover'])).toContain('no halt is standing');
+  });
+
   test('events lists what the runner wrote', async () => {
     const root = projectWith({});
     writeFileSync(

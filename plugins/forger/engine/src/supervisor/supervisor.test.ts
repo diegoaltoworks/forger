@@ -75,6 +75,7 @@ describe('approval policy', () => {
     expect(approvalFor('start_runner')).toBe('alone');
     expect(approvalFor('open_pr_for_pushed_branch')).toBe('alone_and_report');
     expect(approvalFor('clear_halt')).toBe('owner');
+    expect(approvalFor('resume_after_known_recovery')).toBe('alone_and_report');
     expect(approvalFor('raise_budget')).toBe('never');
   });
   test('an unlisted action needs the owner', () => {
@@ -85,6 +86,17 @@ describe('approval policy', () => {
     for (const a of ['change_principle', 'change_approval_table', 'change_blocking_check'] as const) {
       expect(APPROVAL_POLICY[a]).toBe('owner');
     }
+  });
+});
+
+describe('report recoveries', () => {
+  test('lists recovered halts and recommends by halt kind', () => {
+    const halted = {...status({alive: false, ticket: null, done: []}), halted: true};
+    const plan = orient({...base, status: halted, haltReason: 'x'});
+    const r = buildReport({status: halted, plan, branch: 'main', baseBranch: 'main', haltKind: 'timed_out', recovered: ['t1: PR #2 verified after the merge: pass']});
+    expect(r.recovered).toEqual(['t1: PR #2 verified after the merge: pass']);
+    expect(r.waiting_on_owner[0].recommendation).toContain('pushed a branch');
+    expect(formatReport(r)).toContain('**Recovered by the engine**');
   });
 });
 

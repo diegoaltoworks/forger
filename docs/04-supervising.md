@@ -73,6 +73,7 @@ Verify each merge against its PR's CI result: `facts --json --issue <n>` gives
 the closing PR's `checks`. A merge whose checks are anything but `success`, on a
 repo with CI, is an anomaly: the worker merged red or did not wait. The engine
 makes the same check after every run and halts with `merged_red`, or `unverified` when the PR head has no passing verdict.
+A halt with a known, checkable recovery is recovered by `recover`; see below.
 The base branch should require the `forger/verify` status that `verify` sets,
 so GitHub refuses such a merge before it lands; `orient` reports a base branch
 that does not, and `setup` adds the check when its token can change the branch
@@ -136,6 +137,12 @@ improvise them:
   worker declined, and the owner measures from `measure` (cost, rework, escaped
   defects, interventions).
 - `approval <action>`: who may do an action, from the table below.
+- `recover [--json]`: the standing halt's recovery, from a table in the engine
+  keyed by the halt's event kind. An `unverified` halt runs `verify` on the
+  merged head: a pass resumes the loop and writes a `recovered` event (seen in
+  `events` and in the report's recovered section); a block or unclear keeps the
+  HALT and files a ticket for the revert, citing the verdict. Every other kind
+  keeps the HALT, and the report gives the one recommended action for it.
 
 ## Read-only on the loop's checkout
 
@@ -159,7 +166,8 @@ it, and an action it does not list needs the owner.
 | Record a note or a process rule by PR | yes | |
 | Stop an engine that is about to build on a wrong base | yes, report at once | |
 | Open a PR for a worker's pushed, gated branch | yes, report it | |
-| Clear a HALT, reset counters | | yes |
+| Resume after a known-recovery halt whose check passes | yes, report it | |
+| Clear any other HALT, reset counters | | yes |
 | Close issues, delete branches with unmerged work | | yes |
 | Touch production data or secrets | | yes |
 | Publish anything outside the repository | | yes |

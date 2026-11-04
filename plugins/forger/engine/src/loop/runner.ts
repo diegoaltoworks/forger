@@ -197,14 +197,19 @@ export class AutomationRunner {
     this.emit(kind, state.iteration, currentTicket(state), reason);
   }
 
-  clearHalt(): void {
+  /** Ends a halt the engine recovered by itself; the event says why, not that a person cleared it. */
+  recoverHalt(detail: string): void {
+    this.clearHalt('recovered', detail);
+  }
+
+  clearHalt(kind: 'halt_cleared' | 'recovered' = 'halt_cleared', detail: string | null = null): void {
     const before = this.store.load();
     const wasHalted = this.store.isHalted() || before.status === 'halted';
     if (this.store.isHalted()) {
       this.store.clearHalt();
       this.logger.log('INFO', 'Cleared HALT file');
     }
-    if (wasHalted) this.emit('halt_cleared', before.iteration, currentTicket(before), before.last_error);
+    if (wasHalted) this.emit(kind, before.iteration, currentTicket(before), detail ?? before.last_error);
     // The counters that tripped the halt would trip it again on the first
     // iteration after the human has fixed the cause.
     const state = this.store.load();
