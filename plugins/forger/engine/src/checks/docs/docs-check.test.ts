@@ -4,7 +4,8 @@ import {tmpdir} from 'os';
 import {join} from 'path';
 
 import {DOCS_OPINIONS} from './docs-content';
-import {installedPackIds, runDocsCheck} from './docs-check';
+import {README_OPINIONS} from './docs-readme';
+import {installedPackIds, runDocsCheck, runDocsWarnings} from './docs-check';
 import {loadPacks} from '../../packs';
 
 const dirs: string[] = [];
@@ -137,6 +138,23 @@ describe('the shipped docs pack', () => {
   test('declares an opinion for every rule id the content rules emit', () => {
     const pack = loadPacks(join(import.meta.dir, '..', '..', '..', '..')).find(p => p.manifest.id === 'docs');
     const declared = pack!.manifest.opinions.filter(o => o.check === 'docs').map(o => o.id);
-    expect(declared.sort()).toEqual([...new Set(Object.values(DOCS_OPINIONS))].sort());
+    expect(declared.sort()).toEqual([...new Set([...Object.values(DOCS_OPINIONS), ...Object.values(README_OPINIONS)])].sort());
+  });
+});
+
+describe('README rule', () => {
+  const readme = '# T\n\nIt is new.\n\nThe file is checked by the tool.\n';
+  const lock = {'.forger/forger.lock.json': JSON.stringify({packs: [{id: 'docs', version: '1.0.0', files: []}]})};
+
+  test('fails a README and warns on passive voice when the docs pack is installed', () => {
+    const root = repo({'README.md': readme, ...lock});
+    expect(runDocsCheck(root, lister(['README.md'])).map(v => v.rule)).toEqual(['readme-transient']);
+    expect(runDocsWarnings(root, lister(['README.md'])).map(v => v.rule)).toEqual(['readme-passive-voice']);
+  });
+
+  test('does not run without the docs pack', () => {
+    const root = repo({'README.md': readme});
+    expect(runDocsCheck(root, lister(['README.md']))).toEqual([]);
+    expect(runDocsWarnings(root, lister(['README.md']))).toEqual([]);
   });
 });

@@ -158,6 +158,26 @@ describe('check docs', () => {
   });
 });
 
+describe('check docs README rule', () => {
+  test('prints file, line, rule id and offending text, fails on a rule and only warns on passive voice', async () => {
+    const root = projectWith({});
+    writeFileSync(join(root, '.forger', 'forger.lock.json'), JSON.stringify({packs: [{id: 'docs', version: '1.0.0', files: []}]}));
+    process.chdir(root);
+    writeFileSync(join(root, 'README.md'), '# T\n\nThe file is checked by the tool.\n');
+    const warn = spyOn(console, 'error').mockImplementation(() => {});
+    const clean = await capture(['check', 'docs'], () => 'README.md');
+    expect(clean).toBe('docs check: clean');
+    expect(warn.mock.calls.join('\n')).toContain('README.md:3: readme-passive-voice: passive voice: "is checked"');
+    expect(process.exitCode ?? 0).toBe(0);
+    writeFileSync(join(root, 'README.md'), '# T\n\nIt has 12 files.\n');
+    const bad = await capture(['check', 'docs'], () => 'README.md');
+    warn.mockRestore();
+    expect(bad).toBe('README.md:3: readme-transient: a count of things: "12 files"');
+    expect(process.exitCode).toBe(1);
+    process.exitCode = 0;
+  });
+});
+
 describe('check decisions', () => {
   test('fails on a layer map change with no ADR; an ADR in the diff passes', async () => {
     const root = projectWith({});

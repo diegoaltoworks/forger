@@ -1,6 +1,6 @@
 {
   "id": "docs",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Docs as Markdown in the repo: every concept drawn, the glossary as the vocabulary, links and diagrams that cannot quietly rot.",
   "detect": [],
   "files": [
@@ -14,7 +14,11 @@
     {"id": "docs.links-resolve", "rung": "check", "summary": "Relative links and #anchors in Markdown point at a file and a heading that exist.", "check": "docs"},
     {"id": "docs.images-resolve", "rung": "check", "summary": "Image links point at files in the repository.", "check": "docs"},
     {"id": "docs.diagrams-parse", "rung": "check", "summary": "Every mermaid block is a well-formed diagram.", "check": "docs"},
-    {"id": "docs.glossary-terms", "rung": "check", "summary": "Terms the glossary says to avoid stay out of prose; code spans and fences are exempt.", "check": "docs"}
+    {"id": "docs.glossary-terms", "rung": "check", "summary": "Terms the glossary says to avoid stay out of prose; code spans and fences are exempt.", "check": "docs"},
+    {"id": "docs.readme-purpose-first", "rung": "check", "summary": "A README opens with a purpose paragraph of at most two sentences under the H1.", "check": "docs"},
+    {"id": "docs.readme-short-sentences", "rung": "check", "summary": "README steps are at most 20 words, descriptive sentences at most 25, paragraphs at most 6 sentences.", "check": "docs"},
+    {"id": "docs.readme-active-voice", "rung": "check", "summary": "README prose uses the active voice; a passive construction warns and never fails.", "check": "docs"},
+    {"id": "docs.readme-no-transient", "rung": "check", "summary": "README prose holds no counts, dates, time-bound words or version numbers.", "check": "docs"}
   ],
   "checks": ["docs"],
   "slots": []

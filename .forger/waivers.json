@@ -1,0 +1,166 @@
+{
+  "waivers": [
+    {
+      "opinion": "docs.readme-no-transient",
+      "path": "assets/brand/README.md",
+      "reason": "Written before the README rule; rewrite to the rule and delete this waiver.",
+      "approved_by": "the owner (issue 208)"
+    },
+    {
+      "opinion": "docs.readme-no-transient",
+      "path": "plugins/forger/README.md",
+      "reason": "Written before the README rule; rewrite to the rule and delete this waiver.",
+      "approved_by": "the owner (issue 208)"
+    },
+    {
+      "opinion": "docs.readme-no-transient",
+      "path": "plugins/forger/engine/src/checks/README.md",
+      "reason": "Written before the README rule; rewrite to the rule and delete this waiver.",
+      "approved_by": "the owner (issue 208)"
+    },
+    {
+      "opinion": "docs.readme-no-transient",
+      "path": "plugins/forger/engine/src/checks/decisions/README.md",
+      "reason": "Written before the README rule; rewrite to the rule and delete this waiver.",
+      "approved_by": "the owner (issue 208)"
+    },
+    {
+      "opinion": "docs.readme-no-transient",
+      "path": "plugins/forger/engine/src/cli/README.md",
+      "reason": "Written before the README rule; rewrite to the rule and delete this waiver.",
+      "approved_by": "the owner (issue 208)"
+    },
+    {
+      "opinion": "docs.readme-no-transient",
+      "path": "plugins/forger/engine/src/migrate/README.md",
+      "reason": "Written before the README rule; rewrite to the rule and delete this waiver.",
+      "approved_by": "the owner (issue 208)"
+    },
+    {
+      "opinion": "docs.readme-purpose-first",
+      "path": "plugins/forger/engine/src/checks/arch/README.md",
+      "reason": "Written before the README rule; rewrite to the rule and delete this waiver.",
+      "approved_by": "the owner (issue 208)"
+    },
+    {
+      "opinion": "docs.readme-short-sentences",
+      "path": "README.md",
+      "reason": "Written before the README rule; rewrite to the rule and delete this waiver.",
+      "approved_by": "the owner (issue 208)"
+    },
+    {
+      "opinion": "docs.readme-short-sentences",
+      "path": "assets/brand/README.md",
+      "reason": "Written before the README rule; rewrite to the rule and delete this waiver.",
+      "approved_by": "the owner (issue 208)"
+    },
+    {
+      "opinion": "docs.readme-short-sentences",
+      "path": "docs/skills/README.md",
+      "reason": "Written before the README rule; rewrite to the rule and delete this waiver.",
+      "approved_by": "the owner (issue 208)"
+    },
+    {
+      "opinion": "docs.readme-short-sentences",
+      "path": "plugins/forger/README.md",
+      "reason": "Written before the README rule; rewrite to the rule and delete this waiver.",
+      "approved_by": "the owner (issue 208)"
+    },
+    {
+      "opinion": "docs.readme-short-sentences",
+      "path": "plugins/forger/engine/src/README.md",
+      "reason": "Written before the README rule; rewrite to the rule and delete this waiver.",
+      "approved_by": "the owner (issue 208)"
+    },
+    {
+      "opinion": "docs.readme-short-sentences",
+      "path": "plugins/forger/engine/src/adapters/README.md",
+      "reason": "Written before the README rule; rewrite to the rule and delete this waiver.",
+      "approved_by": "the owner (issue 208)"
+    },
+    {
+      "opinion": "docs.readme-short-sentences",
+      "path": "plugins/forger/engine/src/backlog/README.md",
+      "reason": "Written before the README rule; rewrite to the rule and delete this waiver.",
+      "approved_by": "the owner (issue 208)"
+    },
+    {
+      "opinion": "docs.readme-short-sentences",
+      "path": "plugins/forger/engine/src/checks/README.md",
+      "reason": "Written before the README rule; rewrite to the rule and delete this waiver.",
+      "approved_by": "the owner (issue 208)"
+    },
+    {
+      "opinion": "docs.readme-short-sentences",
+      "path": "plugins/forger/engine/src/checks/docs/README.md",
+      "reason": "Written before the README rule; rewrite to the rule and delete this waiver.",
+      "approved_by": "the owner (issue 208)"
+    },
+    {
+      "opinion": "docs.readme-short-sentences",
+      "path": "plugins/forger/engine/src/checks/hooks/README.md",
+      "reason": "Written before the README rule; rewrite to the rule and delete this waiver.",
+      "approved_by": "the owner (issue 208)"
+    },
+    {
+      "opinion": "docs.readme-short-sentences",
+      "path": "plugins/forger/engine/src/checks/ui/README.md",
+      "reason": "Written before the README rule; rewrite to the rule and delete this waiver.",
+      "approved_by": "the owner (issue 208)"
+    },
+    {
+      "opinion": "docs.readme-short-sentences",
+      "path": "plugins/forger/engine/src/cli/README.md",
+      "reason": "Written before the README rule; rewrite to the rule and delete this waiver.",
+      "approved_by": "the owner (issue 208)"
+    },
+    {
+      "opinion": "docs.readme-short-sentences",
+      "path": "plugins/forger/engine/src/config/README.md",
+      "reason": "Written before the README rule; rewrite to the rule and delete this waiver.",
+      "approved_by": "the owner (issue 208)"
+    },
+    {
+      "opinion": "docs.readme-short-sentences",
+      "path": "plugins/forger/engine/src/hooks/README.md",
+      "reason": "Written before the README rule; rewrite to the rule and delete this waiver.",
+      "approved_by": "the owner (issue 208)"
+    },
+    {
+      "opinion": "docs.readme-short-sentences",
+      "path": "plugins/forger/engine/src/loop/README.md",
+      "reason": "Written before the README rule; rewrite to the rule and delete this waiver.",
+      "approved_by": "the owner (issue 208)"
+    },
+    {
+      "opinion": "docs.readme-short-sentences",
+      "path": "plugins/forger/engine/src/migrate/README.md",
+      "reason": "Written before the README rule; rewrite to the rule and delete this waiver.",
+      "approved_by": "the owner (issue 208)"
+    },
+    {
+      "opinion": "docs.readme-short-sentences",
+      "path": "plugins/forger/engine/src/packs/README.md",
+      "reason": "Written before the README rule; rewrite to the rule and delete this waiver.",
+      "approved_by": "the owner (issue 208)"
+    },
+    {
+      "opinion": "docs.readme-short-sentences",
+      "path": "plugins/forger/engine/src/pipeline/README.md",
+      "reason": "Written before the README rule; rewrite to the rule and delete this waiver.",
+      "approved_by": "the owner (issue 208)"
+    },
+    {
+      "opinion": "docs.readme-short-sentences",
+      "path": "plugins/forger/engine/src/ports/README.md",
+      "reason": "Written before the README rule; rewrite to the rule and delete this waiver.",
+      "approved_by": "the owner (issue 208)"
+    },
+    {
+      "opinion": "docs.readme-short-sentences",
+      "path": "plugins/forger/engine/src/supervisor/README.md",
+      "reason": "Written before the README rule; rewrite to the rule and delete this waiver.",
+      "approved_by": "the owner (issue 208)"
+    }
+  ]
+}

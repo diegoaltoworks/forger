@@ -13,6 +13,7 @@ import {loadConfig} from '../../config';
 import type {CommandRunner} from '../../ports';
 import {projectFiles} from '../files';
 import {checkCommandSlots, slotsByCommand, type DefinitionShape} from './docs-slots';
+import {checkReadme, isCheckedReadme, type ReadmeFinding} from './docs-readme';
 import {checkText, parseDenylist} from './docs-rules';
 import {LOCK_PATH, parseLock} from '../../packs';
 import type {Finding} from '../waivers';
@@ -50,6 +51,19 @@ function contentRules(projectRoot: string, avoided: AvoidedTerm[]): (file: strin
   ];
 }
 
+/** README findings, failures and warnings, when the docs pack is installed. */
+export function readmeFindings(projectRoot: string, run: CommandRunner, packs: string[] = installedPackIds(projectRoot)): ReadmeFinding[] {
+  if (!packs.includes('docs')) return [];
+  return projectFiles(run)
+    .filter(f => isCheckedReadme(f) && existsSync(join(projectRoot, f)))
+    .flatMap(f => checkReadme(f, readFileSync(join(projectRoot, f), 'utf-8')));
+}
+
+/** The warnings alone: reported by `check docs`, never failing it. */
+export function runDocsWarnings(projectRoot: string, run: CommandRunner, packs?: string[]): ReadmeFinding[] {
+  return readmeFindings(projectRoot, run, packs).filter(f => f.severity === 'warn');
+}
+
 export function runDocsCheck(projectRoot: string, run: CommandRunner, packs: string[] = installedPackIds(projectRoot)): Finding[] {
   const denyFile = join(projectRoot, '.forger-denylist');
   const terms = existsSync(denyFile) ? parseDenylist(readFileSync(denyFile, 'utf-8')) : [];
@@ -74,5 +88,6 @@ export function runDocsCheck(projectRoot: string, run: CommandRunner, packs: str
     if (content && file.endsWith('.md')) out.push(...content(file, text));
     if (slots && COMMAND_FILE.test(file)) out.push(...checkCommandSlots(file, text, slots));
   }
+  out.push(...readmeFindings(projectRoot, run, packs).filter(f => f.severity === 'fail'));
   return out;
 }

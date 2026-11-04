@@ -7,6 +7,7 @@ import {
   runCoverageCheck,
   runDecisionsCheck,
   runDocsCheck,
+  runDocsWarnings,
   runHooksCheck,
   runSafetyCheck,
   runSpecDecision,
@@ -51,7 +52,7 @@ export const check: Command = {
   check a11y [--json] Serve the app and fail on serious or critical axe violations on every route, viewport and theme (exit 2 when Playwright, axe-core or the app is unavailable)
   check spec [--json] Fail when a requirement the issue names is unsatisfied or a MUST regresses; the slcr binary is the provider; none is a gap, not a pass
   check arch [--json] Fail on an import that crosses a forbidden edge of .forger/architecture.json
-  check docs [--json] Fail on non-ASCII punctuation, emails, home paths, denylist terms`,
+  check docs [--json] Fail on non-ASCII punctuation, emails, home paths, denylist terms and, with the docs pack, README writing rules; passive voice warns on stderr`,
   async run(ctx) {
     const {values, positionals, projectRoot, pluginRoot} = ctx;
     if (positionals[1] === 'a11y') {
@@ -109,6 +110,9 @@ export const check: Command = {
       return;
     }
     console.log(values.json ? JSON.stringify(violations) : formatViolations(violations, positionals[1]));
+    if (positionals[1] === 'docs') {
+      for (const w of runDocsWarnings(projectRoot, ctx.run())) console.error(`warning: ${w.file}:${w.line}: ${w.rule}: ${w.detail}`);
+    }
     if (violations.length > 0) process.exitCode = 1;
   },
 };
