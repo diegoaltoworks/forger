@@ -3,8 +3,8 @@
   "status": "running",
   "last_completed_at": "2026-11-04T06:16:03.883Z",
   "completed_iterations": 86,
-  "failed_iterations": 0,
-  "consecutive_failures": 0,
+  "failed_iterations": 1,
+  "consecutive_failures": 1,
   "completed_tasks": [
     "engine_timeout_kills_group",
     "engine_outcome_from_facts",
@@ -95,16 +95,6 @@
   ],
   "in_flight": [
     {
-      "ticket": "issue-156",
-      "pid": null,
-      "session_id": "8155977c-9046-4d5f-9cce-74f31a24a3a4",
-      "snapshot": {
-        "baseSha": "",
-        "reflogLength": 1
-      },
-      "started_at": "2026-11-04T06:16:10.737Z"
-    },
-    {
       "ticket": "issue-155",
       "pid": null,
       "session_id": "2d2e040b-d95d-4e86-b34d-af7097a7fbe4",
@@ -115,8 +105,8 @@
       "started_at": "2026-11-04T06:16:19.510Z"
     }
   ],
-  "last_error": null,
-  "stall_count": 0,
+  "last_error": "Nothing merged or pushed, exit code 1",
+  "stall_count": 1,
   "declined_tasks": [
     {
       "ticket": "issue-81",
