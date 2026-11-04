@@ -1,0 +1,42 @@
+{
+  "version": 1,
+  "stages": [
+    {"id": "intake", "command": "plan", "inputs": ["owner_request", "inbox"],
+     "slots": [
+       {"slot": "interview", "contract": "decisions"},
+       {"slot": "glossary", "contract": "glossary_entries"},
+       {"slot": "design", "contract": "wireframe", "when": {"labels_any": ["ui"]}}
+     ],
+     "gate": "check docs"},
+    {"id": "plan", "command": "auto-plan", "inputs": ["spec", "decisions"],
+     "slots": [],
+     "gate": "backlog --json"},
+    {"id": "build", "command": "auto-ticket", "inputs": ["ticket", "slice"],
+     "slots": [
+       {"slot": "test_first", "contract": "tests_written"},
+       {"slot": "diagnose", "contract": "diagnosis", "on": "gate_red"}
+     ],
+     "gate": "gates"},
+    {"id": "review", "command": "auto-ticket", "inputs": ["diff", "ticket"],
+     "slots": [{"slot": "review", "contract": "review_findings"}],
+     "gate": "contract review_findings"},
+    {"id": "risk", "command": "auto-ticket", "inputs": ["diff", "ticket"],
+     "slots": [{"slot": "risk", "contract": "risk_report"}],
+     "gate": "contract risk_report"},
+    {"id": "pr", "command": "auto-ticket", "inputs": ["diff", "ticket", "review_findings", "risk_report"],
+     "slots": [
+       {"slot": "pr_body", "contract": "pr_body"},
+       {"slot": "merge_conflicts", "contract": "rebase_clean", "on": "rebase_conflict"}
+     ],
+     "gate": "rebase"},
+    {"id": "verify", "command": "verify", "inputs": ["pr", "ticket"],
+     "slots": [{"slot": "verify", "contract": "verdict"}],
+     "gate": "verify --json"},
+    {"id": "merge", "command": "auto-ticket", "inputs": ["pr", "verdict"],
+     "slots": [],
+     "gate": "merge --json"},
+    {"id": "retro", "command": "retro", "inputs": ["measure", "events"],
+     "slots": [{"slot": "retro", "contract": "retro_proposals"}],
+     "gate": "check"}
+  ]
+}

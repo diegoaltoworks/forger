@@ -12,6 +12,7 @@ real `CommandRunner` and agent spawn from `adapters/` are handed to the core.
   from it. Pure.
 - `command.ts`, `flags.ts` - the command shape, the stages and the flag table.
   Pure.
+- `pipeline.ts` - `pipeline --json`: reads the ticket's labels and knock-on through `gh`, hands them to `pipeline/`.
 - One file per command group (`loop.ts`, `check.ts`, `setup.ts`, `facts.ts`,
   ...) - each handler prints its output and sets the exit code; some read or
   write the files their command names.

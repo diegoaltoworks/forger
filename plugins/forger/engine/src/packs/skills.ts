@@ -100,21 +100,24 @@ function resolveFile(file: string, env: ResolveEnv): {path: string | null; exist
   return {path: found ?? candidates[0] ?? null, exists: found !== undefined};
 }
 
+/** One slot against the project's mapping: the mapped skill or file when present, else the built-in step. */
+export function resolveSlot(def: SlotDefinition, mapping: Record<string, SkillMapping>, have: ReadonlySet<string>, env: ResolveEnv = {}): ResolvedSlot {
+  const m = mapping[def.slot];
+  if (m !== null && typeof m === 'object' && typeof m.file === 'string' && m.file.trim() !== '') {
+    const file = m.file.trim();
+    const {path, exists} = resolveFile(file, env);
+    return {...def, skill: null, file, installed: exists, invoke: exists ? 'file' : 'builtin', path};
+  }
+  const name = typeof m === 'string' ? m.trim() : '';
+  if (name === '') return {...def, skill: null, file: null, installed: false, invoke: 'builtin', path: null};
+  const resolved = resolveName(name, have, env.presets ?? []);
+  return {...def, skill: resolved ?? name, file: null, installed: resolved !== null, invoke: resolved !== null ? 'skill' : 'builtin', path: null};
+}
+
 export function resolveSkills(mapping: Record<string, SkillMapping>, installed: readonly string[], env: ResolveEnv = {}): SkillsReport {
   const have = new Set(installed);
   const presets = env.presets ?? [];
-  const slots = SLOTS.map((def): ResolvedSlot => {
-    const m = mapping[def.slot];
-    if (m !== null && typeof m === 'object' && typeof m.file === 'string' && m.file.trim() !== '') {
-      const file = m.file.trim();
-      const {path, exists} = resolveFile(file, env);
-      return {...def, skill: null, file, installed: exists, invoke: exists ? 'file' : 'builtin', path};
-    }
-    const name = typeof m === 'string' ? m.trim() : '';
-    if (name === '') return {...def, skill: null, file: null, installed: false, invoke: 'builtin', path: null};
-    const resolved = resolveName(name, have, presets);
-    return {...def, skill: resolved ?? name, file: null, installed: resolved !== null, invoke: resolved !== null ? 'skill' : 'builtin', path: null};
-  });
+  const slots = SLOTS.map(def => resolveSlot(def, mapping, have, env));
   const known = new Set(SLOTS.map(s => s.slot));
   const forbid = [...new Set(presets.filter(p => collectionInstalled(p, installed)).flatMap(p => p.forbid ?? []))].sort();
   return {slots, forbid, preamble: UNATTENDED_PREAMBLE, unknown: Object.keys(mapping).filter(k => !known.has(k))};
