@@ -51,6 +51,10 @@ export interface RunnerDeps {
   /** Liveness probe for the lock holder; defaults to a signal-0 check. */
   isAlive?: (pid: number) => boolean;
   pid?: number;
+  /** Registers a handler for a stop signal; defaults to `process.on`. */
+  onSignal?: (signal: 'SIGTERM' | 'SIGINT', handler: () => void) => void;
+  /** Ends the process after a signal released the lease; defaults to `process.exit`. */
+  exit?: (code: number) => void;
   /** Clock and wait, injectable so a rate-limit wait runs in a test without waiting. */
   now?: () => number;
   /** The `halted` label on the pinned loop issue; omitted when the tracker is not GitHub. */
@@ -106,6 +110,9 @@ export class AutomationRunner {
   private leaseSettings: LeaseSettings | undefined;
   private leaseLost = false;
   private leaseTimer: ReturnType<typeof setInterval> | undefined;
+  private released = false;
+  private onSignal: (signal: 'SIGTERM' | 'SIGINT', handler: () => void) => void;
+  private exit: (code: number) => void;
 
   constructor(
     private projectRoot: string,
@@ -126,6 +133,8 @@ export class AutomationRunner {
     this.gitCapture = deps.gitCapture ?? capturing(deps.gitRunner);
     this.folderMap = deps.folderMap;
     this.leaseSettings = deps.lease;
+    this.onSignal = deps.onSignal ?? ((signal, handler) => void process.on(signal, handler));
+    this.exit = deps.exit ?? (code => process.exit(code));
     this.agent = deps.agent ?? {run: () => Promise.reject(new Error('no agent runner was given to this runner'))};
     this.uuid = deps.uuid ?? (() => crypto.randomUUID());
     this.now = deps.now ?? Date.now;
@@ -241,7 +250,7 @@ export class AutomationRunner {
   private claimLease(): boolean {
     const settings = this.leaseSettings;
     if (!settings) return true;
-    const claim = this.stateStore.claimLease({...settings, now: new Date(this.now())});
+    const claim = this.stateStore.claimLease({...settings, now: new Date(this.now()), isAlive: this.isAliveFn});
     if (claim.ok) {
       if (claim.action === 'takeover') {
         const reason = `took over the lease from ${claim.previousHolder} on ${claim.previousHost}`;
@@ -288,6 +297,15 @@ export class AutomationRunner {
         if (!this.leaseLost) this.claimLease();
       }, every);
     }
+    this.released = false;
+    // A stopped service must not leave the lease to expire: the next start would be refused.
+    for (const signal of ['SIGTERM', 'SIGINT'] as const) {
+      this.onSignal(signal, () => {
+        this.logger.log('WARN', `Stopped by ${signal}; releasing the lease and the lock`);
+        this.releaseHeld();
+        this.exit(signal === 'SIGTERM' ? 143 : 130);
+      });
+    }
     try {
       await this.refreshBacklog();
       this.closeOrphan();
@@ -295,10 +313,17 @@ export class AutomationRunner {
       else await this.loop(iterations, continuous);
       return true;
     } finally {
-      clearInterval(this.leaseTimer);
-      if (this.leaseSettings && !this.leaseLost) this.stateStore.releaseLease(this.leaseSettings.self);
-      this.lock.release();
+      this.releaseHeld();
     }
+  }
+
+  /** Frees the lease and the lock once, whether the run ended or a signal stopped it. */
+  private releaseHeld(): void {
+    if (this.released) return;
+    this.released = true;
+    clearInterval(this.leaseTimer);
+    if (this.leaseSettings && !this.leaseLost) this.stateStore.releaseLease(this.leaseSettings.self);
+    this.lock.release();
   }
 
   /** The owner removed the halted label: the persisted halt is over, with the counters that caused it. */

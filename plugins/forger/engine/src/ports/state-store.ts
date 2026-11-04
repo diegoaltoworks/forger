@@ -27,6 +27,8 @@ export interface LeaseRequest {
   host: string;
   ttlSeconds: number;
   now: Date;
+  /** Liveness of a pid on this machine; lets a lease held here by a dead pid be taken over. */
+  isAlive?: (pid: number) => boolean;
 }
 
 export interface StateStore {
@@ -39,6 +41,8 @@ export interface StateStore {
   readEvents(): string;
   /** Acquires, renews or takes over the lease, or says why it could not. */
   claimLease(request: LeaseRequest): LeaseClaim;
+  /** The stored lease record, or null when there is none. */
+  readLease(): unknown;
   /** Frees the lease if `self` holds it. */
   releaseLease(self: string): void;
 }

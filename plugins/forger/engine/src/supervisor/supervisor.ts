@@ -4,7 +4,7 @@
  * (`commands/work.md`) calls these through the CLI and keeps only judgement.
  */
 
-import {missingVerifyStatusAnomaly, openLabel, recommendationFor, type HandedOver, type StatusReport} from '../loop';
+import {missingVerifyStatusAnomaly, type LeaseView, openLabel, recommendationFor, type HandedOver, type StatusReport} from '../loop';
 import type {Measures} from './measure';
 import {type Period} from './waiting';
 import {buildReportMeasures, formatReportMeasures, type ReportMeasures} from './report-measures';
@@ -26,6 +26,8 @@ export interface OrientInputs {
   blockers?: string[];
   /** Whether the base branch requires the `forger/verify` check; undefined or null when not known. */
   requiresVerify?: boolean | null;
+  /** The stored lease seen from this machine; undefined when not read. */
+  lease?: LeaseView;
 }
 
 export interface OrientPlan {
@@ -36,6 +38,8 @@ export interface OrientPlan {
   anomalies: string[];
   /** For nothing_to_do with tickets left: what blocks each of them. */
   blockers: string[];
+  /** The stored lease seen from this machine: holder, host and expiry; null when not read. */
+  lease: LeaseView | null;
 }
 
 /**
@@ -52,19 +56,26 @@ export function orient(i: OrientInputs): OrientPlan {
   if (s.runner.pid !== null && !s.runner.alive) {
     anomalies.push(`the lock names pid ${s.runner.pid}, which is gone`);
   }
+  const lease = i.lease;
+  if (lease?.state === 'stale_local') {
+    anomalies.push(`the lease names ${lease.holder}, a dead engine on this machine; the next start takes it over`);
+  }
   for (const label of i.missingLabels ?? []) {
     anomalies.push(`the label "${label}" the loop relies on does not exist on GitHub; run setup to create it`);
   }
   if (i.requiresVerify === false) anomalies.push(missingVerifyStatusAnomaly(i.baseBranch));
   anomalies.push(...(i.backlogAnomalies ?? []));
   if (s.halted) {
-    return {action: 'surface_halt', reason: i.haltReason?.trim() || s.last_error || 'halted, no reason recorded', anomalies, blockers: []};
+    return {action: 'surface_halt', reason: i.haltReason?.trim() || s.last_error || 'halted, no reason recorded', anomalies, blockers: [], lease: i.lease ?? null};
   }
   if (s.runner.alive) {
-    return {action: 'attach', reason: `a runner is alive (pid ${s.runner.pid})`, anomalies, blockers: []};
+    return {action: 'attach', reason: `a runner is alive (pid ${s.runner.pid})`, anomalies, blockers: [], lease: i.lease ?? null};
+  }
+  if (lease?.state === 'live_elsewhere') {
+    return {action: 'nothing_to_do', reason: `another machine (${lease.host}) holds the loop lease (${lease.holder}) until ${lease.expires_at}; an engine started here is refused`, anomalies, blockers: [], lease: i.lease ?? null};
   }
   if (s.remaining === 0) {
-    return {action: 'nothing_to_do', reason: 'the backlog has nothing left; plan the next work', anomalies, blockers: []};
+    return {action: 'nothing_to_do', reason: 'the backlog has nothing left; plan the next work', anomalies, blockers: [], lease: i.lease ?? null};
   }
   if (s.workable === 0) {
     const blockers = i.blockers ?? [];
@@ -73,9 +84,10 @@ export function orient(i: OrientInputs): OrientPlan {
       reason: `${s.remaining} ticket(s) remain but none is workable; they wait on the owner`,
       anomalies,
       blockers,
+      lease: i.lease ?? null,
     };
   }
-  return {action: 'start', reason: `${s.remaining} ticket(s) remain and no runner is alive`, anomalies, blockers: []};
+  return {action: 'start', reason: `${s.remaining} ticket(s) remain and no runner is alive`, anomalies, blockers: [], lease: i.lease ?? null};
 }
 
 export type Authority = 'alone' | 'alone_and_report' | 'owner' | 'never';

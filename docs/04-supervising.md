@@ -27,6 +27,10 @@ Asked once, written down, refined later (see `05-refining-the-process.md`):
 - Read the playbook, the open owner questions and the memory notes.
 - Engine status, HALT (the `halted` label on the pinned loop issue, or the local HALT file), whether an engine is alive.
   Add the label with a comment to stop the loop from anywhere; remove it to resume. The issue body is a generated status view.
+- The loop lease, when the state lives on the branch. `orient` reports it: a live lease held by another machine is the
+  reason not to start, and a stale lease of this machine is an anomaly the next start clears. Restarting an engine
+  needs no wait: a stop by SIGTERM or SIGINT releases the lease, and a lease left by a killed engine on this machine
+  is taken over at once.
 - What merged since the last session; what the checked-out branch really is.
 - Anything stuck: a ticket marked completed with no merged PR, a branch with
   commits and no PR.
