@@ -24,7 +24,7 @@ import {verifyMerged} from './merged';
 import {decideOutcome, type Outcome} from './outcome';
 import type {PrFact} from './pr-checks';
 import type {Decision} from './verdict';
-import {decisionForHead, readVerdicts} from './verdict-store';
+import {readVerdicts, recordedDecision} from './verdict-store';
 import {buildPrompt} from './prompt';
 import {workerEnv} from './worker-env';
 import {gatherFacts, takeSnapshot, ticketFromBranch} from './run-facts';
@@ -320,8 +320,13 @@ function closeRun(ctx: IterationContext, iteration: number, run: InFlightRun | u
   settle(ctx, run?.session_id ?? '', iteration, held, backlogCompleted, outcome, false);
 }
 
-/** The decision recorded for the head of the run's PR; null when there is no PR or no record for its head. */
+/**
+ * The decision recorded for the head of the run's PR; null when there is no PR
+ * or no verdict for its head. `verify` keeps records in the main checkout; a
+ * worktree's own directory is read too, for a run that wrote one there.
+ */
 function verdictOf(ctx: IterationContext, pr: PrFact | null, root = ctx.projectRoot): Decision | null {
   if (!pr) return null;
-  return decisionForHead(readVerdicts(join(root, ctx.config.paths.verdicts), pr.number), pr.head);
+  const dirs = [...new Set([ctx.projectRoot, root])].map(r => join(r, ctx.config.paths.verdicts));
+  return recordedDecision(dirs.flatMap(d => readVerdicts(d, pr.number)), pr.head, pr.verify_passed === true);
 }

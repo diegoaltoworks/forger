@@ -5,10 +5,44 @@
  */
 
 import {existsSync, readdirSync, readFileSync} from 'fs';
-import {join} from 'path';
+import {dirname, isAbsolute, join} from 'path';
 
+import {isProjectRoot} from '../config';
+import type {CommandRunner} from '../ports';
 import type {Decision} from './verdict';
 import type {VerdictRecord} from './verify-input';
+
+/**
+ * The main checkout a run belongs to. A worker's worktree shares its git
+ * directory with it, and the worktree is removed after the run, so state the
+ * engine reads afterwards must be kept in the main checkout, not in the
+ * worktree. Outside a worktree, or when git cannot tell, it is `projectRoot`.
+ */
+export function loopRootOf(run: CommandRunner, projectRoot: string, isRoot: (dir: string) => boolean = isProjectRoot): string {
+  let common: string;
+  try {
+    common = run('git rev-parse --path-format=absolute --git-common-dir').trim();
+  } catch {
+    return projectRoot;
+  }
+  if (!common || !isAbsolute(common)) return projectRoot;
+  const root = dirname(common);
+  return isRoot(root) ? root : projectRoot;
+}
+
+/** The one place verdicts are written and read, whichever checkout the command runs in. */
+export function verdictsHome(run: CommandRunner, projectRoot: string, verdictsPath: string, isRoot?: (dir: string) => boolean): string {
+  return join(loopRootOf(run, projectRoot, isRoot), verdictsPath);
+}
+
+/**
+ * The decision the engine counts for a PR's head: the record when there is
+ * one, else the `forger/verify` commit status `verify` set on that head, so a
+ * record lost with a worktree does not turn a verified merge into an unverified one.
+ */
+export function recordedDecision(records: VerdictRecord[], head: string | null, statusPassed: boolean): Decision | null {
+  return decisionForHead(records, head) ?? (head && statusPassed ? 'pass' : null);
+}
 
 /** Every readable record kept for a PR, whatever head it was made at. */
 export function readVerdicts(dir: string, pr: number): VerdictRecord[] {

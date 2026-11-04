@@ -2,7 +2,7 @@ import {existsSync, readdirSync, readFileSync} from 'fs';
 import {homedir} from 'os';
 import {join} from 'path';
 
-import {parseAllEvents, parseEvents, readAllVerdicts, readSchedule} from '../loop';
+import {parseAllEvents, parseEvents, readAllVerdicts, readSchedule, verdictsHome} from '../loop';
 import {buildComparisonReport, DEFAULT_PRICES, mergePrices, sessionCostUsd, type PriceTable, type Measures, computeMeasures, diffReports, parseDiffRanges, parseReplacedRanges, picksToPrs, DEFAULT_REWORK_WINDOW, type MergedPr, type TrackerIssue, type ReworkInputs, type ComparisonReport, formatMeasures, parseBudgets, parseIterationLog, type CiRun, type IterationRecord} from '../supervisor';
 import type {Command, CommandContext} from './command';
 
@@ -102,7 +102,7 @@ export function gatherMeasures(ctx: CommandContext): Measures {
     iterations,
     budgets,
     sessionCosts,
-    verdicts: readAllVerdicts(join(projectRoot, config.paths.verdicts)),
+    verdicts: readAllVerdicts(verdictsHome(ctx.run(), projectRoot, config.paths.verdicts)),
     schedule: readSchedule(join(outDir, 'schedule-decisions.jsonl')),
     events: parseEvents(ctx.stateStore.readEvents()),
     ciRuns,

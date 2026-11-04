@@ -942,7 +942,7 @@ describe('handover', () => {
     const calls: string[] = [];
     const out = JSON.parse(await capture(['handover', '--pr', '7', '--json'], cmd => (calls.push(cmd), '')));
     expect(out).toMatchObject({move: 'fix', round: 2, handed_over: null});
-    expect(calls).toEqual([]);
+    expect(calls.filter(c => !c.startsWith('git rev-parse'))).toEqual([]);
   });
 
   test('hands the issue over when rounds are spent, exits 1, and --list reports it', async () => {
@@ -968,6 +968,20 @@ describe('handover', () => {
     expect(list).toHaveLength(1);
     expect(list[0]).toMatchObject({ticket: 'issue-5', pr: 7});
     expect(await capture(['handover', '--list'])).toContain('issue-5');
+  });
+
+  test('run from a worker worktree, it reads the verdicts of the main checkout', async () => {
+    const root = projectWith({}, {kind: 'github', label: 'ready-for-agent'});
+    seed(root, ['not_met', 'not_met']);
+    const worktree = join(root, '.forger', 'worktrees', 'issue-5');
+    mkdirSync(join(worktree, '.forger'), {recursive: true});
+    writeFileSync(join(worktree, '.forger', 'workloop.config.json'), JSON.stringify({tracker: {kind: 'github', label: 'ready-for-agent'}}));
+    process.chdir(worktree);
+    const run: CommandRunner = cmd => (cmd === 'git rev-parse --path-format=absolute --git-common-dir' ? join(root, '.git') : '');
+    const list = JSON.parse(await capture(['handover', '--list', '--json'], run));
+    expect(list).toHaveLength(1);
+    expect(list[0]).toMatchObject({ticket: 'issue-5', pr: 7});
+    expect(existsSync(join(worktree, '.forger', 'verdicts'))).toBe(false);
   });
 
   test('reports a failed label and requires --pr', async () => {
