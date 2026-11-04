@@ -87,6 +87,10 @@ the ticket, the rule and the command. It is a mid-run event: `events --json`
 lists it and `await-event` wakes on it, but the run goes on. Report it; denials
 repeated on one ticket mean the ticket or the process tells the worker to do
 something it may not.
+`verify` finds a PR's ticket from a `Closes #n` line in its body, then from a
+`feat/issue-<n>` branch (on a local tracker, `feat/<ticket-id>`). A PR the
+supervisor opens for itself carries `Closes #n` or an `## Acceptance` section of
+checkbox criteria in its body; one with neither is refused and cannot merge.
 A ticket whose verification ran out of rounds carries `needs-human`; The report's
 **Handed over** section (and `handover --list`) names it with the criteria at fault.
 

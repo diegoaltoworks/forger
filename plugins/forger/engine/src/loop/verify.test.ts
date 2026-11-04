@@ -228,10 +228,41 @@ describe('verifyPr', () => {
     });
   });
 
-  test('refuses a branch that names no ticket', async () => {
+  test('refuses a PR with no ticket and no acceptance section, naming both fixes', async () => {
     const f = fixture();
-    const run: CommandRunner = c => (c.startsWith('gh pr view') ? view.replace('feat/issue-9', 'wip') : f.run(c));
-    await expect(verifyPr(run, f.agentSaying('x'), f.opts)).rejects.toThrow('cannot tell the ticket');
+    const noTicket = JSON.stringify({...JSON.parse(view), headRefName: 'wip', body: ''});
+    const run: CommandRunner = c => (c.startsWith('gh pr view') ? noTicket : f.run(c));
+    await expect(verifyPr(run, f.agentSaying('x'), f.opts)).rejects.toThrow(/Closes #<n>.*## Acceptance/);
+  });
+
+  test('takes the ticket from Closes #n in the body when the branch names none', async () => {
+    const f = fixture();
+    const withBody = JSON.stringify({...JSON.parse(view), headRefName: 'docs/x', body: 'Closes #9'});
+    const run: CommandRunner = c => (c.startsWith('gh pr view') ? withBody : f.run(c));
+    const record = await verifyPr(run, f.agentSaying('x'), f.opts);
+    expect(record.ticket).toBe('issue-9');
+    expect(f.prompts[0]).toContain('first');
+  });
+
+  test('verifies a PR with no ticket against the Acceptance section of its body', async () => {
+    const f = fixture();
+    const withBody = JSON.stringify({...JSON.parse(view), headRefName: 'docs/x', body: '## Acceptance\n- [ ] the doc names the fix\n'});
+    const run: CommandRunner = c => (c.startsWith('gh pr view') ? withBody : f.run(c));
+    const record = await verifyPr(run, f.agentSaying('x'), f.opts);
+    expect(record.ticket).toBe('pr-5');
+    expect(record.entries.map(e => e.criterion)).toEqual(['c1']);
+    expect(f.prompts[0]).toContain('the doc names the fix');
+  });
+
+  test('on a local tracker takes the ticket from feat/<id> and its backlog entry', async () => {
+    const f = fixture();
+    const backlogFile = join(tmp(), 'backlog.json');
+    writeFileSync(backlogFile, JSON.stringify({features: {'sim-engine': {acceptance_criteria: ['it simulates']}}}));
+    const local = JSON.stringify({...JSON.parse(view), headRefName: 'feat/sim-engine', body: ''});
+    const run: CommandRunner = c => (c.startsWith('gh pr view') ? local : f.run(c));
+    const record = await verifyPr(run, f.agentSaying('x'), {...f.opts, trackerKind: 'local', backlogFile});
+    expect(record.ticket).toBe('sim-engine');
+    expect(f.prompts[0]).toContain('it simulates');
   });
 
   test('refuses a ticket with no criteria', async () => {
