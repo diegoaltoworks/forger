@@ -18,7 +18,8 @@ export function findHarness(id: string, harnesses: Harness[] = HARNESSES): Harne
   return found;
 }
 
-export function agentFor(harness: Harness): AgentRunner {
+/** `env` is added to every run's environment, under what the run itself sets. */
+export function agentFor(harness: Harness, env: Record<string, string> = {}): AgentRunner {
   return {
     run(opts) {
       const spec = harness.spawn(opts);
@@ -26,7 +27,7 @@ export function agentFor(harness: Harness): AgentRunner {
         command: spec.command,
         args: spec.args,
         cwd: opts.cwd,
-        env: opts.env,
+        env: {...env, ...opts.env},
         input: spec.input ?? '',
         timeoutMs: opts.timeoutMinutes * 60 * 1000,
         graceMs: opts.killGraceSeconds * 1000,

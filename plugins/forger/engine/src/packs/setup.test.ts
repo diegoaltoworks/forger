@@ -5,7 +5,7 @@ import {join, resolve} from 'path';
 
 import {codexHarness, copilotHarness, opencodeHarness} from '../adapters';
 import {sha256} from './packs';
-import {gitignoreLines, mergeGitignore, renderConfig, runSetup, withCheck} from './setup';
+import {gitignoreLines, mergeGitignore, relocatableGates, renderConfig, runSetup, withCheck} from './setup';
 
 const PLUGIN_ROOT = resolve(import.meta.dir, '../../..');
 const dirs: string[] = [];
@@ -107,8 +107,15 @@ describe('runSetup', () => {
     const root = emptyProject();
     runSetup(root, PLUGIN_ROOT, {gates: 'make test'});
     const config = JSON.parse(readFileSync(join(root, '.forger/workloop.config.json'), 'utf-8'));
-    expect(config.gates).toStartWith('make test && bun ');
-    expect(config.gates).toEndWith('bin/work.ts check');
+    expect(config.gates).toBe('make test && bun "$FORGER_PLUGIN_ROOT/bin/work.ts" check');
+    expect(config.gates).not.toContain(PLUGIN_ROOT);
+  });
+
+  test('a fresh repository passes its own check', () => {
+    const root = emptyProject();
+    runSetup(root, PLUGIN_ROOT, {gates: 'make test'});
+    const gates = JSON.parse(readFileSync(join(root, '.forger/workloop.config.json'), 'utf-8')).gates as string;
+    expect(gates).not.toMatch(/\/(home|Users)\//);
   });
 
   test('installs the ticket, PR, work order, report, retro and rule templates', () => {
@@ -198,4 +205,15 @@ describe('runSetup layout and harness', () => {
       expect(runSetup(root, PLUGIN_ROOT, {harness}).files.every(f => f.action === 'kept')).toBe(true);
     });
   }
+});
+
+describe('relocatableGates', () => {
+  test('swaps an absolute check command for the variable form', () => {
+    expect(relocatableGates('make test && bun /opt/a/plug/bin/work.ts check')).toBe('make test && bun "$FORGER_PLUGIN_ROOT/bin/work.ts" check');
+    expect(relocatableGates('bun "/opt/p/bin/work.ts" check')).toBe('bun "$FORGER_PLUGIN_ROOT/bin/work.ts" check');
+  });
+  test('leaves a relative or variable form alone', () => {
+    expect(relocatableGates('bun plugins/forger/bin/work.ts check')).toBe('bun plugins/forger/bin/work.ts check');
+    expect(relocatableGates('bun "$FORGER_PLUGIN_ROOT/bin/work.ts" check')).toBe('bun "$FORGER_PLUGIN_ROOT/bin/work.ts" check');
+  });
 });

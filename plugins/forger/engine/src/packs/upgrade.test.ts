@@ -116,3 +116,17 @@ describe('runUpgrade on a fixture repo', () => {
     expect(() => runUpgrade(tmp(), plugin('1.0.0', {'a.md': 'x'}))).toThrow('run setup');
   });
 });
+
+describe('runUpgrade gates', () => {
+  test('an absolute check command in the config becomes the variable form, the rest kept', () => {
+    const project = tmp();
+    mkdirSync(join(project, '.forger'), {recursive: true});
+    writeFileSync(join(project, LOCK_PATH), JSON.stringify({packs: []}));
+    const config = join(project, '.forger/workloop.config.json');
+    writeFileSync(config, '{ "gates": "make test && bun /opt/x/p/bin/work.ts check", "base_branch": "main" }\n');
+    const result = runUpgrade(project, plugin('1.0.0', {}));
+    expect(result.gates).toBe('rewritten');
+    expect(readFileSync(config, 'utf-8')).toBe('{ "gates": "make test && bun \\"$FORGER_PLUGIN_ROOT/bin/work.ts\\" check", "base_branch": "main" }\n');
+    expect(runUpgrade(project, plugin('1.0.0', {})).gates).toBeUndefined();
+  });
+});

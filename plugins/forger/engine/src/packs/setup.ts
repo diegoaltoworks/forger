@@ -36,6 +36,19 @@ export interface SetupResult {
 
 const CHECK_MARKER = /\bwork\.ts\s+check\b|\bcheck docs\b/;
 
+/** The engine exports the plugin's root under this name to the processes that run the gates. */
+export const PLUGIN_ROOT_VAR = 'FORGER_PLUGIN_ROOT';
+
+/** The check command the gates end with: it names the variable, so the committed line holds no machine path. */
+export const CHECK_COMMAND = 'bun "$' + PLUGIN_ROOT_VAR + '/bin/work.ts" check';
+
+const ABSOLUTE_CHECK = /\bbun\s+"?[/~][^\s"]*\/bin\/work\.ts"?\s+check\b/g;
+
+/** Gates written by an older setup name the plugin by absolute path; this swaps them for the variable form. */
+export function relocatableGates(gates: string): string {
+  return gates.replace(ABSOLUTE_CHECK, () => CHECK_COMMAND);
+}
+
 /** Per-run files a project never commits. */
 export function gitignoreLines(dir: string): string[] {
   return ['state.json', 'work.log', 'output/', 'HALT', 'runner.lock', 'events.jsonl', 'declined.json', 'verdicts/'].map(f => `${dir}/${f}`);
@@ -108,7 +121,6 @@ function installHook(projectRoot: string, pluginRoot: string, harness: Harness):
 export function runSetup(projectRoot: string, pluginRoot: string, opts: SetupOptions): SetupResult {
   const templates = join(pluginRoot, 'templates');
   const read = (name: string) => readFileSync(join(templates, name), 'utf-8');
-  const check = `bun ${join(pluginRoot, 'bin', 'work.ts')} check`;
 
   const {packs, unknown} = selectPacks(loadPacks(pluginRoot), opts.packs ?? ['base']);
   if (unknown.length > 0) throw new Error(`Unknown pack: ${unknown.join(', ')}`);
@@ -117,7 +129,7 @@ export function runSetup(projectRoot: string, pluginRoot: string, opts: SetupOpt
     {
       path: `${FORGER_DIR}/${CONFIG_FILE}`,
       action: writeIfAbsent(forgerPath(projectRoot, `${FORGER_DIR}/${CONFIG_FILE}`), () =>
-        renderConfig(read('workloop.config.json'), opts, check)
+        renderConfig(read('workloop.config.json'), opts, CHECK_COMMAND)
       ),
     },
   ];

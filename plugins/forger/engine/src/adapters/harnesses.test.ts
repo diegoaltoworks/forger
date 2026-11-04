@@ -4,7 +4,7 @@ import type {AgentRunOptions} from '../ports';
 import {claudeHarness} from './claude';
 import {codexHarness} from './codex';
 import {copilotHarness} from './copilot';
-import {findHarness, HARNESSES} from './harnesses';
+import {agentFor, findHarness, HARNESSES} from './harnesses';
 import {opencodeCommandName, opencodeHarness, stripClaudeFrontmatter} from './opencode';
 
 const opts: AgentRunOptions = {
@@ -107,5 +107,13 @@ describe('hooks', () => {
   });
   test('only claude has hooks forger installs', () => {
     expect(HARNESSES.filter(h => h.hooks !== null).map(h => h.id)).toEqual(['claude']);
+  });
+});
+
+describe('agentFor', () => {
+  test('adds its environment under the run\'s own', async () => {
+    const h = {...claudeHarness, spawn: () => ({command: 'sh', args: ['-c', 'echo "$A-$B"'], input: ''})};
+    const result = await agentFor(h, {A: 'one', B: 'base'}).run({...opts, cwd: '/tmp', env: {B: 'run'}});
+    expect(JSON.stringify(result)).toContain('one-run');
   });
 });
