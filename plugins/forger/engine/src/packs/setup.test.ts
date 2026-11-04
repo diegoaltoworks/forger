@@ -38,12 +38,11 @@ describe('withCheck', () => {
 
 describe('renderConfig skills', () => {
   const template = JSON.stringify({gates: 'g', skills: {}});
-  test('a preset fills the skill slots', () => {
-    const out = JSON.parse(renderConfig(template, {skills: {review: 'c:r'}}, 'c check docs'));
-    expect(out.skills).toEqual({review: 'c:r'});
+  test('a flavour is recorded with its version', () => {
+    expect(JSON.parse(renderConfig(template, {flavour: 'c@2'}, 'c check docs')).flavour).toBe('c@2');
   });
-  test('without a preset the slots stay empty', () => {
-    expect(JSON.parse(renderConfig(template, {}, 'c check docs')).skills).toEqual({});
+  test('without a flavour the config does not name one', () => {
+    expect(JSON.parse(renderConfig(template, {}, 'c check docs')).flavour).toBeUndefined();
   });
 });
 

@@ -26,6 +26,7 @@ export const FLAGS = {
   list: {type: 'boolean'},
   summary: {type: 'boolean', default: false},
   preset: {type: 'string'},
+  flavour: {type: 'string'},
   packs: {type: 'string'},
   harness: {type: 'string'},
   upgrade: {type: 'boolean'},

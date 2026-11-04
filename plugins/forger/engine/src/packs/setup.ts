@@ -8,14 +8,14 @@ import {dirname, join} from 'path';
 
 import {LOCK_PATH, loadPacks, mergeLock, parseLock, renderLock, selectPacks, sha256, type Lock, type LockedFile} from './packs';
 import type {Harness} from '../ports';
-import {CONFIG_FILE, FORGER_DIR, detectLayout, forgerPath, type SkillMapping} from '../config';
+import {CONFIG_FILE, FORGER_DIR, detectLayout, forgerPath} from '../config';
 
 export interface SetupOptions {
   gates?: string;
   baseBranch?: string;
   trackerKind?: string;
-  /** Skill slots to map, from a preset. */
-  skills?: Record<string, SkillMapping>;
+  /** The flavour to record in the config, as `<name>@<version>`. */
+  flavour?: string;
   /** Pack ids to install; defaults to `base`. */
   packs?: string[];
   /** The harness the worker runs in; its commands are installed where it reads them. */
@@ -54,7 +54,7 @@ export function renderConfig(template: string, opts: SetupOptions, checkCommand:
   };
   config.gates = withCheck(opts.gates ?? config.gates, checkCommand);
   if (opts.baseBranch) config.base_branch = opts.baseBranch;
-  if (opts.skills) config.skills = {...opts.skills};
+  if (opts.flavour) config.flavour = opts.flavour;
   if (opts.harness) config.harness = opts.harness.id;
   if (opts.trackerKind) config.tracker = {...config.tracker, kind: opts.trackerKind};
   return JSON.stringify(config, null, 2) + '\n';
@@ -156,6 +156,6 @@ export function runSetup(projectRoot: string, pluginRoot: string, opts: SetupOpt
 export function formatSetup(result: SetupResult, offeredPresets: string[] = []): string {
   const lines = result.files.map(f => `${f.action.padEnd(7)} ${f.path}`);
   lines.push(...result.gitignore.added.map(l => `ignored ${l}`));
-  lines.push(...offeredPresets.map(p => `preset available: ${p} (setup --preset ${p})`));
+  lines.push(...offeredPresets.map(p => `flavour available: ${p} (setup --flavour ${p})`));
   return lines.join('\n');
 }

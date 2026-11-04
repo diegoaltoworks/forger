@@ -3,7 +3,7 @@ import {existsSync, readFileSync} from 'fs';
 import {parseFootprint} from '../backlog';
 import {forgerPath} from '../config';
 import {LOCK_PATH, loadPresets, parseLock} from '../packs';
-import {loadDefinition, loadOverlay, NO_TICKET, resolvePipeline, type PipelinePlan, type TicketFacts} from '../pipeline';
+import {loadDefinition, loadFlavour, loadOverlay, NO_TICKET, resolvePipeline, type PipelinePlan, type TicketFacts} from '../pipeline';
 import type {Command, CommandContext} from './command';
 
 function ticketFacts(ctx: CommandContext, issue: number): TicketFacts {
@@ -23,7 +23,7 @@ function installedPacks(ctx: CommandContext): string[] {
 }
 
 export function formatPlan(plan: PipelinePlan): string {
-  const lines: string[] = [];
+  const lines: string[] = [`flavour ${plan.flavour}`];
   for (const s of plan.stages) {
     lines.push(`${s.id} (${s.command}) -> gate: ${s.gate}`);
     for (const slot of s.slots) lines.push(`  ${slot.slot}${slot.on ? ` on ${slot.on}` : ''}: ${slot.invoke} ${slot.target ?? '-'} (${slot.reason})`);
@@ -49,7 +49,7 @@ export const pipeline: Command = {
       const issue = issueArg === undefined ? null : Number(issueArg);
       if (issue !== null && !Number.isInteger(issue)) throw new Error(`--issue must be an issue number, got "${issueArg}"`);
       const ticket = issue === null ? {...NO_TICKET, packs: installedPacks(ctx)} : {...ticketFacts(ctx, issue), packs: installedPacks(ctx)};
-      const plan = resolvePipeline(loadDefinition(pluginRoot), loadOverlay(forgerPath(projectRoot, '.forger')), config.skills, ctx.installedSkills(), ticket, {
+      const plan = resolvePipeline(loadDefinition(pluginRoot), loadOverlay(forgerPath(projectRoot, '.forger')), loadFlavour(pluginRoot, forgerPath(projectRoot, '.forger'), config.flavour), config.skills, ctx.installedSkills(), ticket, {
         roots: [...ctx.collectionRoots(), pluginRoot],
         presets: loadPresets(pluginRoot),
       });

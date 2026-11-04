@@ -47,3 +47,26 @@ export interface TicketFacts {
 }
 
 export const NO_TICKET: TicketFacts = {id: null, labels: [], paths: [], packs: []};
+
+/** One choice for a slot: a skill by name or a file to follow, used when its conditions hold and it is installed. */
+export interface Candidate {
+  skill?: string;
+  file?: string;
+  when?: Condition;
+}
+
+/**
+ * A named, versioned selection over the pipeline (ADR 0016 section 4): per slot an ordered list of
+ * candidates. The built-in step is the implicit last candidate. The collection fields describe the
+ * skill collection a flavour maps, so setup can offer it and the worker can be told what not to invoke.
+ */
+export interface Flavour {
+  name: string;
+  version: number;
+  description: string;
+  slots: Record<string, Candidate[]>;
+  collection?: string;
+  plugin?: string;
+  aliases?: string[];
+  forbid?: string[];
+}

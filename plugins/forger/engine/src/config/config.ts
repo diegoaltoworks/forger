@@ -103,6 +103,11 @@ export interface WorkloopConfig {
    */
   skills: Record<string, SkillMapping>;
   /**
+   * The flavour that picks a skill per slot: `"<name>"` or `"<name>@<version>"`, looked up in
+   * `.forger/flavours/` then the plugin's. The `skills` map wins per slot. `default` is forger's built-ins.
+   */
+  flavour: string;
+  /**
    * Model and vendor names the `docs` check flags in prose, matched as whole
    * words, case-insensitively. Prose names roles; adapters and config name models.
    */
@@ -131,6 +136,7 @@ export interface WorkloopConfigInput {
   state?: Partial<WorkloopConfig['state']>;
   local_only?: string[];
   skills?: Record<string, SkillMapping>;
+  flavour?: string;
   model_names?: string[];
 }
 
@@ -191,6 +197,7 @@ export const DEFAULT_CONFIG: WorkloopConfig = {
   state: {home: 'local', branch: 'forger-state'},
   local_only: [],
   skills: {},
+  flavour: 'default',
   model_names: ['claude', 'anthropic', 'opus', 'sonnet', 'haiku', 'gpt', 'openai', 'gemini', 'llama', 'mistral'],
 };
 

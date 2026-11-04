@@ -10,16 +10,21 @@ what a given ticket gets for each slot and why.
 - `overlay.ts` - `mergeOverlay`: the shipped definition with a project overlay
   applied. An overlay may disable a stage, add a slot to a stage or replace a
   gate; anything else is reported as a problem. Pure.
-- `resolve.ts` - `resolvePipeline`: the merged definition resolved against the
-  skill mapping and what is installed, with the reason for each choice. Pure.
+- `flavour.ts` - parsing a flavour file, picking the winning candidate of a slot
+  for a ticket with the reason each earlier one lost, and the flavour as a plain
+  skill mapping for a ticket with nothing. Pure.
+- `resolve.ts` - `resolvePipeline`: the merged definition resolved by the
+  `skills` map, then the flavour, then the built-in, with the reason for each
+  choice. Pure.
 - `contracts.ts` - the output contract of each slot and a pure validator per
   contract over the parsed result and the facts a caller passes in. Pure.
 - `contract-policy.ts` - `onContractFailure`: retry, then the built-in step,
   then a decline. Pure.
 - `contract-suffix.ts` - the shape of each contract and the suffix that tells a
   skill where to write its result. Pure.
-- `load.ts` - reads `plugins/forger/pipeline/default.json` and the project's
-  `.forger/pipeline.json`. Reads files.
+- `load.ts` - reads `plugins/forger/pipeline/default.json`, the project's
+  `.forger/pipeline.json` and the flavours (the project's, then the plugin's).
+  Reads files.
 
 ## Entry point
 

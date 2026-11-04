@@ -40,6 +40,12 @@ _Avoid_: inbox, brief
 A named point where a model does judgement work, with a built-in forger step that an installed skill can replace through the `skills` section of the config.
 _Avoid_: hook (when meaning a skill slot), plugin point
 
+**Flavour**:
+A named, versioned selection over the skill slots: per slot an ordered list of candidates, with the built-in step as the implicit last one. The config picks one by `name@version`; the `skills` map still wins per slot.
+
+**Candidate**:
+One skill or file a flavour offers for a slot, with optional conditions on the ticket (labels, paths, installed packs). The first candidate whose conditions hold and which is installed wins.
+
 **Opinion**:
 One rule forger holds about how the work is done, with an id, the why, a rung on the refinement ladder and, when it has one, the check that enforces it.
 _Avoid_: preference, guideline
