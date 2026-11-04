@@ -105,7 +105,10 @@
       "ticket": "issue-183",
       "pid": null,
       "session_id": "5bafc468-61dd-424b-8b87-21844eddeb39",
-      "snapshot": null,
+      "snapshot": {
+        "baseSha": "",
+        "reflogLength": 1
+      },
       "started_at": "2026-11-04T07:47:07.215Z"
     }
   ],
