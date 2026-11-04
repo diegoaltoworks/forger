@@ -6,12 +6,12 @@
  * exit code and the output.
  */
 
-export type ExitClass =
-  | {kind: 'worker'}
-  | {kind: 'infrastructure'; category: 'authentication' | 'billing' | 'network'; reason: string};
+export type InfraCategory = 'authentication' | 'billing' | 'network' | 'delivery';
+
+export type ExitClass = {kind: 'worker'} | {kind: 'infrastructure'; category: InfraCategory; reason: string};
 
 interface Signature {
-  category: 'authentication' | 'billing' | 'network';
+  category: InfraCategory;
   pattern: RegExp;
 }
 
@@ -29,15 +29,26 @@ const SIGNATURES: Signature[] = [
   {category: 'network', pattern: /ECONNREFUSED|ECONNRESET|ENOTFOUND|EAI_AGAIN|ETIMEDOUT/},
   {category: 'network', pattern: /unable to connect to (the )?api/i},
   {category: 'network', pattern: /network (error|is unreachable)/i},
+  {category: 'delivery', pattern: /no stdin data received/i},
+  {category: 'delivery', pattern: /input must be provided either through stdin or as a prompt argument/i},
 ];
 
 /**
  * A clean exit is never an infrastructure error, and a run that timed out is
  * the timeout's business: a worker can quote one of these messages while
- * reading a log, so the signature only counts on a failed exit.
+ * reading a log, so the signature only counts on a failed exit. A prompt the
+ * engine could not deliver (`inputError`) is the engine's failure, never the
+ * ticket's.
  */
-export function classifyExit(exitCode: number, output: string, timedOut: boolean): ExitClass {
+export function classifyExit(exitCode: number, output: string, timedOut: boolean, inputError: string | null = null): ExitClass {
   if (exitCode === 0 || timedOut) return {kind: 'worker'};
+  if (inputError) {
+    return {
+      kind: 'infrastructure',
+      category: 'delivery',
+      reason: `Infrastructure error (delivery): the prompt did not reach the worker: ${inputError}`,
+    };
+  }
   for (const {category, pattern} of SIGNATURES) {
     if (pattern.test(output)) {
       return {

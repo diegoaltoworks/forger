@@ -6,10 +6,18 @@
  * keep the run alive indefinitely, so the run resolves on the worker's `exit`,
  * waiting only a short drain for `close`, never on `close` alone.
  *
+ * The input is written to a file, synchronously, and the file is the worker's
+ * stdin. A pipe is fed by the event loop, and the runner blocks the loop with
+ * synchronous git and gh calls while it starts the next worker: long enough
+ * for a worker that waits a few seconds for its prompt to give up on it.
+ *
  * This is a side-effect boundary; it is tested against real fake workers.
  */
 
 import {spawn} from 'child_process';
+import {closeSync, mkdtempSync, openSync, rmSync, writeFileSync} from 'fs';
+import {tmpdir} from 'os';
+import {join} from 'path';
 
 import type {SupervisedResult} from '../ports';
 
@@ -27,6 +35,8 @@ export interface SupervisedOptions {
   drainMs?: number;
   /** Ends the group like a deadline does, without marking the run timed out. */
   abort?: AbortSignal;
+  /** Where the input file is written; the system temp directory by default. */
+  inputDir?: string;
 }
 
 const DEFAULT_DRAIN_MS = 2000;
@@ -44,8 +54,29 @@ export function runSupervised(opts: SupervisedOptions): Promise<SupervisedResult
   const {command, args, cwd, input, timeoutMs, graceMs} = opts;
   const drainMs = opts.drainMs ?? DEFAULT_DRAIN_MS;
 
+  let stdin: number;
+  let dir: string | undefined;
+  try {
+    dir = mkdtempSync(join(opts.inputDir ?? tmpdir(), 'forger-input-'));
+    const file = join(dir, 'input');
+    writeFileSync(file, input);
+    stdin = openSync(file, 'r');
+  } catch (e) {
+    if (dir) rmSync(dir, {recursive: true, force: true});
+    const inputError = `the prompt could not be written: ${(e as Error).message}`;
+    return Promise.resolve({exitCode: 1, signal: null, output: `Error: ${inputError}\n`, timedOut: false, inputError});
+  }
+  const inputDir = dir;
+
   return new Promise(resolve => {
-    const child = spawn(command, args, {cwd, env: opts.env ? {...process.env, ...opts.env} : process.env, stdio: ['pipe', 'pipe', 'pipe'], detached: true});
+    let child: ReturnType<typeof spawn>;
+    try {
+      child = spawn(command, args, {cwd, env: opts.env ? {...process.env, ...opts.env} : process.env, stdio: [stdin, 'pipe', 'pipe'], detached: true});
+    } finally {
+      // The worker holds its own descriptor to the file now.
+      closeSync(stdin);
+      rmSync(inputDir, {recursive: true, force: true});
+    }
     const pid = child.pid;
 
     let output = '';
@@ -95,6 +126,7 @@ export function runSupervised(opts: SupervisedOptions): Promise<SupervisedResult
         signal: signal ?? null,
         output,
         timedOut,
+        inputError: null,
       });
       const drain = setTimeout(() => finish(result()), drainMs);
       child.on('close', () => {
@@ -104,13 +136,7 @@ export function runSupervised(opts: SupervisedOptions): Promise<SupervisedResult
     });
 
     child.on('error', err => {
-      finish({exitCode: 1, signal: null, output: `Error: ${err.message}\n${output}`, timedOut});
+      finish({exitCode: 1, signal: null, output: `Error: ${err.message}\n${output}`, timedOut, inputError: `not started: ${err.message}`});
     });
-
-    child.stdin?.on('error', () => {
-      // The worker may exit before reading its input; that is reported by `exit`.
-    });
-    child.stdin?.write(input);
-    child.stdin?.end();
   });
 }

@@ -163,7 +163,7 @@ export async function runIteration(
   const record = readDeclineRecord(declinedFile);
   clearDeclineRecord(declinedFile);
   const conflict = placement && !gitFacts.merged && gitFacts.pushed ? placement.conflicts() : null;
-  const exit = classifyExit(result.exitCode, result.output, result.timedOut);
+  const exit = classifyExit(result.exitCode, result.output, result.timedOut, result.inputError ?? null);
   const outcome = decideOutcome({
     ...gitFacts,
     infraError: exit.kind === 'infrastructure' ? exit.reason : null,

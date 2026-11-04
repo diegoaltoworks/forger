@@ -4,6 +4,7 @@ import type {CapturingRunner, CommandResult} from '../ports';
 import {createWorktree, rebaseOnBase, removeWorktree, ticketBranch, validTicket, worktreePath} from './worktree';
 
 const O = {ticket: 'issue-9', baseBranch: 'main', stateDir: '/r/.forger'};
+const NO_BRANCH = {'rev-parse': {stdout: '', stderr: '', exitCode: 1}};
 const PATH = '/r/.forger/worktrees/issue-9';
 
 const ok = (stdout = ''): CommandResult => ({stdout, stderr: '', exitCode: 0});
@@ -34,12 +35,29 @@ describe('names', () => {
 
 describe('createWorktree', () => {
   test('fetches the base, then adds the worktree on a new branch from it', () => {
-    const {run, calls} = fake({});
+    const {run, calls} = fake(NO_BRANCH);
     expect(createWorktree(run, O)).toEqual({ok: true, ticket: 'issue-9', branch: 'feat/issue-9', path: PATH, error: null});
     expect(calls).toEqual([
       `git fetch origin 'main'`,
+      `git rev-parse --verify --quiet 'refs/heads/feat/issue-9'`,
       `git worktree add -b 'feat/issue-9' '${PATH}' 'origin/main'`,
     ]);
+  });
+  test('a branch left by an earlier attempt is checked out, not created again', () => {
+    const {run, calls} = fake({});
+    expect(createWorktree(run, O)).toMatchObject({ok: true, error: null});
+    expect(calls.at(-1)).toBe(`git worktree add '${PATH}' 'feat/issue-9'`);
+  });
+  test("git's progress on stderr with a zero exit is a created worktree, not an error", () => {
+    const {run} = fake({...NO_BRANCH, 'worktree add': {stdout: '', stderr: "Preparing worktree (new branch 'feat/issue-9')", exitCode: 0}});
+    expect(createWorktree(run, O)).toEqual({ok: true, ticket: 'issue-9', branch: 'feat/issue-9', path: PATH, error: null});
+  });
+  test('a failure names the fatal line, not the progress line before it', () => {
+    const {run} = fake({
+      ...NO_BRANCH,
+      'worktree add': bad(`Preparing worktree (new branch 'feat/issue-9')\nfatal: '${PATH}' already exists`),
+    });
+    expect(createWorktree(run, O)).toMatchObject({ok: false, error: `fatal: '${PATH}' already exists`});
   });
   test('never runs a command that moves the main checkout', () => {
     const {run, calls} = fake({});
@@ -54,7 +72,7 @@ describe('createWorktree', () => {
     expect(calls).toHaveLength(1);
   });
   test('a branch that exists is reported', () => {
-    const {run} = fake({'worktree add': bad("fatal: a branch named 'feat/issue-9' already exists")});
+    const {run} = fake({...NO_BRANCH, 'worktree add': bad("fatal: a branch named 'feat/issue-9' already exists")});
     expect(createWorktree(run, O)).toMatchObject({ok: false, error: expect.stringContaining('already exists')});
   });
   test('an unusable ticket runs nothing', () => {

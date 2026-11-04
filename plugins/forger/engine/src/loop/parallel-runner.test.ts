@@ -157,4 +157,41 @@ describe('parallelism 2', () => {
     expect(t.captured).toContain(`git push origin --delete 'feat/tk_a'`);
     expect(existsSync(join(t.root, '.forger', 'worktrees'))).toBe(false);
   });
+
+  test('a worker whose prompt was not delivered halts on an infrastructure error and is not counted', async () => {
+    const t = setup(2, only('tk_a', 'tk_b'), async o =>
+      o.cwd.endsWith('tk_a') ? {...fail, inputError: 'the prompt could not be written: ENOSPC'} : slow()
+    );
+    await t.runner.run(2);
+    const state = JSON.parse(readFileSync(join(t.root, '.forger', 'state.json'), 'utf-8'));
+    expect(readFileSync(join(t.root, '.forger', 'HALT'), 'utf-8')).toContain('Infrastructure error (delivery)');
+    expect(state.status).toBe('halted');
+    // tk_b's own failure counts; tk_a's undelivered prompt does not.
+    expect(state.consecutive_failures).toBe(1);
+  });
+
+  test("git's progress on stderr from a worktree add that exits 0 is no error", async () => {
+    const capture = (cmd: string): CommandResult =>
+      cmd.includes('worktree add') ? {stdout: '', stderr: "Preparing worktree (new branch 'feat/tk_a')", exitCode: 0} : ok();
+    const t = setup(2, only('tk_a'), slow, () => '', capture);
+    await t.runner.run(1);
+    expect(t.calls).toHaveLength(1);
+    expect(readFileSync(join(t.root, '.forger', 'work.log'), 'utf-8')).not.toContain('[ERROR] worktree');
+  });
+
+  test('a worktree that cannot be made halts on an infrastructure error naming it, and is not counted', async () => {
+    const capture = (cmd: string): CommandResult =>
+      cmd.includes('worktree add')
+        ? {stdout: '', stderr: "Preparing worktree (new branch 'feat/tk_a')\nfatal: '/x' already exists", exitCode: 128}
+        : ok();
+    const t = setup(2, only('tk_a', 'tk_b'), slow, () => '', capture);
+    await t.runner.run(2);
+    const state = JSON.parse(readFileSync(join(t.root, '.forger', 'state.json'), 'utf-8'));
+    expect(t.calls).toHaveLength(0);
+    expect(state.status).toBe('halted');
+    expect(state.consecutive_failures).toBe(0);
+    expect(state.failed_iterations).toBe(0);
+    expect(state.last_error).toBe("Infrastructure error (worktree): worktree for tk_a: fatal: '/x' already exists");
+  });
 });
+
