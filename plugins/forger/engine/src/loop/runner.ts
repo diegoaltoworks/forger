@@ -21,6 +21,7 @@ import {type IterationContext, type Placement, closeOrphan, runIteration} from '
 import {conflictAfterAttempt, finishWorktree, folderMapFrom, inWorktree} from './parallel';
 import {createWorktree, worktreePath} from './worktree';
 import {pidAlive, RunnerLock} from './lock';
+import {criterionOptions, refuseUncheckable} from './ticket-check';
 import {eventLine, terminalEvent, type EventKind, type TerminalEventKind} from './events';
 import {appendSchedule} from './schedule-log';
 import {buildStatus, type StatusReport} from './status-report';
@@ -179,6 +180,17 @@ export class AutomationRunner {
         await this.sleep(wait);
       }
     }
+  }
+
+  /** Takes workable tickets whose criteria cannot be checked out of the queue before a pick. GitHub only: a local ticket has no text. */
+  async refuseUncheckable(): Promise<void> {
+    if (this.config.tracker.kind !== 'github') return;
+    const tickets = this.backlog.candidates().map(c => ({id: c.id, body: this.backlog.body(c.id)}));
+    const target = {trackerKind: this.config.tracker.kind, intakeLabel: this.config.tracker.label, backlogFile: join(this.projectRoot, this.config.paths.backlog)};
+    const {refused, errors} = refuseUncheckable(this.gitRunner, target, tickets, criterionOptions(this.projectRoot, this.config));
+    for (const r of refused) this.logger.log('WARN', `Refused ${r.ticket}: ${r.problems.join('; ')}`);
+    for (const e of errors) this.logger.log('ERROR', `Could not refuse ${e}`);
+    if (refused.length > 0) await this.refreshBacklog();
   }
 
   private emit(kind: EventKind, iteration: number, ticket: string | null, reason: string | null): void {
@@ -343,6 +355,7 @@ export class AutomationRunner {
         break;
       }
 
+      await this.refuseUncheckable();
       const remaining = this.getRemainingTasks();
 
       const currentState = this.store.load();
@@ -493,6 +506,7 @@ export class AutomationRunner {
           killTimer = setTimeout(() => abort.abort(), killGraceSeconds * 1000);
         }
       } else {
+        await this.refuseUncheckable();
         const state = this.store.load();
         const remaining = this.getRemainingTasks();
         if (remaining === 0 && running.size === 0) {

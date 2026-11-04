@@ -11,6 +11,7 @@ Pure:
   built the engine's pick, declined it, or took another ticket.
 - `decline.ts` - what a decline record must hold, and how a run of declines
   becomes a halt.
+- `criteria.ts` - whether an acceptance criterion is a named test, a command with its result, a sourced number or a named UI state, and the subjective words that fail it.
 - `claim.ts` - the worker's completion signal.
 - `infra.ts` - an infrastructure failure or a rate limit, told from a worker
   failure.
@@ -52,6 +53,7 @@ Touch the world (their own files, the terminal, the clock):
 - `iteration.ts` - one iteration and the close-out of one a dead engine left open.
 - `labels.ts` - the GitHub labels the loop relies on, declared once; creating the
   missing ones, and checking a decline's relabel from the issue's labels read back.
+- `ticket-check.ts` - refuses the workable tickets whose criteria cannot be checked, before a pick: they leave the backlog as `needs-info` with the failing criteria named.
 - `decline-io.ts` - the decline record file and the tracker calls that take a
   declined ticket out of the backlog, through the command port.
 - `state.ts`, `lock.ts`, `events.ts`, `schedule-log.ts`, `logger.ts` - the state

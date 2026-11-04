@@ -18,6 +18,7 @@ import {
 } from '../checks';
 import {findHarness, playwrightAuditor, shellAppServer} from '../adapters';
 import {loadConfig} from '../config';
+import {checkTicketCriteria, criterionOptions} from '../loop';
 import type {Harness} from '../ports';
 import {UiInfrastructureError} from '../ports';
 import type {Command} from './command';
@@ -50,6 +51,7 @@ export const check: Command = {
   check ui [--json] Fail when a branch changes UI files and updates no screenshot under docs/screenshots/, or a UI file holds a raw colour literal
   check a11y [--json] Serve the app and fail on serious or critical axe violations on every route, viewport and theme (exit 2 when Playwright, axe-core or the app is unavailable)
   check spec [--json] Fail when a requirement the issue names is unsatisfied or a MUST regresses; the slcr binary is the provider; none is a gap, not a pass
+  check ticket N [--json] Fail when an acceptance criterion of issue N is not a named test, a command with its result, a sourced number or a named UI state, or uses a subjective word
   check arch [--json] Fail on an import that crosses a forbidden edge of .forger/architecture.json
   check docs [--json] Fail on non-ASCII punctuation, emails, home paths, denylist terms`,
   async run(ctx) {
@@ -74,6 +76,30 @@ export const check: Command = {
         console.error((e as Error).message);
         process.exitCode = 1;
       }
+      return;
+    }
+    if (positionals[1] === 'ticket') {
+      const n = Number(positionals[2]);
+      if (!Number.isInteger(n) || n <= 0) {
+        console.error('check ticket: give the issue number, as in "check ticket 42"');
+        process.exitCode = 1;
+        return;
+      }
+      let body: string;
+      try {
+        body = ctx.run()(`gh issue view ${n} --json body --jq .body`);
+      } catch (e) {
+        console.error(`check ticket: could not read issue #${n}: ${(e as Error).message}`);
+        process.exitCode = 1;
+        return;
+      }
+      const result = checkTicketCriteria(body, criterionOptions(projectRoot, loadConfig(projectRoot)));
+      console.log(
+        values.json
+          ? JSON.stringify({issue: n, ok: result.ok, problems: result.problems, criteria: result.criteria})
+          : result.ok ? `#${n}: every acceptance criterion can be checked` : `#${n}: ${result.problems.length} problem(s)\n${result.problems.map(p => `- ${p}`).join('\n')}`
+      );
+      if (!result.ok) process.exitCode = 1;
       return;
     }
     if (positionals[1] === 'spec') {

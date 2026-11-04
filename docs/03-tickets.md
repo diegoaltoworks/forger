@@ -20,6 +20,29 @@ ticket is written to be implemented without guessing and without asking.
 - **Knock-on named.** The tests, fixtures, shared screens and documents the
   change reaches, found before coding, not one CI run at a time.
 
+## Criteria that can be checked
+
+A criterion nobody can check gets disputed by the verifier or blocks correct
+work. Each acceptance criterion takes one of four forms:
+
+| Form | Example |
+|---|---|
+| A named test that must pass | "`parse.test.ts` covers a blank line" |
+| A command with its expected exit code or output | "`bun run check` exits 0" |
+| A number with a unit and a source | "slope error within the `slope` row of the spike's thresholds table" |
+| A named UI state from `ui.json`, with its assertions or a screenshot | "the `empty` state shows the prompt" |
+
+A source is a spike's thresholds row, an ADR or a cited reference. A spike
+records its numbers in the thresholds table of its template (quantity, value,
+unit, tolerance, source), and build tickets cite its rows.
+
+Subjective words ("sharpens", "better", "nice", "looks right", "fast") fail a
+criterion; a project adds its own under `criteria.subjective_words` in the
+config. `check ticket <n>` reports the failing criteria. The engine runs the same
+check before a pick: a failing ticket swaps the intake label for `needs-info`,
+gets a comment naming the criteria, and is skipped. A supervisor runs it before
+filing, and the build tickets `auto-plan` writes must pass it.
+
 ## Sections
 
 Every issue body carries these sections. A section that does not apply says so

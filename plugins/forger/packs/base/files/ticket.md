@@ -14,8 +14,17 @@
 
 ## Acceptance
 
-- [ ] <a testable outcome>
+- [ ] <a testable outcome, in one of the four forms below>
 - [ ] <stored records from before carry forward unchanged, where a stored shape changes>
+
+Each criterion takes one of four forms, or the ticket is refused before a worker picks it (`check ticket <n>`):
+
+- a named test that must pass: "`parse.test.ts` covers a blank line";
+- a command with its expected exit code or output: "`bun run check` exits 0";
+- a number with a unit and a source: "slope error within the `slope` row of the spike's thresholds table";
+- a named UI state from `ui.json`, with its assertions or a screenshot.
+
+Words such as "better", "nice", "fast" and "looks right" fail the check; say what is measured instead.
 
 ## UI states
 

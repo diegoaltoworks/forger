@@ -67,7 +67,7 @@ shape. Good tickets:
 - name the **files** they touch and the **patterns** to reuse, as hints for a
   cold worker (read the code to fill these in; do not copy stale paths from
   the source);
-- have **testable** acceptance criteria;
+- have **testable** acceptance criteria, each a named test, a command with its expected result, a sourced number or a named UI state (`work.ts check ticket <n>` on the filed issue must pass; otherwise the engine skips it as `needs-info`);
 - carry `depends_on` so the order is mechanical;
 - name a `repo` if the work belongs to another codebase;
 - state whether they write to a datastore, with the safety argument if the repo

@@ -90,6 +90,8 @@ export interface WorkloopConfig {
    * trailing `*` matches a prefix, as in `wayfinder:*`.
    */
   tracker: {kind: 'github' | 'local' | 'none'; label: string; ignore: string[]};
+  /** What `check ticket` holds acceptance criteria to; `subjective_words` extends the built-in list. */
+  criteria: {subjective_words: string[]};
   /**
    * Where the machine-written loop files live (ADR 0015). `local` keeps them
    * beside the engine; `branch` keeps them on the `branch` of the remote and
@@ -140,6 +142,7 @@ export interface WorkloopConfigInput {
   limits?: Partial<WorkloopConfig['limits']>;
   paths?: Partial<WorkloopConfig['paths']>;
   tracker?: Partial<WorkloopConfig['tracker']>;
+  criteria?: Partial<WorkloopConfig['criteria']>;
   state?: Partial<WorkloopConfig['state']>;
   local_only?: string[];
   skills?: Record<string, SkillMapping>;
@@ -202,6 +205,7 @@ export const DEFAULT_CONFIG: WorkloopConfig = {
     verdicts: `${FORGER_DIR}/verdicts`,
   },
   tracker: {kind: 'github', label: 'ready-for-agent', ignore: []},
+  criteria: {subjective_words: []},
   state: {home: 'local', branch: 'forger-state'},
   local_only: [],
   skills: {},
@@ -255,6 +259,7 @@ export function mergeConfig(
     limits: {...base.limits, ...(user.limits ?? {})},
     paths: {...base.paths, ...(user.paths ?? {})},
     tracker: {...base.tracker, ...(user.tracker ?? {})},
+    criteria: {...base.criteria, ...(user.criteria ?? {})},
     skills: {...base.skills, ...(user.skills ?? {})},
     model_names: user.model_names ?? base.model_names,
   };

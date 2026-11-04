@@ -220,6 +220,8 @@ export interface Backlog {
   next(): string | null;
   /** The workable tickets in order with their declared footprints, for the parallel scheduler. */
   candidates(): Schedulable[];
+  /** The text of a workable ticket, when the tracker holds one. */
+  body(ticket: string): string | null;
   /** Direct dependencies by ticket. */
   graph(): Record<string, string[]>;
   tier(ticket: string | null): Tier;
@@ -241,6 +243,10 @@ export function backlogFrom(load: () => BacklogData | null, config: WorkloopConf
     workableCount: () => workableCount(data(), config),
     next: () => nextTaskName(data(), config),
     candidates: () => candidateTickets(data(), config),
+    body: ticket => {
+      const t = tickets(data())[ticket];
+      return isTicket(t) && typeof t.body === 'string' ? t.body : null;
+    },
     graph: () => dependencyGraph(data()),
     tier: ticket => tierFor(data(), config, ticket),
     isCompleted: ticket => isTicketCompleted(data(), ticket),
