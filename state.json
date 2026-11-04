@@ -111,7 +111,10 @@
       "ticket": "issue-198",
       "pid": null,
       "session_id": "70ea6b5d-8844-4966-a815-42bc57371e62",
-      "snapshot": null,
+      "snapshot": {
+        "baseSha": "",
+        "reflogLength": 1
+      },
       "started_at": "2026-11-04T22:45:31.946Z",
       "plan": {
         "stages": [
