@@ -81,6 +81,11 @@ const cases: Case[] = [
     ],
   },
   {name: 'tests_written no file', contract: 'tests_written', value: [{criterion: 'c1', test: 't'}, {criterion: 'c2', waived: 'x'}], problems: ['tests_written[0] has no file']},
+  {name: 'diagnosis not an object', contract: 'diagnosis', value: 'x', problems: ['diagnosis must be an object']},
+  {name: 'review finding with no file', contract: 'review_findings', value: [{severity: 'low', line: 1, summary: 's'}], problems: ['review_findings[0] has no file']},
+  {name: 'glossary not an array', contract: 'glossary_entries', value: {}, problems: ['glossary_entries must be an array']},
+  {name: 'tests_written not an array', contract: 'tests_written', value: 'x', problems: ['tests_written must be an array']},
+  {name: 'retro not an array', contract: 'retro_proposals', value: {}, problems: ['retro_proposals must be an array']},
   {name: 'diagnosis good', contract: 'diagnosis', value: {command: 'bun test', exit: 1, excerpt: 'fail', hypothesis: 'h', result: 'confirmed'}, problems: []},
   {
     name: 'diagnosis problems',

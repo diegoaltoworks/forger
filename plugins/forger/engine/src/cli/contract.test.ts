@@ -103,6 +103,42 @@ describe('contract, the loop-validated contracts', () => {
   });
 });
 
+describe('contract verdict', () => {
+  const gh: CommandRunner = cmd => (cmd.startsWith('gh issue view') ? JSON.stringify({body: '## Acceptance\n- [ ] one\n- [ ] two\n'}) : run(cmd));
+  async function verdict(file: string): Promise<{ok: boolean; problems: string[]}> {
+    const lines: string[] = [];
+    const spy = spyOn(console, 'log').mockImplementation((...a: unknown[]) => void lines.push(a.join(' ')));
+    try {
+      await main(['contract', '--slot', 'verify', '--file', file, '--issue', '7', '--json'], {run: gh});
+    } finally {
+      spy.mockRestore();
+    }
+    process.exitCode = 0;
+    return JSON.parse(lines.join('\n'));
+  }
+
+  test('holds a verdict to the ticket criteria through the loop validator', async () => {
+    const root = project();
+    process.chdir(root);
+    writeFileSync(join(root, 'v.json'), JSON.stringify([{criterion: 'c1', verdict: 'met', evidence: [{kind: 'command', ref: 'bun test'}]}]));
+    expect((await verdict('v.json')).problems).toEqual(['missing criterion c2: two']);
+    writeFileSync(join(root, 'v.json'), JSON.stringify({entries: [
+      {criterion: 'c1', verdict: 'met', evidence: [{kind: 'command', ref: 'bun test'}]},
+      {criterion: 'c2', verdict: 'met', evidence: [{kind: 'file', ref: 'nope.ts:3'}]},
+    ]}));
+    expect((await verdict('v.json')).ok).toBe(true);
+  });
+
+  test('rejects a verdict that is not a list and one that is not JSON', async () => {
+    const root = project();
+    process.chdir(root);
+    writeFileSync(join(root, 'v.json'), '{"x":1}');
+    expect((await verdict('v.json')).problems).toEqual(['a verdict is a list of {criterion, verdict, evidence}']);
+    writeFileSync(join(root, 'v.json'), '{');
+    expect((await verdict('v.json')).problems[0]).toContain('not valid JSON');
+  });
+});
+
 describe('contract, bad input', () => {
   test('an unknown slot, a missing file and a missing flag exit 1', async () => {
     const root = project();
