@@ -267,6 +267,19 @@ describe('AutomationRunner outcome from facts', () => {
     expect(readState(root).completed_tasks).toEqual(['the_ticket']);
   });
 
+  test('a stop claim on a run whose PR merged does not halt; the facts win', async () => {
+    const {runner, root} = runnerWith(
+      {exitCode: 0, signal: null, output: 'waiting on verify\n<process>stop</process>\nnot merged yet', timedOut: false},
+      {merge: true, branch: 'feat/the_ticket', prCheck: 'SUCCESS'},
+      done
+    );
+    expect(await runner.runIteration(1)).toBe(true);
+    const state = readState(root);
+    expect(state.status).toBe('completed');
+    expect(state.completed_tasks).toEqual(['the_ticket']);
+    expect(existsSync(join(root, '.forger', 'HALT'))).toBe(false);
+  });
+
   test('a merge with no verdict for its head halts as unverified and never counts as completed', async () => {
     const {runner, root} = runnerWith(
       {exitCode: 0, signal: null, output: '<process>complete</process>', timedOut: false},

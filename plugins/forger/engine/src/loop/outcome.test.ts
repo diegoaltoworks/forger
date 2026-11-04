@@ -107,10 +107,12 @@ describe('decideOutcome', () => {
     expect(o.warning).toBeNull();
   });
 
-  test('merged then stop is a success that also halts', () => {
+  test('merged with a stop claim is a success that does not halt, and the contradiction is logged', () => {
     const o = decideOutcome({...nothing, merged: true, claim: 'stop', stopReason: 'needs a key'});
     expect(o.result).toBe('success');
-    expect(o.halt).toBe('needs a key');
+    expect(o.status).toBe('completed');
+    expect(o.halt).toBeNull();
+    expect(o.warning).toBe('claimed stop but merged into main: needs a key');
   });
 
   test('stop without a merge halts and counts neither way', () => {
