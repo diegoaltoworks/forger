@@ -76,6 +76,20 @@ recovered, and where the lasting fix belongs: **E** the engine, **S** a skill
   head is `unverified` and halts the same way. S: read a gate's exit status, not the tail of
   its output, and run the gates again after the last edit.
 
+### A worker merges its own PR by hand
+
+- **Seen:** on several demo repositories, workers merged their own PRs with the
+  CLI, despite a prompt that told them to merge only through the merge tool.
+  Branch protection and the engine's `unverified` halt caught each one, but only
+  after the code was on the base branch.
+- **Cause:** the boundary was prompt text; nothing refused the call.
+- **Fix:** E: the harness hook refuses a hand merge (the CLI's merge, and the
+  merge endpoint through `gh api` or curl), a push to the base branch or a forced
+  push, a status or check-run write, and an edit of the engine's state, before
+  the call runs. Each refusal is a `worker_denied` event, so the supervisor sees
+  it while the run goes on, and `check hooks` fails a project whose hook is
+  missing or whose policy drops a default rule without a waiver.
+
 ### Adopting new work looks like a stall
 
 - **Seen:** a run finished one ticket and adopted one new issue; the remaining

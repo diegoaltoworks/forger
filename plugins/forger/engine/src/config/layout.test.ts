@@ -76,7 +76,9 @@ describe('the folder name has one owner', () => {
       for (const name of readdirSync(dir)) {
         const path = join(dir, name);
         if (statSync(path).isDirectory()) walk(path);
-        else if (name.endsWith('.ts') && !name.endsWith('.test.ts') && !path.endsWith('config/layout.ts') && readFileSync(path, 'utf-8').includes('.claude/')) offenders.push(path);
+        else if (name.endsWith('.ts') && !name.endsWith('.test.ts') && !path.endsWith('config/layout.ts') &&
+          // The claude harness's own settings folder shares the legacy name.
+          !path.endsWith('adapters/claude-hooks.ts') && readFileSync(path, 'utf-8').includes('.claude/')) offenders.push(path);
       }
     };
     walk(src);

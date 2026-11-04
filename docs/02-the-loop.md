@@ -146,6 +146,45 @@ red or unfinished checks is never a success: the worker merges through
 `merge --pr <n>`, which waits for CI and refuses red, and a merge that got past
 it halts the loop.
 
+## The hook layer
+
+Three layers hold a worker to its boundaries, earliest first: a harness hook
+refuses the call before it runs, the engine reads the facts after the run, and
+GitHub's branch protection refuses a merge without the `forger/verify` status.
+The hook is the one that stops a mistake before it lands.
+
+`setup` installs `work hook` as a PreToolUse hook in the harness's project
+settings (`.claude/settings.json` for the default harness, which every worktree
+checks out with the code). The engine names the worker's role, ticket and iteration in
+the worker's environment; the hook reads them and judges each shell and edit
+call against `.forger/hooks.json`. The decision is a pure function of the
+policy and the call, and it reads through chains (`&&`, `;`, pipes), wrappers
+(`env`, `sudo`, `bash -c`, `eval`) and subshells. The default rules:
+
+- `merge`: `gh pr merge`, and the merge endpoint or mutation reached through
+  `gh api` or curl. The worker merges only through `work merge --pr <n>`.
+- `push-base`: a push to the base branch (`HEAD:main`, `--delete main`,
+  `--all`, `--mirror`, a bare push while on it) and a forced push (`-f`,
+  `--force`, a `+` refspec). `--force-with-lease` to the worker's own branch is
+  allowed, since a rebased branch needs it.
+- `status-write`: writing commit statuses or check runs, so only the engine sets
+  `forger/verify`.
+- `state-edit`: editing or removing the engine's state under `.forger/` (state,
+  events, verdicts, HALT, lock, lease), by an editor tool or a shell write.
+
+A refusal tells the worker what to do instead, and is appended to the event
+file as `worker_denied`, with the ticket, the rule and the refused command. A
+project adds rules of its own in `deny` (an id, a regular expression over each
+simple command, and the message). The defaults ship on: a policy may drop one,
+but `check hooks` fails until a waiver on `base.worker-hooks` records who
+approved it, and it fails too when the harness's settings do not run the hook.
+
+The same hook guards the supervisor: a call made without the worker role,
+while an engine holds the lock, may not run a state-changing git command
+(`checkout`, `switch`, `reset`, `stash`, `pull`, `merge`, `commit`, `rebase`
+and the like) in the loop's checkout. Read-only git, and a worktree's own
+checkout, are allowed.
+
 ## Verifying a PR
 
 `verify --pr <n> --json` runs an independent check of a PR against its ticket

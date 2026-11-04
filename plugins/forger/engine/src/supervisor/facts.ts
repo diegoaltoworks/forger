@@ -84,12 +84,3 @@ export function formatFacts(f: LoopFacts): string {
   if (f.pr) lines.push(describePr(f.pr));
   return lines.join('\n');
 }
-
-/**
- * State-changing git commands a supervisor must never issue while a runner is
- * alive. Returns the offending lines of a prompt/doc body.
- */
-const MUTATING = /\bgit\s+(checkout|switch|reset|stash|pull|commit|merge|rebase|restore|clean|cherry-pick|revert|am|apply)\b/;
-export function mutatingGitLines(text: string): string[] {
-  return text.split('\n').filter(l => MUTATING.test(l));
-}

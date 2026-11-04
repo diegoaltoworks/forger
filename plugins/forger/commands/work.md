@@ -59,6 +59,10 @@ or match a process name.
 - `work await-event --seen <n>` blocks until one past that arrives, prints it,
   and exits 2 on its timeout. Run it in the background; it reads a file, so
   there is no command-line pattern for it to match.
+- A `worker_denied` event is mid-run, not terminal: the worker's hook refused a
+  call (its `reason` names the rule and the command) and the run goes on.
+  Report it and keep watching; repeated denials on one ticket mean the ticket
+  needs restating.
 
 On each event, and on each tick, verify from facts: `work facts --json` gives
 the checkout's branch, whether it is clean, the base head on `origin`, and with
@@ -97,7 +101,8 @@ that touches production.
 - Read-only on the loop's checkout. While an engine is alive, never check out,
   switch, reset, stash, pull, merge or commit in its working tree, not even to
   repair a stray state; a changed HEAD can move the worker off its branch. Read
-  `work facts --json` instead.
+  `work facts --json` instead. The hook `setup` installs refuses those commands
+  while an engine holds the lock.
 - Supervise; never implement. The workers do the tickets.
 - One engine at a time; the lock enforces it, `work orient` reports it.
 - Never clear a HALT without the owner deciding to.

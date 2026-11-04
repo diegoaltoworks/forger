@@ -20,6 +20,8 @@ export interface SetupOptions {
   packs?: string[];
   /** The harness the worker runs in; its commands are installed where it reads them. */
   harness?: Harness;
+  /** The harness whose settings get forger's tool-call hook, for workers and the supervisor alike. */
+  hookHarness?: Harness;
 }
 
 export interface SetupEntry {
@@ -91,6 +93,18 @@ function installCommands(projectRoot: string, pluginRoot: string, harness: Harne
   });
 }
 
+/** The harness's hook settings with forger's hook added; a settings file that already runs it is kept. */
+function installHook(projectRoot: string, pluginRoot: string, harness: Harness): SetupEntry[] {
+  if (!harness.hooks) return [];
+  const target = join(projectRoot, harness.hooks.path);
+  const existing = existsSync(target) ? readFileSync(target, 'utf-8') : null;
+  const text = harness.hooks.install(existing, `bun ${join(pluginRoot, 'bin', 'work.ts')} hook`);
+  if (text === existing) return [{path: harness.hooks.path, action: 'kept'}];
+  mkdirSync(dirname(target), {recursive: true});
+  writeFileSync(target, text);
+  return [{path: harness.hooks.path, action: 'written'}];
+}
+
 export function runSetup(projectRoot: string, pluginRoot: string, opts: SetupOptions): SetupResult {
   const templates = join(pluginRoot, 'templates');
   const read = (name: string) => readFileSync(join(templates, name), 'utf-8');
@@ -130,6 +144,8 @@ export function runSetup(projectRoot: string, pluginRoot: string, opts: SetupOpt
   files.push({path: LOCK_PATH, action: lockChanged ? 'written' : 'kept'});
 
   if (opts.harness) files.push(...installCommands(projectRoot, pluginRoot, opts.harness));
+  const hookHarness = opts.hookHarness ?? opts.harness;
+  if (hookHarness) files.push(...installHook(projectRoot, pluginRoot, hookHarness));
 
   const ignorePath = join(projectRoot, '.gitignore');
   const merged = mergeGitignore(existsSync(ignorePath) ? readFileSync(ignorePath, 'utf-8') : '', gitignoreLines(detectLayout(projectRoot).dir));

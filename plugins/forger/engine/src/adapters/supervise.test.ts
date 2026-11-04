@@ -63,6 +63,11 @@ describe('runSupervised', () => {
     expect(r.output).toBe('hello\ndone\n');
   });
 
+  test('adds the given variables to the inherited environment', async () => {
+    const r = await runSupervised({command: 'bash', args: ['-c', 'echo "$FORGER_ROLE:${PATH:+path}"'], cwd: tmp(), env: {FORGER_ROLE: 'worker'}, input: '', timeoutMs: 5000, graceMs: 500});
+    expect(r.output.trim()).toBe('worker:path');
+  });
+
   test('ends a worker that ignores SIGTERM and its grandchild, and resolves', async () => {
     const dir = tmp();
     const pidFile = join(dir, 'grandchild.pid');

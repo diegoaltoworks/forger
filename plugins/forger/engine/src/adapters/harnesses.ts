@@ -26,6 +26,7 @@ export function agentFor(harness: Harness): AgentRunner {
         command: spec.command,
         args: spec.args,
         cwd: opts.cwd,
+        env: opts.env,
         input: spec.input ?? '',
         timeoutMs: opts.timeoutMinutes * 60 * 1000,
         graceMs: opts.killGraceSeconds * 1000,

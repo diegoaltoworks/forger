@@ -30,7 +30,15 @@ export const RECORDED_EVENTS = ['picked', 'approval_asked', 'halt_cleared', 'lea
 
 export type RecordedEventKind = (typeof RECORDED_EVENTS)[number];
 
-export type EventKind = TerminalEventKind | RecordedEventKind;
+/**
+ * Mid-run facts a watcher wakes on while the run continues: a worker's call
+ * the hook refused. `reason` carries the rule and the refused command.
+ */
+export const MIDRUN_EVENTS = ['worker_denied'] as const;
+
+export type MidrunEventKind = (typeof MIDRUN_EVENTS)[number];
+
+export type EventKind = TerminalEventKind | RecordedEventKind | MidrunEventKind;
 
 export interface TerminalEvent {
   event: EventKind;
@@ -62,9 +70,14 @@ export function parseEvents(text: string): TerminalEvent[] {
   return parseKinds(text, TERMINAL_EVENTS);
 }
 
-/** Every line the file holds: terminal and recorded events alike. */
+/** Every line the file holds: terminal, recorded and mid-run events alike. */
 export function parseAllEvents(text: string): TerminalEvent[] {
-  return parseKinds(text, [...TERMINAL_EVENTS, ...RECORDED_EVENTS]);
+  return parseKinds(text, [...TERMINAL_EVENTS, ...RECORDED_EVENTS, ...MIDRUN_EVENTS]);
+}
+
+/** What a watcher wakes on: terminal events and mid-run ones, in file order. */
+export function parseWatchedEvents(text: string): TerminalEvent[] {
+  return parseKinds(text, [...TERMINAL_EVENTS, ...MIDRUN_EVENTS]);
 }
 
 function parseKinds(text: string, kinds: readonly string[]): TerminalEvent[] {
@@ -91,18 +104,18 @@ export function readAllEvents(file: string): TerminalEvent[] {
 
 /**
  * Resolve with the first event past `seen`, or null at the deadline. It reads
- * the event file, so there is no process pattern to match and nothing that can
- * match the watcher itself.
+ * the events, so there is no process pattern to match and nothing that can
+ * match the watcher itself. `events` is a file of terminal events, or a reader.
  */
 export async function awaitEvent(
-  file: string,
+  events: string | (() => TerminalEvent[]),
   seen: number,
   timeoutMs: number,
   sleep: (ms: number) => Promise<void> = ms => new Promise(r => setTimeout(r, ms)),
   pollMs = 1000
 ): Promise<TerminalEvent | null> {
   for (let waited = 0; waited <= timeoutMs; waited += pollMs) {
-    const next = readEvents(file)[seen];
+    const next = (typeof events === 'string' ? readEvents(events) : events())[seen];
     if (next) return next;
     await sleep(pollMs);
   }

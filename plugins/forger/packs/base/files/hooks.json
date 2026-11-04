@@ -1,0 +1,9 @@
+{
+  "rules": [
+    "merge",
+    "push-base",
+    "status-write",
+    "state-edit"
+  ],
+  "deny": []
+}

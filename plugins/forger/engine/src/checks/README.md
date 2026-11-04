@@ -13,7 +13,7 @@ reads the tree and hands it to them.
 - `files.ts` - the files a check scans: tracked, and untracked but not ignored,
   so the local gates see a new file before it is committed.
 - `ci.ts` - the CI job summary and the workflow the loop's CI runs. Pure.
-- `docs/`, `arch/`, `decisions/`, `safety/`, `spec/`, `testing/`, `ui/` - one check each; see
+- `docs/`, `arch/`, `decisions/`, `hooks/`, `safety/`, `spec/`, `testing/`, `ui/` - one check each; see
   their READMEs.
 
 ## Entry point
@@ -23,4 +23,4 @@ import `../waivers` and `../files` directly; every other folder goes through `in
 
 ## May import
 
-The core: `config`, `packs`, `ports`, `ui`.
+The core: `config`, `hooks`, `packs`, `ports`, `ui`.

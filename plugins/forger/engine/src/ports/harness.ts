@@ -28,4 +28,15 @@ export interface Harness {
   pluginRootVar: string;
   /** The source command text in this harness's format; `name` is the command's file name without extension. */
   packageCommand(source: string, pluginRoot: string, name?: string): string;
+  /** Where the harness reads a project's tool-call hooks, or null when it has none forger can install into. */
+  hooks: HarnessHooks | null;
+}
+
+export interface HarnessHooks {
+  /** The settings file, relative to the project. */
+  path: string;
+  /** Whether the settings text already runs forger's hook. */
+  installed(settings: string | null): boolean;
+  /** The settings with forger's hook command added; text that already runs it comes back unchanged. */
+  install(settings: string | null, command: string): string;
 }

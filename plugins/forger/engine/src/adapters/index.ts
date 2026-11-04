@@ -15,3 +15,4 @@ export * from './svg-raster';
 export * from './git-state-store';
 export * from './local-state-store';
 export * from './memory-state-store';
+export * from './claude-hooks';

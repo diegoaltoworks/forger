@@ -3,7 +3,8 @@ import {existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, 
 import {tmpdir} from 'os';
 import {join} from 'path';
 
-import {execRunner, gitStateStore} from '../adapters';
+import {claudeHooks, execRunner, gitStateStore} from '../adapters';
+import {renderHookPolicy} from '../hooks';
 import {main} from './main';
 import type {CommandRunner} from '../ports';
 
@@ -255,6 +256,9 @@ describe('check', () => {
   function installed(): string {
     const root = projectWith({});
     writeFileSync(join(root, '.forger', 'forger.lock.json'), JSON.stringify({packs: [{id: 'base', version: '1.1.0', files: []}]}));
+    writeFileSync(join(root, '.forger', 'hooks.json'), renderHookPolicy());
+    mkdirSync(join(root, '.claude'), {recursive: true});
+    writeFileSync(join(root, '.claude', 'settings.json'), claudeHooks.install(null, 'bun /p/bin/work.ts hook'));
     writeFileSync(join(root, 'a.md'), 'clean');
     process.chdir(root);
     return root;
@@ -266,7 +270,10 @@ describe('check', () => {
     expect(report).toEqual({
       ok: true,
       gaps: [],
-      results: [{check: 'docs', opinions: ['base.ascii-punctuation', 'base.nothing-personal', 'base.no-hard-coded-skills', 'base.model-agnostic', 'base.merge-through-tool'], status: 'passed', violations: [], waived: [], gaps: []}],
+      results: [
+        {check: 'docs', opinions: ['base.ascii-punctuation', 'base.nothing-personal', 'base.no-hard-coded-skills', 'base.model-agnostic', 'base.merge-through-tool'], status: 'passed', violations: [], waived: [], gaps: []},
+        {check: 'hooks', opinions: ['base.worker-hooks'], status: 'passed', violations: [], waived: [], gaps: []},
+      ],
       waivers: [],
       staleWaivers: [],
     });
@@ -335,6 +342,24 @@ describe('setup --json', () => {
     expect(config.tracker.kind).toBe('local');
     const second = JSON.parse(await capture(['setup', '--json']));
     expect(second.files.map((f: {action: string}) => f.action)).not.toContain('written');
+  });
+
+  test('installs the hook policy and the hook into the harness settings, keeping the settings already there', async () => {
+    const root = realpathSync(mkdtempSync(join(tmpdir(), 'forger-cli-setup-')));
+    dirs.push(root);
+    mkdirSync(join(root, '.claude'));
+    writeFileSync(join(root, '.claude', 'settings.json'), JSON.stringify({permissions: {allow: ['Bash(ls)']}}));
+    process.chdir(root);
+    const first = JSON.parse(await capture(['setup', '--json', '--tracker', 'local']));
+    expect(first.files).toContainEqual({path: '.claude/settings.json', action: 'written'});
+    expect(first.files).toContainEqual({path: '.forger/hooks.json', action: 'written'});
+    const settings = readFileSync(join(root, '.claude', 'settings.json'), 'utf-8');
+    expect(JSON.parse(settings).permissions).toEqual({allow: ['Bash(ls)']});
+    expect(JSON.parse(settings).hooks.PreToolUse[0].hooks[0].command).toMatch(/bin\/work\.ts hook$/);
+    expect(JSON.parse(readFileSync(join(root, '.forger', 'hooks.json'), 'utf-8')).rules).toEqual(['merge', 'push-base', 'status-write', 'state-edit']);
+    const second = JSON.parse(await capture(['setup', '--json']));
+    expect(second.files).toContainEqual({path: '.claude/settings.json', action: 'kept'});
+    expect(readFileSync(join(root, '.claude', 'settings.json'), 'utf-8')).toBe(settings);
   });
 });
 

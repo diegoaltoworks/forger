@@ -25,6 +25,7 @@ import type {PrFact} from './pr-checks';
 import type {Decision} from './verdict';
 import {decisionForHead, readVerdicts} from './verdict-store';
 import {buildPrompt} from './prompt';
+import {workerEnv} from './worker-env';
 import {gatherFacts, takeSnapshot, ticketFromBranch} from './run-facts';
 import {type InFlightRun, endRun, type LoopStore, stallUpdate, startRun, updateRun} from './state';
 
@@ -121,6 +122,7 @@ export async function runIteration(
     model: resolveModel(tier.model, ctx.config.models),
     workerCommand: ctx.config.worker_command,
     cwd: root,
+    env: workerEnv(attemptedTask, iteration),
     timeoutMinutes,
     killGraceSeconds,
     abort: placement?.abort,
