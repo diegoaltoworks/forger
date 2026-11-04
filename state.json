@@ -3,8 +3,8 @@
   "status": "running",
   "last_completed_at": "2026-11-04T06:16:03.883Z",
   "completed_iterations": 86,
-  "failed_iterations": 1,
-  "consecutive_failures": 1,
+  "failed_iterations": 2,
+  "consecutive_failures": 2,
   "completed_tasks": [
     "engine_timeout_kills_group",
     "engine_outcome_from_facts",
@@ -105,7 +105,7 @@
       "started_at": "2026-11-04T06:16:19.510Z"
     }
   ],
-  "last_error": "Nothing merged or pushed, exit code 1",
+  "last_error": "worktree for issue-156: Preparing worktree (new branch 'feat/issue-156')",
   "stall_count": 1,
   "declined_tasks": [
     {
