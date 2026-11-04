@@ -110,7 +110,10 @@
       "ticket": "issue-196",
       "pid": null,
       "session_id": "670e6802-decf-4baf-84c7-cb79a1669016",
-      "snapshot": null,
+      "snapshot": {
+        "baseSha": "",
+        "reflogLength": 1
+      },
       "started_at": "2026-11-04T08:17:59.864Z"
     }
   ],
