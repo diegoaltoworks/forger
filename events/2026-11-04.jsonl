@@ -5,3 +5,4 @@
 {"event":"picked","at":"2026-11-04T06:07:33.877Z","iteration":92,"ticket":"issue-154","reason":null}
 {"event":"picked","at":"2026-11-04T06:16:14.446Z","iteration":93,"ticket":"issue-156","reason":null}
 {"event":"picked","at":"2026-11-04T06:16:23.560Z","iteration":94,"ticket":"issue-155","reason":null}
+{"event":"too_many_failures","at":"2026-11-04T06:17:25.009Z","iteration":94,"ticket":"issue-155","reason":"Too many consecutive failures (3)"}
