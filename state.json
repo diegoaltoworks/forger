@@ -108,7 +108,7 @@
       "started_at": "2026-11-04T07:05:45.826Z"
     },
     {
-      "ticket": null,
+      "ticket": "issue-155",
       "pid": null,
       "session_id": "37f9ec72-3400-4ee3-abf2-5f5c04563935",
       "snapshot": null,
