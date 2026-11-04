@@ -37,6 +37,7 @@ export const verify: Command = {
         timeoutMinutes: config.limits.timeoutMinutes,
         killGraceSeconds: config.limits.killGraceSeconds,
         sessionId: randomUUID(),
+        runLogged: `bun ${join(ctx.pluginRoot, 'bin', 'work.ts')} run-logged`,
         capture: ctx.capture(),
         specReport: dir => slcrProvider({projectRoot: dir, baseBranch: config.base_branch}).report('head'),
       });

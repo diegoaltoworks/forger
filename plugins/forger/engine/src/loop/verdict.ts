@@ -9,6 +9,10 @@ export type Judgement = 'met' | 'not_met' | 'cannot_tell';
 export type Decision = 'pass' | 'block' | 'unclear';
 export type EvidenceKind = 'file' | 'command' | 'test' | 'check' | 'screenshot';
 
+/** What a `cannot_tell` lacked: the owner acts on this, so it is a fixed list and not prose. */
+export const MISSING = ['no_state', 'no_test', 'no_data', 'infra', 'ambiguous_criterion'] as const;
+export type Missing = (typeof MISSING)[number];
+
 export interface Evidence {
   kind: EvidenceKind;
   /** A file with line, a command, a test name, or (kind screenshot) a path under docs/screenshots/. */
@@ -26,6 +30,8 @@ export interface VerdictEntry {
   criterion: string;
   verdict: Judgement;
   evidence: Evidence[];
+  /** Required on `cannot_tell`: the capability the verifier lacked. */
+  missing?: Missing;
 }
 
 export interface CheckedEntry extends VerdictEntry {
@@ -86,6 +92,9 @@ export function parseUiStates(body: string): Criterion[] {
   return texts.map((text, i) => ({id: `u${i + 1}`, text, ui: true}));
 }
 
+/** What `demoted` starts with when a `met` fell because its evidence did not check out; the cue for a second round. */
+export const EVIDENCE_DEMOTION = 'evidence does not check out: ';
+
 const JUDGEMENTS: readonly Judgement[] = ['met', 'not_met', 'cannot_tell'];
 
 /** Hold a verdict to the ticket's criteria. `resolves` says whether one piece of evidence points at something real. */
@@ -126,21 +135,40 @@ export function checkVerdict(
 }
 
 function settle(entry: VerdictEntry, ui: boolean, resolves: (e: Evidence) => boolean, problems: string[]): CheckedEntry {
-  if (entry.verdict === 'cannot_tell') return {...entry};
+  if (entry.verdict === 'cannot_tell') {
+    if (!MISSING.includes(entry.missing as Missing)) {
+      problems.push(`criterion ${entry.criterion} is cannot_tell without "missing", one of ${MISSING.join(', ')}`);
+    }
+    return {...entry};
+  }
   const evidence = entry.evidence ?? [];
   if (evidence.length === 0) {
     problems.push(`criterion ${entry.criterion} is ${entry.verdict} without evidence`);
     return {...entry};
   }
   if (ui && entry.verdict === 'met' && !evidence.some(e => e.kind === 'screenshot' && resolves(e))) {
-    return {...entry, verdict: 'cannot_tell', demoted: 'no screenshot shows this state'};
+    return {...entry, verdict: 'cannot_tell', missing: 'no_state', demoted: 'no screenshot shows this state'};
+  }
+  if (entry.verdict === 'met') {
+    const failed = evidence.filter(e => !resolves(e));
+    if (failed.length === 0) return {...entry};
+    return {
+      ...entry,
+      verdict: 'cannot_tell',
+      missing: missingFor(failed),
+      demoted: `${EVIDENCE_DEMOTION}${failed.map(e => `${e.kind} ${(e.ref ?? '').trim()}`.trim()).join('; ')}`,
+    };
   }
   if (evidence.some(e => resolves(e))) return {...entry};
-  if (entry.verdict === 'met') {
-    return {...entry, verdict: 'cannot_tell', demoted: 'no evidence reference resolves'};
-  }
   problems.push(`criterion ${entry.criterion} is not_met but no evidence reference resolves`);
   return {...entry};
+}
+
+/** The capability a failed citation points at: a test that did not run, a state not shown, else data. */
+function missingFor(failed: Evidence[]): Missing {
+  if (failed.some(e => e.kind === 'test')) return 'no_test';
+  if (failed.some(e => e.kind === 'screenshot')) return 'no_state';
+  return 'no_data';
 }
 
 /** `block` if any criterion is not met, else `unclear` if any could not be told, else `pass`. */

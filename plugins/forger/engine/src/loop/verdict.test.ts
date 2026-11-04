@@ -1,6 +1,6 @@
 import {describe, expect, test} from 'bun:test';
 
-import {checkVerdict, parseCriteria, parseUiStates, reduceVerdict, type Criterion, type Evidence, type VerdictEntry} from './verdict';
+import {checkVerdict, EVIDENCE_DEMOTION, MISSING, parseCriteria, parseUiStates, reduceVerdict, type Criterion, type Evidence, type VerdictEntry} from './verdict';
 
 const criteria: Criterion[] = [
   {id: 'c1', text: 'one'},
@@ -13,6 +13,7 @@ const e = (criterion: string, verdict: VerdictEntry['verdict'], evidence: Eviden
   criterion,
   verdict,
   evidence,
+  ...(verdict === 'cannot_tell' ? {missing: 'no_test' as const} : {}),
 });
 
 describe('parseCriteria', () => {
@@ -78,8 +79,23 @@ describe('checkVerdict and reduceVerdict', () => {
     expect(run([e('c1', 'not_met', [bad]), e('c2', 'met')]).problems.join()).toContain('no evidence reference resolves');
   });
 
-  test('one resolvable reference is enough', () => {
-    expect(run([e('c1', 'met', [bad, good]), e('c2', 'met')]).entries[0].verdict).toBe('met');
+  test('a met with any unresolved citation is cannot_tell, naming it and what was missing', () => {
+    const c = run([e('c1', 'met', [bad, good]), e('c2', 'met')]).entries[0];
+    expect(c.verdict).toBe('cannot_tell');
+    expect(c.missing).toBe('no_data');
+    expect(c.demoted).toBe(`${EVIDENCE_DEMOTION}file ghost.ts:1`);
+    expect(run([e('c1', 'met', [{kind: 'test', ref: 'absent'}]), e('c2', 'met')]).entries[0].missing).toBe('no_test');
+  });
+
+  test('a not_met needs only one resolvable reference', () => {
+    expect(run([e('c1', 'not_met', [bad, good]), e('c2', 'met')]).entries[0].verdict).toBe('not_met');
+  });
+
+  test('a cannot_tell without a valid missing is rejected', () => {
+    const none = {criterion: 'c1', verdict: 'cannot_tell' as const, evidence: []};
+    expect(run([none, e('c2', 'met')]).problems[0]).toContain('without "missing"');
+    expect(run([{...none, missing: 'because' as never}, e('c2', 'met')]).problems.length).toBe(1);
+    for (const m of MISSING) expect(run([{...none, missing: m}, e('c2', 'met')]).problems).toEqual([]);
   });
 
   test('one not met blocks, even beside a cannot_tell', () => {

@@ -23,6 +23,8 @@ export * from './schedule-log';
 export * from './state';
 export * from './status-report';
 export * from './mechanical';
+export * from './evidence-check';
+export * from './run-logged';
 export * from './verdict';
 export * from './verdict-store';
 export * from './verify';

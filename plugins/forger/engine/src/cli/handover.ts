@@ -1,6 +1,6 @@
 import {join} from 'path';
 
-import {handedOver, handOver, issueNumber, nextMove, parseCriteria, readAllVerdicts, readVerdicts} from '../loop';
+import {handedOver, handOver, issueNumber, nextMove, openLabel, parseCriteria, readAllVerdicts, readVerdicts} from '../loop';
 import type {Command} from './command';
 
 export const handover: Command = {
@@ -24,7 +24,7 @@ export const handover: Command = {
           ? JSON.stringify(list)
           : list.length === 0
             ? 'No tickets handed over.'
-            : list.map(h => `${h.ticket} (PR #${h.pr}, ${h.rounds} rounds): ${h.open.map(o => `${o.criterion} ${o.verdict}`).join(', ')}`).join('\n')
+            : list.map(h => `${h.ticket} (PR #${h.pr}, ${h.rounds} rounds): ${h.open.map(openLabel).join(', ')}`).join('\n')
       );
       return;
     }

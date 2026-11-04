@@ -1,7 +1,7 @@
 import {describe, expect, test} from 'bun:test';
 
 import type {CommandRunner} from '../ports';
-import {handedOver, handoverComment, nextMove, repeatedCannotTell} from './handover';
+import {handedOver, handoverComment, nextMove, openLabel, repeatedCannotTell} from './handover';
 import {handOver, handoverCommands} from './handover-io';
 import type {Judgement} from './verdict';
 import type {VerdictRecord} from './verify-input';
@@ -97,5 +97,24 @@ describe('handing over', () => {
 
   test('a non-issue ticket cannot be handed over', () => {
     expect(() => handOver(() => '', {...h, ticket: 'local-1'}, texts, 'x')).toThrow(/not an issue/);
+  });
+});
+
+describe('the missing capability', () => {
+  const recMissing = (missing?: 'no_test'): VerdictRecord => ({
+    pr: 3, head: 'h', ticket: 'issue-3', verifier: 'v', decision: 'unclear', problems: [], at: '2026-01-01T00:00:00Z',
+    entries: [{criterion: 'c1', verdict: 'cannot_tell', evidence: [], ...(missing ? {missing} : {})}, {criterion: 'c2', verdict: 'not_met', evidence: []}],
+  });
+
+  test('an open cannot_tell carries it into the move, the label and the comment', () => {
+    const move = nextMove([recMissing('no_test')], 1);
+    if (move.move !== 'hand_over') throw new Error('expected a hand-over');
+    expect(move.open.map(openLabel)).toEqual(['c1 cannot_tell (missing: no_test)', 'c2 not_met']);
+    const h = handedOver([recMissing('no_test')], 1)[0];
+    expect(handoverComment(h, {c1: 'one', c2: 'two'})).toContain('- c1 (cannot_tell, missing no_test): one');
+  });
+
+  test('a record from before it was required still reads', () => {
+    expect(handedOver([recMissing()], 1)[0].open[0]).toEqual({criterion: 'c1', verdict: 'cannot_tell'});
   });
 });

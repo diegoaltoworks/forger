@@ -4,6 +4,7 @@
  * the tracker calls live in handover-io.ts.
  */
 
+import type {Missing} from './verdict';
 import type {VerdictRecord} from './verify-input';
 
 export type VerifyMove =
@@ -14,6 +15,13 @@ export type VerifyMove =
 export interface OpenCriterion {
   criterion: string;
   verdict: 'not_met' | 'cannot_tell';
+  /** What a cannot_tell lacked; absent on a not_met and on records from before it was required. */
+  missing?: Missing;
+}
+
+/** One open criterion as the owner reads it: the id, the verdict and, for a cannot_tell, what was missing. */
+export function openLabel(o: OpenCriterion): string {
+  return `${o.criterion} ${o.verdict}${o.missing ? ` (missing: ${o.missing})` : ''}`;
 }
 
 /** Records in the order they were made. */
@@ -24,7 +32,7 @@ function inOrder(records: VerdictRecord[]): VerdictRecord[] {
 function openOf(record: VerdictRecord): OpenCriterion[] {
   return record.entries
     .filter(e => e.verdict !== 'met')
-    .map(e => ({criterion: e.criterion, verdict: e.verdict as OpenCriterion['verdict']}));
+    .map(e => ({criterion: e.criterion, verdict: e.verdict as OpenCriterion['verdict'], ...(e.missing ? {missing: e.missing} : {})}));
 }
 
 /** Criteria that were `cannot_tell` in at least two rounds: the owner should reword them or make them mechanical. */
@@ -76,7 +84,7 @@ export function handedOver(records: VerdictRecord[], maxRounds: number): HandedO
 
 /** The comment left on the issue; names each unmet or unclear criterion with its text. */
 export function handoverComment(h: HandedOver, texts: Record<string, string>): string {
-  const line = (o: OpenCriterion) => `- ${o.criterion} (${o.verdict}): ${texts[o.criterion] ?? ''}`.trimEnd();
+  const line = (o: OpenCriterion) => `- ${o.criterion} (${o.verdict}${o.missing ? `, missing ${o.missing}` : ''}): ${texts[o.criterion] ?? ''}`.trimEnd();
   const parts = [
     `Verification of PR #${h.pr} did not pass in ${h.rounds} rounds, so the loop is handing this ticket to the owner.`,
     '',
