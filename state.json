@@ -1,8 +1,8 @@
 {
   "iteration": 101,
-  "status": "running",
-  "last_completed_at": "2026-11-04T07:20:42.689Z",
-  "completed_iterations": 91,
+  "status": "completed",
+  "last_completed_at": "2026-11-04T07:41:59.693Z",
+  "completed_iterations": 92,
   "failed_iterations": 5,
   "consecutive_failures": 0,
   "completed_tasks": [
@@ -96,21 +96,11 @@
     "issue-156",
     "issue-157",
     "issue-155",
-    "issue-150"
+    "issue-150",
+    "issue-217"
   ],
-  "in_flight": [
-    {
-      "ticket": "issue-217",
-      "pid": null,
-      "session_id": "d5be5c29-cee2-4565-9bf9-0d9609927f36",
-      "snapshot": {
-        "baseSha": "",
-        "reflogLength": 1
-      },
-      "started_at": "2026-11-04T07:36:29.550Z"
-    }
-  ],
-  "last_error": "Nothing merged or pushed, exit code 143",
+  "in_flight": [],
+  "last_error": null,
   "stall_count": 0,
   "declined_tasks": [
     {
