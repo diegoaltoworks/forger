@@ -2,6 +2,7 @@ import {describe, expect, test} from 'bun:test';
 import {readFileSync} from 'fs';
 import {join} from 'path';
 
+import {formatViolations} from './docs-rules';
 import {checkReadme, isCheckedReadme, splitSentences, type ReadmeRule} from './docs-readme';
 
 const rules = (text: string, severity?: 'fail' | 'warn') =>
@@ -98,4 +99,15 @@ describe('transient facts', () => {
 test('every rule id is reachable', () => {
   const seen = new Set<ReadmeRule>(checkReadme('README.md', 'x\n' + words(30) + '.\nIt is new and was made.\n').map(f => f.rule));
   expect([...seen].sort()).toEqual(['readme-passive-voice', 'readme-purpose', 'readme-sentence-length', 'readme-transient']);
+});
+
+describe('reporting', () => {
+  test('each failure prints file, line, rule id and the offending text', () => {
+    const out = formatViolations(checkReadme('pkg/README.md', head + 'It is new today.\n'));
+    expect(out).toBe('pkg/README.md:5: readme-transient: a time-bound word: "new"');
+  });
+  test('a purpose failure quotes the paragraph that was found', () => {
+    const [f] = checkReadme('README.md', '# T\n\n- one\n');
+    expect(f.detail).toContain('one');
+  });
 });

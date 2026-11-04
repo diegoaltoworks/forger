@@ -110,9 +110,9 @@ export function checkReadme(file: string, text: string): ReadmeFinding[] {
     const next = prose.slice(h1 + 1).findIndex(l => l.trim() !== '' && !/^\s*(!\[|<)/.test(l));
     const first = next < 0 ? undefined : blocks.find(b => b.line === h1 + 2 + next);
     if (!first || first.item) {
-      out.push(at(file, h1 + 1, 'readme-purpose', README_OPINIONS.purpose, 'the first paragraph after the H1 must state what this is and who it is for', 'fail'));
+      out.push(at(file, h1 + 1, 'readme-purpose', README_OPINIONS.purpose, `the first paragraph after the H1 must state what this is and who it is for: "${quote(first ? first.text : (prose[h1 + 1 + Math.max(next, 0)] ?? '').trim())}"`, 'fail'));
     } else if (splitSentences(first.text).length > LIMITS.purpose) {
-      out.push(at(file, first.line, 'readme-purpose', README_OPINIONS.purpose, `the purpose paragraph must be at most ${LIMITS.purpose} sentences`, 'fail'));
+      out.push(at(file, first.line, 'readme-purpose', README_OPINIONS.purpose, `the purpose must be at most ${LIMITS.purpose} sentences: "${quote(first.text)}"`, 'fail'));
     }
   }
 
@@ -124,7 +124,7 @@ export function checkReadme(file: string, text: string): ReadmeFinding[] {
       if (n > limit) out.push(at(file, b.line, 'readme-sentence-length', README_OPINIONS.sentences, `${n} words (limit ${limit}): "${quote(s)}"`, 'fail'));
     }
     if (!b.item && sentences.length > LIMITS.paragraph) {
-      out.push(at(file, b.line, 'readme-paragraph-length', README_OPINIONS.sentences, `${sentences.length} sentences (limit ${LIMITS.paragraph})`, 'fail'));
+      out.push(at(file, b.line, 'readme-paragraph-length', README_OPINIONS.sentences, `${sentences.length} sentences (limit ${LIMITS.paragraph}): "${quote(b.text)}"`, 'fail'));
     }
     for (const m of b.text.matchAll(PASSIVE)) out.push(at(file, b.line, 'readme-passive-voice', README_OPINIONS.voice, `passive voice: "${m[0]}"`, 'warn'));
     for (const [re, what] of TRANSIENT) {
