@@ -185,11 +185,16 @@ If the merge conflicts, resolve it in the `merge_conflicts` slot (built-in: by
 hand) and re-run the gates; never `--abort` and walk away from a green ticket.
 
 ### 9. Completion signal
+Print the signal once, as the very last thing in your response, and never while
+you are still working: not while you wait on a background command, not as a
+progress note. The engine takes the last signal in the output as your claim,
+and a stop's reason is the text right after the tag, up to the next blank line.
+
 End your response with exactly one:
 
 - `<process>complete</process>` - ticket done, gates green, merged.
-- `<process>stop</process>` then a reason - blocked / needs human input / no
-  actionable ticket.
+- `<process>stop</process>` then the reason on the same or next line - blocked /
+  needs human input / no actionable ticket.
 
 ## Rules
 - ONE ticket per iteration. Quality gates must pass. Small, clean commits.

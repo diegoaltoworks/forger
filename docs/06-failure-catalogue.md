@@ -53,6 +53,19 @@ recovered, and where the lasting fix belongs: **E** the engine, **S** a skill
   pushed, nothing) before it is counted; a merge is a success whatever the
   exit.
 
+### An early stop signal halts a run that merged
+
+- **Seen:** a worker printed the stop tag while it waited on a background
+  `verify`, then carried on, merged its PR and ended with the complete tag. The
+  engine took the stop, because it checked for stop anywhere before complete,
+  and scraped the halt reason from an unrelated "because" in the summary. The
+  halt also ended a healthy parallel worker.
+- **Fix:** E (in place): the last signal in the output is the claim; a stop's
+  reason is only the text right after the tag, up to the next blank line, and
+  capped; a stop claim on a run whose PR merged does not halt, and the
+  contradiction is logged as a warning. S: the auto-ticket command signals
+  once, at the very end, never while it is still working.
+
 ### A red merge counted as completed
 
 - **Seen:** a worker squash-merged its PR seconds after CI started, before the

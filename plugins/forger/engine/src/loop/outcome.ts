@@ -140,13 +140,16 @@ export function decideOutcome(f: RunFacts): Outcome {
     const notes: string[] = [];
     if (f.timedOut) notes.push('merged, then timed out');
     if (f.unclean) notes.push(f.unclean);
+    // The merge is the fact; a stop claim beside it is a contradiction to
+    // report, not a reason to end the loop and the healthy workers in it.
+    if (f.claim === 'stop') notes.push(`claimed stop but merged into ${f.baseBranch}: ${f.stopReason}`);
     return {
       status: 'completed',
       result: 'success',
       merged: true,
       error: null,
       warning: notes.length > 0 ? notes.join('; ') : null,
-      halt: f.claim === 'stop' ? f.stopReason : null,
+      halt: null,
     };
   }
 
