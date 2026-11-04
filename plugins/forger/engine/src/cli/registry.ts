@@ -29,6 +29,7 @@ import {skills} from './skills';
 import {slice} from './slice';
 import {orient, report} from './supervisor';
 import {linkBlockersCommand} from './link-blockers';
+import {recover} from './recover';
 import {verify} from './verify';
 import {rebase, worktree} from './worktree';
 
@@ -60,6 +61,7 @@ export const COMMANDS: Command[] = [
   rebase,
   handover,
   approval,
+  recover,
   events,
   awaitEventCommand,
   hook,

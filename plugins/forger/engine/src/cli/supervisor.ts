@@ -1,7 +1,7 @@
 import {existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync} from 'fs';
 import {join} from 'path';
 
-import {decideHalt, GhTrackerHalt, requiresVerifyStatus, handedOver, listRepoLabels, loopLabels, missingLabels, readAllVerdicts} from '../loop';
+import {decideHalt, standingHalt, parseAllEvents, GhTrackerHalt, requiresVerifyStatus, handedOver, listRepoLabels, loopLabels, missingLabels, readAllVerdicts} from '../loop';
 import {describeBlocked} from '../backlog';
 import {buildReport, formatReport, mergedInPeriod, orient as orientPlan, proposedAdrs, reportPeriod, waitingIssues, OWNER_LABELS, type AdrText, type MergedPrFact, type OwnerItem, type WaitingIssue} from '../supervisor';
 import type {Command, CommandContext} from './command';
@@ -84,6 +84,7 @@ function supervise(which: 'orient' | 'report') {
         merged = undefined;
       }
     }
+    const events = parseAllEvents(ctx.stateStore.readEvents());
     const out = which === 'orient' ? plan : buildReport({
           ownerWaiting: ownerWaiting(ctx),
           merged,
@@ -91,6 +92,8 @@ function supervise(which: 'orient' | 'report') {
           status,
           measures: gatherMeasures(ctx),
           plan,
+          haltKind: standingHalt(events)?.event ?? null,
+          recovered: events.filter(e => e.event === 'recovered').map(e => `${e.ticket ?? 'no ticket'}: ${e.reason ?? 'recovered'} (${e.at})`),
           branch,
           baseBranch: config.base_branch,
           handedOver: handedOver(readAllVerdicts(join(projectRoot, config.paths.verdicts)), config.limits.maxVerifyRounds),

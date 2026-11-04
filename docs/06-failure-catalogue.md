@@ -86,7 +86,7 @@ recovered, and where the lasting fix belongs: **E** the engine, **S** a skill
   out a raw merge. The outcome reads the merged PR's checks: a merge on failing
   or pending checks is `merged-red`, never completed, and halts the loop naming
   the PR and the failing check; one with no passing `verify` verdict for its
-  head is `unverified` and halts the same way. S: read a gate's exit status, not the tail of
+  head is `unverified` and halts the same way. `recover` verifies an unverified merge after the fact: a pass resumes the loop, a block keeps the halt and files the revert. S: read a gate's exit status, not the tail of
   its output, and run the gates again after the last edit.
 
 ### A worker merges its own PR by hand

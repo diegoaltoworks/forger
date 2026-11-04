@@ -4,7 +4,7 @@
  * (`commands/work.md`) calls these through the CLI and keeps only judgement.
  */
 
-import {missingVerifyStatusAnomaly, openLabel, type HandedOver, type StatusReport} from '../loop';
+import {missingVerifyStatusAnomaly, openLabel, recommendationFor, type HandedOver, type StatusReport} from '../loop';
 import type {Measures} from './measure';
 import {type Period} from './waiting';
 import {buildReportMeasures, formatReportMeasures, type ReportMeasures} from './report-measures';
@@ -89,6 +89,7 @@ export const APPROVAL_POLICY = {
   record_note_or_process_rule_by_pr: 'alone',
   stop_runner_on_wrong_base: 'alone_and_report',
   open_pr_for_pushed_branch: 'alone_and_report',
+  resume_after_known_recovery: 'alone_and_report',
   clear_halt: 'owner',
   reset_counters: 'owner',
   close_issues: 'owner',
@@ -125,6 +126,10 @@ export interface ReportInputs {
   handedOver?: HandedOver[];
   /** Issues and proposed ADRs that wait on the owner's decision. */
   ownerWaiting?: OwnerItem[];
+  /** The kind of the halt standing, when known; picks the recommended action. */
+  haltKind?: string | null;
+  /** Halts the engine recovered by itself, one line each. */
+  recovered?: string[];
   /** What merged in the period; absent when the tracker could not be read. */
   merged?: string[];
   period?: Period;
@@ -137,6 +142,7 @@ export interface Report {
   merged: string[] | null;
   in_progress: Array<{ticket: string; branch: string}>;
   declined: Array<{ticket: string; reason: string}>;
+  recovered: string[];
   handed_over: Array<{ticket: string; pr: number; criteria: string[]}>;
   next: string[];
   waiting_on_owner: OwnerItem[];
@@ -149,7 +155,7 @@ export function buildReport(i: ReportInputs): Report {
   if (plan.action === 'surface_halt') {
     waiting.push({
       question: `The loop is halted: ${plan.reason}`,
-      recommendation: 'check for a pushed branch with no merged PR, finish or discard it, then resume',
+      recommendation: recommendationFor(i.haltKind ?? null),
       because: 'clearing a halt blindly can march the loop past unmerged work',
     });
   }
@@ -174,6 +180,7 @@ export function buildReport(i: ReportInputs): Report {
     merged: i.merged ?? null,
     in_progress: inProgress,
     declined: s.declined,
+    recovered: i.recovered ?? [],
     handed_over: (i.handedOver ?? []).map(h => ({
       ticket: h.ticket,
       pr: h.pr,
@@ -196,6 +203,9 @@ export function formatReport(r: Report): string {
     '',
     '**Declined**',
     ...list(r.declined.map(d => `${d.ticket} (${d.reason})`)),
+    '',
+    '**Recovered by the engine**',
+    ...list(r.recovered),
     '',
     '**Handed over**',
     ...list(r.handed_over.map(h => `${h.ticket} (PR #${h.pr}): ${h.criteria.join(', ')}`)),
