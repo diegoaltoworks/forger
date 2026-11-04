@@ -26,12 +26,13 @@ know:
 - the **tracker** (`github` when `origin` is a GitHub remote and `gh` is
   authenticated, else `local`; say why).
 
-Then ask about skills. List the presets whose skill collection is installed:
+Then ask about skills. List the flavours whose skill collection is installed:
 ```
 bun "${CLAUDE_PLUGIN_ROOT}/bin/work.ts" skills --presets --json
 ```
-For each one, offer to map it onto the skill slots; an empty list means ask
-nothing. The user can map slots by hand later in `.forger/workloop.config.json`.
+For each one, offer to use it as the flavour; an empty list means ask
+nothing. The user can add a flavour of their own in `.forger/flavours/` or map
+slots by hand later in `.forger/workloop.config.json`.
 
 Then ask about packs. List the ones the repo's own facts call for:
 ```
@@ -44,7 +45,7 @@ chosen ids go to `--packs` below, after `base`.
 ## 2. Install
 
 ```
-bun "${CLAUDE_PLUGIN_ROOT}/bin/work.ts" setup --json --gates "<gates>" --base-branch "<branch>" --tracker "<kind>" [--preset "<name>"] [--packs "base,<chosen>"]
+bun "${CLAUDE_PLUGIN_ROOT}/bin/work.ts" setup --json --gates "<gates>" --base-branch "<branch>" --tracker "<kind>" [--flavour "<name>"] [--packs "base,<chosen>"]
 ```
 
 The tool writes the config (with `check` appended to the gates),

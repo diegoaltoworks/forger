@@ -9,7 +9,8 @@ import {existsSync, mkdirSync, readFileSync, writeFileSync} from 'fs';
 import {dirname, join} from 'path';
 
 import {LOCK_PATH, loadPacks, parseLock, renderLock, sha256, type Lock, type LockedFile, type LockedPack} from './packs';
-import {forgerPath} from '../config';
+import {forgerPath, loadConfig} from '../config';
+import {newerFlavour, parseFlavourRef, shippedFlavour} from '../pipeline';
 
 export type UpgradeAction =
   | 'unchanged' // nothing differs
@@ -46,8 +47,17 @@ export interface UpgradeEntry {
   upstreamFile?: string;
 }
 
+/** A pinned flavour the plugin ships a newer version of; the owner takes it by changing the pin. */
+export interface FlavourUpgrade {
+  name: string;
+  pinned: number;
+  available: number;
+}
+
 export interface UpgradeResult {
   files: UpgradeEntry[];
+  /** Set when the config's flavour is pinned to a version older than the plugin's. */
+  flavour?: FlavourUpgrade;
   /** Files the owner has to decide about. */
   review: string[];
 }
@@ -61,6 +71,12 @@ function hashOf(path: string): string | null {
 function write(path: string, content: string): void {
   mkdirSync(dirname(path), {recursive: true});
   writeFileSync(path, content);
+}
+
+function newerFlavourPin(projectRoot: string, pluginRoot: string): FlavourUpgrade | undefined {
+  const ref = parseFlavourRef(loadConfig(projectRoot).flavour);
+  const available = newerFlavour(ref, shippedFlavour(pluginRoot, ref.name));
+  return available === null || ref.version === null ? undefined : {name: ref.name, pinned: ref.version, available};
 }
 
 export function runUpgrade(projectRoot: string, pluginRoot: string): UpgradeResult {
@@ -113,11 +129,14 @@ export function runUpgrade(projectRoot: string, pluginRoot: string): UpgradeResu
   const text = renderLock(nextLock);
   if (readFileSync(lockPath, 'utf-8') !== text) write(lockPath, text);
 
+  const flavour = newerFlavourPin(projectRoot, pluginRoot);
+
   const review = files.filter(f => f.action === 'conflict' || f.action === 'removed' || f.action === 'deleted').map(f => f.path);
-  return {files, review};
+  return {files, review, ...(flavour ? {flavour} : {})};
 }
 
 export function formatUpgrade(result: UpgradeResult): string {
   const lines = result.files.filter(f => f.action !== 'unchanged').map(f => `${f.action.padEnd(14)} ${f.path}${f.upstreamFile ? ` (pack version in ${f.upstreamFile})` : ''}`);
+  if (result.flavour) lines.push(`flavour        ${result.flavour.name}@${result.flavour.available} is available (config pins @${result.flavour.pinned}); change "flavour" in the config to take it`);
   return lines.length === 0 ? 'already up to date' : lines.join('\n');
 }

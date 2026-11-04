@@ -194,18 +194,53 @@ tells a skill where to write its result and in what shape.
 Every `skill` or `file` invocation starts with the engine-owned `preamble`: the
 intent is the ticket and its spec, never ask the owner (an open question is a
 decline), do not commit, push, merge or open pull requests (forger does), and do
-not route to another skill or start a loop. A preset's `forbid` lists the skills
+not route to another skill or start a loop. A flavour's `forbid` lists the skills
 of its collection the worker must not invoke: routers, loops and anything that
 owns the process.
 
-**Worked example: the mattpocock-skills collection.** The preset
-`plugins/forger/presets/mattpocock-skills.json` maps that collection onto the
+**Flavours.** A flavour is a named, versioned selection of skills: per slot an
+ordered list of candidates, each a `skill` or a `file`, with optional `when`
+conditions (`labels_any`, `labels_none`, `paths_any` over the ticket's knock-on
+paths, `packs_all` over the installed opinion packs; every key present must hold).
+The first candidate whose conditions hold and which is installed wins; otherwise
+the built-in step, which is the implicit last candidate.
+
+```json
+{
+  "name": "mine",
+  "version": 1,
+  "description": "A reviewer for UI tickets, the default otherwise.",
+  "slots": {
+    "review": [
+      {"skill": "some-collection:ui-review", "when": {"labels_any": ["ui"]}},
+      {"skill": "some-collection:review"}
+    ]
+  }
+}
+```
+
+Shipped flavours live in `plugins/forger/flavours/` (`default` is forger's own
+built-ins); a project adds its own as `.forger/flavours/<name>.json`, and a
+project file beats a shipped one of the same name. The config picks one with
+`"flavour": "<name>@<version>"`; the version pins the choice, and a flavour whose
+version differs is refused until the owner changes the pin. `setup --upgrade`
+reports a newer shipped version of the pinned flavour. No `flavour` is `default`.
+The config's `skills` map still wins per slot, so a project configured with only
+a `skills` map behaves as before.
+
+`pipeline --json [--issue N]` shows the choice per slot for one ticket and the
+reason: which candidate won, or why each one before the built-in did not.
+`skills --json` resolves the flavour for a ticket with no labels and no paths.
+
+**Worked example: the mattpocock-skills collection.** The flavour
+`plugins/forger/flavours/mattpocock-skills.json` maps that collection onto the
 slots it covers. `/forger:setup` offers it when the collection is installed, or
-apply it directly with `setup --preset mattpocock-skills`. A preset is a plain
-file: copy it to map another collection. Besides the slot mapping it declares
-how to find the collection (`collection` and `plugin` for a prefixed plugin
-install, `aliases` for the bare skill names of an install without a prefix) and
-the `forbid` list, so detection and resolution work with or without the prefix.
+apply it directly with `setup --flavour mattpocock-skills` (`--preset` is the
+same). A flavour is a plain file: copy it to map another collection. Besides the
+slot mapping it declares how to find the collection (`collection` and `plugin`
+for a prefixed plugin install, `aliases` for the bare skill names of an install
+without a prefix) and the `forbid` list, so detection and resolution work with or
+without the prefix.
 
 **The `design` slot** (ui pack) maps like any other. Examples: a Figma MCP
 server for boards, a prototype skill from an installed collection, or artifacts
@@ -271,7 +306,7 @@ worker treats these as enforced. Run `/forger:plan` to generate the
 first tickets, and `/forger:work` to start.
 
 The copy is a tested command: `bun "$CLAUDE_PLUGIN_ROOT/bin/work.ts" setup --json
-[--gates CMD] [--base-branch B] [--tracker KIND] [--preset NAME] [--packs A,B] [--harness H]`. It installs the
+[--gates CMD] [--base-branch B] [--tracker KIND] [--flavour NAME] [--packs A,B] [--harness H]`. It installs the
 chosen opinion packs (default `base`), records them in `.forger/forger.lock.json`, and writes `.forger/` files
 only where they are absent, installs the default `process.md`, the ticket, PR,
 work order, report, retro and rule templates and the hook policy
@@ -298,7 +333,8 @@ write and state edit, and gitignores the per-run state. Create the label with
 | `paths` | Where the backlog, state, log, output dir, HALT file, engine lock, terminal-event file, verdicts directory and `process.md` live. The verdicts stay local, not committed; the dirty-tree check skips them. Default under `.forger/`. |
 | `local_only` | Paths that stay modified in a checkout without being the worker's doing (local settings, a work order). The dirty-tree check skips them and the engine's own files (`paths`); a directory covers what is under it. Default none. |
 | `model_names` | Model and vendor names `check docs` flags in prose, as whole words, case-insensitively. Default a list of common ones. |
-| `skills` | Skill slot -> installed skill name, or `{ "file": "<path to SKILL.md>" }` (see Bring your own skills). Default none: every slot uses its built-in step. |
+| `flavour` | `"<name>"` or `"<name>@<version>"`: the flavour that picks a skill per slot (see Bring your own skills). Default `default`: every slot uses its built-in step. |
+| `skills` | Skill slot -> installed skill name, or `{ "file": "<path to SKILL.md>" }`. Wins over the flavour for the slots it names. Default none. |
 | `state` | `{ home, branch }`. `home` is `local` (default: state and events sit in files beside the engine) or `branch` (they live on `branch` of the remote, default `forger-state`, and the engine holds a lease while it runs; ADR 0015). Move existing state with `migrate --state`; roll back by setting `home` back to `local`, nothing is deleted. Other values are refused when the config loads. |
 | `tracker` | `{ kind, label, ignore }`. `kind` is `github` (default: issues are the backlog), `local`, or `none` (both read `backlog.json`). `label` is the intake label, default `ready-for-agent`. `ignore` lists labels whose issues are not work, a trailing `*` matching a prefix (`["wayfinder:*"]`); default none. |
 
@@ -311,7 +347,7 @@ from the consumer repo root so it finds `.forger/`:
 bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts run --continuous   # the loop
 bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts status [--json]      # where it's at: runner pid and liveness, halt, counters, current ticket, next pick
 bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts backlog --json     # workable tickets, remaining, next pick
-bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts skills [--json] [--presets]  # each skill slot's configured skill, whether installed, and the built-in fallback; --presets lists offered presets
+bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts skills [--json] [--presets]  # each skill slot's skill (skills map, then the flavour), whether installed, and the built-in fallback; --presets lists offered flavours
 bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts contract --slot SLOT --file PATH [--issue N] [--json]  # check a slot's result against its output contract; exit 1 unless ok
 bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts pipeline [--issue N] [--stage ID] [--json]  # the pipeline resolved for a ticket: each stage's slots, the skill or built-in chosen and why, the gate
 bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts migrate [--json]      # move a legacy .claude/ layout to .forger/ (git mv where tracked; refuses while an engine holds the lock; safe to repeat)

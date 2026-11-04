@@ -13,7 +13,8 @@ the skill slots a project can plug its own skills into.
   pack hashes, and the shell that applies it. Never overwrites a file whose
   hash differs from the lock. Writes files.
 - `skills.ts` - resolving each slot to a configured skill or its built-in
-  fallback; reads presets and the installed skills.
+  fallback; reads the shipped flavours that map a collection (as presets) and
+  the installed skills.
 
 The parsing and listing functions in each are pure; the loaders read files.
 

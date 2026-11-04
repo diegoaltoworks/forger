@@ -154,15 +154,44 @@ export function offerPresets(presets: readonly Preset[], installed: readonly str
   return presets.filter(p => collectionInstalled(p, installed));
 }
 
+/**
+ * The shipped flavours that map a skill collection, as presets: the first unconditional
+ * candidate of each slot. Read straight from the files, so the packs layer does not import pipeline.
+ */
 export function loadPresets(pluginRoot: string): Preset[] {
-  const dir = join(pluginRoot, 'presets');
+  const dir = join(pluginRoot, 'flavours');
   if (!existsSync(dir)) return [];
   return readdirSync(dir)
     .filter(f => f.endsWith('.json'))
     .sort()
-    .map(f => {
-      const data = JSON.parse(readFileSync(join(dir, f), 'utf-8')) as Omit<Preset, 'name'>;
-      return {name: f.replace(/\.json$/, ''), ...data};
+    .flatMap((f): Preset[] => {
+      const data = JSON.parse(readFileSync(join(dir, f), 'utf-8')) as {
+        name?: string;
+        collection?: string;
+        plugin?: string;
+        aliases?: string[];
+        forbid?: string[];
+        description?: string;
+        slots?: Record<string, Array<{skill?: string; file?: string; when?: unknown}>>;
+      };
+      if (typeof data.collection !== 'string') return [];
+      const skills: Record<string, SkillMapping> = {};
+      for (const [slot, candidates] of Object.entries(data.slots ?? {})) {
+        const c = candidates.find(x => x.when === undefined);
+        if (c?.skill) skills[slot] = c.skill;
+        else if (c?.file) skills[slot] = {file: c.file};
+      }
+      return [
+        {
+          name: data.name ?? f.replace(/\.json$/, ''),
+          collection: data.collection,
+          ...(data.plugin ? {plugin: data.plugin} : {}),
+          ...(data.aliases ? {aliases: data.aliases} : {}),
+          ...(data.forbid ? {forbid: data.forbid} : {}),
+          description: data.description ?? '',
+          skills,
+        },
+      ];
     });
 }
 

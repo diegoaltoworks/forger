@@ -2,7 +2,8 @@ import type {SkillMapping} from '../config';
 import {globToRegExp} from '../checks';
 import {resolveSlot, SLOTS, type ResolveEnv} from '../packs';
 import {mergeOverlay} from './overlay';
-import type {Condition, Definition, StageSlot, TicketFacts} from './types';
+import {pickCandidate, flavourRef} from './flavour';
+import type {Condition, Definition, Flavour, StageSlot, TicketFacts} from './types';
 
 export interface PlannedSlot {
   slot: string;
@@ -26,6 +27,8 @@ export interface PlannedStage {
 
 export interface PipelinePlan {
   ticket: string | null;
+  /** The flavour the plan was resolved with, as the config names it. */
+  flavour: string;
   stages: PlannedStage[];
   disabled: string[];
   problems: string[];
@@ -55,28 +58,36 @@ function holds(when: Condition | undefined): string {
   return keys.length > 0 ? `; when ${keys.join(' and ')} holds` : '';
 }
 
-function planSlot(s: StageSlot, mapping: Record<string, SkillMapping>, have: ReadonlySet<string>, env: ResolveEnv): PlannedSlot {
+function planSlot(s: StageSlot, flavour: Flavour, overrides: Record<string, SkillMapping>, have: ReadonlySet<string>, ticket: TicketFacts, env: ResolveEnv): PlannedSlot {
   const def = SLOTS.find(d => d.slot === s.slot) ?? {slot: s.slot, usedBy: '', builtin: ''};
-  const r = resolveSlot(def, mapping, have, env);
   const on = s.on ? {on: s.on} : {};
   const base = {slot: s.slot, contract: s.contract, ...on};
   const extra = holds(s.when);
-  if (r.invoke === 'skill') return {...base, invoke: 'skill', target: r.skill, reason: `skills map${extra}`};
-  if (r.invoke === 'file') return {...base, invoke: 'file', target: r.path, reason: `skills map${extra}`};
   const target = def.builtin === '' ? null : def.builtin;
-  const missing = r.file !== null ? `skills map names file ${r.file}, not found` : r.skill !== null ? `skills map names ${r.skill}, not installed` : null;
-  return {...base, invoke: 'builtin', target, reason: `builtin${missing ? `: ${missing}` : ''}${extra}`};
+  if (overrides[s.slot] !== undefined) {
+    const r = resolveSlot(def, overrides, have, env);
+    if (r.invoke === 'skill') return {...base, invoke: 'skill', target: r.skill, reason: `skills map${extra}`};
+    if (r.invoke === 'file') return {...base, invoke: 'file', target: r.path, reason: `skills map${extra}`};
+    const missing = r.file !== null ? `skills map names file ${r.file}, not found` : r.skill !== null ? `skills map names ${r.skill}, not installed` : null;
+    return {...base, invoke: 'builtin', target, reason: `builtin${missing ? `: ${missing}` : ''}${extra}`};
+  }
+  const pick = pickCandidate(def, flavour, ticket, have, env);
+  const r = pick.resolved;
+  if (r?.invoke === 'skill') return {...base, invoke: 'skill', target: r.skill, reason: `${pick.reason}${extra}`};
+  if (r?.invoke === 'file') return {...base, invoke: 'file', target: r.path, reason: `${pick.reason}${extra}`};
+  return {...base, invoke: 'builtin', target, reason: `builtin: ${pick.reason}${extra}`};
 }
 
 /**
  * The plan for one ticket: the definition with the overlay applied, each slot
- * resolved against the project's skill mapping and what is installed, each with
- * the reason it was chosen. Pure.
+ * resolved by the project's `skills` map first, then the flavour's candidates
+ * for the ticket, then the built-in step, each with the reason it was chosen. Pure.
  */
 export function resolvePipeline(
   definition: Definition,
   overlay: unknown,
-  mapping: Record<string, SkillMapping>,
+  flavour: Flavour,
+  overrides: Record<string, SkillMapping>,
   installed: readonly string[],
   ticket: TicketFacts,
   env: ResolveEnv = {}
@@ -89,9 +100,9 @@ export function resolvePipeline(
     for (const s of stage.slots) {
       const failed = failedCondition(s.when, ticket);
       if (failed !== null) skipped.push({slot: s.slot, reason: failed});
-      else slots.push(planSlot(s, mapping, have, env));
+      else slots.push(planSlot(s, flavour, overrides, have, ticket, env));
     }
     return {id: stage.id, command: stage.command, inputs: stage.inputs, gate: stage.gate, slots, skipped};
   });
-  return {ticket: ticket.id, stages, disabled: merged.disabled, problems: merged.problems};
+  return {ticket: ticket.id, flavour: flavourRef(flavour), stages, disabled: merged.disabled, problems: merged.problems};
 }

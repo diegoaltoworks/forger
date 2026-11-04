@@ -1,0 +1,24 @@
+{
+  "name": "mattpocock-skills",
+  "version": 1,
+  "collection": "mattpocock-skills",
+  "plugin": "mattpocock-skills",
+  "aliases": ["grilling", "domain-modeling", "tdd", "code-review", "diagnosing-bugs"],
+  "forbid": [
+    "mattpocock-skills:implement",
+    "mattpocock-skills:implement-spec",
+    "mattpocock-skills:retro",
+    "mattpocock-skills:to-spec",
+    "mattpocock-skills:to-tickets",
+    "mattpocock-skills:triage",
+    "mattpocock-skills:wayfinder"
+  ],
+  "description": "Maps the mattpocock-skills collection onto forger's skill slots. A slot the collection has no skill for uses forger's built-in step.",
+  "slots": {
+    "interview": [{"skill": "mattpocock-skills:grilling"}],
+    "glossary": [{"skill": "mattpocock-skills:domain-modeling"}],
+    "test_first": [{"skill": "mattpocock-skills:tdd"}],
+    "review": [{"skill": "mattpocock-skills:code-review"}],
+    "diagnose": [{"skill": "mattpocock-skills:diagnosing-bugs"}]
+  }
+}
