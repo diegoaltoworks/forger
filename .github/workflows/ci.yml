@@ -19,6 +19,14 @@ jobs:
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: 1.3.14
+      # A real browser for the capture integration test; without it that test skips.
+      - name: Playwright
+        run: |
+          mkdir "$RUNNER_TEMP/playwright" && cd "$RUNNER_TEMP/playwright"
+          echo '{"private":true}' > package.json
+          npm install playwright
+          npx playwright install --with-deps chromium
+          echo "FORGER_PLAYWRIGHT_ROOT=$RUNNER_TEMP/playwright" >> "$GITHUB_ENV"
       # Must equal `gates` in .forger/workloop.config.json; a test fails when they drift.
       - name: Gates
         run: cd plugins/forger/engine && bun install --frozen-lockfile && bun run check && cd ../../.. && bun plugins/forger/bin/work.ts check

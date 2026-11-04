@@ -23,6 +23,27 @@ says how to add it and exits 2, which is an environment problem, not a failure
 of the change. The PR body's Screenshots section links the updated files at the
 head commit.
 
+## Motion is recorded, not described (ui.captures-in-pr)
+
+A still hides motion, feedback and pacing. For interactive or animated work,
+declare a capture in `.forger/ui.json`: a name, a `route`, a `viewport` (one of
+the declared names; the first by default), `steps` and `max_seconds`. A step is
+one of `wait` (a selector to appear), `click` or `tap` (a selector), `key` (a
+Playwright key name) or `pause` (milliseconds).
+
+```json
+{"captures": [{"name": "play", "route": "/", "viewport": "phone", "max_seconds": 20,
+  "steps": [{"wait": "#start"}, {"click": "#start"}, {"key": "ArrowRight"}, {"pause": 800}]}]}
+```
+
+`screenshot --capture play` serves the app, plays the steps with Playwright's
+video recording and writes `docs/screenshots/play.webm`. When `ffmpeg` is
+installed it also writes `docs/screenshots/play.gif`; when it is not, the
+command still writes the `.webm`, says how to add `ffmpeg` and exits 2. A script
+that runs past `max_seconds` fails. An updated capture counts as UI evidence for
+`check ui`, like a still. The PR body's Captures section links the updated
+files at the head commit.
+
 Feature docs may embed images from `docs/screenshots/`, so they stay current
 with each UI change.
 

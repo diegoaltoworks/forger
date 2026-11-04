@@ -4,7 +4,7 @@ import {tmpdir} from 'os';
 import {join} from 'path';
 
 import {UiInfrastructureError} from '../ports';
-import {AXE_HINT, PLAYWRIGHT_HINT, loadAxeSource, loadPlaywright, playwrightAuditor, playwrightScreenshotter} from './playwright';
+import {AXE_HINT, PLAYWRIGHT_HINT, ffmpegGifEncoder, loadAxeSource, loadPlaywright, playwrightAuditor, playwrightRecorder, playwrightScreenshotter} from './playwright';
 
 const dirs: string[] = [];
 afterEach(() => {
@@ -120,5 +120,95 @@ describe('the Playwright adapter', () => {
     const audited = await playwrightAuditor('/unused', () => fake, () => 'AXE').audit([request]);
     expect(audited).toEqual([{request, results}]);
     expect(log).toEqual(['context 10x20 light', 'goto http://x/a', 'inject AXE', 'eval axe.run()', 'close context', 'close browser']);
+  });
+
+  function recordingFake(log: string[], opts: {slowStep?: boolean; noVideo?: boolean} = {}) {
+    return {
+      chromium: {
+        async launch() {
+          return {
+            async newContext(o: {viewport: {width: number; height: number}; colorScheme: string; hasTouch?: boolean; recordVideo?: {dir: string; size: {width: number; height: number}}}) {
+              log.push(`context ${o.viewport.width}x${o.viewport.height} touch=${o.hasTouch} video=${o.recordVideo?.size.width}x${o.recordVideo?.size.height}`);
+              return {
+                async newPage() {
+                  return {
+                    async goto(url: string) {
+                      log.push(`goto ${url}`);
+                    },
+                    async screenshot() {},
+                    async addScriptTag() {},
+                    async evaluate() {},
+                    async waitForSelector(s: string) {
+                      log.push(`wait ${s}`);
+                    },
+                    async click(s: string) {
+                      log.push(`click ${s}`);
+                    },
+                    async tap(s: string) {
+                      log.push(`tap ${s}`);
+                    },
+                    async waitForTimeout(ms: number) {
+                      log.push(`pause ${ms}`);
+                      if (opts.slowStep) await new Promise(r => setTimeout(r, 5000));
+                    },
+                    keyboard: {
+                      async press(k: string) {
+                        log.push(`key ${k}`);
+                      },
+                    },
+                    video: () => (opts.noVideo ? null : {async saveAs(path: string) { log.push(`save ${path}`); }}),
+                  };
+                },
+                async close() {
+                  log.push('close context');
+                },
+              };
+            },
+            async close() {
+              log.push('close browser');
+            },
+          };
+        },
+      },
+    };
+  }
+
+  test('the recorder plays each step in order on a video-recording context, saves the video after the context closes', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'forger-pw-'));
+    dirs.push(root);
+    const log: string[] = [];
+    const file = join(root, 'docs', 'screenshots', 'play.webm');
+    await playwrightRecorder(root, () => recordingFake(log)).record({
+      url: 'http://x/g',
+      width: 10,
+      height: 20,
+      maxSeconds: 5,
+      steps: [{wait: '#a'}, {click: '#a'}, {key: 'Space'}, {tap: '#b'}, {pause: 100}],
+      file,
+    });
+    expect(log).toEqual(['context 10x20 touch=true video=10x20', 'goto http://x/g', 'wait #a', 'click #a', 'key Space', 'tap #b', 'pause 100', 'close context', `save ${file}`, 'close context', 'close browser']);
+  });
+
+  test('a script that outruns its maximum fails and still closes the browser', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'forger-pw-'));
+    dirs.push(root);
+    const log: string[] = [];
+    const rec = playwrightRecorder(root, () => recordingFake(log, {slowStep: true}));
+    await expect(rec.record({url: 'http://x/', width: 1, height: 1, maxSeconds: 0.05, steps: [{pause: 10}], file: join(root, 'a.webm')})).rejects.toThrow('maximum of 0.05 seconds');
+    expect(log.at(-1)).toBe('close browser');
+    expect(log.some(l => l.startsWith('save'))).toBe(false);
+  });
+
+  test('a context that recorded no video is an error', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'forger-pw-'));
+    dirs.push(root);
+    const rec = playwrightRecorder(root, () => recordingFake([], {noVideo: true}));
+    await expect(rec.record({url: 'http://x/', width: 1, height: 1, maxSeconds: 5, steps: [{pause: 1}], file: join(root, 'a.webm')})).rejects.toThrow('recorded no video');
+  });
+
+  test('the gif encoder reports a missing ffmpeg as false, success as true and a failing run as an error', async () => {
+    expect(await ffmpegGifEncoder('forger-no-such-ffmpeg').encode('a.webm', 'a.gif')).toBe(false);
+    expect(await ffmpegGifEncoder('true').encode('a.webm', 'a.gif')).toBe(true);
+    await expect(ffmpegGifEncoder('false').encode('a.webm', 'a.gif')).rejects.toThrow('ffmpeg failed');
   });
 });

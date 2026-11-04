@@ -3,6 +3,8 @@
  * never a quiet default. Pure.
  */
 
+import type {CaptureStep} from '../ports';
+
 export const UI_PATH = '.forger/ui.json';
 export const SCREENSHOT_DIR = 'docs/screenshots/';
 
@@ -13,6 +15,17 @@ export interface Viewport {
 }
 
 export type Theme = 'light' | 'dark';
+
+/** A named, scripted interaction recorded as video: motion, feedback and pacing that a still hides. */
+export interface CaptureSpec {
+  name: string;
+  route: string;
+  /** Name of one of the config's viewports. */
+  viewport: string;
+  steps: CaptureStep[];
+  /** The longest the recording may run, in seconds. */
+  max_seconds: number;
+}
 
 export interface UiConfig {
   /** Globs of files that count as UI. */
@@ -28,6 +41,8 @@ export interface UiConfig {
   themes: Theme[];
   /** Seconds to wait for the app to answer. */
   ready_timeout: number;
+  /** Scripted interactions for `screenshot --capture`; empty when the file declares none. */
+  captures: CaptureSpec[];
 }
 
 export class UiConfigError extends Error {
@@ -68,6 +83,43 @@ function viewport(v: unknown, i: number): Viewport {
   return {name, width: o.width as number, height: o.height as number};
 }
 
+export const DEFAULT_CAPTURE_SECONDS = 15;
+const STEP_KINDS = ['wait', 'key', 'click', 'tap', 'pause'] as const;
+
+function step(v: unknown, where: string): CaptureStep {
+  if (typeof v !== 'object' || v === null || Array.isArray(v)) throw new UiConfigError(`${where} must be an object`);
+  const keys = Object.keys(v);
+  if (keys.length !== 1 || !(STEP_KINDS as readonly string[]).includes(keys[0])) {
+    throw new UiConfigError(`${where} must have exactly one of ${STEP_KINDS.join(', ')}`);
+  }
+  const kind = keys[0] as (typeof STEP_KINDS)[number];
+  const value = (v as Record<string, unknown>)[kind];
+  if (kind === 'pause') {
+    if (!Number.isInteger(value) || (value as number) <= 0) throw new UiConfigError(`${where}.pause must be a positive integer of milliseconds`);
+    return {pause: value as number};
+  }
+  return {[kind]: text(value, `${where}.${kind}`)} as CaptureStep;
+}
+
+function captureSpec(v: unknown, i: number, viewports: Viewport[]): CaptureSpec {
+  const where = `captures[${i}]`;
+  if (typeof v !== 'object' || v === null || Array.isArray(v)) throw new UiConfigError(`${where} must be an object`);
+  const o = v as Record<string, unknown>;
+  const name = text(o.name, `${where}.name`);
+  if (!NAME.test(name)) throw new UiConfigError(`${where}.name must be lowercase words joined by hyphens`);
+  const route = o.route === undefined ? '/' : text(o.route, `${where}.route`);
+  if (!route.startsWith('/')) throw new UiConfigError(`${where}.route "${route}" must start with "/"`);
+  const viewport = o.viewport === undefined ? viewports[0].name : text(o.viewport, `${where}.viewport`);
+  if (!viewports.some(x => x.name === viewport)) throw new UiConfigError(`${where}.viewport "${viewport}" is not one of the declared viewports`);
+  if (!Array.isArray(o.steps) || o.steps.length === 0) throw new UiConfigError(`${where}.steps must be a non-empty list`);
+  const steps = o.steps.map((s, j) => step(s, `${where}.steps[${j}]`));
+  const max = o.max_seconds === undefined ? DEFAULT_CAPTURE_SECONDS : o.max_seconds;
+  if (!Number.isInteger(max) || (max as number) <= 0) throw new UiConfigError(`${where}.max_seconds must be a positive integer`);
+  const paused = steps.reduce((sum, s) => sum + ('pause' in s ? s.pause : 0), 0);
+  if (paused > (max as number) * 1000) throw new UiConfigError(`${where} pauses for ${paused} ms, more than its max_seconds`);
+  return {name, route, viewport, steps, max_seconds: max as number};
+}
+
 export function parseUiConfig(raw: string): UiConfig {
   let parsed: unknown;
   try {
@@ -96,6 +148,11 @@ export function parseUiConfig(raw: string): UiConfig {
   const timeout = o.ready_timeout === undefined ? 60 : o.ready_timeout;
   if (!Number.isInteger(timeout) || (timeout as number) <= 0) throw new UiConfigError('"ready_timeout" must be a positive integer of seconds');
 
+  if (o.captures !== undefined && !Array.isArray(o.captures)) throw new UiConfigError('"captures" must be a list');
+  const captures = ((o.captures as unknown[] | undefined) ?? []).map((c, i) => captureSpec(c, i, viewports));
+  const captureNames = captures.map(c => c.name);
+  if (new Set(captureNames).size !== captureNames.length) throw new UiConfigError('"captures" names must be unique');
+
   return {
     paths: strings(o.paths, 'paths'),
     tokens: o.tokens === undefined ? [] : strings(o.tokens, 'tokens'),
@@ -105,5 +162,6 @@ export function parseUiConfig(raw: string): UiConfig {
     viewports,
     themes: themes as Theme[],
     ready_timeout: timeout as number,
+    captures,
   };
 }

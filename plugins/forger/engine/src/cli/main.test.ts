@@ -808,6 +808,22 @@ describe('screenshot', () => {
     }
   });
 
+  test('--capture of an undeclared name asks for it as a config problem', async () => {
+    const root = projectWith({});
+    process.chdir(root);
+    writeFileSync(join(root, '.forger', 'ui.json'), JSON.stringify({paths: ['a'], start: 'x'}));
+    const err = spyOn(console, 'error').mockImplementation(() => {});
+    try {
+      await capture(['screenshot', '--json', '--capture', 'play']);
+      expect(JSON.parse(err.mock.calls[0][0])).toMatchObject({ok: false, infrastructure: false});
+      expect(JSON.parse(err.mock.calls[0][0]).error).toContain('no capture named "play"');
+      expect(process.exitCode).toBe(1);
+    } finally {
+      err.mockRestore();
+      process.exitCode = 0;
+    }
+  });
+
   test('a project without Playwright exits 2 with the command that adds it', async () => {
     const root = projectWith({});
     process.chdir(root);

@@ -4,6 +4,9 @@
  * tests use fakes.
  */
 
+/** One scripted interaction. `wait`, `click` and `tap` take a CSS selector, `key` a Playwright key name, `pause` milliseconds. */
+export type CaptureStep = {wait: string} | {key: string} | {click: string} | {tap: string} | {pause: number};
+
 export interface ShotRequest {
   url: string;
   width: number;
@@ -15,6 +18,26 @@ export interface ShotRequest {
 
 export interface Screenshotter {
   capture(shots: ShotRequest[]): Promise<void>;
+}
+
+export interface RecordRequest {
+  url: string;
+  width: number;
+  height: number;
+  steps: CaptureStep[];
+  maxSeconds: number;
+  /** Absolute path of the .webm to write. */
+  file: string;
+}
+
+export interface Recorder {
+  record(request: RecordRequest): Promise<void>;
+}
+
+/** Turns a recorded video into a GIF beside it. */
+export interface GifEncoder {
+  /** Resolves false when no encoder is installed, so the caller can say how to add one. */
+  encode(video: string, gif: string): Promise<boolean>;
 }
 
 export interface AppServer {
@@ -62,8 +85,8 @@ export interface AccessibilityAuditor {
  * apart from a bad config.
  */
 export class UiInfrastructureError extends Error {
-  readonly category: 'playwright-missing' | 'axe-missing' | 'app-not-ready';
-  constructor(category: 'playwright-missing' | 'axe-missing' | 'app-not-ready', message: string) {
+  readonly category: 'playwright-missing' | 'axe-missing' | 'app-not-ready' | 'ffmpeg-missing';
+  constructor(category: 'playwright-missing' | 'axe-missing' | 'app-not-ready' | 'ffmpeg-missing', message: string) {
     super(message);
     this.category = category;
   }
