@@ -1,8 +1,8 @@
 {
   "iteration": 102,
-  "status": "running",
-  "last_completed_at": "2026-11-04T07:41:59.693Z",
-  "completed_iterations": 92,
+  "status": "completed",
+  "last_completed_at": "2026-11-04T07:47:00.414Z",
+  "completed_iterations": 93,
   "failed_iterations": 5,
   "consecutive_failures": 0,
   "completed_tasks": [
@@ -97,20 +97,10 @@
     "issue-157",
     "issue-155",
     "issue-150",
-    "issue-217"
+    "issue-217",
+    "issue-181"
   ],
-  "in_flight": [
-    {
-      "ticket": "issue-181",
-      "pid": null,
-      "session_id": "83bc0cb3-e1fd-4177-b683-e8782d637505",
-      "snapshot": {
-        "baseSha": "",
-        "reflogLength": 1
-      },
-      "started_at": "2026-11-04T07:42:06.437Z"
-    }
-  ],
+  "in_flight": [],
   "last_error": null,
   "stall_count": 0,
   "declined_tasks": [
