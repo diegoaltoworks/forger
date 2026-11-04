@@ -1,6 +1,6 @@
 {
-  "iteration": 94,
-  "status": "ready",
+  "iteration": 95,
+  "status": "running",
   "last_completed_at": "2026-11-04T06:16:03.883Z",
   "completed_iterations": 86,
   "failed_iterations": 4,
@@ -93,7 +93,15 @@
     "issue-153",
     "issue-154"
   ],
-  "in_flight": [],
+  "in_flight": [
+    {
+      "ticket": null,
+      "pid": null,
+      "session_id": "ff9b064f-2449-4069-aa8c-a205e93d546f",
+      "snapshot": null,
+      "started_at": "2026-11-04T06:35:17.224Z"
+    }
+  ],
   "last_error": "Nothing merged or pushed, exit code 143",
   "stall_count": 0,
   "declined_tasks": [
