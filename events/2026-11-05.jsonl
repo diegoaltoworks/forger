@@ -7,3 +7,4 @@
 {"event":"worker_denied","at":"2026-11-05T00:42:51.405Z","iteration":126,"ticket":"issue-185","reason":"merge: gh pr merge 253 --squash --delete-branch 2>&1 | tail -3; gh pr view 253 --json state -q .state"}
 {"event":"picked","at":"2026-11-05T00:44:24.910Z","iteration":127,"ticket":"issue-186","reason":null}
 {"event":"picked","at":"2026-11-05T00:50:37.590Z","iteration":128,"ticket":"issue-197","reason":null}
+{"event":"picked","at":"2026-11-05T01:01:48.096Z","iteration":129,"ticket":"issue-191","reason":null}
