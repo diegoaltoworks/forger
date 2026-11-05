@@ -6,7 +6,7 @@ import {loadDefinition, resolvePipeline, NO_TICKET, loadFlavour, CONTRACT_FOR_SL
 import {resolveSkills, SLOTS} from './skills';
 
 const PLUGIN_ROOT = resolve(import.meta.dir, '../../..');
-const SHIPPED = ['test_first', 'review', 'diagnose'];
+const SHIPPED = ['test_first', 'review', 'diagnose', 'prototype'];
 
 function plan(env: {exists?: (p: string) => boolean}) {
   return resolvePipeline(loadDefinition(PLUGIN_ROOT), undefined, loadFlavour(PLUGIN_ROOT, '/nonexistent', 'default'), {}, [], NO_TICKET, {pluginRoot: PLUGIN_ROOT, roots: [PLUGIN_ROOT], ...env});

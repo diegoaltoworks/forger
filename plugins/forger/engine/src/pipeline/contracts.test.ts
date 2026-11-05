@@ -12,7 +12,7 @@ const facts: ContractFacts = {
     {id: 'c2', text: 'it is documented'},
   ],
   gateCommand: 'bun run check && bun test',
-  fileExists: p => p === 'w/index.html' || p === 'w/index.png',
+  fileExists: p => ['w/index.html', 'w/index.png', 'docs/progress/a.html', 'docs/progress/b.html', 'docs/progress/c.html', 'docs/progress/d.html'].includes(p),
   fileContains: (p, term) => p === 'GLOSSARY.md' && term === 'Slot',
   isTestFile: p => p.endsWith('.test.ts'),
 };
@@ -62,6 +62,48 @@ const cases: Case[] = [
     problems: ['wireframe html w/missing.html does not exist', 'wireframe png w/index.jpg is not a .png file'],
   },
   {name: 'wireframe no paths', contract: 'wireframe', value: {}, problems: ['wireframe has no html path', 'wireframe has no png path']},
+  {
+    name: 'concepts good',
+    contract: 'concepts',
+    value: [
+      {path: 'docs/progress/a.html', axis: 'watch vs play', pitch: 'a scene you watch'},
+      {path: 'docs/progress/b.html', axis: 'watch vs play', pitch: 'a toy you play'},
+    ],
+    problems: [],
+  },
+  {name: 'concepts not a list', contract: 'concepts', value: {}, problems: ['concepts must be an array']},
+  {
+    name: 'concepts too few',
+    contract: 'concepts',
+    value: [{path: 'docs/progress/a.html', axis: 'tone', pitch: 'p'}],
+    problems: ['concepts must hold two or three concepts, got 1'],
+  },
+  {
+    name: 'concepts too many',
+    contract: 'concepts',
+    value: ['a', 'b', 'c', 'd'].map(n => ({path: `docs/progress/${n}.html`, axis: 'tone', pitch: 'p'})),
+    problems: ['concepts must hold two or three concepts, got 4'],
+  },
+  {
+    name: 'concepts problems',
+    contract: 'concepts',
+    value: [
+      {axis: 'tone', pitch: 'p'},
+      {path: 'docs/progress/a.png', axis: 'tone', pitch: 'p'},
+      {path: 'docs/progress/missing.html', axis: 'tone', pitch: 'p'},
+      {path: 'docs/progress/a.html', pitch: 'one\ntwo'},
+      {path: 'docs/progress/a.html', axis: 'tone', pitch: 'p'},
+    ],
+    problems: [
+      'concepts must hold two or three concepts, got 5',
+      'concepts[0] has no path',
+      'concepts[1] path docs/progress/a.png is not a .html file',
+      'concepts[2] path docs/progress/missing.html does not exist',
+      'concepts[3] names no axis',
+      'concepts[3] pitch must be one line',
+      'concepts[4] path docs/progress/a.html repeats an earlier concept',
+    ],
+  },
   {
     name: 'tests_written good with a waiver',
     contract: 'tests_written',

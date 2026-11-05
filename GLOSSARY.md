@@ -45,6 +45,9 @@ The owner's creative request, recorded verbatim at the top of the plan doc. Late
 **Reference**:
 A work the owner names as a touchstone ("think <X>", "in the style of"). It is read as intent (feel, charm, readability), never as a spec to copy, and the plan states how it was read.
 
+**Prototype**:
+A throwaway single-file concept built before tickets on creative work, so the owner reacts to something real. Two or three are built, differing on the axis the brief leaves open; the chosen one is archived under `docs/progress/` as the reference and is never merged into the product source.
+
 **Skill slot**:
 A named point where a model does judgement work, with a built-in forger step that an installed skill can replace through the `skills` section of the config.
 _Avoid_: hook (when meaning a skill slot), plugin point

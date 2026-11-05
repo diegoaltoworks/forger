@@ -9,6 +9,7 @@ export type ContractName =
   | 'decisions'
   | 'glossary_entries'
   | 'wireframe'
+  | 'concepts'
   | 'tests_written'
   | 'diagnosis'
   | 'review_findings'
@@ -23,6 +24,7 @@ export const CONTRACT_FOR_SLOT: Readonly<Record<string, ContractName>> = {
   interview: 'decisions',
   glossary: 'glossary_entries',
   design: 'wireframe',
+  prototype: 'concepts',
   test_first: 'tests_written',
   diagnose: 'diagnosis',
   review: 'review_findings',
@@ -125,6 +127,26 @@ function wireframe(value: unknown, f: ContractFacts): string[] {
   return problems;
 }
 
+function concepts(value: unknown, f: ContractFacts): string[] {
+  const problems: string[] = [];
+  const list = entries(value, 'concepts', problems);
+  if (!list) return problems;
+  if (list.length < 2 || list.length > 3) problems.push(`concepts must hold two or three concepts, got ${list.length}`);
+  const paths = new Set<string>();
+  list.forEach((e, i) => {
+    const at = `concepts[${i}]`;
+    if (!text(e.path)) problems.push(`${at} has no path`);
+    else if (!e.path.endsWith('.html')) problems.push(`${at} path ${e.path} is not a .html file`);
+    else if (!f.fileExists(e.path)) problems.push(`${at} path ${e.path} does not exist`);
+    else if (paths.has(e.path)) problems.push(`${at} path ${e.path} repeats an earlier concept`);
+    else paths.add(e.path);
+    if (!text(e.axis)) problems.push(`${at} names no axis`);
+    if (!text(e.pitch)) problems.push(`${at} has no pitch`);
+    else if (/\r|\n/.test(e.pitch.trim())) problems.push(`${at} pitch must be one line`);
+  });
+  return problems;
+}
+
 function testsWritten(value: unknown, f: ContractFacts): string[] {
   const problems: string[] = [];
   const list = entries(value, 'tests_written', problems);
@@ -215,6 +237,7 @@ export const VALIDATORS: Partial<Record<ContractName, (value: unknown, facts: Co
   decisions: v => decisions(v),
   glossary_entries: glossaryEntries,
   wireframe,
+  concepts,
   tests_written: testsWritten,
   diagnosis,
   review_findings: reviewFindings,

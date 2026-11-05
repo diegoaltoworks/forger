@@ -5,6 +5,7 @@
      "slots": [
        {"slot": "interview", "contract": "decisions"},
        {"slot": "glossary", "contract": "glossary_entries"},
+       {"slot": "prototype", "contract": "concepts", "on": "creative_intent"},
        {"slot": "design", "contract": "wireframe", "when": {"labels_any": ["ui"]}}
      ],
      "gate": "check docs"},
