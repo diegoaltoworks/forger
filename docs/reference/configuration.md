@@ -16,6 +16,7 @@ Every field of `.forger/workloop.config.json`.
 | `base_branch` | Branch an iteration must land on. Merge verification checks HEAD against it. |
 | `models` | Role -> model id the agent adapter is given. Default `fast`, `standard` and `deep`. A project remaps a role here, and tickets, logs and docs keep naming the role. |
 | `model_by_priority` | Role + USD budget per priority (`P0`, `default`, and any others). A tier naming something that is not a role is taken as a literal model id, so an older config keeps working. |
+| `model_prices` | Model id -> `{input, output, cached_input}` in USD per million tokens (`cached_input` defaults to `input`). Lets the engine enforce the budget in a harness that reports tokens and not cost; a model with no price runs with no spend limit there (see [adapters](adapters.md)). Default none. |
 | `effort_multiplier` | Budget multiplier by ticket `effort` (`small`/`medium`/`large`/...). |
 | `limits` | `timeoutMinutes`, `killGraceSeconds` (SIGTERM to SIGKILL on timeout), `maxConsecutiveFailures`, `pauseBetweenIterations`, `pauseAfterFailure`, `maxStallIterations`. |
 | `paths` | Where the backlog, state, log, output dir, HALT file, engine lock, terminal-event file, verdicts directory and `process.md` live. The verdicts stay local, not committed; the dirty-tree check skips them. Default under `.forger/`. |

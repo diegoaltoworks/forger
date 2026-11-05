@@ -16,6 +16,14 @@ export interface Tier {
   budget: number;
 }
 
+/** What a model costs, in USD per million tokens, for a harness that reports tokens and not cost. */
+export interface ModelPrice {
+  input: number;
+  output: number;
+  /** Cached input tokens; defaults to `input`. */
+  cached_input?: number;
+}
+
 /** A skill slot maps to an installed skill name, or to a SKILL.md the worker reads and follows. */
 export type SkillMapping = string | {file: string};
 
@@ -31,6 +39,8 @@ export interface WorkloopConfig {
   /** Role -> the model id the agent adapter is given. A tier naming anything else is taken as a model id. */
   models: Record<string, string>;
   model_by_priority: {P0: Tier; default: Tier; [k: string]: Tier};
+  /** Model id -> price, so a harness that reports tokens only can enforce the budget. Default none: such a run has no spend limit. */
+  model_prices: Record<string, ModelPrice>;
   effort_multiplier: Record<string, number>;
   /**
    * The tier the verifier runs on (ADR 0010). null picks one other than the
@@ -138,6 +148,7 @@ export interface WorkloopConfigInput {
   base_branch?: string;
   models?: Record<string, string>;
   model_by_priority?: Record<string, Tier>;
+  model_prices?: Record<string, ModelPrice>;
   effort_multiplier?: Record<string, number>;
   verifier?: Tier | null;
   verify?: Partial<WorkloopConfig['verify']>;
@@ -180,6 +191,7 @@ export const DEFAULT_CONFIG: WorkloopConfig = {
     P0: {model: 'deep', budget: 22.5},
     default: {model: 'standard', budget: 18.0},
   },
+  model_prices: {},
   verifier: null,
   verify: {setup: null},
   /** Budget multiplier by declared effort; a truncated large ticket is worst. */
@@ -254,6 +266,7 @@ export function mergeConfig(
     ...user,
     state,
     models: {...base.models, ...(user.models ?? {})},
+    model_prices: {...base.model_prices, ...(user.model_prices ?? {})},
     model_by_priority: {
       ...base.model_by_priority,
       ...(user.model_by_priority ?? {}),

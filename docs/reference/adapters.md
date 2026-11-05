@@ -29,8 +29,25 @@ reports usage in its output implements `spentUsd(output)` on the `Harness` seam;
 output arrives and ends the worker's process group once the reported spend passes the budget, logging that it did.
 Claude Code also gets its own `--max-budget-usd` cap.
 
-A harness that reports no usage (`spentUsd` absent) runs under the timeout alone. OpenCode, Codex and Copilot
-are in that case today: their headless output states no spend, so the budget cannot be enforced for them.
+A run with no spend limit runs under the timeout alone, and says so: the engine logs at the start of the run
+that the harness reports no usage for the model, and `status --json` shows `runner.spendLimit` as `none`
+(`harness` when the harness caps the budget itself, `engine` when the engine reads the spend, `partial`
+when only some of the models the config can pick are covered).
+
+## Spend limit by harness
+
+The headless mode of OpenCode and Codex is started with its JSON event stream so usage can be read. The worker's
+own words are decoded from the stream, so its completion signal is still read.
+
+| Harness | Spend limit | Source |
+|---|---|---|
+| `claude` | Yes, the harness's own `--max-budget-usd` cap | Claude Code's CLI reference |
+| `opencode` | Yes, from the cost in each `step_finish` event of `run --format json` | OpenCode CLI documentation and its SDK's `StepFinishPart` |
+| `codex` | Only for a model with a price in `model_prices`: `exec --json` reports token counts and no cost | Codex non-interactive mode documentation, `turn.completed` usage |
+| `copilot` | No: `-p` output documents no cost or token count | Copilot CLI programmatic reference |
+
+A harness that reports tokens only prices them with `model_prices` in the config, keyed by the model id the role
+maps to (see [configuration](configuration.md)). With no price for a model its run has no spend limit.
 
 ## Guards
 

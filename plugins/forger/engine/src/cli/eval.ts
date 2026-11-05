@@ -68,7 +68,7 @@ export const evalCommand: Command = {
     }
     if (cases.length === 0) return fail(`no cases under evals/${slot}/`);
 
-    const agent = ctx.deps.agent ?? agentFor(findHarness(config.harness));
+    const agent = ctx.deps.agent ?? agentFor(findHarness(config.harness), config.model_prices);
     const tier = config.model_by_priority.default;
     const scores: CaseScore[] = [];
     for (const c of cases) {

@@ -135,6 +135,40 @@ describe('AutomationRunner worker environment', () => {
   });
 });
 
+describe('AutomationRunner spend limit', () => {
+  const build = (limit: 'none' | 'engine') => {
+    const root = mkdtempSync(join(tmpdir(), 'forger-runner-'));
+    dirs.push(root);
+    const calls: AgentRunOptions[] = [];
+    const config = mergeConfig({});
+    const runner = new AutomationRunner(root, config, backlogFrom(() => backlog, config), {
+      stateStore: localStateFor(root, config),
+      agent: {
+        harnessId: 'copilot',
+        spendLimit: () => limit,
+        run: async opts => (calls.push(opts), {exitCode: 0, signal: null, output: '', timedOut: false}),
+      },
+      gitRunner: sceneRunner({}, () => calls.length > 0),
+    });
+    return {runner, root};
+  };
+
+  test('a run in a harness with no usage logs that it has no spend limit', async () => {
+    const {runner, root} = build('none');
+    await runner.runIteration(1);
+    const log = readFileSync(join(root, '.forger', 'work.log'), 'utf-8');
+    expect(log).toContain('copilot harness reports no usage for sonnet: this run has no spend limit');
+    expect(runner.statusReport().runner.spendLimit).toBe('none');
+  });
+
+  test('a run whose spend the engine reads logs nothing about a missing limit', async () => {
+    const {runner, root} = build('engine');
+    await runner.runIteration(1);
+    expect(readFileSync(join(root, '.forger', 'work.log'), 'utf-8')).not.toContain('no spend limit');
+    expect(runner.statusReport().runner.spendLimit).toBe('engine');
+  });
+});
+
 describe('AutomationRunner iteration log', () => {
   test('stores the resolved plan with the run and in the iteration log', async () => {
     const plan: StoredPlan = {stages: [{id: 'build', slots: [{slot: 'test_first', invoke: 'builtin', target: null}]}]};
@@ -644,7 +678,7 @@ describe('AutomationRunner single runner', () => {
     writeFileSync(join(root, '.forger', 'runner.lock'), '4242');
     const runner = runnerIn(root, {isAlive: (p: number) => p === 4242});
     const r = runner.statusReport();
-    expect(r.runner).toEqual({pid: 4242, alive: true});
+    expect(r.runner).toEqual({pid: 4242, alive: true, spendLimit: 'none'});
     expect(r.next_pick).toBe('the_ticket');
     expect(r.remaining).toBe(1);
   });

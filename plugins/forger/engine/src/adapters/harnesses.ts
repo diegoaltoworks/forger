@@ -3,7 +3,8 @@
  * The process supervision lives in `supervise.ts`; a harness only says what to run.
  */
 
-import type {AgentRunner, Harness} from '../ports';
+import type {ModelPrice} from '../config';
+import type {AgentRunner, Harness, SpendLimit} from '../ports';
 import {claudeHarness} from './claude';
 import {codexHarness} from './codex';
 import {copilotHarness} from './copilot';
@@ -18,11 +19,29 @@ export function findHarness(id: string, harnesses: Harness[] = HARNESSES): Harne
   return found;
 }
 
-export function agentFor(harness: Harness): AgentRunner {
+/**
+ * Whether the engine can stop a run of `harness` on `model` for passing its budget. Pure.
+ * A `tokens` harness needs a price for the model; without one it reports nothing usable.
+ */
+export function spendLimitOf(harness: Harness, model: string, prices: Record<string, ModelPrice> = {}): Exclude<SpendLimit, 'partial'> {
+  if (harness.usage === 'cap') return 'harness';
+  if (!harness.spentUsd) return 'none';
+  if (harness.usage === 'tokens' && !Object.prototype.hasOwnProperty.call(prices, model)) return 'none';
+  return 'engine';
+}
+
+export function agentFor(harness: Harness, prices: Record<string, ModelPrice> = {}): AgentRunner {
   return {
-    run(opts) {
+    harnessId: harness.id,
+    spendLimit(models) {
+      const kinds = new Set(models.map(m => spendLimitOf(harness, m, prices)));
+      return kinds.size === 1 ? [...kinds][0] : 'partial';
+    },
+    async run(opts) {
       const spec = harness.spawn(opts);
-      return runSupervised({
+      const engineLimit = spendLimitOf(harness, opts.model, prices) === 'engine';
+      const price = Object.prototype.hasOwnProperty.call(prices, opts.model) ? prices[opts.model] : undefined;
+      const result = await runSupervised({
         command: spec.command,
         args: spec.args,
         cwd: opts.cwd,
@@ -31,9 +50,12 @@ export function agentFor(harness: Harness): AgentRunner {
         timeoutMs: opts.timeoutMinutes * 60 * 1000,
         graceMs: opts.killGraceSeconds * 1000,
         abort: opts.abort,
-        spendLimitUsd: harness.spentUsd ? opts.tier.budget : undefined,
-        spentUsd: harness.spentUsd?.bind(harness),
+        spendLimitUsd: engineLimit ? opts.tier.budget : undefined,
+        spentUsd: engineLimit ? (output: string) => harness.spentUsd!(output, price) : undefined,
       });
+      // The claim and the stop reason are read from the worker's words, which a JSON stream escapes.
+      const text = harness.plainText?.(result.output);
+      return text ? {...result, output: `${result.output}\n${text}\n`} : result;
     },
   };
 }
