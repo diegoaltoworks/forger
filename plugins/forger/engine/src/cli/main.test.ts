@@ -383,6 +383,27 @@ describe('setup --json', () => {
   });
 });
 
+describe('setup with the testing pack', () => {
+  test('carries the missing lcov report and the runner flag as next steps', async () => {
+    const root = realpathSync(mkdtempSync(join(tmpdir(), 'forger-cli-setup-')));
+    dirs.push(root);
+    process.chdir(root);
+    writeFileSync(join(root, 'bunfig.toml'), '');
+    const out = JSON.parse(await capture(['setup', '--json', '--gates', 'make test', '--tracker', 'local', '--packs', 'base,testing']));
+    expect(out.coverage.report_present).toBe(false);
+    expect(out.next_steps.join('\n')).toContain('coverage/lcov.info');
+    expect(out.next_steps.join('\n')).toContain('bun test --coverage --coverage-reporter=lcov');
+  });
+
+  test('says nothing about coverage without the testing pack', async () => {
+    const root = realpathSync(mkdtempSync(join(tmpdir(), 'forger-cli-setup-')));
+    dirs.push(root);
+    process.chdir(root);
+    const out = JSON.parse(await capture(['setup', '--json', '--tracker', 'local']));
+    expect(out.next_steps).toBeUndefined();
+  });
+});
+
 describe('setup creates the loop labels', () => {
   test('creates the missing ones on a GitHub tracker, and none the second time', async () => {
     const root = realpathSync(mkdtempSync(join(tmpdir(), 'forger-cli-labels-')));
