@@ -4,3 +4,4 @@ export * from './tokens';
 export * from './ui';
 export * from './ui-check';
 export * from './states-check';
+export * from './baseline-check';

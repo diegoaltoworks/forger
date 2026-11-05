@@ -32,6 +32,7 @@ import {slice} from './slice';
 import {orient, report} from './supervisor';
 import {linkBlockersCommand} from './link-blockers';
 import {recover} from './recover';
+import {ui} from './ui';
 import {verify} from './verify';
 import {critique} from './critique';
 import {replay} from './replay';
@@ -52,6 +53,7 @@ export const COMMANDS: Command[] = [
   slice,
   intent,
   screenshot,
+  ui,
   brand,
   backlog,
   linkBlockersCommand,

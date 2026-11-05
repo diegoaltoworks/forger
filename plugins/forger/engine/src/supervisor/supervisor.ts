@@ -116,6 +116,7 @@ export const APPROVAL_POLICY = {
   change_principle: 'owner',
   change_approval_table: 'owner',
   change_blocking_check: 'owner',
+  ui_approve: 'owner',
   raise_budget: 'never',
 } as const satisfies Record<string, Authority>;
 

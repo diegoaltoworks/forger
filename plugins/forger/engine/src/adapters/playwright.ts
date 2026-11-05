@@ -10,7 +10,7 @@ import {createRequire} from 'module';
 import {tmpdir} from 'os';
 import {dirname, join} from 'path';
 
-import {decodePng, samplePixels} from './png';
+import {decodePng, samplePixels} from '../ui';
 import {UiInfrastructureError, type AccessibilityAuditor, type AuditRequest, type AuditedPage, type AxeResults, type Box, type CaptureStep, type ElementModel, type GifEncoder, type PageModel, type Probe, type Recorder, type RecordRequest, type Screenshotter, type ShotRequest} from '../ports';
 
 export const PLAYWRIGHT_HINT = 'Playwright is not installed in this project; add it with `bun add -d playwright && bunx playwright install chromium`';
