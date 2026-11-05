@@ -1,3 +1,4 @@
+import {watchRepos} from './multi';
 import {behindBaseRefusal, readBaseSync} from '../loop';
 import type {Command} from './command';
 
@@ -46,11 +47,16 @@ export const reset: Command = {
 
 export const watch: Command = {
   name: 'watch',
-  needs: 'loop',
-  flags: [],
-  help: '  watch            Live status display',
-  async run({runner}) {
-    await runner.watch();
+  needs: 'none',
+  flags: ['repos', 'timeout'],
+  help: `  watch [--repos PATH,PATH] [--timeout S]
+                   Live status display; with --repos, follow every loop's events (terminal and mid-run) as one JSON line each, tagged with its repository`,
+  async run(ctx) {
+    if (ctx.values.repos === undefined) {
+      await ctx.runner.watch();
+      return;
+    }
+    await watchRepos(ctx);
   },
 };
 
