@@ -39,12 +39,14 @@ without lease, no edit of the engine's state, and the read-only rule for the loo
 `work.ts hook` before the call runs. `setup` installs that hook where each harness documents it
 ([ADR 0018](../adr/0018-every-harness-refuses-the-same-calls-in-its-own-mechanism.md) lists the sources):
 
-| Harness | Guard |
-|---|---|
-| `claude` | `PreToolUse` hook in `.claude/settings.json` |
-| `opencode` | plugin `.opencode/plugins/forger-guard.js` |
-| `codex` | `PreToolUse` hook in `.codex/hooks.json`; trust the project and review the hook with `/hooks` |
-| `copilot` | `preToolUse` hook in `.github/hooks/forger.json` |
+| Harness | Guard | Proven |
+|---|---|---|
+| `claude` | `PreToolUse` hook in `.claude/settings.json` | yes |
+| `opencode` | plugin `.opencode/plugins/forger-guard.js` | not yet |
+| `codex` | `PreToolUse` hook in `.codex/hooks.json`; trust the project and review the hook with `/hooks` | not yet |
+| `copilot` | `preToolUse` hook in `.github/hooks/forger.json` | not yet |
 
 A harness with no way to refuse a call is unguarded. `run` refuses to start with it unless the config sets
 `allow_unguarded: true`. No shipped harness is unguarded.
+
+Proven means a real run in that harness has merged a ticket. A harness moves to `yes` only in the PR that records its proving run.

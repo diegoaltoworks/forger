@@ -13,14 +13,14 @@ Forger runs an unattended development loop that builds your backlog one ticket a
 
 ## 📦 Install
 
-You need [Bun](https://bun.sh), `gh` and one supported harness. Forger works in Claude Code, OpenCode, Codex and Copilot. Pick your row.
+You need [Bun](https://bun.sh), `gh` and one supported harness. Forger runs in Claude Code. Adapters for OpenCode, Codex and Copilot exist and are not yet proven by a real run; see [adapters](docs/reference/adapters.md). Pick your row.
 
 | Harness | Install |
 |---|---|
 | Claude Code | `claude plugin marketplace add diegoaltoworks/forger`, then `claude plugin install forger@forger` |
-| OpenCode | `git clone https://github.com/diegoaltoworks/forger ~/forger`, then in your repository `bun ~/forger/plugins/forger/bin/work.ts setup --harness opencode` |
-| Codex | `git clone https://github.com/diegoaltoworks/forger ~/forger`, then in your repository `bun ~/forger/plugins/forger/bin/work.ts setup --harness codex` |
-| Copilot | `git clone https://github.com/diegoaltoworks/forger ~/forger`, then in your repository `bun ~/forger/plugins/forger/bin/work.ts setup --harness copilot` |
+| OpenCode | This adapter is not yet proven by a real run. `git clone https://github.com/diegoaltoworks/forger ~/forger`, then in your repository `bun ~/forger/plugins/forger/bin/work.ts setup --harness opencode` |
+| Codex | This adapter is not yet proven by a real run. `git clone https://github.com/diegoaltoworks/forger ~/forger`, then in your repository `bun ~/forger/plugins/forger/bin/work.ts setup --harness codex` |
+| Copilot | This adapter is not yet proven by a real run. `git clone https://github.com/diegoaltoworks/forger ~/forger`, then in your repository `bun ~/forger/plugins/forger/bin/work.ts setup --harness copilot` |
 
 Setup installs the same guards in every harness. Full steps for each harness: [Getting started](docs/getting-started.md). What each harness adapter does: [Adapters](docs/reference/adapters.md).
 

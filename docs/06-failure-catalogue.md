@@ -85,7 +85,7 @@ the result.
 | The engine runs from a checkout behind origin | fixed (before tickets were tracked) | [entry](#the-engine-runs-from-a-checkout-behind-origin---fixed-before-tickets-were-tracked) |
 | A resume with the wrong GitHub identity | fixed (before tickets were tracked) | [entry](#a-resume-with-the-wrong-github-identity---fixed-before-tickets-were-tracked) |
 | An outside pull request is invisible to the loop | fixed by #264 | [entry](#an-outside-pull-request-is-invisible-to-the-loop---fixed-by-267) |
-| A new gate halts every older install | open, #283 | [entry](#a-new-gate-halts-every-older-install) |
+| A new gate halts every older install | fixed by #283 | [entry](#a-new-gate-halts-every-older-install---fixed-by-287) |
 
 <!-- catalogue-index:end -->
 
@@ -783,9 +783,9 @@ the result.
   PR references; it waits on the owner. S: the supervisor triages the PR without running its code
   (docs/04-supervising.md).
 
-### A new gate halts every older install
+### ~~A new gate halts every older install~~ - fixed by #287
 
-**Status:** open, #283
+**Status:** fixed by #283
 
 - **Seen:** the hooks gate was added while repositories set up before it existed were running loops. Each loop picked
   a ticket, found the gate red on a clean base branch, and halted, because running `setup` is outside any ticket.

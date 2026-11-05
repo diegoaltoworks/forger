@@ -8,7 +8,9 @@ step is in [Install reference](reference/install.md).
 
 You need [Bun](https://bun.sh), one supported harness and, for a GitHub
 tracker, an authenticated `gh`. The harness is Claude Code (`claude`),
-OpenCode (`opencode`), Codex (`codex`) or Copilot (`copilot`).
+OpenCode (`opencode`), Codex (`codex`) or Copilot (`copilot`). Only Claude Code
+is proven by a real run; the other three are not yet proven (see
+[Adapters](reference/adapters.md)).
 
 ```
 bun --version
@@ -46,7 +48,7 @@ later, see [Install reference](reference/install.md#install-and-update).
 
 ### 🧰 OpenCode, Codex and Copilot
 
-These harnesses have no forger plugin. Clone the repository once, anywhere on
+These harnesses are not yet proven by a real run, and have no forger plugin. Clone the repository once, anywhere on
 the machine. The engine needs no install step.
 
 ```
