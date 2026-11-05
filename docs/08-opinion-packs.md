@@ -150,7 +150,7 @@ The `creative` pack is for games, demos, animation and canvas-heavy projects, in
 | `creative.style-frame` | template | a ticket that changes how a screen looks gets one finished frame in the real palette under `docs/design/<ticket>/`, rendered by `screenshot --wireframe` and approved by the owner before screens are built on it |
 | `creative.brief-fit`, `creative.juice`, `creative.glanceable` | template | the ticket says how it serves the verbatim brief, the visual, motion and sound feedback for each player action or event, and what a viewer must understand within a few seconds, with a time-to-first-interaction budget |
 | `creative.palette-tokens`, `creative.no-style-locking-tests` | rule | colours come from tokens and a palette is a set of tokens; review flags a test that locks a style choice instead of a behaviour |
-| `creative.reduced-motion` | rule | motion respects the reduced-motion preference |
+| `creative.reduced-motion` | rule | motion respects the reduced-motion setting |
 | `creative.original` | rule | nothing from an existing work is reproduced |
 
 The pack installs `.forger/templates/ticket-creative.md` (the base ticket with the brief-fit, juice and readable-at-a-glance sections), an example style frame under `docs/design/style-frame/` and the opinions doc, never overwriting. It adds no skill slot of its own: the `design` slot gains a second built-in step through the shipped `creative` flavour (`setup --flavour creative`), which resolves `design` to forger's style-frame skill; every other flavour keeps the grey wireframe. The style-frame step leaves the same `wireframe` contract. With the `ui` pack installed, `check ui` already fails raw colour literals outside the token files.

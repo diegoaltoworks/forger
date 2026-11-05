@@ -23,7 +23,7 @@ Colours come from tokens, and a palette is a set of tokens. A test that asserts 
 
 ## Motion is respected (creative.reduced-motion)
 
-Animation and screen shake stop or soften under the viewer's `prefers-reduced-motion` preference, and the work is still playable without them.
+Animation and screen shake stop or soften under the viewer's `prefers-reduced-motion` setting, and the work is still playable without them.
 
 ## Nothing is copied (creative.original)
 
