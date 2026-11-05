@@ -373,4 +373,33 @@ describe('screenshot evidence', () => {
     expect(f.prompts[0]).toContain(`- ${shot}`);
     expect(f.prompts[0]).toContain('u1: empty: no banner, no clear-filter button (UI state)');
   });
+
+  test('an image the owner approved on the base is withheld from the verifier and named as approved', async () => {
+    const f = withScreenshots(`${shot}\ndocs/screenshots/filled.png\n`);
+    const manifest = JSON.stringify({approved: [{name: 'empty', approved_by: 'owner', files: [shot]}]});
+    const run: CommandRunner = cmd => {
+      if (cmd.startsWith('gh pr view')) return JSON.stringify({...JSON.parse(view), baseRefName: 'main'});
+      if (cmd === 'git show origin/main:.forger/ui-baselines/approved.json') return manifest;
+      return f.run(cmd);
+    };
+    const out = JSON.stringify({verdict: [{criterion: 'c1', verdict: 'met', evidence: [{kind: 'command', ref: 'bun test'}]}]});
+    await verifyPr(run, f.agentSaying(out), f.opts);
+    const prompt = f.prompts[0];
+    expect(prompt.split('## Changed screenshots')[1].split('## Approved')[0]).toContain('- docs/screenshots/filled.png');
+    expect(prompt.split('## Changed screenshots')[1].split('## Approved')[0]).not.toContain(shot);
+    expect(prompt.split('## Approved screenshots (not shown)')[1]).toContain(`- ${shot}`);
+  });
+
+  test('a manifest the PR adds to its own head does not hide its screenshots', async () => {
+    const f = withScreenshots(`${shot}\n`);
+    const run: CommandRunner = cmd => {
+      if (cmd.startsWith('gh pr view')) return JSON.stringify({...JSON.parse(view), baseRefName: 'main'});
+      if (cmd.startsWith('git show origin/main:')) throw new Error('does not exist');
+      return f.run(cmd);
+    };
+    const out = JSON.stringify({verdict: [{criterion: 'c1', verdict: 'met', evidence: [{kind: 'command', ref: 'bun test'}]}]});
+    await verifyPr(run, f.agentSaying(out), f.opts);
+    expect(f.prompts[0]).toContain(`## Changed screenshots\n- ${shot}`);
+    expect(f.prompts[0]).not.toContain('## Approved screenshots');
+  });
 });

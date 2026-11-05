@@ -97,6 +97,7 @@ describe('approval policy', () => {
     expect(approvalFor('resume_after_known_recovery')).toBe('alone_and_report');
     expect(approvalFor('file_critique_tickets')).toBe('alone_and_report');
     expect(approvalFor('raise_budget')).toBe('never');
+    expect(approvalFor('ui_approve')).toBe('owner');
   });
   test('an unlisted action needs the owner', () => {
     expect(approvalFor('something_new')).toBe('owner');

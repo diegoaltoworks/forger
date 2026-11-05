@@ -5,6 +5,7 @@
 
 import type {CaptureStep} from '../ports';
 import {parseAssertions, type StateAssertions} from './assertions';
+import {DEFAULT_TOLERANCE, type Tolerance} from './compare';
 
 export const UI_PATH = '.forger/ui.json';
 export const SCREENSHOT_DIR = 'docs/screenshots/';
@@ -53,6 +54,8 @@ export interface UiConfig {
   themes: Theme[];
   /** Seconds to wait for the app to answer. */
   ready_timeout: number;
+  /** How far a capture may drift from its approved baseline before `check ui` fails. */
+  tolerance: Tolerance;
   /** Scripted interactions for `screenshot --capture`; empty when the file declares none. */
   captures: CaptureSpec[];
 }
@@ -117,6 +120,17 @@ function step(v: unknown, where: string): CaptureStep {
     return {fill: {selector: text(f.selector, `${where}.fill.selector`), value: f.value}};
   }
   return {[kind]: text(value, `${where}.${kind}`)} as CaptureStep;
+}
+
+function tolerance(v: unknown): Tolerance {
+  if (v === undefined) return DEFAULT_TOLERANCE;
+  if (typeof v !== 'object' || v === null || Array.isArray(v)) throw new UiConfigError('"tolerance" must be an object');
+  const o = v as Record<string, unknown>;
+  const pixel = o.pixel === undefined ? DEFAULT_TOLERANCE.pixel : o.pixel;
+  const area = o.area === undefined ? DEFAULT_TOLERANCE.area : o.area;
+  if (!Number.isInteger(pixel) || (pixel as number) < 0 || (pixel as number) > 255) throw new UiConfigError('"tolerance.pixel" must be an integer from 0 to 255');
+  if (typeof area !== 'number' || area < 0 || area > 1) throw new UiConfigError('"tolerance.area" must be a number from 0 to 1');
+  return {pixel: pixel as number, area};
 }
 
 function captureSpec(v: unknown, i: number, viewports: Viewport[]): CaptureSpec {
@@ -202,6 +216,7 @@ export function parseUiConfig(raw: string): UiConfig {
     viewports,
     themes: themes as Theme[],
     ready_timeout: timeout as number,
+    tolerance: tolerance(o.tolerance),
     captures,
   };
 }

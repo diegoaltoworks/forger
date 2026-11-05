@@ -128,6 +128,28 @@ alpha forms - in a text file under `paths`, unless the file matches `tokens` in
 everywhere else. Comments are ignored. A deliberate exception is a waiver, in
 the open.
 
+## Approved baselines (check: ui.baselines)
+
+The owner approves a state's screenshots once: `ui approve <state>` copies the
+committed captures under `.forger/ui-baselines/` and records who approved them
+in `approved.json`. The change lands by PR, on the owner's word; `approval
+ui_approve` answers `owner`, so a worker never runs it on its own. From then on
+`check ui` compares each approved capture with its baseline and fails a
+difference beyond the tolerance, writing a side-by-side diff image
+(`<capture>.diff.png`: baseline, capture, differing pixels) next to the capture.
+The comparison is a pure function of two images and the tolerance:
+
+```json
+"tolerance": {"pixel": 16, "area": 0.001}
+```
+
+`pixel` is the per-channel difference a pixel may have and still match, which
+absorbs anti-aliasing noise; `area` is the share of pixels allowed beyond it.
+Both are optional. Re-approving after an intended visual change is again the
+owner's action. The verifier is sent only the changed images that have no
+baseline on the base branch, and must cite the image it judged. The diff images
+are throwaway output; leave them out of commits.
+
 ## Accessibility is run, not remembered (tool: ui.a11y)
 
 `check a11y` serves the app like `screenshot`, runs axe-core on every route at

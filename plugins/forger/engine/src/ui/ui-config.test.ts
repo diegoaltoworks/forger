@@ -5,6 +5,19 @@ import {DEFAULT_THEMES, DEFAULT_VIEWPORTS, UiConfigError, parseUiConfig} from '.
 
 const base = {paths: ['src/**'], start: 'bun run dev'};
 
+describe('tolerance', () => {
+  const base = {paths: ['a'], start: 's'};
+  test('defaults, and a partial override keeps the other default', () => {
+    expect(parseUiConfig(JSON.stringify(base)).tolerance).toEqual({pixel: 16, area: 0.001});
+    expect(parseUiConfig(JSON.stringify({...base, tolerance: {area: 0.01}})).tolerance).toEqual({pixel: 16, area: 0.01});
+  });
+  test('out-of-range numbers are errors', () => {
+    expect(() => parseUiConfig(JSON.stringify({...base, tolerance: {pixel: 300}}))).toThrow('tolerance.pixel');
+    expect(() => parseUiConfig(JSON.stringify({...base, tolerance: {area: 2}}))).toThrow('tolerance.area');
+    expect(() => parseUiConfig(JSON.stringify({...base, tolerance: []}))).toThrow('"tolerance"');
+  });
+});
+
 describe('parseUiConfig', () => {
   test('applies the defaults: a phone and a desktop, light and dark, the root route', () => {
     const c = parseUiConfig(JSON.stringify(base));

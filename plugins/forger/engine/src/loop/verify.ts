@@ -11,6 +11,7 @@ import {join} from 'path';
 
 import type {Tier} from '../config';
 import type {AgentRunner, CapturingRunner, CommandRunner, SpecReport} from '../ports';
+import {BASELINE_MANIFEST, parseBaselines, withoutBaseline, type BaselineManifest} from '../ui';
 import {issueNumber} from './decline';
 import {PR_FIELDS, parsePr} from './pr-checks';
 import {mergeEntries, partitionCriteria} from './mechanical';
@@ -53,12 +54,25 @@ export function changedScreenshots(nameOnly: string): string[] {
   return nameOnly
     .split(/\r?\n/)
     .map(l => l.trim())
-    .filter(l => l.startsWith(SCREENSHOTS_DIR) && /\.(png|jpe?g|gif|webp)$/i.test(l));
+    .filter(l => l.startsWith(SCREENSHOTS_DIR) && /\.(png|jpe?g|gif|webp)$/i.test(l) && !/\.diff\.png$/i.test(l));
 }
 
 /** A UI state the ticket names while the PR changed no screenshot cannot be seen, so it is cannot_tell. */
 export function unseenStates(states: Criterion[]): CheckedEntry[] {
   return states.map(c => ({criterion: c.id, verdict: 'cannot_tell', missing: 'no_state', evidence: [], demoted: 'the PR changed no screenshot under docs/screenshots/'}));
+}
+
+/**
+ * The baselines the owner approved, read from the PR's base and not its head: a
+ * PR that approves its own screenshots would otherwise keep them from being judged.
+ */
+export function baseBaselines(run: CommandRunner, base: string | undefined): BaselineManifest {
+  if (!base) return {approved: []};
+  try {
+    return parseBaselines(run(`git show origin/${base}:${BASELINE_MANIFEST}`));
+  } catch {
+    return {approved: []};
+  }
 }
 
 /** The install step of a gates command: its segments up to and including the first that installs. Pure. */
@@ -126,7 +140,7 @@ export function copyRecord(root: string, commands: CommandRun[]): CopyRecord {
 }
 
 export async function verifyPr(run: CommandRunner, agent: AgentRunner, opts: VerifyOptions): Promise<VerifyResult> {
-  const view = JSON.parse(run(`gh pr view ${opts.pr} --json ${PR_FIELDS},headRefName,body`)) as {headRefOid?: string; headRefName?: string; body?: string; statusCheckRollup?: unknown};
+  const view = JSON.parse(run(`gh pr view ${opts.pr} --json ${PR_FIELDS},headRefName,baseRefName,body`)) as {headRefOid?: string; headRefName?: string; baseRefName?: string; body?: string; statusCheckRollup?: unknown};
   const pr = parsePr(JSON.stringify({...view, statusCheckRollup: withoutVerifyStatus(view.statusCheckRollup)}));
   if (!pr || !view.headRefOid) throw new Error(`cannot read PR #${opts.pr}`);
   const head = view.headRefOid;
@@ -156,8 +170,11 @@ export async function verifyPr(run: CommandRunner, agent: AgentRunner, opts: Ver
     } catch {
       // an unreadable spec decides nothing; every criterion stays with the verifier
     }
-    const screenshots = uiStates.length > 0 ? changedScreenshots(run(`gh pr diff ${opts.pr} --name-only`)) : [];
-    const unseen = screenshots.length === 0 ? uiStates : [];
+    const changed = uiStates.length > 0 ? changedScreenshots(run(`gh pr diff ${opts.pr} --name-only`)) : [];
+    const manifest = baseBaselines(run, view.baseRefName);
+    const screenshots = withoutBaseline(changed, manifest);
+    const approved = changed.filter(c => !screenshots.includes(c));
+    const unseen = changed.length === 0 ? uiStates : [];
     const {mechanical: specDecided, remaining: toJudge} = partitionCriteria(criteria, report);
     const mechanical = [...specDecided, ...unseenStates(unseen)];
     const remaining = toJudge.filter(c => !unseen.includes(c));
@@ -169,7 +186,7 @@ export async function verifyPr(run: CommandRunner, agent: AgentRunner, opts: Ver
     const gate = {checks: pr.checks, failing_checks: pr.failing_checks};
     const ask = async (criteriaAsked: Criterion[], failed?: {criterion: string; citations: string[]}[]) => {
       const result = await agent.run({
-        prompt: buildVerifierInput({criteria: criteriaAsked, diff, gate, screenshots, runLogged, failedCitations: failed}),
+        prompt: buildVerifierInput({criteria: criteriaAsked, diff, gate, screenshots, approved, runLogged, failedCitations: failed}),
         sessionId: opts.sessionId,
         tier: opts.tier,
         model: opts.model,

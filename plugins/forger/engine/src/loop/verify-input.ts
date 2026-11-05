@@ -21,6 +21,8 @@ export interface VerifierInput {
   gate: GateResult;
   /** Images the PR changed under docs/screenshots/; empty when it changed none. */
   screenshots?: string[];
+  /** Changed images the owner approved as baselines; `check ui` already holds them to the baseline, so they are not judged. */
+  approved?: string[];
   /** The command prefix that records a command in the copy's log; absent when no log is kept. */
   runLogged?: string;
   /** Citations of the previous round that did not check out, per criterion; present in the second round. */
@@ -30,6 +32,7 @@ export interface VerifierInput {
 export function buildVerifierInput(input: VerifierInput): string {
   const criteria = input.criteria.map(c => `- ${c.id}: ${c.text}${c.ui ? ' (UI state)' : ''}`).join('\n');
   const shots = input.screenshots ?? [];
+  const approved = input.approved ?? [];
   const gate =
     input.gate.checks === 'failure'
       ? `failure (${input.gate.failing_checks.join(', ') || 'unnamed'})`
@@ -51,6 +54,9 @@ export function buildVerifierInput(input: VerifierInput): string {
           '## Changed screenshots',
           ...shots.map(s => `- ${s}`),
         ]
+      : []),
+    ...(approved.length > 0
+      ? ['', '## Approved screenshots (not shown)', 'The owner approved these images as baselines and `check ui` holds them to the baseline. Do not judge them and do not cite them:', ...approved.map(s => `- ${s}`)]
       : []),
     '',
     '## Acceptance criteria',

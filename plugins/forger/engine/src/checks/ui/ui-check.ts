@@ -12,6 +12,7 @@ import type {CommandRunner} from '../../ports';
 import {mergeBase, parseNameStatus} from '../decisions';
 import type {Finding} from '../waivers';
 import {loadUiConfig} from './a11y-check';
+import {runBaselineCheck} from './baseline-check';
 import {checkTokens, tokenScanTargets} from './tokens';
 import {checkUiEvidence} from './ui';
 
@@ -30,5 +31,5 @@ export function runUiCheck(projectRoot: string, run: CommandRunner): Finding[] {
       return [];
     }
   });
-  return [...checkUiEvidence(changes, config), ...checkTokens(sources)];
+  return [...checkUiEvidence(changes, config), ...checkTokens(sources), ...runBaselineCheck(projectRoot, config)];
 }

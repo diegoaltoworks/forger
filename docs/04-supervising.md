@@ -212,4 +212,5 @@ it, and an action it does not list needs the owner.
 | Touch production data or secrets | | yes |
 | Publish anything outside the repository | | yes |
 | Change a principle, this table or a blocking check | | yes |
+| Approve or re-approve a screenshot baseline (`ui approve`) | | yes |
 | Raise the run budget | | never |
