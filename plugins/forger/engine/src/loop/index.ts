@@ -1,5 +1,7 @@
 export * from './base-sync';
 export * from './claim';
+export * from './criteria';
+export * from './ticket-check';
 export * from './decline';
 export * from './decline-io';
 export * from './events';
