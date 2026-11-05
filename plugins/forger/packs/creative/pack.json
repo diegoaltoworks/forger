@@ -1,0 +1,23 @@
+{
+  "id": "creative",
+  "version": "1.0.0",
+  "description": "Creative work is judged by how it looks and feels: a finished style frame replaces the grey wireframe, tickets name the brief fit and the feedback on every action, and a palette is tokens, not a test of pixel counts.",
+  "detect": ["dep:phaser", "dep:pixi.js", "dep:three", "dep:p5", "dep:kaplay", "dep:kaboom", "dep:excalibur", "dep:@babylonjs/core", "dep:matter-js", "dep:konva", "dep:fabric", "dep:gsap", "dep:lottie-web", "dep:tone"],
+  "files": [
+    {"source": "files/creative.md", "target": ".forger/opinions/creative.md"},
+    {"source": "files/ticket.md", "target": ".forger/templates/ticket-creative.md"},
+    {"source": "files/style-frame.html", "target": "docs/design/style-frame/index.html"}
+  ],
+  "opinions": [
+    {"id": "creative.style-frame", "rung": "template", "summary": "A ticket that changes how a screen looks gets one finished frame in the real palette under docs/design/<ticket>/, rendered by screenshot --wireframe and approved by the owner before screens are built on it.", "check": null},
+    {"id": "creative.brief-fit", "rung": "template", "summary": "A creative ticket says how the change serves the verbatim brief.", "check": null},
+    {"id": "creative.juice", "rung": "template", "summary": "A creative ticket names, for each player action or event, the visual, motion and sound feedback.", "check": null},
+    {"id": "creative.glanceable", "rung": "template", "summary": "A creative ticket says what a viewer must understand within a few seconds, and its time-to-first-interaction budget.", "check": null},
+    {"id": "creative.palette-tokens", "rung": "rule", "summary": "Colours come from tokens, and a palette is a set of tokens; no test asserts pixel counts or exact shades.", "check": null},
+    {"id": "creative.no-style-locking-tests", "rung": "rule", "summary": "Review flags a test that locks a style choice (a palette size, a pixel shade, a font) instead of a behaviour.", "check": null},
+    {"id": "creative.reduced-motion", "rung": "rule", "summary": "Motion respects the viewer's reduced-motion setting.", "check": null},
+    {"id": "creative.original", "rung": "rule", "summary": "Nothing from an existing work is reproduced: references set a mood, they are not copied.", "check": null}
+  ],
+  "checks": [],
+  "slots": ["design"]
+}
