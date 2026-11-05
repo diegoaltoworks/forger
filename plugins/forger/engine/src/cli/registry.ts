@@ -33,6 +33,7 @@ import {linkBlockersCommand} from './link-blockers';
 import {recover} from './recover';
 import {verify} from './verify';
 import {critique} from './critique';
+import {replay} from './replay';
 import {rebase, worktree} from './worktree';
 
 export const COMMANDS: Command[] = [
@@ -58,6 +59,7 @@ export const COMMANDS: Command[] = [
   merge,
   verify,
   critique,
+  replay,
   runLogged,
   decline,
   prBody,
