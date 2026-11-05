@@ -9,6 +9,7 @@ This folder is the forger plugin: the commands, the engine, the packs and the sk
 | `bin/work.ts` | The engine entry that the commands call |
 | `packs/` | The opinion packs that a repository adopts |
 | `skills/` | Forger's own steps for the skill slots |
+| `evals/` | The cases that score a skill on a slot |
 | `flavours/` | The shipped skill flavours |
 | `pipeline/` | The pipeline definition |
 | `templates/` | The files that `setup` copies into `.forger/` |
