@@ -6,6 +6,7 @@
 import {approval} from './approval';
 import {backlog} from './backlog';
 import {brand} from './brand';
+import {catalogue} from './catalogue';
 import {check} from './check';
 import {contract} from './contract';
 import {decline} from './decline';
@@ -50,6 +51,7 @@ export const COMMANDS: Command[] = [
   contract,
   evalCommand,
   check,
+  catalogue,
   slice,
   intent,
   screenshot,

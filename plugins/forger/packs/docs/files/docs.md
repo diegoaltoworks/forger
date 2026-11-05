@@ -41,6 +41,15 @@ The check catches both before a merge. Diagram parsing is structural: the
 diagram type is known, flowchart brackets and quotes balance, arrows have both
 ends and subgraphs close.
 
+## A failure catalogue states what is fixed
+
+A catalogue of failures keeps every entry, fixed or not: the list is what the
+project defends against, and a fixed entry is how a regression is recognised.
+Each entry carries one `**Status:**` line naming its fix tickets, and the
+tracker decides whether it is open or fixed. A fixed entry's heading is struck
+through with the merged PR. The check fails on an entry with no status, or a
+status that disagrees with the tracker.
+
 ## READMEs are a launch pad in Simplified Technical English
 
 Every `README.md` states its purpose first and is written to the measurable
