@@ -1,6 +1,6 @@
 {
-  "iteration": 137,
-  "status": "ready",
+  "iteration": 138,
+  "status": "running",
   "last_completed_at": "2026-11-05T07:57:27.347Z",
   "completed_iterations": 123,
   "failed_iterations": 7,
@@ -128,7 +128,15 @@
     "issue-262",
     "issue-209"
   ],
-  "in_flight": [],
+  "in_flight": [
+    {
+      "ticket": null,
+      "pid": null,
+      "session_id": "f7c016a5-a5d7-452d-acb7-81dfc5ee8072",
+      "snapshot": null,
+      "started_at": "2026-11-05T08:22:59.624Z"
+    }
+  ],
   "last_error": "forger/verify cannot run (disk quota error `EDQUOT`, no verdict from the verifier); PR #267 is green locally and ready to verify and merge once space is freed",
   "stall_count": 0,
   "declined_tasks": [
