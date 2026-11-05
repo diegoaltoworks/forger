@@ -1,3 +1,4 @@
+export * from './base-sync';
 export * from './claim';
 export * from './decline';
 export * from './decline-io';

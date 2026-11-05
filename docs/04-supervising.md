@@ -31,6 +31,12 @@ Asked once, written down, refined later (see `05-refining-the-process.md`):
   reason not to start, and a stale lease of this machine is an anomaly the next start clears. Restarting an engine
   needs no wait: a stop by SIGTERM or SIGINT releases the lease, and a lease left by a killed engine on this machine
   is taken over at once.
+- The base branch against its remote. The engine runs its own code from the loop's checkout, so a base branch
+  behind `origin/<base>` means every restart runs old code. `orient` lists it as an anomaly while no engine is
+  alive and names the fix (`git pull --ff-only origin <base>`); `run` refuses to start on a behind base branch in a
+  clean checkout and gives the same message.
+- Who pushes the state branch. When `resume` or `run` cannot write it, the message names the GitHub identity in use;
+  the loop's scoped identity must be set in that shell.
 - What merged since the last session; what the checked-out branch really is.
 - Anything stuck: a ticket marked completed with no merged PR, a branch with
   commits and no PR.

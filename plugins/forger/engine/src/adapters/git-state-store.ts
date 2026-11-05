@@ -12,7 +12,7 @@ import {tmpdir} from 'os';
 import {join} from 'path';
 
 import {execCapture} from './exec';
-import {decideLease, leaseFor} from '../loop';
+import {decideLease, leaseFor, stateWriteFailure} from '../loop';
 import {eventDay, type LeaseClaim, type LeaseRequest, type StateBranch, type StateStore} from '../ports';
 
 export interface GitStateOptions {
@@ -22,6 +22,8 @@ export interface GitStateOptions {
   branch?: string;
   /** Attempts per write before giving up; at least one. */
   attempts?: number;
+  /** Who pushes, named in the message when a write is refused; defaults to the `gh` login. */
+  identity?: () => string | null;
 }
 
 const STATE = 'state.json';
@@ -37,6 +39,10 @@ export function gitStateStore(opts: GitStateOptions): StateStore & StateBranch {
   const run = execCapture(opts.repo);
   const attempts = Math.max(1, opts.attempts ?? 5);
   const ref = `refs/forger/${branch}`;
+  const identity = opts.identity ?? (() => {
+    const r = run('gh api user --jq .login');
+    return r.exitCode === 0 && r.stdout !== '' ? r.stdout : null;
+  });
 
   /** Fetches the branch; the tip's commit id, or null when the branch is absent. */
   function fetchTip(): string | null {
@@ -109,7 +115,7 @@ export function gitStateStore(opts: GitStateOptions): StateStore & StateBranch {
     seed: (files, message) => (fetchTip() === null ? push(null, files, message) : false),
     readState: () => blob(fetchTip(), STATE),
     writeState(text) {
-      if (!update('state', () => ({[STATE]: text}))) throw new Error('forger: could not write the state branch');
+      if (!update('state', () => ({[STATE]: text}))) throw new Error(stateWriteFailure(identity()));
     },
     appendEvent(line, at) {
       const path = `${EVENTS}${eventDay(at)}.jsonl`;
@@ -118,7 +124,7 @@ export function gitStateStore(opts: GitStateOptions): StateStore & StateBranch {
         const kept = read(path);
         return {[path]: `${kept === null || kept === '' ? '' : `${kept}\n`}${line.replace(/\n$/, '')}\n`};
       });
-      if (!ok) throw new Error('forger: could not write the state branch');
+      if (!ok) throw new Error(stateWriteFailure(identity()));
     },
     readEvents() {
       const tip = fetchTip();

@@ -2,7 +2,7 @@ import {hostname} from 'os';
 import {existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync} from 'fs';
 import {join} from 'path';
 
-import {decideHalt, pidAlive, viewLease, standingHalt, parseAllEvents, GhTrackerHalt, requiresVerifyStatus, handedOver, listRepoLabels, loopLabels, missingLabels, readAllVerdicts, verdictsHome} from '../loop';
+import {readBaseSync, decideHalt, pidAlive, viewLease, standingHalt, parseAllEvents, GhTrackerHalt, requiresVerifyStatus, handedOver, listRepoLabels, loopLabels, missingLabels, readAllVerdicts, verdictsHome} from '../loop';
 import {describeBlocked} from '../backlog';
 import {buildReport, formatReport, mergedInPeriod, orient as orientPlan, proposedAdrs, reportPeriod, waitingIssues, OWNER_LABELS, type AdrText, type MergedPrFact, type OwnerItem, type WaitingIssue} from '../supervisor';
 import type {Command, CommandContext} from './command';
@@ -64,6 +64,7 @@ function supervise(which: 'orient' | 'report') {
     const lease = viewLease(ctx.stateStore.readLease(), new Date(), {host: hostname(), isAlive: pidAlive});
     const plan = orientPlan({
       lease,
+      baseSync: readBaseSync(ctx.run(), config.base_branch),
       backlogAnomalies: ctx.backlog.report().anomalies,
       blockers: ctx.backlog.blocked().map(b => describeBlocked([b])),
       missingLabels: missing,

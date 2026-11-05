@@ -4,7 +4,7 @@
  * (`commands/work.md`) calls these through the CLI and keeps only judgement.
  */
 
-import {missingVerifyStatusAnomaly, type LeaseView, openLabel, recommendationFor, type HandedOver, type StatusReport} from '../loop';
+import {behindBaseAnomaly, type BaseSync, missingVerifyStatusAnomaly, type LeaseView, openLabel, recommendationFor, type HandedOver, type StatusReport} from '../loop';
 import type {Measures} from './measure';
 import {type Period} from './waiting';
 import {buildReportMeasures, formatReportMeasures, type ReportMeasures} from './report-measures';
@@ -28,6 +28,8 @@ export interface OrientInputs {
   requiresVerify?: boolean | null;
   /** The stored lease seen from this machine; undefined when not read. */
   lease?: LeaseView;
+  /** The base branch against its remote; undefined when not read. */
+  baseSync?: BaseSync;
 }
 
 export interface OrientPlan {
@@ -63,6 +65,8 @@ export function orient(i: OrientInputs): OrientPlan {
   for (const label of i.missingLabels ?? []) {
     anomalies.push(`the label "${label}" the loop relies on does not exist on GitHub; run setup to create it`);
   }
+  const behind = behindBaseAnomaly(i.baseSync, i.baseBranch, s.runner.alive);
+  if (behind) anomalies.push(behind);
   if (i.requiresVerify === false) anomalies.push(missingVerifyStatusAnomaly(i.baseBranch));
   anomalies.push(...(i.backlogAnomalies ?? []));
   if (s.halted) {

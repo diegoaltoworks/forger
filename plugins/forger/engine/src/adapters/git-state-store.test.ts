@@ -113,3 +113,21 @@ describe('gitStateStore', () => {
     expect(() => gitStateStore({repo: root, branch: "x'; rm -rf /"})).toThrow();
   });
 });
+
+describe('gitStateStore refused write', () => {
+  test('the message names the identity in use and the scoped identity fix', () => {
+    const s = scene();
+    const a = s.clone('a');
+    sh(s.remote, 'printf "#!/bin/sh\\nexit 1\\n" > hooks/pre-receive && chmod +x hooks/pre-receive');
+    const store = gitStateStore({repo: a, attempts: 1, identity: () => 'someone-else'});
+    expect(() => store.writeState('{}')).toThrow(/identity in use is "someone-else".*scoped identity must be set/);
+    expect(() => store.appendEvent('{}', at)).toThrow(/someone-else/);
+  });
+  test('an unreadable identity is said so', () => {
+    const s = scene();
+    const a = s.clone('a');
+    sh(s.remote, 'printf "#!/bin/sh\\nexit 1\\n" > hooks/pre-receive && chmod +x hooks/pre-receive');
+    const store = gitStateStore({repo: a, attempts: 1, identity: () => null});
+    expect(() => store.writeState('{}')).toThrow(/could not be read.*scoped identity/);
+  });
+});
