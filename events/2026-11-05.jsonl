@@ -18,3 +18,4 @@
 {"event":"picked","at":"2026-11-05T07:35:40.265Z","iteration":135,"ticket":"issue-262","reason":null}
 {"event":"picked","at":"2026-11-05T07:47:07.421Z","iteration":136,"ticket":"issue-209","reason":null}
 {"event":"picked","at":"2026-11-05T07:57:39.065Z","iteration":137,"ticket":"issue-264","reason":null}
+{"event":"halted","at":"2026-11-05T08:05:15.856Z","iteration":137,"ticket":null,"reason":"forger/verify cannot run (disk quota error `EDQUOT`, no verdict from the verifier); PR #267 is green locally and ready to verify and merge once space is freed"}
