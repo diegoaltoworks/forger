@@ -229,6 +229,11 @@ it, and a changed HEAD can move the worker off its branch. Verification reads
 state-changing git command in the loop's checkout is refused before it runs,
 and read-only git is allowed (see the hook layer in `02-the-loop.md`).
 
+The rule judges the repository a command acts on, read from `-C`, `--git-dir`,
+`--work-tree` and a leading `cd`. A commit in another repository passes; a path
+the hook cannot resolve (a variable, `~`) is treated as the loop's checkout and
+refused. Heredoc bodies are data, so a git command quoted in one is not judged.
+
 ## Approval reference
 
 The table is encoded in the engine and tested; `approval <action>` answers from

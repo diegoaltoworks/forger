@@ -20,7 +20,28 @@ interface Token {
   text: string;
 }
 
-function tokenize(command: string): Token[] {
+/** The command with each heredoc body removed: the body is data fed to a program, not commands. */
+export function withoutHeredocs(command: string): string {
+  let out = command;
+  let from = 0;
+  for (;;) {
+    const re = /<<(?!<)-?\s*(['"]?)([A-Za-z_][A-Za-z0-9_]*)\1/g;
+    re.lastIndex = from;
+    const m = re.exec(out);
+    if (!m) return out;
+    const lineEnd = out.indexOf('\n', m.index + m[0].length);
+    from = m.index + m[0].length;
+    if (lineEnd === -1) continue;
+    const lines = out.slice(lineEnd + 1).split('\n');
+    const stop = lines.findIndex(l => l.replace(/^\t+/, '') === m[2]);
+    const consumed = stop === -1 ? lines.length : stop + 1;
+    const rest = lines.slice(consumed).join('\n');
+    out = out.slice(0, lineEnd) + (consumed < lines.length ? '\n' + rest : '');
+  }
+}
+
+function tokenize(rawCommand: string): Token[] {
+  const command = withoutHeredocs(rawCommand);
   const tokens: Token[] = [];
   let word = '';
   let inWord = false;
