@@ -16,6 +16,13 @@ export interface Viewport {
 
 export type Theme = 'light' | 'dark';
 
+/** A named screen state that is not its own route: a route (query string allowed) and the steps that reach it. */
+export interface UiState {
+  name: string;
+  route: string;
+  steps: CaptureStep[];
+}
+
 /** A named, scripted interaction recorded as video: motion, feedback and pacing that a still hides. */
 export interface CaptureSpec {
   name: string;
@@ -37,6 +44,8 @@ export interface UiConfig {
   /** Where the served app answers. */
   url: string;
   routes: string[];
+  /** Named states captured like routes, after their steps; empty when the file declares none. */
+  states: UiState[];
   viewports: Viewport[];
   themes: Theme[];
   /** Seconds to wait for the app to answer. */
@@ -84,7 +93,7 @@ function viewport(v: unknown, i: number): Viewport {
 }
 
 export const DEFAULT_CAPTURE_SECONDS = 15;
-const STEP_KINDS = ['wait', 'key', 'click', 'tap', 'pause'] as const;
+const STEP_KINDS = ['wait', 'key', 'click', 'tap', 'pause', 'fill'] as const;
 
 function step(v: unknown, where: string): CaptureStep {
   if (typeof v !== 'object' || v === null || Array.isArray(v)) throw new UiConfigError(`${where} must be an object`);
@@ -97,6 +106,12 @@ function step(v: unknown, where: string): CaptureStep {
   if (kind === 'pause') {
     if (!Number.isInteger(value) || (value as number) <= 0) throw new UiConfigError(`${where}.pause must be a positive integer of milliseconds`);
     return {pause: value as number};
+  }
+  if (kind === 'fill') {
+    if (typeof value !== 'object' || value === null || Array.isArray(value)) throw new UiConfigError(`${where}.fill must be an object with selector and value`);
+    const f = value as Record<string, unknown>;
+    if (typeof f.value !== 'string') throw new UiConfigError(`${where}.fill.value must be a string`);
+    return {fill: {selector: text(f.selector, `${where}.fill.selector`), value: f.value}};
   }
   return {[kind]: text(value, `${where}.${kind}`)} as CaptureStep;
 }
@@ -118,6 +133,19 @@ function captureSpec(v: unknown, i: number, viewports: Viewport[]): CaptureSpec 
   const paused = steps.reduce((sum, s) => sum + ('pause' in s ? s.pause : 0), 0);
   if (paused > (max as number) * 1000) throw new UiConfigError(`${where} pauses for ${paused} ms, more than its max_seconds`);
   return {name, route, viewport, steps, max_seconds: max as number};
+}
+
+function uiState(v: unknown, i: number): UiState {
+  const where = `states[${i}]`;
+  if (typeof v !== 'object' || v === null || Array.isArray(v)) throw new UiConfigError(`${where} must be an object`);
+  const o = v as Record<string, unknown>;
+  const name = text(o.name, `${where}.name`);
+  if (!NAME.test(name)) throw new UiConfigError(`${where}.name must be lowercase words joined by hyphens`);
+  const route = o.route === undefined ? '/' : text(o.route, `${where}.route`);
+  if (!route.startsWith('/')) throw new UiConfigError(`${where}.route "${route}" must start with "/"`);
+  if (o.steps !== undefined && !Array.isArray(o.steps)) throw new UiConfigError(`${where}.steps must be a list`);
+  const steps = ((o.steps as unknown[] | undefined) ?? []).map((s, j) => step(s, `${where}.steps[${j}]`));
+  return {name, route, steps};
 }
 
 export function parseUiConfig(raw: string): UiConfig {
@@ -150,6 +178,11 @@ export function parseUiConfig(raw: string): UiConfig {
 
   if (o.captures !== undefined && !Array.isArray(o.captures)) throw new UiConfigError('"captures" must be a list');
   const captures = ((o.captures as unknown[] | undefined) ?? []).map((c, i) => captureSpec(c, i, viewports));
+  if (o.states !== undefined && !Array.isArray(o.states)) throw new UiConfigError('"states" must be a list');
+  const states = ((o.states as unknown[] | undefined) ?? []).map(uiState);
+  const stateNames = states.map(s => s.name);
+  if (new Set(stateNames).size !== stateNames.length) throw new UiConfigError('"states" names must be unique');
+
   const captureNames = captures.map(c => c.name);
   if (new Set(captureNames).size !== captureNames.length) throw new UiConfigError('"captures" names must be unique');
 
@@ -159,6 +192,7 @@ export function parseUiConfig(raw: string): UiConfig {
     start: text(o.start, 'start'),
     url: url.replace(/\/+$/, ''),
     routes,
+    states,
     viewports,
     themes: themes as Theme[],
     ready_timeout: timeout as number,

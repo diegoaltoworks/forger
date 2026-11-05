@@ -28,7 +28,7 @@ export async function runScreenshots(
     await server.start(config.start);
     await server.waitReady(config.url, config.ready_timeout * 1000);
     await shooter.capture(
-      captures.map(c => ({url: c.url, width: c.width, height: c.height, theme: c.theme, file: join(projectRoot, c.file)}))
+      captures.map(c => ({url: c.url, width: c.width, height: c.height, theme: c.theme, ...(c.steps !== undefined && c.steps.length > 0 ? {steps: c.steps} : {}), file: join(projectRoot, c.file)}))
     );
   } finally {
     await server.stop();

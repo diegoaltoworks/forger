@@ -19,7 +19,7 @@
 
 ## UI states
 
-<What the screen shows when empty, loading, failed and full, or "none" when no screen changes.>
+<What the screen shows when empty, loading, failed and full, or "none" when no screen changes. Name each state; a state that is not its own route needs a `states` entry in `.forger/ui.json` (route plus steps), so `screenshot` can capture it.>
 
 ## Knock-on
 

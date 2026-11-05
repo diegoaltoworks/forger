@@ -4,14 +4,16 @@
  * tests use fakes.
  */
 
-/** One scripted interaction. `wait`, `click` and `tap` take a CSS selector, `key` a Playwright key name, `pause` milliseconds. */
-export type CaptureStep = {wait: string} | {key: string} | {click: string} | {tap: string} | {pause: number};
+/** One scripted interaction. `wait`, `click` and `tap` take a CSS selector, `fill` a selector and the text to type, `key` a Playwright key name, `pause` milliseconds. */
+export type CaptureStep = {wait: string} | {key: string} | {click: string} | {tap: string} | {pause: number} | {fill: {selector: string; value: string}};
 
 export interface ShotRequest {
   url: string;
   width: number;
   height: number;
   theme: 'light' | 'dark';
+  /** Run in order after the page loads and before the capture; a named UI state's setup. */
+  steps?: CaptureStep[];
   /** Absolute path of the image to write. */
   file: string;
 }

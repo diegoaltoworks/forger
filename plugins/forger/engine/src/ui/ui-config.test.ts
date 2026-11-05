@@ -76,4 +76,33 @@ describe('parseUiConfig', () => {
       test(`rejects ${name}`, () => expect(() => parse(value)).toThrow(message));
     }
   });
+
+  describe('states', () => {
+    const state = {name: 'filtered', route: '/list?filter=open', steps: [{click: '#filter'}, {fill: {selector: '#q', value: 'a'}}, {wait: '.row'}, {pause: 100}]};
+    const parse = (s: unknown) => parseUiConfig(JSON.stringify({...base, states: s}));
+
+    test('a file without states has none', () => expect(parseUiConfig(JSON.stringify(base)).states).toEqual([]));
+
+    test('keeps a state with its query string and steps', () => {
+      expect(parse([state]).states).toEqual([state]);
+    });
+
+    test('a state without steps or route takes the root and no steps', () => {
+      expect(parse([{name: 'home'}]).states).toEqual([{name: 'home', route: '/', steps: []}]);
+    });
+
+    const bad: Array<[string, unknown, string]> = [
+      ['not a list', {}, '"states" must be a list'],
+      ['not an object', ['x'], 'states[0] must be an object'],
+      ['no name', [{route: '/'}], 'non-empty string'],
+      ['a bad name', [{...state, name: 'Not Ok'}], 'lowercase words'],
+      ['a route without a slash', [{...state, route: 'list'}], 'must start with "/"'],
+      ['steps not a list', [{...state, steps: 'x'}], 'steps must be a list'],
+      ['an unknown step', [{...state, steps: [{hover: '#a'}]}], 'exactly one of'],
+      ['a fill without a selector', [{...state, steps: [{fill: {value: 'a'}}]}], 'fill.selector'],
+      ['a fill without a value', [{...state, steps: [{fill: {selector: '#a'}}]}], 'fill.value'],
+      ['duplicate names', [state, state], '"states" names must be unique'],
+    ];
+    for (const [name, value, message] of bad) test(`rejects ${name}`, () => expect(() => parse(value)).toThrow(message));
+  });
 });
