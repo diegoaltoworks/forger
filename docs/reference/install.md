@@ -20,6 +20,24 @@ claude plugin marketplace update forger
 claude plugin update forger@forger
 ```
 
+### 🧰 Without Claude Code
+
+OpenCode, Codex and Copilot need no plugin. Clone the repository once and run
+setup from the repository you want the loop to work on. The engine has no
+runtime dependencies, so there is no install step.
+
+```
+git clone https://github.com/diegoaltoworks/forger ~/forger
+bun ~/forger/plugins/forger/bin/work.ts setup --harness opencode
+```
+
+Use `codex` or `copilot` in place of `opencode`. Setup writes the packaged
+commands where the harness reads them (see [Adapters](adapters.md)) and records
+the harness in the config. To update, pull the clone and run the same setup
+line again: it rewrites the commands that changed and keeps everything else.
+In these harnesses a command is named `forger-<step>`, for example
+`/forger-work` in OpenCode and Copilot and `$forger-work` in Codex.
+
 Already-onboarded repos keep working with their files in `.claude/` (the legacy layout):
 every command prints one warning naming `migrate`, which moves them to `.forger/`. An old config without a
 `tracker` section gets the GitHub default on merge; set `tracker.kind` to
@@ -29,7 +47,7 @@ every command prints one warning naming `migrate`, which moves them to `.forger/
 ## Prerequisites
 
 - [Bun](https://bun.sh) on `PATH` (the engine is a Bun program).
-- The `claude` CLI on `PATH` (the engine spawns it per iteration).
+- One supported harness CLI on `PATH`: `claude`, `opencode`, `codex` or `copilot` (the engine spawns it per iteration).
 - The `gh` CLI, authenticated, when `tracker.kind` is `github`.
 
 ## Onboard a repo
