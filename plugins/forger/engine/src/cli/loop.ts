@@ -1,3 +1,4 @@
+import {findHarness, guardRefusal} from '../adapters';
 import {watchRepos} from './multi';
 import {behindBaseRefusal, readBaseSync} from '../loop';
 import type {Command} from './command';
@@ -9,6 +10,12 @@ export const run: Command = {
   help: `  run [N]          Run N iterations (default: 1)
   run --continuous Run until all tasks complete`,
   async run({values, positionals, runner, run, config}) {
+    const unguarded = guardRefusal(findHarness(config.harness), config.allow_unguarded);
+    if (unguarded) {
+      console.error(`Not starting: ${unguarded}.`);
+      process.exitCode = 1;
+      return;
+    }
     const stale = behindBaseRefusal(readBaseSync(run(), config.base_branch), config.base_branch);
     if (stale) {
       console.error(`Not starting: ${stale}.`);

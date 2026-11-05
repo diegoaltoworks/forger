@@ -163,6 +163,7 @@ export async function runIteration(
     plan,
   };
   writeFileSync(outputFile, formatIterationLog(logFacts));
+  if (result.overSpend) ctx.logger.log('WARN', `Spend limit $${result.overSpend.limitUsd} passed (reported $${result.overSpend.spentUsd}); worker stopped`);
   ctx.logger.log('INFO', `Claude finished in ${duration}s (exit: ${result.exitCode})`);
 
   const claim = parseClaim(result.output);

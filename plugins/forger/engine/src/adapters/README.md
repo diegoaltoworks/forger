@@ -6,8 +6,8 @@ world, and is tested against real processes.
 
 ## Files
 
-- `exec.ts` - command runners over `execSync`: one that swallows a failure to
-  empty output, one that keeps stdout, stderr and the exit code.
+- `exec.ts` - command runners over `execSync`. One turns a failure into empty
+  output. One keeps stdout, stderr and the exit code.
 - `supervise.ts` - spawns a worker as its own process group and ends the whole
   group at the deadline.
 - `svg-raster.ts` - the brand `Rasteriser` over resvg; text is already outlines, so no font is loaded.
@@ -15,23 +15,26 @@ world, and is tested against real processes.
 - `app-server.ts` - the `AppServer` port over a shell command in its own process
   group, ready when the url answers.
 
-- `playwright.ts` - the `Screenshotter`, `Recorder` and `AccessibilityAuditor` ports over the project's own Playwright,
-  resolved from the project, never a dependency of forger.
+- `playwright.ts` - the `Screenshotter`, `Recorder` and `AccessibilityAuditor`
+  ports over the project's own Playwright. It resolves Playwright from the
+  project. Forger never depends on it.
 - `claude.ts`, `opencode.ts`, `codex.ts`, `copilot.ts` - the shipped `Harness` adapters. A harness is
   another file here implementing the same interface; its spawn arguments and
   install paths are pure and table-tested.
 - `skill-package.ts` - repackages a command as a repository skill, for the harnesses that load skills.
-- `slcr.ts` - the `SpecProvider` over the `slcr` binary: `check --format json`, `query` and `slice`
-  through the command port; the base side is the base branch exported to a scratch folder.
+- `slcr.ts` - the `SpecProvider` over the `slcr` binary. It runs `check --format json`,
+  `query` and `slice` through the command port. The base side is the base
+  branch exported to a scratch folder.
 - `slcr-report.ts` - the pure parsing of that output into the normalized report; a changed shape is
   a `SpecOutputError` naming the field. Tested on recorded output in `fixtures/slcr/`.
 - `harnesses.ts` - the shipped harnesses by id, and `agentFor`, the
   `AgentRunner` any of them yields over `supervise.ts`.
 - `local-state-store.ts` - the `StateStore` over files beside the engine, the behaviour before the state branch.
 - `memory-state-store.ts` - the in-memory `StateStore` the loop's tests use.
-- `git-state-store.ts` - the `StateStore` over the state branch: reads and writes use git plumbing and a
-  private ref, so HEAD and the working tree never move; a write is a non-forced push, retried a bounded
-  number of times on a fresh read, and a lease that cannot be written is lost.
+- `git-state-store.ts` - the `StateStore` over the state branch. Reads and
+  writes use git plumbing and a private ref, so HEAD and the working tree never
+  move. A write is a non-forced push. It retries a bounded number of times on
+  a fresh read. A lease that cannot be written is lost.
 
 ## Entry point
 

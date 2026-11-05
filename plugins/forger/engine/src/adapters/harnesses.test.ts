@@ -4,7 +4,7 @@ import type {AgentRunOptions} from '../ports';
 import {claudeHarness} from './claude';
 import {codexHarness} from './codex';
 import {copilotHarness} from './copilot';
-import {findHarness, HARNESSES} from './harnesses';
+import {agentFor, findHarness, HARNESSES} from './harnesses';
 import {opencodeCommandName, opencodeHarness, stripClaudeFrontmatter} from './opencode';
 
 const opts: AgentRunOptions = {
@@ -105,7 +105,31 @@ describe('hooks', () => {
     expect(() => claudeHooks.install('{', command)).toThrow('.claude/settings.json is not valid JSON');
     expect(claudeHooks.installed('{')).toBe(false);
   });
-  test('only claude has hooks forger installs', () => {
-    expect(HARNESSES.filter(h => h.hooks !== null).map(h => h.id)).toEqual(['claude']);
+  test('every shipped harness has a hook forger installs', () => {
+    expect(HARNESSES.filter(h => h.hooks !== null).map(h => h.id)).toEqual(['claude', 'opencode', 'codex', 'copilot']);
+  });
+});
+
+describe('the run budget', () => {
+  const fake = (reports: boolean) => ({
+    ...claudeHarness,
+    id: 'fake',
+    spawn: () => ({command: 'bash', args: ['-c', 'echo "cost: 1.00"; sleep 0.2; echo "cost: 30.00"; sleep 30']}),
+    ...(reports ? {spentUsd: (out: string) => { const m = [...out.matchAll(/cost: ([\d.]+)/g)].pop(); return m ? Number(m[1]) : null; }} : {}),
+  });
+  const run = (reports: boolean, timeoutMinutes: number) =>
+    agentFor(fake(reports)).run({...opts, cwd: process.cwd(), timeoutMinutes, killGraceSeconds: 1});
+
+  test('a run that passes its spend limit is stopped and logged, for a harness that reports usage', async () => {
+    const r = await run(true, 1);
+    expect(r.overSpend).toEqual({limitUsd: 18, spentUsd: 30});
+    expect(r.timedOut).toBe(false);
+    expect(r.output).toContain('spend limit $18 passed');
+  });
+
+  test('a harness with no usage output runs under the timeout alone', async () => {
+    const r = await run(false, 0.02);
+    expect(r.overSpend ?? null).toBeNull();
+    expect(r.timedOut).toBe(true);
   });
 });

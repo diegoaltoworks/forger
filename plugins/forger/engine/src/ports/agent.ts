@@ -12,6 +12,8 @@ export interface SupervisedResult {
   signal: string | null;
   output: string;
   timedOut: boolean;
+  /** Set when the engine stopped the worker for passing its spend limit. */
+  overSpend?: {limitUsd: number; spentUsd: number} | null;
   /** Why the prompt did not reach the worker's stdin; null or absent when it did. */
   inputError?: string | null;
 }

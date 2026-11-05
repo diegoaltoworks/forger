@@ -1,7 +1,7 @@
 # checks/hooks
 
-`check hooks`: a missing or broken hook policy, a default rule dropped without
-a waiver, or harness settings that do not run the hook, is a finding.
+`check hooks`: a missing or broken hook policy is a finding. So is a default
+rule dropped without a waiver, or harness settings that do not run the hook.
 
 ## Files
 

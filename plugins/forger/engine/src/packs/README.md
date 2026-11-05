@@ -12,11 +12,11 @@ the skill slots a project can plug its own skills into.
 - `upgrade.ts` - `setup --upgrade`: the pure classifier over the lock, disk and
   pack hashes, and the shell that applies it. Never overwrites a file whose
   hash differs from the lock. Writes files.
-- `coverage-advice.ts` - what the testing pack's coverage check needs from the
-  gates: whether the lcov report is missing and the flag that writes it. Pure.
-- `skills.ts` - resolving each slot to a configured skill or its built-in
-  fallback; reads the shipped flavours that map a collection (as presets) and
-  the installed skills.
+- `coverage-advice.ts` - what the testing pack's coverage check needs from
+  the gates. It tells if the lcov report is missing and which flag writes it. Pure.
+- `skills.ts` - resolves each slot to a configured skill or its built-in
+  fallback. It reads the shipped flavours that map a collection (as presets)
+  and the installed skills.
 
 The parsing and listing functions in each are pure; the loaders read files.
 

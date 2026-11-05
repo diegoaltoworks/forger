@@ -17,6 +17,11 @@ export interface SpawnSpec {
 
 export interface Harness {
   id: string;
+  /**
+   * The spend, in USD, the harness's own output reports so far, or null when it states none.
+   * Absent for a harness that reports no usage: its worker runs under the timeout alone.
+   */
+  spentUsd?(output: string): number | null;
   /** How the worker is started headless for one iteration. */
   spawn(opts: AgentRunOptions): SpawnSpec;
   /**

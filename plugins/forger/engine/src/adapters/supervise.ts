@@ -33,6 +33,9 @@ export interface SupervisedOptions {
   graceMs: number;
   /** How long to wait for the output pipes to close after the worker exits. */
   drainMs?: number;
+  /** Stop the worker once the spend read from its output passes this limit. */
+  spendLimitUsd?: number;
+  spentUsd?: (output: string) => number | null;
   /** Ends the group like a deadline does, without marking the run timed out. */
   abort?: AbortSignal;
   /** Where the input file is written; the system temp directory by default. */
@@ -81,6 +84,7 @@ export function runSupervised(opts: SupervisedOptions): Promise<SupervisedResult
 
     let output = '';
     let timedOut = false;
+    let overSpend: SupervisedResult['overSpend'] = null;
     let settled = false;
     let killTimer: ReturnType<typeof setTimeout> | undefined;
 
@@ -108,11 +112,21 @@ export function runSupervised(opts: SupervisedOptions): Promise<SupervisedResult
     if (opts.abort?.aborted) onAbort();
     else opts.abort?.addEventListener('abort', onAbort, {once: true});
 
+    const watchSpend = (): void => {
+      if (overSpend || opts.spendLimitUsd === undefined || !opts.spentUsd) return;
+      const spent = opts.spentUsd(output);
+      if (spent === null || spent <= opts.spendLimitUsd) return;
+      overSpend = {limitUsd: opts.spendLimitUsd, spentUsd: spent};
+      output += `\nforger: spend limit $${opts.spendLimitUsd} passed (reported $${spent}); worker stopped\n`;
+      onAbort();
+    };
     child.stdout?.on('data', (data: Buffer) => {
       output += data.toString();
+      watchSpend();
     });
     child.stderr?.on('data', (data: Buffer) => {
       output += data.toString();
+      watchSpend();
     });
 
     child.on('exit', (code, signal) => {
@@ -126,6 +140,7 @@ export function runSupervised(opts: SupervisedOptions): Promise<SupervisedResult
         signal: signal ?? null,
         output,
         timedOut,
+        overSpend,
         inputError: null,
       });
       const drain = setTimeout(() => finish(result()), drainMs);

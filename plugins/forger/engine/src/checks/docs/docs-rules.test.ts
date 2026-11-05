@@ -52,6 +52,12 @@ describe('checkText', () => {
       ['docs/a.md', 3, 'denylist'],
     ]);
   });
+  test('a section heading may lead with one emoji, nothing else may', () => {
+    expect(checkText('a.md', '## \u{1F680} Start\n### \u{1F6E0}\uFE0F Setup', [])).toEqual([]);
+    expect(checkText('a.md', 'text \u{1F680}', []).map(x => x.rule)).toEqual(['non-ascii', 'non-ascii']);
+    expect(checkText('a.md', '## Start \u{1F680}', []).length).toBeGreaterThan(0);
+    expect(checkText('a.md', '## \u{1F680}\u{1F680} Start', []).length).toBeGreaterThan(0);
+  });
   test('clean text has no violations', () => {
     expect(checkText('a.md', 'plain\ntext', [])).toEqual([]);
   });
@@ -123,6 +129,7 @@ describe('model-agnostic', () => {
     expect(checkText('docs/getting-started.md', 'a Claude session', [], names)).toEqual([]);
     expect(checkText('docs/reference/adapters.md', 'a Claude session', [], names)).toEqual([]);
     expect(checkText('plugins/forger/README.md', 'a Claude session', [], names).map(x => x.rule)).toEqual(['model-agnostic']);
+    expect(checkText('docs/adr/0018-a-harness-decision.md', 'a Claude session', [], names)).toEqual([]);
     expect(checkText('docs/skills/pstack.md', 'a Claude session', [], names)).toEqual([]);
     expect(checkText('plugins/forger/engine/src/adapters/README.md', 'claude', [], names)).toEqual([]);
     expect(checkText('src/a.ts', '// claude', [], names)).toEqual([]);

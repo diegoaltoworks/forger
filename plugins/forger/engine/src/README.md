@@ -1,9 +1,8 @@
 # Engine source
 
-The work-loop engine, one folder per domain. Each folder has a README (what it
-owns, which files are pure and which touch the world, what it may import) and
-an `index.ts` that is its public interface: other folders import a folder, not
-the files inside it.
+The work-loop engine, one folder per domain. Each folder has a README with its
+owned code and imports, and an `index.ts`, its public interface: other folders
+import a folder, not its files.
 
 | Folder | Owns |
 |---|---|
@@ -38,5 +37,5 @@ The layer is in the path, and `check arch` enforces it through
 - Tests sit beside the code they test and may import any layer.
 
 A core file may still read or write its own files (the state file, the lock,
-a check reading the tree); each folder's README says which. What the core never
-does is spawn a process itself: it receives a `CommandRunner` or a spawn from `cli/`.
+a check reading the tree). Each folder's README says which. The core never
+spawns a process itself. It receives a `CommandRunner` or a spawn from `cli/`.

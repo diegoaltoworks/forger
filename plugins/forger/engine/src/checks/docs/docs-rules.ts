@@ -51,9 +51,10 @@ export function isShipped(file: string): boolean {
  * Prose outside these files names roles, not models or vendors. The adapter
  * docs are where a harness and its models are named once, honestly; the install
  * path is one, since it is a harness's own commands, and so is a collection's page,
- * since its install differs per harness.
+ * since its install differs per harness. A decision record about harnesses has "harness" in its name
+ * and names them for the same reason.
  */
-const ADAPTER_DOCS = [/^README\.md$/, /^docs\/getting-started\.md$/, /^docs\/reference\/[^/]+\.md$/, /(^|\/)adapters\/README\.md$/, /^docs\/skills\/[^/]+\.md$/];
+const ADAPTER_DOCS = [/^README\.md$/, /^docs\/getting-started\.md$/, /^docs\/reference\/[^/]+\.md$/, /(^|\/)adapters\/README\.md$/, /^docs\/skills\/[^/]+\.md$/, /^docs\/adr\/[^/]*harness[^/]*\.md$/];
 
 export function isAdapterDoc(file: string): boolean {
   return ADAPTER_DOCS.some(r => r.test(file));
@@ -91,8 +92,11 @@ function codePoint(ch: string): string {
   return 'U+' + ch.codePointAt(0)!.toString(16).toUpperCase().padStart(4, '0');
 }
 
+/** The one emoji a section heading may lead with; it marks the section and is allowed nowhere else. */
+const HEADING_EMOJI = /^(#{2,6}\s+)\p{Extended_Pictographic}\uFE0F?(?=\s)/u;
+
 export const nonAscii: LineRule = line =>
-  [...new Set(line.match(NON_ASCII) ?? [])].map(codePoint);
+  [...new Set(line.replace(HEADING_EMOJI, '$1').match(NON_ASCII) ?? [])].map(codePoint);
 
 export const email: LineRule = line => line.match(EMAIL) ?? [];
 

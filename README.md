@@ -11,51 +11,56 @@ Forger runs an unattended development loop that builds your backlog one ticket a
 
 [![CI](https://github.com/diegoaltoworks/forger/actions/workflows/ci.yml/badge.svg)](https://github.com/diegoaltoworks/forger/actions/workflows/ci.yml)
 
-## Install
+## 📦 Install
 
-```
-claude plugin marketplace add diegoaltoworks/forger
-claude plugin install forger@forger
-```
+You need [Bun](https://bun.sh), `gh` and one supported harness. Forger works in Claude Code, OpenCode, Codex and Copilot. Pick your row.
 
-You need Bun, the `claude` CLI and `gh`. Full steps: [`docs/getting-started.md`](docs/getting-started.md).
+| Harness | Install |
+|---|---|
+| Claude Code | `claude plugin marketplace add diegoaltoworks/forger`, then `claude plugin install forger@forger` |
+| OpenCode | `git clone https://github.com/diegoaltoworks/forger ~/forger`, then in your repository `bun ~/forger/plugins/forger/bin/work.ts setup --harness opencode` |
+| Codex | `git clone https://github.com/diegoaltoworks/forger ~/forger`, then in your repository `bun ~/forger/plugins/forger/bin/work.ts setup --harness codex` |
+| Copilot | `git clone https://github.com/diegoaltoworks/forger ~/forger`, then in your repository `bun ~/forger/plugins/forger/bin/work.ts setup --harness copilot` |
 
-## Start
+Setup installs the same guards in every harness. Full steps for each harness: [Getting started](docs/getting-started.md). What each harness adapter does: [Adapters](docs/reference/adapters.md).
 
-Run these in a session at the root of your repository:
+## 🚀 Start
 
-```
-/forger:setup
-/forger:plan
-/forger:work
-```
+Open a session at the root of your repository and run the three steps in order.
 
-- `/forger:setup` adds the loop's files under `.forger/`.
-- `/forger:plan` interviews you and writes the first tickets.
-- `/forger:work` starts the loop and reports each merge or halt.
+| Harness | Setup | Plan | Work |
+|---|---|---|---|
+| Claude Code | `/forger:setup` | `/forger:plan` | `/forger:work` |
+| OpenCode | `/forger-setup` | `/forger-plan` | `/forger-work` |
+| Codex | `$forger-setup` | `$forger-plan` | `$forger-work` |
+| Copilot | `/forger-setup` | `/forger-plan` | `/forger-work` |
 
-What each step prints, and what to do on a halt: [`docs/getting-started.md`](docs/getting-started.md).
+- Setup adds the loop's files under `.forger/`.
+- Plan interviews you and writes the first tickets.
+- Work starts the loop and reports each merge or halt.
 
-## Why
+What each step prints, and what to do on a halt: [Getting started](docs/getting-started.md).
+
+## 💡 Why
 
 - **Determinism first.** Tested commands make every decision that must come out the same. The model only does the judgement work.
 - **Quality from commands.** The worker runs the same gates as CI and merges only through a tool that refuses red.
 - **Bring your own skills.** Forger has its own step for each point of judgement. You can map any installed skill onto it.
 
-## Learn more
+## 📚 Learn more
 
 | Read | For |
 |---|---|
-| [`ABOUT.md`](ABOUT.md) | The ideas, the diagrams and the opinion packs |
-| [`docs/getting-started.md`](docs/getting-started.md) | From nothing to a running loop |
-| [`docs/01-principles.md`](docs/01-principles.md) to [`docs/08-opinion-packs.md`](docs/08-opinion-packs.md) | The process, in reading order |
-| [`docs/reference/configuration.md`](docs/reference/configuration.md) | Every config field |
-| [`docs/reference/commands.md`](docs/reference/commands.md) | Every command |
-| [`docs/reference/`](docs/reference/README.md) | The tracker, skill slots, pipeline, adapters and engine |
-| [`docs/06-failure-catalogue.md`](docs/06-failure-catalogue.md) | Failures seen in real runs, and their fixes |
-| [`docs/07-roadmap.md`](docs/07-roadmap.md) | What comes next |
-| [`GLOSSARY.md`](GLOSSARY.md) | The vocabulary |
+| [About forger](ABOUT.md) | The ideas, the diagrams and the opinion packs |
+| [Getting started](docs/getting-started.md) | From nothing to a running loop |
+| [Principles](docs/01-principles.md) to [Opinion packs](docs/08-opinion-packs.md) | The process, in reading order |
+| [Configuration reference](docs/reference/configuration.md) | Every config field |
+| [Commands reference](docs/reference/commands.md) | Every command |
+| [Reference index](docs/reference/README.md) | The tracker, skill slots, pipeline, adapters and engine |
+| [Failure catalogue](docs/06-failure-catalogue.md) | Failures seen in real runs, and their fixes |
+| [Roadmap](docs/07-roadmap.md) | What comes next |
+| [Glossary](GLOSSARY.md) | The vocabulary |
 
-## Licence
+## 📄 Licence
 
-MIT. See [`LICENSE`](LICENSE).
+MIT. See [the licence](LICENSE).
