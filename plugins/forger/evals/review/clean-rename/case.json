@@ -1,0 +1,6 @@
+{
+  "facts": {"diffPaths": ["src/name.ts", "src/greet.ts"]},
+  "properties": [
+    {"kind": "at_most", "count": 0, "minSeverity": "medium"}
+  ]
+}

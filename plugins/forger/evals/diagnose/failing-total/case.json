@@ -1,0 +1,7 @@
+{
+  "facts": {"gateCommand": "bun test src/total.test.ts"},
+  "properties": [
+    {"kind": "text", "terms": ["loop"], "label": "blames the loop"},
+    {"kind": "text", "terms": ["first"], "label": "says the first price is skipped"}
+  ]
+}

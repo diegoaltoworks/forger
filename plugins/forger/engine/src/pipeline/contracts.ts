@@ -57,6 +57,8 @@ export interface ContractFacts {
   isTestFile: (path: string) => boolean;
 }
 
+export const TEST_FILE = /(^|\/)(tests?|__tests__)\/|\.(test|spec)\.[a-z]+$|_test\.[a-z]+$|(^|\/)test_[^/]+$/i;
+
 export const NO_FACTS: ContractFacts = {
   diffPaths: [],
   criteria: [],

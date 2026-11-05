@@ -1,0 +1,12 @@
+{
+  "facts": {
+    "diffPaths": ["src/slugify.ts", "src/slugify.test.ts"],
+    "criteria": [
+      {"id": "c1", "text": "`slugify(\"Hello World\")` returns `hello-world`"},
+      {"id": "c2", "text": "runs of non-alphanumeric characters collapse into a single hyphen, with none at either end"}
+    ]
+  },
+  "properties": [
+    {"kind": "text", "terms": ["src/slugify.test.ts"], "label": "puts the tests in the test file"}
+  ]
+}

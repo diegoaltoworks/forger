@@ -11,6 +11,7 @@ import {contract} from './contract';
 import {decline} from './decline';
 import type {Command} from './command';
 import {awaitEventCommand, events} from './events';
+import {evalCommand} from './eval';
 import {facts} from './facts';
 import {halt, reset, resume, run, status, watch} from './loop';
 import {handover} from './handover';
@@ -46,6 +47,7 @@ export const COMMANDS: Command[] = [
   skills,
   pipeline,
   contract,
+  evalCommand,
   check,
   slice,
   intent,

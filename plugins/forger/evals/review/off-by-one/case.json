@@ -1,0 +1,7 @@
+{
+  "facts": {"diffPaths": ["src/list.ts"]},
+  "properties": [
+    {"kind": "finding", "file": "src/list.ts", "line": 6, "minSeverity": "medium"},
+    {"kind": "text", "terms": ["slice"], "label": "names the slice call as the cause"}
+  ]
+}

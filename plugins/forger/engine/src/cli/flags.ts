@@ -18,6 +18,7 @@ export const FLAGS = {
   ticket: {type: 'string'},
   stage: {type: 'string'},
   slot: {type: 'string'},
+  skill: {type: 'string'},
   attempt: {type: 'string'},
   remove: {type: 'boolean', default: false},
   reason: {type: 'string'},
