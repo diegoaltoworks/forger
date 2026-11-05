@@ -9,6 +9,7 @@ import {existsSync, readFileSync} from 'fs';
 import {join} from 'path';
 
 import {checkAvoidedTerms, checkDiagrams, checkLinks, parseGlossaryAvoid, type AvoidedTerm, type LinkWorld} from './docs-content';
+import {CATALOGUE_OPINION, CATALOGUE_PATH, checkCatalogue, ticketsOf, trackerFacts, type TicketFacts} from '../../catalogue';
 import {loadConfig} from '../../config';
 import type {CommandRunner} from '../../ports';
 import {projectFiles} from '../files';
@@ -64,7 +65,24 @@ export function runDocsWarnings(projectRoot: string, run: CommandRunner, packs?:
   return readmeFindings(projectRoot, run, packs).filter(f => f.severity === 'warn');
 }
 
-export function runDocsCheck(projectRoot: string, run: CommandRunner, packs: string[] = installedPackIds(projectRoot)): Finding[] {
+/** The catalogue's missing or stale statuses. Facts the tracker cannot give leave only the structure checked. */
+export function catalogueFindings(
+  projectRoot: string,
+  run: CommandRunner,
+  lookup: (tickets: number[]) => TicketFacts | null = tickets => trackerFacts(run, tickets)
+): Finding[] {
+  const path = join(projectRoot, CATALOGUE_PATH);
+  if (!existsSync(path)) return [];
+  const text = readFileSync(path, 'utf-8');
+  return checkCatalogue(text, lookup(ticketsOf(text))).map(p => ({file: CATALOGUE_PATH, line: p.line, rule: p.rule, opinion: CATALOGUE_OPINION, detail: p.detail}));
+}
+
+export function runDocsCheck(
+  projectRoot: string,
+  run: CommandRunner,
+  packs: string[] = installedPackIds(projectRoot),
+  lookup?: (tickets: number[]) => TicketFacts | null
+): Finding[] {
   const denyFile = join(projectRoot, '.forger-denylist');
   const terms = existsSync(denyFile) ? parseDenylist(readFileSync(denyFile, 'utf-8')) : [];
   const names = loadConfig(projectRoot).model_names;
@@ -89,5 +107,6 @@ export function runDocsCheck(projectRoot: string, run: CommandRunner, packs: str
     if (slots && COMMAND_FILE.test(file)) out.push(...checkCommandSlots(file, text, slots));
   }
   out.push(...readmeFindings(projectRoot, run, packs).filter(f => f.severity === 'fail'));
+  if (packs.includes('docs')) out.push(...catalogueFindings(projectRoot, run, lookup));
   return out;
 }

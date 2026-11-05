@@ -113,6 +113,10 @@ gets it at the next setup or update.
 7. **Land it through the same gate as code:** a PR, reviewed or at least
    visible, so the history of the process is in git.
 8. **Tell the owner** in one line what changed and where.
+9. **Update the failure catalogue.** A failure seen again gets a new open ticket on
+   its entry's status line in [the failure catalogue](06-failure-catalogue.md); a
+   fix that merged is recorded by `work catalogue --update`, which strikes the
+   entry's heading and links the PR. Entries stay.
 
 ## Hygiene
 
