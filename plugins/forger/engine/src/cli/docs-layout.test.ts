@@ -3,18 +3,27 @@ import {readdirSync, readFileSync} from 'node:fs';
 import {join} from 'node:path';
 
 import {splitFences} from '../checks';
+import {HARNESSES} from '../adapters';
 import {COMMANDS} from './registry';
 
 const REPO = join(import.meta.dir, '..', '..', '..', '..', '..');
 const read = (path: string) => readFileSync(join(REPO, path), 'utf8');
 
 /** The tools a reader installs before forger; the install path cannot avoid them. */
-const PREREQUISITES = ['bun', 'claude', 'gh'];
+const PREREQUISITES = ['bun', 'gh', 'git', ...HARNESSES.map(h => h.id)];
 
 const SLASH_COMMANDS = readdirSync(join(REPO, 'plugins/forger/commands'))
   .filter(f => f.endsWith('.md'))
   .map(f => `/forger:${f.replace(/\.md$/, '')}`);
 const CLI = COMMANDS.map(c => c.name);
+const STEPS = SLASH_COMMANDS.map(c => c.replace('/forger:', ''));
+
+/** How a reader starts a packaged command in each harness: `/forger:x` under Claude Code, `forger-x` as a command or skill elsewhere. */
+const START_PREFIX: Record<string, string> = {claude: '/forger:', opencode: '/forger-', codex: '$forger-', copilot: '/forger-'};
+const HARNESS_ROWS = (text: string, heading: string) =>
+  (text.split(/^## /m).find(s => s.replace(EMOJI, '').startsWith(`${heading}\n`)) ?? '').split('\n').filter(l => /^\|\s*(Claude Code|OpenCode|Codex|Copilot)\s*\|/.test(l));
+const inlineCode = (line: string) => [...line.matchAll(/`([^`]+)`/g)].map(m => m[1]);
+const HARNESS_NAMES: Record<string, string> = {claude: 'Claude Code', opencode: 'OpenCode', codex: 'Codex', copilot: 'Copilot'};
 
 const EMOJI = /^\p{Extended_Pictographic}\uFE0F?\s+/u;
 
@@ -54,6 +63,8 @@ function unknownCommand(line: string): string | null {
   if (engine) return CLI.includes(engine[1]) ? null : `engine command "${engine[1]}" is not in the usage`;
   const slash = /^\/forger:[a-z-]+/.exec(line);
   if (slash) return SLASH_COMMANDS.includes(slash[0]) ? null : `slash command "${slash[0]}" is not a plugin command`;
+  const packaged = /^[/$]forger-([a-z-]+)$/.exec(line);
+  if (packaged) return STEPS.includes(packaged[1]) ? null : `packaged command "${line}" is not a plugin command`;
   const tool = line.split(/\s+/)[0];
   return PREREQUISITES.includes(tool) ? null : `"${tool}" is neither a forger command nor a prerequisite`;
 }
@@ -71,12 +82,30 @@ describe('the root README', () => {
 
   test('install and start commands exist', () => {
     const text = read('README.md');
-    const section = (name: string) => text.split(/^## /m).find(s => s.replace(EMOJI, '').startsWith(`${name}\n`)) ?? '';
-    const lines = [...fencedCommands(section('Install')), ...fencedCommands(section('Start'))];
-    expect(lines.some(l => l.startsWith('claude plugin install'))).toBe(true);
-    expect(lines).toContain('/forger:setup');
-    expect(lines).toContain('/forger:work');
+    const install = HARNESS_ROWS(text, 'Install');
+    expect(install.flatMap(inlineCode).some(c => c.startsWith('claude plugin install'))).toBe(true);
+    const lines = [...install, ...HARNESS_ROWS(text, 'Start')].flatMap(inlineCode);
     expect(lines.map(unknownCommand).filter(Boolean)).toEqual([]);
+  });
+
+  test('root README names every supported harness', () => {
+    const text = read('README.md');
+    for (const section of ['Install', 'Start']) {
+      const rows = HARNESS_ROWS(text, section);
+      expect(rows.map(r => r.split('|')[1].trim())).toEqual(HARNESSES.map(h => HARNESS_NAMES[h.id]));
+    }
+    for (const h of HARNESSES.filter(h => h.id !== 'claude')) {
+      const row = HARNESS_ROWS(text, 'Install').find(r => r.includes(HARNESS_NAMES[h.id])) ?? '';
+      expect(row).toContain(`setup --harness ${h.id}`);
+    }
+  });
+
+  test('each harness row starts setup, plan and work with that harness\'s command names', () => {
+    const rows = HARNESS_ROWS(read('README.md'), 'Start');
+    for (const h of HARNESSES) {
+      const row = rows.find(r => r.includes(HARNESS_NAMES[h.id])) ?? '';
+      expect(inlineCode(row)).toEqual(['setup', 'plan', 'work'].map(step => `${START_PREFIX[h.id]}${step}`));
+    }
   });
 });
 
@@ -112,7 +141,16 @@ describe('docs/getting-started.md', () => {
     expect(lines.map(l => [l, unknownCommand(l)]).filter(([, why]) => why)).toEqual([]);
   });
 
+  test('getting started covers every harness', () => {
+    const text = read('docs/getting-started.md');
+    for (const h of HARNESSES) expect(text).toContain(h.id === 'claude' ? 'claude plugin install' : `setup --harness ${h.id}`);
+    expect(text).toContain('/forger-setup');
+    expect(text).toContain('$forger-setup');
+  });
+
   test('an unknown command is caught', () => {
+    expect(unknownCommand('/forger-nope')).toContain('/forger-nope');
+    expect(unknownCommand('$forger-work')).toBeNull();
     expect(unknownCommand('bun <forger>/bin/work.ts nope')).toContain('nope');
     expect(unknownCommand('/forger:nope')).toContain('/forger:nope');
     expect(unknownCommand('make start')).toContain('make');

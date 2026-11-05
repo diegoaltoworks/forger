@@ -3,7 +3,7 @@ import {existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync}
 import {tmpdir} from 'os';
 import {join, resolve} from 'path';
 
-import {codexHarness, copilotHarness, opencodeHarness} from '../adapters';
+import {claudeHarness, codexHarness, copilotHarness, opencodeHarness} from '../adapters';
 import {sha256} from './packs';
 import {gitignoreLines, mergeGitignore, relocatableGates, renderConfig, runSetup, withCheck} from './setup';
 
@@ -203,6 +203,26 @@ describe('runSetup layout and harness', () => {
       expect(text).not.toContain('allowed-tools');
       expect(first.files.find(f => f.path === path)?.action).toBe('written');
       expect(runSetup(root, PLUGIN_ROOT, {harness}).files.every(f => f.action === 'kept')).toBe(true);
+    });
+  }
+});
+
+describe('setup --harness', () => {
+  const START = ['setup', 'plan', 'work'];
+  for (const harness of [claudeHarness, opencodeHarness, codexHarness, copilotHarness]) {
+    test(`setup --harness writes the start commands for each harness: ${harness.id}`, () => {
+      const root = emptyProject();
+      const result = runSetup(root, PLUGIN_ROOT, {harness});
+      expect(JSON.parse(readFileSync(join(root, '.forger/workloop.config.json'), 'utf-8')).harness).toBe(harness.id);
+      for (const step of START) {
+        const rel = harness.commandPath(step);
+        if (rel === null) {
+          expect(harness.id).toBe('claude');
+          continue;
+        }
+        expect(result.files.find(f => f.path === rel)?.action).toBe('written');
+        expect(existsSync(join(root, rel))).toBe(true);
+      }
     });
   }
 });

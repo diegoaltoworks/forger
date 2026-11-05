@@ -13,26 +13,31 @@ Forger runs an unattended development loop that builds your backlog one ticket a
 
 ## 📦 Install
 
-```
-claude plugin marketplace add diegoaltoworks/forger
-claude plugin install forger@forger
-```
+You need [Bun](https://bun.sh), `gh` and one supported harness. Forger works in Claude Code, OpenCode, Codex and Copilot. Pick your row.
 
-You need Bun, `gh` and an agent harness. The commands above are for Claude Code; forger also runs under OpenCode, Codex and Copilot, set with `setup --harness` (see [Adapters](docs/reference/adapters.md)). Full steps: [Getting started](docs/getting-started.md).
+| Harness | Install |
+|---|---|
+| Claude Code | `claude plugin marketplace add diegoaltoworks/forger`, then `claude plugin install forger@forger` |
+| OpenCode | `git clone https://github.com/diegoaltoworks/forger ~/forger`, then in your repository `bun ~/forger/plugins/forger/bin/work.ts setup --harness opencode` |
+| Codex | `git clone https://github.com/diegoaltoworks/forger ~/forger`, then in your repository `bun ~/forger/plugins/forger/bin/work.ts setup --harness codex` |
+| Copilot | `git clone https://github.com/diegoaltoworks/forger ~/forger`, then in your repository `bun ~/forger/plugins/forger/bin/work.ts setup --harness copilot` |
+
+Full steps for each harness: [Getting started](docs/getting-started.md). What each harness adapter does: [Adapters](docs/reference/adapters.md).
 
 ## 🚀 Start
 
-Run these in a session at the root of your repository:
+Open a session at the root of your repository and run the three steps in order.
 
-```
-/forger:setup
-/forger:plan
-/forger:work
-```
+| Harness | Setup | Plan | Work |
+|---|---|---|---|
+| Claude Code | `/forger:setup` | `/forger:plan` | `/forger:work` |
+| OpenCode | `/forger-setup` | `/forger-plan` | `/forger-work` |
+| Codex | `$forger-setup` | `$forger-plan` | `$forger-work` |
+| Copilot | `/forger-setup` | `/forger-plan` | `/forger-work` |
 
-- `/forger:setup` adds the loop's files under `.forger/`.
-- `/forger:plan` interviews you and writes the first tickets.
-- `/forger:work` starts the loop and reports each merge or halt.
+- Setup adds the loop's files under `.forger/`.
+- Plan interviews you and writes the first tickets.
+- Work starts the loop and reports each merge or halt.
 
 What each step prints, and what to do on a halt: [Getting started](docs/getting-started.md).
 

@@ -6,19 +6,31 @@ step is in [Install reference](reference/install.md).
 
 ## 📋 1. Check the prerequisites
 
-You need [Bun](https://bun.sh), the `claude` CLI and, for a GitHub tracker, an
-authenticated `gh`.
+You need [Bun](https://bun.sh), one supported harness and, for a GitHub
+tracker, an authenticated `gh`. The harness is Claude Code (`claude`),
+OpenCode (`opencode`), Codex (`codex`) or Copilot (`copilot`).
 
 ```
 bun --version
-claude --version
 gh auth status
 ```
 
 Each prints a version or `Logged in`. A `command not found` names the tool to
-install first.
+install first. Then check the harness you chose:
 
-## 📦 2. Install the plugin
+```
+claude --version
+opencode --version
+codex --version
+copilot --version
+```
+
+## 📦 2. Install forger
+
+Pick the harness you use. Forger decides the same things in each; only the way
+you install it and the way you start a step differ.
+
+### 🤖 Claude Code
 
 Add the forger repository as a marketplace once, then install the plugin. A
 local checkout works as well as `owner/repo` on GitHub.
@@ -32,13 +44,42 @@ The second command confirms the install. Restart the harness, then type
 `/forger` in a session: the forger commands appear in the list. To update
 later, see [Install reference](reference/install.md#install-and-update).
 
+### 🧰 OpenCode, Codex and Copilot
+
+These harnesses have no forger plugin. Clone the repository once, anywhere on
+the machine. The engine needs no install step.
+
+```
+git clone https://github.com/diegoaltoworks/forger ~/forger
+```
+
+Then, in the repository you want the loop to work on, run setup with your
+harness. It writes the forger commands where the harness reads them:
+`.opencode/commands/` for OpenCode, `.agents/skills/` for Codex and
+`.github/skills/` for Copilot.
+
+```
+bun ~/forger/plugins/forger/bin/work.ts setup --harness opencode
+bun ~/forger/plugins/forger/bin/work.ts setup --harness codex
+bun ~/forger/plugins/forger/bin/work.ts setup --harness copilot
+```
+
+Run only the line for your harness. It prints every file as `written` or
+`kept` and records the harness in `.forger/workloop.config.json`, so the
+engine starts its workers with it. To update later, pull the clone and run the
+same line again: it rewrites the commands that changed.
+
 ## 🛠️ 3. Set up the repository
 
 Open a session at the root of the repository you want the loop to work on and
-run:
+run the setup command. Claude Code names it `/forger:setup`. The other
+harnesses name it `forger-setup`: `/forger-setup` in OpenCode and Copilot,
+`$forger-setup` in Codex.
 
 ```
 /forger:setup
+/forger-setup
+$forger-setup
 ```
 
 It asks for the gates command, the base branch and the tracker, and offers
@@ -57,8 +98,12 @@ worker treats the gotchas as rules.
 
 ## 📝 4. Plan the first tickets
 
+Use the line for your harness, as in step 3.
+
 ```
 /forger:plan
+/forger-plan
+$forger-plan
 ```
 
 The planner reads the repository, asks you numbered questions, each with a
@@ -68,8 +113,12 @@ the tickets it created, in build order.
 
 ## 🚀 5. Start the loop
 
+Use the line for your harness, as in step 3.
+
 ```
 /forger:work
+/forger-work
+$forger-work
 ```
 
 The supervisor starts one engine, or attaches to the one already running. It
@@ -94,7 +143,7 @@ and the next pick. `backlog` lists the workable tickets.
 ## 🩹 7. Recover from a halt
 
 The loop halts on trouble it cannot fix alone, such as a red merge or an
-authentication error. `/forger:work` and `status` print the reason. Fix the
+authentication error. `the work command and `status` print the reason. Fix the
 cause first: look for a pushed branch with no merged pull request. Then clear
 the halt and start again:
 
