@@ -1,0 +1,8 @@
+{
+  "name": "creative",
+  "version": 1,
+  "description": "For games, demos and animation: the design slot draws one finished style frame in the real palette instead of a grey wireframe. Every other slot uses forger's built-in step.",
+  "slots": {
+    "design": [{"file": "skills/style-frame/SKILL.md"}]
+  }
+}

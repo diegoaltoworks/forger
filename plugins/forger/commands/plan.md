@@ -85,7 +85,9 @@ bun "${CLAUDE_PLUGIN_ROOT}/bin/work.ts" intent --request "<the owner's words>" -
 ```
 
 `intent: "product"`: skip the rest of this step. `intent: "creative"`: tell the
-owner which signals matched, then run the creative-brief round before step 3.
+owner which signals matched. If `packs --json` shows the `creative` pack is not
+installed, offer it with `setup --packs creative --flavour creative`. Then run
+the creative-brief round before step 3.
 Ask the whole round at once, numbered, with no recommended answer:
 
 1. References: links or names of works to take as touchstones.

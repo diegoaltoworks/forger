@@ -117,7 +117,7 @@ judgement work are named **skill slots**, and each has a built-in forger step:
 | `interview` | `plan` | numbered rounds of open decisions, each with a recommendation |
 | `glossary` | `plan` | terms into `GLOSSARY.md`, decisions into `docs/adr/` |
 | `prototype` | `plan` | creative intent only: two or three throwaway single-file HTML concepts that differ on the axis the brief leaves open; the owner's pick is recorded in the plan doc and the chosen one archived under `docs/progress/` |
-| `design` | `plan` | a grey-box HTML wireframe under `docs/design/<ticket>/`, captured by `screenshot --wireframe` (with the ui pack) |
+| `design` | `plan` | a grey-box HTML wireframe under `docs/design/<ticket>/`, captured by `screenshot --wireframe` (with the ui pack); the `creative` flavour draws a finished style frame instead (with the creative pack) |
 | `test_first` | `auto-ticket` | failing test, then pass, then refactor |
 | `review` | `auto-ticket` | the diff against the base, on standards and spec |
 | `diagnose` | `auto-ticket` | reproduce the red gate, one hypothesis, test it |
@@ -240,6 +240,8 @@ a `skills` map behaves as before.
 `pipeline --json [--issue N]` shows the choice per slot for one ticket and the
 reason: which candidate won, or why each one before the built-in did not.
 `skills --json` resolves the flavour for a ticket with no labels and no paths.
+
+**The `creative` flavour** maps no collection: it resolves the `design` slot to forger's own style-frame step, for games, demos and animation (see the creative pack).
 
 **Shipped collection flavours.** `agent-skills`, `mattpocock-skills` and `pstack`
 each map one collection onto the slots it fits, and `mixed` takes the strongest fit
