@@ -3,7 +3,7 @@ import {join} from 'path';
 
 import {ffmpegGifEncoder, playwrightRecorder, playwrightScreenshotter, shellAppServer, staticAppServer} from '../adapters';
 import {UiInfrastructureError} from '../ports';
-import {UI_PATH, UiConfigError, WireframeError, parseUiConfig, runRecording, runScreenshots, wireframePlan} from '../ui';
+import {UI_PATH, UiConfigError, WireframeError, formatFailures, parseUiConfig, runRecording, runScreenshots, wireframePlan} from '../ui';
 import type {Command} from './command';
 import {forgerPath} from '../config';
 
@@ -21,7 +21,8 @@ export const screenshot: Command = {
   flags: ['json', 'wireframe', 'capture'],
   help: `  screenshot [--json] [--wireframe <ticket>] [--capture <name>]
                    Start the app (ui.start), capture every route and named state x viewport x theme into
-                   docs/screenshots/, stop it (exit 2 when Playwright or the app is unavailable).
+                   docs/screenshots/, stop it (exit 2 when Playwright or the app is unavailable). A named state's assertions
+                   run on each capture; a failure is named by state, viewport, theme and assertion and exits 1, the images still written.
                    --wireframe serves docs/design/ and captures <ticket>/index.html into docs/design/<ticket>/
                    --capture runs the scripted interaction declared under "captures" in ui.json and records it
                    as docs/screenshots/<name>.webm, plus a .gif when ffmpeg is installed (exit 2 with how to add it when not)`,
@@ -48,6 +49,10 @@ export const screenshot: Command = {
         report = await runScreenshots(plan.config, projectRoot, staticAppServer(join(projectRoot, plan.root), port), shooter, plan.dir);
       }
       console.log(values.json ? JSON.stringify(report) : report.files.join('\n'));
+      if (!report.ok) {
+        if (!values.json) console.error(formatFailures(report.failures));
+        process.exitCode = 1;
+      }
     } catch (e) {
       if (e instanceof UiInfrastructureError) return fail(e.message, 2, true);
       if (e instanceof UiConfigError || e instanceof WireframeError) return fail(e.message, 1, false);

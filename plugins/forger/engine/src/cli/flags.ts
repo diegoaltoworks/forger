@@ -11,6 +11,7 @@ export const FLAGS = {
   continuous: {type: 'boolean', default: false},
   json: {type: 'boolean', default: false},
   update: {type: 'boolean', default: false},
+  states: {type: 'boolean', default: false},
   gates: {type: 'string'},
   'base-branch': {type: 'string'},
   tracker: {type: 'string'},

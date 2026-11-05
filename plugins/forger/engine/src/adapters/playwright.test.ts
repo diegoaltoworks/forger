@@ -2,9 +2,10 @@ import {afterEach, describe, expect, test} from 'bun:test';
 import {mkdtempSync, rmSync} from 'fs';
 import {tmpdir} from 'os';
 import {join} from 'path';
+import {deflateSync} from 'zlib';
 
 import {UiInfrastructureError} from '../ports';
-import {AXE_HINT, PLAYWRIGHT_HINT, ffmpegGifEncoder, loadAxeSource, loadPlaywright, playwrightAuditor, playwrightRecorder, playwrightScreenshotter} from './playwright';
+import {AXE_HINT, PLAYWRIGHT_HINT, ffmpegGifEncoder, loadAxeSource, loadPlaywright, playwrightAuditor, playwrightRecorder, playwrightScreenshotter, visibleClip} from './playwright';
 
 const dirs: string[] = [];
 afterEach(() => {
@@ -45,6 +46,7 @@ describe('the Playwright adapter', () => {
                       log.push(`shot ${o.path}`);
                       throw new Error('disk full');
                     },
+                    on() {},
                     async addScriptTag() {},
                     async evaluate() {},
                   };
@@ -74,6 +76,7 @@ describe('the Playwright adapter', () => {
     const page = {
       async goto(url: string) { log.push(`goto ${url}`); },
       async screenshot(o: {path: string}) { log.push(`shot ${o.path}`); },
+      on() {},
       async addScriptTag() {},
       async evaluate() {},
       async waitForSelector(s: string) { log.push(`wait ${s}`); },
@@ -124,6 +127,7 @@ describe('the Playwright adapter', () => {
                       log.push(`goto ${url}`);
                     },
                     async screenshot() {},
+                    on() {},
                     async addScriptTag(o: {content: string}) {
                       log.push(`inject ${o.content}`);
                     },
@@ -165,6 +169,7 @@ describe('the Playwright adapter', () => {
                       log.push(`goto ${url}`);
                     },
                     async screenshot() {},
+                    on() {},
                     async addScriptTag() {},
                     async evaluate() {},
                     async waitForSelector(s: string) {
@@ -239,5 +244,85 @@ describe('the Playwright adapter', () => {
     expect(await ffmpegGifEncoder('forger-no-such-ffmpeg').encode('a.webm', 'a.gif')).toBe(false);
     expect(await ffmpegGifEncoder('true').encode('a.webm', 'a.gif')).toBe(true);
     await expect(ffmpegGifEncoder('false').encode('a.webm', 'a.gif')).rejects.toThrow('ffmpeg failed');
+  });
+});
+
+describe('probing a page for assertions', () => {
+  const sand = (): Uint8Array => {
+    // 2x2 RGB PNG, every pixel (214, 160, 90)
+    const row = [0, ...[214, 160, 90, 214, 160, 90]];
+    const head = Buffer.alloc(13);
+    head.writeUInt32BE(2, 0);
+    head.writeUInt32BE(2, 4);
+    head.set([8, 2, 0, 0, 0], 8);
+    const chunk = (type: string, body: Uint8Array): Buffer => {
+      const out = Buffer.alloc(12 + body.length);
+      out.writeUInt32BE(body.length, 0);
+      out.write(type, 4, 'ascii');
+      out.set(body, 8);
+      return out;
+    };
+    return Buffer.concat([Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]), chunk('IHDR', head), chunk('IDAT', deflateSync(Buffer.from([...row, ...row]))), chunk('IEND', new Uint8Array())]);
+  };
+
+  test('visibleClip keeps the on-screen part of a box and refuses one that is off screen', () => {
+    expect(visibleClip({x: -5.5, y: 10.2, width: 50, height: 400}, 100, 300)).toEqual({x: 0, y: 10, width: 45, height: 290});
+    expect(visibleClip({x: 0, y: 320, width: 50, height: 40}, 100, 300)).toBeNull();
+  });
+
+  test('a shot with a probe resolves a page model of console errors, boxes and sampled pixels; one without resolves nothing for it', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'forger-pw-'));
+    dirs.push(root);
+    const handlers: Record<string, (arg: never) => void> = {};
+    const clips: unknown[] = [];
+    const fake = {
+      chromium: {
+        async launch() {
+          return {
+            async newContext() {
+              return {
+                async newPage() {
+                  return {
+                    on(event: string, h: (arg: never) => void) {
+                      handlers[event] = h;
+                    },
+                    async goto() {
+                      (handlers.console as (m: unknown) => void)({type: () => 'error', text: () => 'boom'});
+                      (handlers.console as (m: unknown) => void)({type: () => 'log', text: () => 'fine'});
+                      (handlers.pageerror as (e: unknown) => void)(new Error('uncaught'));
+                    },
+                    async screenshot(o: {clip?: unknown}) {
+                      clips.push(o.clip);
+                      return sand();
+                    },
+                    async addScriptTag() {},
+                    async evaluate() {
+                      return [{box: {x: 0, y: 0, width: 40, height: 20}, visible: true}, null];
+                    },
+                  };
+                },
+                async close() {},
+              };
+            },
+            async close() {},
+          };
+        },
+      },
+    };
+    const pages = await playwrightScreenshotter(root, () => fake as never).capture([
+      {url: 'http://x/', width: 100, height: 100, theme: 'light', probe: {boxes: ['#a', '#b'], pixels: ['#a']}},
+      {url: 'http://x/', width: 100, height: 100, theme: 'light'},
+    ]);
+    expect(pages).toHaveLength(2);
+    expect(pages?.[0]).toEqual({
+      viewport: {width: 100, height: 100},
+      console: ['boom', 'uncaught'],
+      elements: {
+        '#a': {found: true, visible: true, box: {x: 0, y: 0, width: 40, height: 20}, pixels: [[214, 160, 90], [214, 160, 90], [214, 160, 90], [214, 160, 90]]},
+        '#b': {found: false, visible: false, box: null, pixels: []},
+      },
+    });
+    expect(pages?.[1]).toBeUndefined();
+    expect(clips).toEqual([{x: 0, y: 0, width: 40, height: 20}]);
   });
 });

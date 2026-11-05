@@ -4,6 +4,7 @@
  */
 
 import type {CaptureStep} from '../ports';
+import {parseAssertions, type StateAssertions} from './assertions';
 
 export const UI_PATH = '.forger/ui.json';
 export const SCREENSHOT_DIR = 'docs/screenshots/';
@@ -21,6 +22,8 @@ export interface UiState {
   name: string;
   route: string;
   steps: CaptureStep[];
+  /** Mechanical checks `screenshot` runs at every viewport and theme. */
+  assert: StateAssertions;
 }
 
 /** A named, scripted interaction recorded as video: motion, feedback and pacing that a still hides. */
@@ -145,7 +148,10 @@ function uiState(v: unknown, i: number): UiState {
   if (!route.startsWith('/')) throw new UiConfigError(`${where}.route "${route}" must start with "/"`);
   if (o.steps !== undefined && !Array.isArray(o.steps)) throw new UiConfigError(`${where}.steps must be a list`);
   const steps = ((o.steps as unknown[] | undefined) ?? []).map((s, j) => step(s, `${where}.steps[${j}]`));
-  return {name, route, steps};
+  const assert = parseAssertions(o.assert, `${where}.assert`, m => {
+    throw new UiConfigError(m);
+  });
+  return {name, route, steps, assert};
 }
 
 export function parseUiConfig(raw: string): UiConfig {

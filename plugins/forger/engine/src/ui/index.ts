@@ -1,3 +1,4 @@
+export * from './assertions';
 export * from './capture';
 export * from './plan';
 export * from './record';

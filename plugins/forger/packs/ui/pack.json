@@ -1,6 +1,6 @@
 {
   "id": "ui",
-  "version": "1.2.1",
+  "version": "1.3.0",
   "description": "A UI change is reviewable only when it can be seen: screenshots come from a command, a branch that changes UI files updates them, and accessibility and design tokens are checked.",
   "detect": ["dep:react", "dep:vue", "dep:svelte", "dep:next", "dep:@angular/core", "file:index.html"],
   "files": [
@@ -13,6 +13,7 @@
     {"id": "ui.evidence", "rung": "check", "summary": "A branch that changes files matching ui.paths also updates files under docs/screenshots/.", "check": "ui"},
     {"id": "ui.tokens", "rung": "check", "summary": "Files under ui.paths use design tokens; raw colour literals (hex, rgb, hsl) appear only in the files named by ui.tokens.", "check": "ui"},
     {"id": "ui.a11y", "rung": "tool", "summary": "check a11y runs axe-core on every route at every viewport and theme; serious and critical violations fail.", "check": null},
+    {"id": "ui.assertions", "rung": "tool", "summary": "A named state declares mechanical assertions in ui.json; screenshot and check ui --states fail on a console error, a blank or cropped region, a wrong shown or hidden element, or an off-hue region.", "check": null},
     {"id": "ui.keyboard", "rung": "rule", "summary": "Every interactive element is reachable and operable by keyboard.", "check": null},
     {"id": "ui.contrast", "rung": "rule", "summary": "Text contrast meets WCAG AA.", "check": null},
     {"id": "ui.responsive", "rung": "rule", "summary": "Layouts hold at phone width.", "check": null},

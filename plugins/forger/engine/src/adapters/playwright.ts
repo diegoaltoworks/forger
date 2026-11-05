@@ -10,13 +10,15 @@ import {createRequire} from 'module';
 import {tmpdir} from 'os';
 import {dirname, join} from 'path';
 
-import {UiInfrastructureError, type AccessibilityAuditor, type AuditRequest, type AuditedPage, type AxeResults, type CaptureStep, type GifEncoder, type Recorder, type RecordRequest, type Screenshotter, type ShotRequest} from '../ports';
+import {decodePng, samplePixels} from './png';
+import {UiInfrastructureError, type AccessibilityAuditor, type AuditRequest, type AuditedPage, type AxeResults, type Box, type CaptureStep, type ElementModel, type GifEncoder, type PageModel, type Probe, type Recorder, type RecordRequest, type Screenshotter, type ShotRequest} from '../ports';
 
 export const PLAYWRIGHT_HINT = 'Playwright is not installed in this project; add it with `bun add -d playwright && bunx playwright install chromium`';
 
 interface PlaywrightPage {
   goto(url: string, opts: {waitUntil: 'networkidle'}): Promise<unknown>;
-  screenshot(opts: {path: string; fullPage: boolean}): Promise<unknown>;
+  screenshot(opts: {path?: string; fullPage?: boolean; clip?: Box; type?: 'png'}): Promise<unknown>;
+  on(event: 'console' | 'pageerror', handler: (arg: any) => void): void;
   addScriptTag(opts: {content: string}): Promise<unknown>;
   evaluate(expression: string): Promise<unknown>;
 }
@@ -104,20 +106,61 @@ export function playwrightAuditor(
   };
 }
 
+/** Evaluated in the page: the box and visibility of each selector, null when nothing matches. */
+const READ_BOXES = `(selectors) => selectors.map(sel => {
+  let e = null;
+  try { e = document.querySelector(sel); } catch (err) { return null; }
+  if (!e) return null;
+  const r = e.getBoundingClientRect();
+  const cs = getComputedStyle(e);
+  const visible = cs.display !== 'none' && cs.visibility !== 'hidden' && Number(cs.opacity) > 0 && r.width > 0 && r.height > 0;
+  return {box: {x: r.x, y: r.y, width: r.width, height: r.height}, visible};
+})`;
+
+/** The part of a box that lies on screen, rounded outward to whole pixels; null when none does. */
+export function visibleClip(box: Box, width: number, height: number): Box | null {
+  const x = Math.max(0, Math.floor(box.x));
+  const y = Math.max(0, Math.floor(box.y));
+  const right = Math.min(width, Math.ceil(box.x + box.width));
+  const bottom = Math.min(height, Math.ceil(box.y + box.height));
+  return right > x && bottom > y ? {x, y, width: right - x, height: bottom - y} : null;
+}
+
+async function probePage(page: PlaywrightPage, probe: Probe, width: number, height: number, lines: string[]): Promise<PageModel> {
+  const read = (await page.evaluate(`(${READ_BOXES})(${JSON.stringify(probe.boxes)})`)) as Array<{box: Box; visible: boolean} | null>;
+  const elements: Record<string, ElementModel> = {};
+  for (const [i, selector] of probe.boxes.entries()) {
+    const found = read[i];
+    const model: ElementModel = found === null ? {found: false, visible: false, box: null, pixels: []} : {found: true, visible: found.visible, box: found.box, pixels: []};
+    const clip = found !== null && found.visible && probe.pixels.includes(selector) ? visibleClip(found.box, width, height) : null;
+    if (clip !== null) model.pixels = samplePixels(decodePng((await page.screenshot({clip, type: 'png'})) as Uint8Array));
+    elements[selector] = model;
+  }
+  return {viewport: {width, height}, console: lines, elements};
+}
+
 export function playwrightScreenshotter(projectRoot: string, load: (root: string) => PlaywrightModule = loadPlaywright): Screenshotter {
   return {
     async capture(shots: ShotRequest[]) {
       const {chromium} = load(projectRoot);
       const browser = await launch(chromium);
+      const pages: Array<PageModel | undefined> = [];
       try {
         for (const shot of shots) {
-          mkdirSync(dirname(shot.file), {recursive: true});
+          if (shot.file !== undefined) mkdirSync(dirname(shot.file), {recursive: true});
           const context = await browser.newContext({viewport: {width: shot.width, height: shot.height}, colorScheme: shot.theme});
           try {
             const page = await context.newPage();
+            const lines: string[] = [];
+            page.on('console', (m: {type(): string; text(): string}) => {
+              if (m.type() === 'error') lines.push(m.text());
+            });
+            page.on('pageerror', (e: Error) => lines.push(e.message));
             await page.goto(shot.url, {waitUntil: 'networkidle'});
             for (const step of shot.steps ?? []) await perform(page as RecordingPage, step);
-            await page.screenshot({path: shot.file, fullPage: true});
+            if (shot.probe !== undefined) pages.push(await probePage(page, shot.probe, shot.width, shot.height, lines));
+            else pages.push(undefined);
+            if (shot.file !== undefined) await page.screenshot({path: shot.file, fullPage: true});
           } finally {
             await context.close();
           }
@@ -125,6 +168,7 @@ export function playwrightScreenshotter(projectRoot: string, load: (root: string
       } finally {
         await browser.close();
       }
+      return pages;
     },
   };
 }
