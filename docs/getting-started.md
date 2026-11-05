@@ -2,9 +2,9 @@
 
 This page takes you from nothing to a running loop, one command per step. Each
 step says what the command prints, so you know it worked. The detail behind each
-step is in [`reference/install.md`](reference/install.md).
+step is in [Install reference](reference/install.md).
 
-## 1. Check the prerequisites
+## 📋 1. Check the prerequisites
 
 You need [Bun](https://bun.sh), the `claude` CLI and, for a GitHub tracker, an
 authenticated `gh`.
@@ -18,7 +18,7 @@ gh auth status
 Each prints a version or `Logged in`. A `command not found` names the tool to
 install first.
 
-## 2. Install the plugin
+## 📦 2. Install the plugin
 
 Add the forger repository as a marketplace once, then install the plugin. A
 local checkout works as well as `owner/repo` on GitHub.
@@ -30,9 +30,9 @@ claude plugin install forger@forger
 
 The second command confirms the install. Restart the harness, then type
 `/forger` in a session: the forger commands appear in the list. To update
-later, see [`reference/install.md`](reference/install.md#install-and-update).
+later, see [Install reference](reference/install.md#install-and-update).
 
-## 3. Set up the repository
+## 🛠️ 3. Set up the repository
 
 Open a session at the root of the repository you want the loop to work on and
 run:
@@ -55,7 +55,7 @@ gh label create ready-for-agent
 Then fill in `.forger/process.md`: what the repository is and its gotchas. The
 worker treats the gotchas as rules.
 
-## 4. Plan the first tickets
+## 📝 4. Plan the first tickets
 
 ```
 /forger:plan
@@ -66,7 +66,7 @@ recommendation, and then writes a plan doc and the tickets. On GitHub each
 ticket is an issue with the `ready-for-agent` label. It ends with the goal and
 the tickets it created, in build order.
 
-## 5. Start the loop
+## 🚀 5. Start the loop
 
 ```
 /forger:work
@@ -77,7 +77,7 @@ prints the engine's pid and the first ticket, then reports each event as it
 lands: a merged ticket, a halt or a stall. Run it again at any time: it never
 starts a second engine.
 
-## 6. Watch it
+## 👀 6. Watch it
 
 The engine CLI answers the same questions from a shell. In the commands below,
 `<forger>` is the plugin folder (`plugins/forger` in a checkout of this
@@ -91,7 +91,7 @@ bun <forger>/bin/work.ts backlog --json
 `status` prints whether the engine is alive, the counters, the current ticket
 and the next pick. `backlog` lists the workable tickets.
 
-## 7. Recover from a halt
+## 🩹 7. Recover from a halt
 
 The loop halts on trouble it cannot fix alone, such as a red merge or an
 authentication error. `/forger:work` and `status` print the reason. Fix the
@@ -105,8 +105,8 @@ bun <forger>/bin/work.ts resume
 
 `resume` clears the halt and the failure counters.
 
-## Next
+## 📚 Next
 
-- [`../ABOUT.md`](../ABOUT.md) - why forger works the way it does.
-- [`reference/commands.md`](reference/commands.md) - every command.
-- [`reference/configuration.md`](reference/configuration.md) - every config field.
+- [About forger](../ABOUT.md) - why forger works the way it does.
+- [Commands reference](reference/commands.md) - every command.
+- [Configuration reference](reference/configuration.md) - every config field.

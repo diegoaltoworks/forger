@@ -91,8 +91,11 @@ function codePoint(ch: string): string {
   return 'U+' + ch.codePointAt(0)!.toString(16).toUpperCase().padStart(4, '0');
 }
 
+/** The one emoji a section heading may lead with; it marks the section and is allowed nowhere else. */
+const HEADING_EMOJI = /^(#{2,6}\s+)\p{Extended_Pictographic}\uFE0F?(?=\s)/u;
+
 export const nonAscii: LineRule = line =>
-  [...new Set(line.match(NON_ASCII) ?? [])].map(codePoint);
+  [...new Set(line.replace(HEADING_EMOJI, '$1').match(NON_ASCII) ?? [])].map(codePoint);
 
 export const email: LineRule = line => line.match(EMAIL) ?? [];
 

@@ -16,10 +16,26 @@ const SLASH_COMMANDS = readdirSync(join(REPO, 'plugins/forger/commands'))
   .map(f => `/forger:${f.replace(/\.md$/, '')}`);
 const CLI = COMMANDS.map(c => c.name);
 
+const EMOJI = /^\p{Extended_Pictographic}\uFE0F?\s+/u;
+
+/** Heading texts with the leading section emoji removed. */
 function headings(text: string): string[] {
   return splitFences(text)
     .prose.map(l => /^#{1,6}\s+(.+?)\s*$/.exec(l)?.[1])
+    .filter((h): h is string => h !== undefined)
+    .map(h => h.replace(EMOJI, ''));
+}
+
+/** Section headings (below the title) that start with an emoji, outside code blocks. */
+function sectionHeadings(text: string): string[] {
+  return splitFences(text)
+    .prose.map(l => /^#{2,6}\s+(.+?)\s*$/.exec(l)?.[1])
     .filter((h): h is string => h !== undefined);
+}
+
+/** Link texts of every markdown link, outside code blocks. */
+function linkTexts(text: string): string[] {
+  return splitFences(text).prose.flatMap(l => [...l.matchAll(/(?<!!)\[([^\]]+)\]\([^)]+\)/g)].map(m => m[1]));
 }
 
 function fencedCommands(text: string): string[] {
@@ -50,17 +66,42 @@ describe('the root README', () => {
     const purpose = prose.slice(h1 + 1).find(l => l.trim() !== '');
     expect(purpose).toBeDefined();
     expect(purpose).not.toMatch(/^\s*(#|\[!|!\[|<|```)/);
-    expect(headings(text).filter(h => prose.includes(`## ${h}`))).toEqual(['Install', 'Start', 'Why', 'Learn more', 'Licence']);
+    expect(headings(text).filter(h => prose.some(l => l.replace(/^(## )\p{Extended_Pictographic}\uFE0F?\s+/u, '$1') === `## ${h}`))).toEqual(['Install', 'Start', 'Why', 'Learn more', 'Licence']);
   });
 
   test('install and start commands exist', () => {
     const text = read('README.md');
-    const section = (name: string) => text.split(/^## /m).find(s => s.startsWith(`${name}\n`)) ?? '';
+    const section = (name: string) => text.split(/^## /m).find(s => s.replace(EMOJI, '').startsWith(`${name}\n`)) ?? '';
     const lines = [...fencedCommands(section('Install')), ...fencedCommands(section('Start'))];
     expect(lines.some(l => l.startsWith('claude plugin install'))).toBe(true);
     expect(lines).toContain('/forger:setup');
     expect(lines).toContain('/forger:work');
     expect(lines.map(unknownCommand).filter(Boolean)).toEqual([]);
+  });
+});
+
+describe('section emoji and link titles', () => {
+  test('root README links have titles', () => {
+    const bad = linkTexts(read('README.md')).filter(t => /\.md\b/.test(t) || /[\w.]\/[\w.]/.test(t) || /^`?[\w./-]+\/`?$/.test(t));
+    expect(bad).toEqual([]);
+  });
+
+  test('root README section headings start with an emoji', () => {
+    const hs = sectionHeadings(read('README.md'));
+    expect(hs.length).toBeGreaterThan(0);
+    expect(hs.filter(h => !EMOJI.test(h))).toEqual([]);
+  });
+
+  test('the same section kind carries the same emoji across the docs', () => {
+    const emojiOf = (file: string) => new Map(sectionHeadings(read(file)).map(h => [h.replace(EMOJI, ''), EMOJI.exec(h)?.[0].trim()]));
+    const root = emojiOf('README.md');
+    const about = emojiOf('ABOUT.md');
+    expect(about.get('Read in this order')).toBe(root.get('Learn more'));
+    expect(emojiOf('docs/getting-started.md').get('Next')).toBe(root.get('Learn more'));
+    expect(about.get('Bring your own skills')).toBe(about.get('Skills from the community'));
+    for (const file of ['ABOUT.md', 'docs/getting-started.md']) {
+      expect(sectionHeadings(read(file)).filter(h => !EMOJI.test(h))).toEqual([]);
+    }
   });
 });
 
