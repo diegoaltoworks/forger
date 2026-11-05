@@ -43,6 +43,9 @@ Asked once, written down, refined later (see `05-refining-the-process.md`):
   behind `origin/<base>` means every restart runs old code. `orient` lists it as an anomaly while no engine is
   alive and names the fix (`git pull --ff-only origin <base>`); `run` refuses to start on a behind base branch in a
   clean checkout and gives the same message.
+- The hooks gate. A repository set up before a gate existed fails it on a clean base branch, and a worker would
+  spend an iteration to find out. `orient` lists it as an anomaly and `run` refuses to start; both name the fix,
+  `work.ts setup` in the repository, which keeps the config and adds what is missing. Commit what it writes.
 - Who pushes the state branch. When `resume` or `run` cannot write it, the message names the GitHub identity in use;
   the loop's scoped identity must be set in that shell.
 - What merged since the last session; what the checked-out branch really is.

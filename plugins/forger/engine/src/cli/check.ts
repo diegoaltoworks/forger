@@ -25,19 +25,11 @@ import {loadConfig} from '../config';
 import {checkTicketCriteria, criterionOptions} from '../loop';
 import type {Harness} from '../ports';
 import {UiInfrastructureError} from '../ports';
+import {harnessOfRoot} from './harness-of';
 import type {Command} from './command';
 import {specProvider} from './spec-provider';
 
-/** The project's harness, for the checks that read its settings; an unknown one leaves them nothing to read. */
-function harnessOf(projectRoot: string): Harness | undefined {
-  try {
-    return findHarness(loadConfig(projectRoot).harness);
-  } catch {
-    return undefined;
-  }
-}
-
-const SINGLE = {hooks: (root: string) => runHooksCheck(root, harnessOf(root)), docs: runDocsCheck, arch: runArchCheck, decisions: runDecisionsCheck, safety: runSafetyCheck, tests: runTestsCheck, coverage: runCoverageCheck, ui: runUiCheck};
+const SINGLE = {hooks: (root: string) => runHooksCheck(root, harnessOfRoot(root)), docs: runDocsCheck, arch: runArchCheck, decisions: runDecisionsCheck, safety: runSafetyCheck, tests: runTestsCheck, coverage: runCoverageCheck, ui: runUiCheck};
 
 export const check: Command = {
   name: 'check',
@@ -85,7 +77,7 @@ export const check: Command = {
     }
     if (positionals[1] === undefined) {
       try {
-        const report = runChecks(projectRoot, pluginRoot, ctx.run(), specProvider(ctx), harnessOf(projectRoot));
+        const report = runChecks(projectRoot, pluginRoot, ctx.run(), specProvider(ctx), harnessOfRoot(projectRoot));
         console.log(values.json ? JSON.stringify(report) : values.summary ? formatSummary(report) : formatCheckReport(report));
         if (!report.ok) process.exitCode = 1;
       } catch (e) {

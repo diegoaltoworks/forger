@@ -85,6 +85,7 @@ the result.
 | The engine runs from a checkout behind origin | fixed (before tickets were tracked) | [entry](#the-engine-runs-from-a-checkout-behind-origin---fixed-before-tickets-were-tracked) |
 | A resume with the wrong GitHub identity | fixed (before tickets were tracked) | [entry](#a-resume-with-the-wrong-github-identity---fixed-before-tickets-were-tracked) |
 | An outside pull request is invisible to the loop | fixed by #264 | [entry](#an-outside-pull-request-is-invisible-to-the-loop---fixed-by-267) |
+| A new gate halts every older install | open, #283 | [entry](#a-new-gate-halts-every-older-install) |
 
 <!-- catalogue-index:end -->
 
@@ -781,3 +782,15 @@ the result.
 - **Fix:** E: `backlog` and `orient` list open PRs from other accounts, and the engine does not pick a ticket such a
   PR references; it waits on the owner. S: the supervisor triages the PR without running its code
   (docs/04-supervising.md).
+
+### A new gate halts every older install
+
+**Status:** open, #283
+
+- **Seen:** the hooks gate was added while repositories set up before it existed were running loops. Each loop picked
+  a ticket, found the gate red on a clean base branch, and halted, because running `setup` is outside any ticket.
+- **Cause:** nothing read the gate before a ticket was picked, and the hook command `setup` wrote held a machine path.
+- **Recovered by:** running `setup` by hand in each repository.
+- **Fix:** E: `run` reads the hooks gate before it starts a worker and refuses with the fix (`work.ts setup`);
+  `orient` lists the same condition as an anomaly; `setup` on an older install keeps its config and adds the missing
+  policy and harness hook; the hook command names `$FORGER_PLUGIN_ROOT`, so the committed file holds no machine path.

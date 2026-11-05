@@ -28,6 +28,8 @@ export interface OrientInputs {
   requiresVerify?: boolean | null;
   /** The stored lease seen from this machine; undefined when not read. */
   lease?: LeaseView;
+  /** Why the hooks gate fails, with the fix; undefined or null when it passes or was not read. */
+  hooksGate?: string | null;
   /** The base branch against its remote; undefined when not read. */
   baseSync?: BaseSync;
 }
@@ -68,6 +70,7 @@ export function orient(i: OrientInputs): OrientPlan {
   const behind = behindBaseAnomaly(i.baseSync, i.baseBranch, s.runner.alive);
   if (behind) anomalies.push(behind);
   if (i.requiresVerify === false) anomalies.push(missingVerifyStatusAnomaly(i.baseBranch));
+  if (i.hooksGate) anomalies.push(i.hooksGate);
   anomalies.push(...(i.backlogAnomalies ?? []));
   if (s.halted) {
     return {action: 'surface_halt', reason: i.haltReason?.trim() || s.last_error || 'halted, no reason recorded', anomalies, blockers: [], lease: i.lease ?? null};

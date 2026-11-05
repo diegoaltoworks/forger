@@ -144,3 +144,21 @@ export function runChecks(projectRoot: string, pluginRoot: string, run: CommandR
   });
   return buildReport(outputs, waivers, listOpinions(available, lock));
 }
+
+/**
+ * The unwaived findings of the hooks gate, read before a worker starts: a gate
+ * that is red on a clean main would cost a whole iteration to discover. Empty
+ * when no installed pack declares the check, or the lock is absent.
+ */
+export function hooksGateProblems(projectRoot: string, pluginRoot: string, harness?: Harness): Finding[] {
+  const lockPath = forgerPath(projectRoot, LOCK_PATH);
+  if (!existsSync(lockPath)) return [];
+  if (!checksToRun(loadPacks(pluginRoot), parseLock(readFileSync(lockPath, 'utf-8'))).includes('hooks')) return [];
+  return applyWaivers(runHooksCheck(projectRoot, harness), loadWaivers(projectRoot)).violations;
+}
+
+/** The sentence `run` and `orient` give for a red hooks gate; null when it is green. */
+export function hooksGateRefusal(findings: Finding[]): string | null {
+  if (findings.length === 0) return null;
+  return `the hooks gate fails (${findings.map(f => `${f.file}: ${f.rule}`).join('; ')}); run \`work.ts setup\` in this repository to add what is missing, then commit it`;
+}
