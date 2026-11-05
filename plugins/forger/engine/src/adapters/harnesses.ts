@@ -31,6 +31,8 @@ export function agentFor(harness: Harness): AgentRunner {
         timeoutMs: opts.timeoutMinutes * 60 * 1000,
         graceMs: opts.killGraceSeconds * 1000,
         abort: opts.abort,
+        spendLimitUsd: harness.spentUsd ? opts.tier.budget : undefined,
+        spentUsd: harness.spentUsd?.bind(harness),
       });
     },
   };
