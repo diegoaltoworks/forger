@@ -25,3 +25,4 @@
 {"event":"picked","at":"2026-11-05T08:35:24.520Z","iteration":139,"ticket":"issue-266","reason":null}
 {"event":"worker_denied","at":"2026-11-05T08:47:23.744Z","iteration":139,"ticket":"issue-266","reason":"merge: git commit -qam \"feat: the failure catalogue follows the tracker\" && bun plugins/forger/bin/work.ts rebase --ticket issue-266 --json | tail -1 && git push -q 2>&1|tail -1; gh pr merge 276 --squash --subject \"feat: the nearest .forger/ inside a repository wins, for monorepos (#266) (#276)\" 2>&1|tail -2; gh pr view 276 --json state -q .state"}
 {"event":"picked","at":"2026-11-05T08:54:15.894Z","iteration":140,"ticket":"issue-271","reason":null}
+{"event":"picked","at":"2026-11-05T09:00:06.215Z","iteration":141,"ticket":"issue-272","reason":null}
