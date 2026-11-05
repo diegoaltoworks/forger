@@ -56,7 +56,7 @@ A check can also report a coverage gap: something it could not measure. A gap is
 `.forger/waivers.json` is how a project switches an opinion off in the open. Each entry names the opinion, a path glob, a reason and who approved it; an entry missing the reason or the approver is an error, not a waiver. A waiver that matches no violation is reported as stale, so it gets deleted once it is no longer needed.
 
 - `check --json` runs everything and reports per check, plus the stale waivers. `/forger:retro` reads it for the waiver list.
-- `check docs` runs the docs check alone, without waivers: the writing rules always, and, when the `docs` pack is installed, the content rules below.
+- `check docs` runs the docs check alone, with `.forger/waivers.json` applied as the full `check` applies it: the writing rules always, and, when the `docs` pack is installed, the content rules below.
 - `setup` appends `check` to the gates as `bun "$FORGER_PLUGIN_ROOT/bin/work.ts" check`. The committed line holds no machine path: the engine exports `FORGER_PLUGIN_ROOT`, the root of the plugin it runs from, to the worker that runs the gates, so the same gates work on any machine. Outside the engine, export the variable yourself before running the gates. `setup --upgrade` rewrites an older absolute check command to this form.
 
 ## The docs pack

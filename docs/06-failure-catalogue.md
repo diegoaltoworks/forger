@@ -61,8 +61,8 @@ the result.
 | Test evidence never checks out, so a passing PR is unclear | fixed by #229 | [entry](#test-evidence-never-checks-out-so-a-passing-pr-is-unclear---fixed-by-237) |
 | The verifier passes a screen that is visibly wrong | fixed by #189, #194, #195 | [entry](#the-verifier-passes-a-screen-that-is-visibly-wrong---fixed-by-225-257-258) |
 | A UI state the screenshot tool cannot reach | fixed by #191 | [entry](#a-ui-state-the-screenshot-tool-cannot-reach---fixed-by-256) |
-| A vague or unsourced criterion decides the outcome | open, #196 | [entry](#a-vague-or-unsourced-criterion-decides-the-outcome) |
-| Faithful but flat | open, #230, #235 | [entry](#faithful-but-flat) |
+| A vague or unsourced criterion decides the outcome | fixed by #196 | [entry](#a-vague-or-unsourced-criterion-decides-the-outcome---fixed-by-228) |
+| Faithful but flat | fixed by #230, #235 | [entry](#faithful-but-flat---fixed-by-245-261) |
 | The engine dies with the session | open | [entry](#the-engine-dies-with-the-session) |
 | A watcher on the wrong process | fixed (before tickets were tracked) | [entry](#a-watcher-on-the-wrong-process---fixed-before-tickets-were-tracked) |
 | A watcher that matches its own command | fixed (before tickets were tracked) | [entry](#a-watcher-that-matches-its-own-command---fixed-before-tickets-were-tracked) |
@@ -493,9 +493,9 @@ the result.
 - **Recovered by:** the owner waiving the screenshot criterion.
 - **Fix:** E: #191: named states in `ui.json`, with steps run before capture.
 
-### A vague or unsourced criterion decides the outcome
+### ~~A vague or unsourced criterion decides the outcome~~ - fixed by #228
 
-**Status:** open, #196
+**Status:** fixed by #196
 
 - **Seen:** "relief sharpens" was read one way by the worker and another by the
   verifier. A threshold the supervisor set without a source was tighter than the
@@ -508,9 +508,9 @@ the result.
 
 ## Planning
 
-### Faithful but flat
+### ~~Faithful but flat~~ - fixed by #245, #261
 
-**Status:** open, #230, #235
+**Status:** fixed by #230, #235
 
 - **Seen:** an owner asked for a playful, retro-handheld-style demo for a
   pitch, "think <a famous handheld game>". The loop planned and built it ticket

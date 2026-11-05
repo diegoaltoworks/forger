@@ -4,6 +4,8 @@ import {
   formatViolations,
   runArchCheck,
   runChecks,
+  applyWaivers,
+  loadWaivers,
   runCoverageCheck,
   runDecisionsCheck,
   runDocsCheck,
@@ -142,7 +144,7 @@ export const check: Command = {
     try {
       const run = ctx.run();
       const runOne = SINGLE[positionals[1] as keyof typeof SINGLE];
-      violations = runOne(projectRoot, run);
+      violations = applyWaivers(runOne(projectRoot, run), loadWaivers(projectRoot)).violations;
     } catch (e) {
       console.error((e as Error).message);
       process.exitCode = 1;

@@ -1,6 +1,9 @@
-import {describe, expect, test} from 'bun:test';
+import {afterEach, describe, expect, test} from 'bun:test';
+import {mkdirSync, mkdtempSync, rmSync, writeFileSync} from 'node:fs';
+import {tmpdir} from 'node:os';
+import {join} from 'node:path';
 
-import {refuseUncheckable} from './ticket-check';
+import {refuseUncheckable, uiStatesOf} from './ticket-check';
 
 const target = {trackerKind: 'github' as const, intakeLabel: 'ready-for-agent', backlogFile: '/none'};
 
@@ -13,6 +16,30 @@ function fakeTracker() {
   };
   return {run, commands};
 }
+
+describe('uiStatesOf', () => {
+  const dirs: string[] = [];
+  afterEach(() => {
+    for (const d of dirs.splice(0)) rmSync(d, {recursive: true, force: true});
+  });
+  function withUi(content: string | null): string {
+    const root = mkdtempSync(join(tmpdir(), 'forger-ui-states-'));
+    dirs.push(root);
+    mkdirSync(join(root, '.forger'));
+    if (content !== null) writeFileSync(join(root, '.forger/ui.json'), content);
+    return root;
+  }
+
+  test('reads string and named-object states, skipping the rest', () => {
+    expect(uiStatesOf(withUi(JSON.stringify({states: ['home', {name: 'empty-cart'}, {route: '/x'}, 3]})))).toEqual(['home', 'empty-cart']);
+  });
+
+  test('no file, no states array or malformed JSON give no states', () => {
+    expect(uiStatesOf(withUi(null))).toEqual([]);
+    expect(uiStatesOf(withUi(JSON.stringify({states: 'home'})))).toEqual([]);
+    expect(uiStatesOf(withUi('{not json'))).toEqual([]);
+  });
+});
 
 describe('refuseUncheckable', () => {
   test('relabels a failing ticket needs-info and names the criteria; leaves a passing one', () => {
