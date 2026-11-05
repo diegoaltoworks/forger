@@ -73,6 +73,13 @@ shape. Good tickets:
 - state whether they write to a datastore, with the safety argument if the repo
   has write-scope rules.
 
+When the source's request is creative (`work intent --request <text> --json`
+says `creative`), do not slice by layer: the first ticket is the toy, the core
+interaction playable end to end with placeholder art, and every other ticket
+depends on it, in the order style pass, rigour, polish (`docs/03-tickets.md`,
+"Toy first"). If the source is a layered plan for creative work with no toy
+ticket, add one at the head rather than copying the layers.
+
 Prefer fewer, well-specified tickets over many vague ones. In adopt mode the
 issue already says what to build; your job is to add what the loop needs
 (priority, effort, files, reuse, `depends_on`) by reading the code, not to
