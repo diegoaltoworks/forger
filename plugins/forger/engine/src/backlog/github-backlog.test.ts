@@ -24,6 +24,7 @@ import {
 import type {CommandResult} from '../ports';
 import {graphqlCost} from './graphql-cost';
 import {RateLimitError} from '../loop';
+import {OPEN_PRS_COMMAND, VIEWER_COMMAND} from './outside-prs';
 
 /** A real `gh api graphql --paginate --slurp` response, recorded. */
 const recorded = readFileSync(join(import.meta.dir, 'github-issues.json'), 'utf-8');
@@ -163,6 +164,7 @@ describe('backlogFromIssues', () => {
       remaining: 4,
       next: 'issue-4',
       anomalies: [],
+      held: [],
     });
   });
 
@@ -186,6 +188,7 @@ describe('backlogFromIssues', () => {
       remaining: 2,
       next: 'issue-3',
       anomalies: [],
+      held: [],
     });
   });
 
@@ -224,6 +227,8 @@ describe('githubBacklog', () => {
   test('reads tickets once from a gh graphql call with the intake label, until refreshed', () => {
     const calls: string[] = [];
     const backlog = githubBacklog(cmd => {
+      if (cmd === VIEWER_COMMAND) return ok('loop\n');
+      if (cmd === OPEN_PRS_COMMAND) return ok('[]');
       calls.push(cmd);
       return ok(JSON.stringify([page([issue(3, {labels: ['ready-for-agent', 'P0']})])]));
     }, config);
@@ -341,5 +346,53 @@ describe('a blocker written only in the body', () => {
     const data = backlogFromIssues([issue(81), issue(82, {blockedBy: [issue(81)], body: blocked})], tracker);
     expect(backlogReport(data, config).anomalies).toEqual([]);
     expect((data.features['issue-82'] as {depends_on: string[]}).depends_on).toEqual(['issue-81']);
+  });
+});
+
+describe('an open outside PR', () => {
+  const ready = ['ready-for-agent', 'P1'];
+  const prs = (list: unknown[]) => JSON.stringify(list);
+  const tracked = (prList: unknown, viewer = 'loop') =>
+    githubBacklog(cmd => {
+      if (cmd === VIEWER_COMMAND) return ok(`${viewer}\n`);
+      if (cmd === OPEN_PRS_COMMAND) return typeof prList === 'string' && prList === 'fail' ? {stdout: '', stderr: 'boom', exitCode: 1} : ok(prs(prList as unknown[]));
+      return ok(JSON.stringify([page([issue(3, {labels: ready}), issue(4, {labels: ['ready-for-agent', 'P2']})])]));
+    }, config);
+
+  test('an open outside PR for a ticket holds the pick', () => {
+    const backlog = tracked([{number: 188, title: 'fix the thing', author: {login: 'someone'}, closingIssuesReferences: [{number: 3}]}]);
+    expect(backlog.next()).toBe('issue-4');
+    const report = backlog.report();
+    expect(report.held).toEqual([{id: 'issue-3', prs: [188]}]);
+    expect(report.remaining).toBe(2);
+    expect(backlog.blocked().map(b => b.id)).toEqual(['issue-3']);
+    expect(backlog.blocked()[0]?.blockedBy[0]?.id).toBe('PR #188');
+  });
+
+  test('the issue number in the title holds the ticket too', () => {
+    const backlog = tracked([{number: 9, title: 'Fix #3 properly', author: {login: 'someone'}, closingIssuesReferences: []}]);
+    expect(backlog.report().held).toEqual([{id: 'issue-3', prs: [9]}]);
+  });
+
+  test('a longer number in the title does not match', () => {
+    const backlog = tracked([{number: 9, title: 'Fix #33', author: {login: 'someone'}, closingIssuesReferences: []}]);
+    expect(backlog.report().held).toEqual([]);
+  });
+
+  test("the loop's own PR holds nothing", () => {
+    const backlog = tracked([{number: 5, title: 'feat: x', author: {login: 'Loop'}, closingIssuesReferences: [{number: 3}]}]);
+    expect(backlog.next()).toBe('issue-3');
+    expect(backlog.report().anomalies).toEqual([]);
+  });
+
+  test('an outside PR is an anomaly even when it references no ticket', () => {
+    const backlog = tracked([{number: 7, title: 'docs', author: {login: 'someone'}, closingIssuesReferences: []}]);
+    expect(backlog.report().anomalies).toEqual([expect.stringContaining('PR #7 from someone')]);
+    expect(backlog.next()).toBe('issue-3');
+  });
+
+  test('an unreadable PR list is reported, not read as none', () => {
+    const backlog = tracked('fail');
+    expect(backlog.report().anomalies).toEqual([expect.stringContaining('could not be read')]);
   });
 });

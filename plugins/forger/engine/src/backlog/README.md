@@ -9,6 +9,8 @@ reads; a tracker is an adapter behind it.
   tickets, the next pick, the model tier. Pure.
 - `blocked-by.ts` - the issue numbers under a ticket's `Blocked by` heading,
   and where they disagree with the native blocked-by. Pure.
+- `outside-prs.ts` - open pull requests the loop did not open, and which tickets
+  they hold back. Pure.
 - `link-blockers.ts` - links those numbers as native blocked-by, through a
   `CommandRunner` handed in.
 - `schedule.ts` - which tickets may run together: the Knock-on footprint,

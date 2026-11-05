@@ -83,6 +83,7 @@ the result.
 | A stopped engine keeps the state-branch lease | fixed (before tickets were tracked) | [entry](#a-stopped-engine-keeps-the-state-branch-lease---fixed-before-tickets-were-tracked) |
 | The engine runs from a checkout behind origin | fixed (before tickets were tracked) | [entry](#the-engine-runs-from-a-checkout-behind-origin---fixed-before-tickets-were-tracked) |
 | A resume with the wrong GitHub identity | fixed (before tickets were tracked) | [entry](#a-resume-with-the-wrong-github-identity---fixed-before-tickets-were-tracked) |
+| An outside pull request is invisible to the loop | open, #264 | [entry](#an-outside-pull-request-is-invisible-to-the-loop) |
 
 <!-- catalogue-index:end -->
 
@@ -750,3 +751,15 @@ the result.
 - **Recovered by:** running `resume` again under the loop's scoped identity.
 - **Fix:** E: a refused state-branch write names the GitHub identity in use and says the loop's scoped identity must
   be set.
+
+### An outside pull request is invisible to the loop
+
+**Status:** open, #264
+
+- **Seen:** a contributor opened a pull request with a fix and tests for a ticket. Hours later the loop picked the
+  same ticket and built its own fix. The contributor's PR then conflicted with the base and got no reply.
+- **Cause:** the backlog is read from issues alone; nothing looked at open pull requests the loop did not open.
+- **Recovered by:** the owner reconciling the two PRs by hand.
+- **Fix:** E: `backlog` and `orient` list open PRs from other accounts, and the engine does not pick a ticket such a
+  PR references; it waits on the owner. S: the supervisor triages the PR without running its code
+  (docs/04-supervising.md).

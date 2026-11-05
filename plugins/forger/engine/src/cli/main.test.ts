@@ -72,13 +72,14 @@ describe('backlog --json', () => {
       remaining: 3,
       next: 'a',
       anomalies: [],
+      held: [],
     });
   });
 
   test('an empty backlog reports nothing to do', async () => {
     process.chdir(projectWith({done: {status: 'completed'}}));
     const out = JSON.parse(await capture(['backlog', '--json']));
-    expect(out).toEqual({workable: [], remaining: 0, next: null, anomalies: []});
+    expect(out).toEqual({workable: [], remaining: 0, next: null, anomalies: [], held: []});
   });
 
   test('with tracker.kind github, lists tickets from issues, not backlog.json', async () => {
@@ -110,6 +111,8 @@ describe('backlog --json', () => {
     const calls: string[] = [];
     const run: CommandRunner = cmd => {
       calls.push(cmd);
+      if (cmd.startsWith('gh api user')) return 'loop\n';
+      if (cmd.startsWith('gh pr list')) return '[]';
       return response;
     };
     const out = JSON.parse(await capture(['backlog', '--json'], run));
@@ -121,8 +124,24 @@ describe('backlog --json', () => {
       remaining: 3,
       next: 'issue-5',
       anomalies: [],
+      held: [],
     });
-    expect(calls.every(c => c.startsWith('gh api graphql'))).toBe(true);
+    expect(calls.filter(c => c.startsWith('gh api graphql'))).toHaveLength(1);
+  });
+
+  test('orient --json reports an open outside PR as an anomaly', async () => {
+    process.chdir(projectWith({}, {kind: 'github', label: 'go'}));
+    const issues = JSON.stringify([{data: {repository: {issues: {nodes: [{number: 5, state: 'OPEN', labels: {nodes: [{name: 'go'}]}, timelineItems: {nodes: []}}]}}}}]);
+    const run: CommandRunner = cmd => {
+      if (cmd.startsWith('gh api graphql')) return issues;
+      if (cmd.startsWith('gh api user')) return 'loop\n';
+      if (cmd.startsWith('gh pr list --state open')) return JSON.stringify([{number: 188, title: 'fix', author: {login: 'someone'}, closingIssuesReferences: [{number: 5}]}]);
+      return '';
+    };
+    const out = JSON.parse(await capture(['orient', '--json'], run));
+    expect(out.anomalies).toContainEqual(expect.stringContaining('PR #188 from someone'));
+    expect(out.action).toBe('nothing_to_do');
+    expect(out.blockers).toEqual(['issue-5 blocked by PR #188 (open, not the loop\'s)']);
   });
 });
 

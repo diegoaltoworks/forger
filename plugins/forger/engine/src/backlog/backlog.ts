@@ -25,6 +25,8 @@ export interface Ticket {
   body?: string;
   /** Carries the `serial` label: runs alone (ADR 0011). */
   serial?: boolean;
+  /** Open pull requests from other accounts that reference this ticket's issue; the ticket waits on the owner. */
+  held_by_prs?: number[];
   [key: string]: unknown;
 }
 
@@ -51,6 +53,10 @@ function tickets(data: BacklogData | null): Record<string, Ticket> {
   return raw as Record<string, Ticket>;
 }
 
+function heldPrs(ticket: Ticket): number[] {
+  return Array.isArray(ticket.held_by_prs) ? ticket.held_by_prs : [];
+}
+
 function isTicket(data: unknown): data is Ticket {
   return typeof data === 'object' && data !== null;
 }
@@ -73,6 +79,7 @@ export function workableTasks(
     if (!isTicket(ticket)) continue;
     if (ticket.status !== 'not_started') continue;
     if (!isThisRepo(ticket, config)) continue;
+    if (heldPrs(ticket).length > 0) continue;
 
     const deps = Array.isArray(ticket.depends_on) ? ticket.depends_on : [];
     if (!deps.every(isCompleted)) continue;
@@ -113,6 +120,7 @@ export function blockedTickets(data: BacklogData | null, config: WorkloopConfig)
     const blockedBy = deps
       .filter(d => all[d]?.status !== 'completed')
       .map(d => ({id: d, status: typeof all[d]?.status === 'string' ? (all[d]?.status as string) : 'unknown'}));
+    for (const pr of heldPrs(ticket)) blockedBy.push({id: `PR #${pr}`, status: 'open, not the loop\'s'});
     if (blockedBy.length > 0) out.push({id, blockedBy, priority: PRIORITY_ORDER[ticket.priority || 'P3'] ?? 3});
   }
   out.sort((a, b) => a.priority - b.priority);
@@ -194,15 +202,24 @@ export interface BacklogReport {
   next: string | null;
   /** Dependencies the text and the tracker disagree on; reconcile them. */
   anomalies: string[];
+  /** Tickets the loop will not pick because an outside PR for them is open; they wait on the owner. */
+  held: Array<{id: string; prs: number[]}>;
+}
+
+function heldTickets(data: BacklogData | null, config: WorkloopConfig): Array<{id: string; prs: number[]}> {
+  return Object.entries(tickets(data))
+    .filter(([, t]) => isTicket(t) && t.status === 'not_started' && isThisRepo(t, config) && heldPrs(t).length > 0)
+    .map(([id, t]) => ({id, prs: heldPrs(t)}));
 }
 
 export function backlogReport(data: BacklogData | null, config: WorkloopConfig): BacklogReport {
   const workable = workableTasks(data, config).map(t => ({id: t.name, priority: t.label}));
-  return {workable, remaining: remainingTasks(data, config), next: workable[0]?.id ?? null, anomalies: data?.anomalies ?? []};
+  return {workable, remaining: remainingTasks(data, config), next: workable[0]?.id ?? null, anomalies: data?.anomalies ?? [], held: heldTickets(data, config)};
 }
 
 export function formatBacklogReport(report: BacklogReport): string {
   const lines = report.workable.map(t => `${t.priority} ${t.id}`);
+  for (const h of report.held) lines.push(`~ ${h.id} waits on the owner: ${h.prs.map(n => `PR #${n}`).join(', ')} is open and not the loop's`);
   for (const a of report.anomalies) lines.push(`! ${a}`);
   lines.push(`Remaining: ${report.remaining}  Next: ${report.next ?? 'none'}`);
   return lines.join('\n');

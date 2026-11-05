@@ -12,6 +12,7 @@ import {dependencyAnomalies, parseBlockedBy} from './blocked-by';
 import {type Backlog, type BacklogData, type Ticket, backlogFrom} from './backlog';
 import type {WorkloopConfig} from '../config';
 import type {CapturingRunner} from '../ports';
+import {OPEN_PRS_COMMAND, VIEWER_COMMAND, type OpenPr, holdingPrs, outsidePrAnomaly, outsidePrs, parseOpenPrs} from './outside-prs';
 import {RateLimitError, isRateLimited, parseRateLimit} from '../loop';
 
 interface Page<T> {
@@ -128,7 +129,7 @@ export function ticketFromIssue(issue: TrackedIssue, tracker: TrackerSettings): 
  * issue. Ignored issues and blockers outside the fetched set are kept, never as
  * work, so their dependants can see whether they are done.
  */
-export function backlogFromIssues(issues: TrackedIssue[], tracker: TrackerSettings): BacklogData {
+export function backlogFromIssues(issues: TrackedIssue[], tracker: TrackerSettings, outside: OpenPr[] = []): BacklogData {
   const features: Record<string, Ticket> = {};
   const sorted = [...issues].sort((a, b) => a.number - b.number);
   for (const issue of sorted) {
@@ -158,6 +159,12 @@ export function backlogFromIssues(issues: TrackedIssue[], tracker: TrackerSettin
       ...dependencyAnomalies({number: issue.number, declared: known, native}, n => features[ticketId(n)]?.status !== 'completed')
     );
   }
+  for (const issue of sorted) {
+    const ticket = features[ticketId(issue.number)] as Ticket;
+    const holding = holdingPrs(outside, issue.number);
+    if (ticket.status === 'not_started' && holding.length > 0) ticket.held_by_prs = holding;
+  }
+  anomalies.push(...outside.map(outsidePrAnomaly));
   return {features, anomalies};
 }
 
@@ -241,12 +248,33 @@ export function ghFailure(run: CapturingRunner, exitCode: number, stderr: string
   return new Error(`GitHub backlog: gh exited ${exitCode} with no output, ${said}`);
 }
 
+/**
+ * The open PRs from other accounts. A PR list that cannot be read is not an
+ * empty one: it is reported as an anomaly so the pick is not trusted silently.
+ */
+export function readOutsidePrs(run: CapturingRunner): {prs: OpenPr[]; anomaly: string | null} {
+  const viewer = run(VIEWER_COMMAND);
+  const list = run(OPEN_PRS_COMMAND);
+  if (viewer.exitCode !== 0 || viewer.stdout.trim() === '' || list.exitCode !== 0) {
+    return {prs: [], anomaly: 'the open pull requests could not be read, so an outside PR for a ticket would go unseen'};
+  }
+  try {
+    return {prs: outsidePrs(parseOpenPrs(list.stdout), viewer.stdout.trim()), anomaly: null};
+  } catch {
+    return {prs: [], anomaly: 'the open pull requests could not be read, so an outside PR for a ticket would go unseen'};
+  }
+}
+
 export function readIssueBacklog(run: CapturingRunner, tracker: TrackerSettings): BacklogData {
   const result = run(issuesCommand(tracker));
   if (result.exitCode !== 0 || result.stdout.trim() === '') {
     throw ghFailure(run, result.exitCode, result.stderr);
   }
-  return backlogFromIssues(parseIssuesResponse(result.stdout), tracker);
+  const issues = parseIssuesResponse(result.stdout);
+  const {prs, anomaly} = readOutsidePrs(run);
+  const data = backlogFromIssues(issues, tracker, prs);
+  if (anomaly) data.anomalies = [...(data.anomalies ?? []), anomaly];
+  return data;
 }
 
 export function githubBacklog(run: CapturingRunner, config: WorkloopConfig): Backlog {
