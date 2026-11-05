@@ -62,7 +62,7 @@ the result.
 | The verifier passes a screen that is visibly wrong | fixed by #189, #194, #195 | [entry](#the-verifier-passes-a-screen-that-is-visibly-wrong---fixed-by-225-257-258) |
 | A UI state the screenshot tool cannot reach | fixed by #191 | [entry](#a-ui-state-the-screenshot-tool-cannot-reach---fixed-by-256) |
 | A vague or unsourced criterion decides the outcome | fixed by #196 | [entry](#a-vague-or-unsourced-criterion-decides-the-outcome---fixed-by-228) |
-| The verifier's checkout fills the system temp folder | open, #268 | [entry](#the-verifiers-checkout-fills-the-system-temp-folder) |
+| The verifier's checkout fills the system temp folder | fixed by #268 | [entry](#the-verifiers-checkout-fills-the-system-temp-folder---fixed-by-269) |
 | Faithful but flat | fixed by #230, #235 | [entry](#faithful-but-flat---fixed-by-245-261) |
 | The engine dies with the session | open | [entry](#the-engine-dies-with-the-session) |
 | A watcher on the wrong process | fixed (before tickets were tracked) | [entry](#a-watcher-on-the-wrong-process---fixed-before-tickets-were-tracked) |
@@ -508,9 +508,9 @@ the result.
   command with its result, a sourced number or a named UI state. S: spikes record
   a thresholds table with sources, and build tickets cite it.
 
-### The verifier's checkout fills the system temp folder
+### ~~The verifier's checkout fills the system temp folder~~ - fixed by #269
 
-**Status:** open, #268
+**Status:** fixed by #268
 
 - **Seen:** the loop halted with `forger/verify` unable to run: a disk quota
   error and no verdict. The machine's temp folder was a RAM-backed tmpfs with a

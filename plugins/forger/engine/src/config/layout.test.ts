@@ -96,6 +96,19 @@ describe('resolveProjectRoot', () => {
     expect(resolveProjectRoot('/work/a/b', facts(['/work'], '/work/a'))).toBe('/work/a');
   });
 
+  test('the nearest marker between the working directory and the git top-level wins', () => {
+    expect(resolveProjectRoot('/work/mono/pkg/src', facts(['/work/mono', '/work/mono/pkg'], '/work/mono'))).toBe('/work/mono/pkg');
+    expect(resolveProjectRoot('/work/mono/other', facts(['/work/mono'], '/work/mono'))).toBe('/work/mono');
+  });
+
+  test('a marker above the git top-level is not a candidate', () => {
+    expect(resolveProjectRoot('/work/mono/pkg', facts(['/work'], '/work/mono'))).toBe('/work/mono');
+  });
+
+  test('the home directory is never a root, whatever it holds', () => {
+    expect(resolveProjectRoot('/users/u/notes', facts(['/users/u'], null))).toBeNull();
+  });
+
   test('the home directory is never a root', () => {
     expect(resolveProjectRoot('/users/u/loose', facts(['/users/u'], null))).toBeNull();
     expect(resolveProjectRoot('/users/u', facts(['/users/u'], '/users/u'))).toBeNull();

@@ -73,17 +73,21 @@ export interface RootFacts {
 }
 
 /**
- * Pure: inside a repository the root is its git top-level, whatever sits above
- * it. Outside one, the nearest ancestor that is a project root, never home.
+ * Pure: inside a repository the nearest project root between the start
+ * directory and the git top-level wins, so a sub-folder of a monorepo can be
+ * its own project; the git top-level answers when none holds a marker, so setup
+ * runs there before any `.forger/` exists. A marker above the top-level is never
+ * a candidate. Outside a repository the climb runs on to the filesystem root.
+ * The home directory is never a root.
  */
 export function resolveProjectRoot(start: string, facts: RootFacts): string | null {
-  if (facts.gitTop !== null) return facts.gitTop === facts.home ? null : facts.gitTop;
   let dir = start;
   for (;;) {
     if (dir !== facts.home && facts.isRoot(dir)) return dir;
-    if (dir === dirname(dir)) return null;
+    if (dir === facts.gitTop || dir === dirname(dir)) break;
     dir = dirname(dir);
   }
+  return facts.gitTop === null || facts.gitTop === facts.home ? null : facts.gitTop;
 }
 
 /** Pure: a logical `.forger/x` path as the layout stores it. Other paths are returned as they are. */
