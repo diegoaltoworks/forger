@@ -131,7 +131,10 @@
       "ticket": "issue-262",
       "pid": null,
       "session_id": "23bbcd8f-1231-4564-b53a-9c886bfdfda4",
-      "snapshot": null,
+      "snapshot": {
+        "baseSha": "",
+        "reflogLength": 1
+      },
       "started_at": "2026-11-05T07:35:34.872Z",
       "plan": {
         "stages": [
