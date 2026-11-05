@@ -34,3 +34,4 @@
 {"event":"picked","at":"2026-11-05T21:05:34.953Z","iteration":146,"ticket":"issue-284","reason":null}
 {"event":"picked","at":"2026-11-05T21:09:33.086Z","iteration":147,"ticket":"issue-285","reason":null}
 {"event":"picked","at":"2026-11-05T21:16:41.958Z","iteration":148,"ticket":"issue-286","reason":null}
+{"event":"halted","at":"2026-11-05T21:19:52.038Z","iteration":148,"ticket":null,"reason":"acceptance criteria 1 and 2 (grep counts of 2 and 1) conflict with the generated catalogue index that `check docs` requires, so PR #291 cannot pass verify. The owner must restate those counts."}
