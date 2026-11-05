@@ -60,6 +60,25 @@ For each owner message:
 4. Answer the owner with the issue link and the defaults chosen, and ask only
    the questions that change the work, each with a recommendation.
 
+### An outside pull request
+
+`orient --json` lists an open pull request from an account other than the
+loop's as an anomaly, and `backlog --json` lists the tickets such a PR holds
+(`held`). The engine does not pick a ticket that an outside PR references, by a
+closing reference or by the issue number in the title; the ticket waits on the
+owner, and `orient` names the PR. Triage it, and never run its code:
+
+1. Read the diff and its checks as text. Do not check the branch out or run its
+   tests or scripts on the loop's machine.
+2. Compare it with the ticket's acceptance criteria and the repository's rules.
+3. Give the owner one recommendation with the reason: adopt it (the owner
+   merges it, or asks the contributor to fix what is missing), ask the
+   contributor for changes, or close it with thanks and say why. Closing is the
+   owner's call.
+4. Reply to the contributor only in words the owner approved.
+
+Once the PR is merged or closed the ticket is workable again.
+
 ## 3. Order
 
 - Add new tickets to the backlog by PR, with `depends_on` wherever order
@@ -145,7 +164,7 @@ Every fact and decision above comes from a command, so a session does not
 improvise them:
 
 - `orient --json`: halt, attach, start or nothing to do, with anomalies.
-- `status --json`, `backlog --json`: counters, the runs in flight, next pick.
+- `status --json`, `backlog --json` (which also lists `held` tickets and anomalies): counters, the runs in flight, next pick.
   Each in-flight run reports its ticket, worker pid and whether that pid is
   alive; `current_ticket` names the oldest. The counters are global across
   runs, and a merge by any run resets the stall counter. A state file written

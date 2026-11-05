@@ -174,11 +174,12 @@ describe('backlogReport', () => {
       remaining: 5,
       next: 'first',
       anomalies: [],
+      held: [],
     });
   });
 
   test('a missing backlog reports nothing to do', () => {
-    expect(backlogReport(null, config)).toEqual({workable: [], remaining: 0, next: null, anomalies: []});
+    expect(backlogReport(null, config)).toEqual({workable: [], remaining: 0, next: null, anomalies: [], held: []});
   });
 });
 
@@ -192,12 +193,13 @@ describe('formatBacklogReport', () => {
       remaining: 3,
       next: 'a',
       anomalies: [],
+      held: [],
     });
     expect(text).toBe('P0 a\nP2 b\nRemaining: 3  Next: a');
   });
 
   test('an empty backlog names no next pick', () => {
-    expect(formatBacklogReport({workable: [], remaining: 0, next: null, anomalies: []})).toBe(
+    expect(formatBacklogReport({workable: [], remaining: 0, next: null, anomalies: [], held: []})).toBe(
       'Remaining: 0  Next: none'
     );
   });
