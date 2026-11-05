@@ -139,7 +139,7 @@
     "issue-285"
   ],
   "in_flight": [],
-  "last_error": null,
+  "last_error": "acceptance criteria 1 and 2 (grep counts of 2 and 1) conflict with the generated catalogue index that `check docs` requires, so PR #291 cannot pass verify. The owner must restate those counts.",
   "stall_count": 1,
   "declined_tasks": [
     {
