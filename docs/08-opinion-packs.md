@@ -124,6 +124,8 @@ The `testing` pack holds the testing habits the engine itself relies on. Three o
 
 The globs and library list live in `.forger/testing.json`, with the path of the lcov report the project's test command writes and the path of the baseline. The baseline is a generated file: `check coverage --update` creates it or raises it, and never lowers it, so the number lives only there and a deliberate drop is a recorded waiver. A missing or empty coverage report is an error, never a pass. The other opinions (tables for the pure core, fixtures for adapters, tests named for behaviour) are rules kept by judgement. Like `check decisions`, `check tests` reads commits and the working tree against the merge-base with the configured base branch.
 
+Setup, detection and this pack's coverage advice are tested against the sample projects in `test/fixtures/`, which CI runs through `setup`, the gates and `check` (see its README).
+
 ## The ui pack
 
 The `ui` pack makes a UI change reviewable by showing it. Evidence, colour tokens and accessibility are enforced; the rest are templates and rules:

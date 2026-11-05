@@ -1,0 +1,8 @@
+{
+  "name": "bun-web-fixture",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "bun test --coverage --coverage-reporter=lcov"
+  }
+}

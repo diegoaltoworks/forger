@@ -1,0 +1,4 @@
+{
+  "prepare": "python3 -m pip install --quiet --target \"$FIXTURE_TOOLS/py\" pytest pytest-cov || uv pip install --quiet --target \"$FIXTURE_TOOLS/py\" pytest pytest-cov",
+  "gates": "PYTHONPATH=\"$FIXTURE_TOOLS/py\" python3 -m pytest --cov=app --cov-report=lcov:coverage/lcov.info"
+}
