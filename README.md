@@ -11,16 +11,16 @@ Forger runs an unattended development loop that builds your backlog one ticket a
 
 [![CI](https://github.com/diegoaltoworks/forger/actions/workflows/ci.yml/badge.svg)](https://github.com/diegoaltoworks/forger/actions/workflows/ci.yml)
 
-## Install
+## 📦 Install
 
 ```
 claude plugin marketplace add diegoaltoworks/forger
 claude plugin install forger@forger
 ```
 
-You need Bun, the `claude` CLI and `gh`. Full steps: [`docs/getting-started.md`](docs/getting-started.md).
+You need Bun, `gh` and an agent harness. The commands above are for Claude Code; forger also runs under OpenCode, Codex and Copilot, set with `setup --harness` (see [Adapters](docs/reference/adapters.md)). Full steps: [Getting started](docs/getting-started.md).
 
-## Start
+## 🚀 Start
 
 Run these in a session at the root of your repository:
 
@@ -34,28 +34,28 @@ Run these in a session at the root of your repository:
 - `/forger:plan` interviews you and writes the first tickets.
 - `/forger:work` starts the loop and reports each merge or halt.
 
-What each step prints, and what to do on a halt: [`docs/getting-started.md`](docs/getting-started.md).
+What each step prints, and what to do on a halt: [Getting started](docs/getting-started.md).
 
-## Why
+## 💡 Why
 
 - **Determinism first.** Tested commands make every decision that must come out the same. The model only does the judgement work.
 - **Quality from commands.** The worker runs the same gates as CI and merges only through a tool that refuses red.
 - **Bring your own skills.** Forger has its own step for each point of judgement. You can map any installed skill onto it.
 
-## Learn more
+## 📚 Learn more
 
 | Read | For |
 |---|---|
-| [`ABOUT.md`](ABOUT.md) | The ideas, the diagrams and the opinion packs |
-| [`docs/getting-started.md`](docs/getting-started.md) | From nothing to a running loop |
-| [`docs/01-principles.md`](docs/01-principles.md) to [`docs/08-opinion-packs.md`](docs/08-opinion-packs.md) | The process, in reading order |
-| [`docs/reference/configuration.md`](docs/reference/configuration.md) | Every config field |
-| [`docs/reference/commands.md`](docs/reference/commands.md) | Every command |
-| [`docs/reference/`](docs/reference/README.md) | The tracker, skill slots, pipeline, adapters and engine |
-| [`docs/06-failure-catalogue.md`](docs/06-failure-catalogue.md) | Failures seen in real runs, and their fixes |
-| [`docs/07-roadmap.md`](docs/07-roadmap.md) | What comes next |
-| [`GLOSSARY.md`](GLOSSARY.md) | The vocabulary |
+| [About forger](ABOUT.md) | The ideas, the diagrams and the opinion packs |
+| [Getting started](docs/getting-started.md) | From nothing to a running loop |
+| [Principles](docs/01-principles.md) to [Opinion packs](docs/08-opinion-packs.md) | The process, in reading order |
+| [Configuration reference](docs/reference/configuration.md) | Every config field |
+| [Commands reference](docs/reference/commands.md) | Every command |
+| [Reference index](docs/reference/README.md) | The tracker, skill slots, pipeline, adapters and engine |
+| [Failure catalogue](docs/06-failure-catalogue.md) | Failures seen in real runs, and their fixes |
+| [Roadmap](docs/07-roadmap.md) | What comes next |
+| [Glossary](GLOSSARY.md) | The vocabulary |
 
-## Licence
+## 📄 Licence
 
-MIT. See [`LICENSE`](LICENSE).
+MIT. See [the licence](LICENSE).

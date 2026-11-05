@@ -52,6 +52,12 @@ describe('checkText', () => {
       ['docs/a.md', 3, 'denylist'],
     ]);
   });
+  test('a section heading may lead with one emoji, nothing else may', () => {
+    expect(checkText('a.md', '## \u{1F680} Start\n### \u{1F6E0}\uFE0F Setup', [])).toEqual([]);
+    expect(checkText('a.md', 'text \u{1F680}', []).map(x => x.rule)).toEqual(['non-ascii', 'non-ascii']);
+    expect(checkText('a.md', '## Start \u{1F680}', []).length).toBeGreaterThan(0);
+    expect(checkText('a.md', '## \u{1F680}\u{1F680} Start', []).length).toBeGreaterThan(0);
+  });
   test('clean text has no violations', () => {
     expect(checkText('a.md', 'plain\ntext', [])).toEqual([]);
   });
