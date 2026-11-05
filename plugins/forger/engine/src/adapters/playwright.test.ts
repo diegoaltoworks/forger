@@ -67,6 +67,35 @@ describe('the Playwright adapter', () => {
     expect(log).toEqual(['context 10x20 dark', 'goto http://x/', `shot ${file}`, 'close context', 'close browser']);
   });
 
+  test('runs the steps of a state in order after the page loads and before the capture', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'forger-pw-'));
+    dirs.push(root);
+    const log: string[] = [];
+    const page = {
+      async goto(url: string) { log.push(`goto ${url}`); },
+      async screenshot(o: {path: string}) { log.push(`shot ${o.path}`); },
+      async addScriptTag() {},
+      async evaluate() {},
+      async waitForSelector(s: string) { log.push(`wait ${s}`); },
+      async click(s: string) { log.push(`click ${s}`); },
+      async tap(s: string) { log.push(`tap ${s}`); },
+      async fill(s: string, v: string) { log.push(`fill ${s}=${v}`); },
+      async waitForTimeout(ms: number) { log.push(`pause ${ms}`); },
+      keyboard: {async press(k: string) { log.push(`key ${k}`); }},
+    };
+    const fake = {chromium: {async launch() {
+      return {
+        async newContext() { return {async newPage() { return page; }, async close() {}}; },
+        async close() {},
+      };
+    }}};
+    const file = join(root, 'docs', 'screenshots', 'a.png');
+    await playwrightScreenshotter(root, () => fake).capture([
+      {url: 'http://x/list?f=1', width: 1, height: 1, theme: 'light', steps: [{click: '#f'}, {fill: {selector: '#q', value: 'a'}}, {wait: '.row'}], file},
+    ]);
+    expect(log).toEqual(['goto http://x/list?f=1', 'click #f', 'fill #q=a', 'wait .row', `shot ${file}`]);
+  });
+
   test('a project without axe-core is told how to add it', () => {
     const root = mkdtempSync(join(tmpdir(), 'forger-pw-'));
     dirs.push(root);

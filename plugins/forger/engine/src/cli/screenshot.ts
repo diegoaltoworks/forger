@@ -20,7 +20,7 @@ export const screenshot: Command = {
   needs: 'root',
   flags: ['json', 'wireframe', 'capture'],
   help: `  screenshot [--json] [--wireframe <ticket>] [--capture <name>]
-                   Start the app (ui.start), capture every route x viewport x theme into
+                   Start the app (ui.start), capture every route and named state x viewport x theme into
                    docs/screenshots/, stop it (exit 2 when Playwright or the app is unavailable).
                    --wireframe serves docs/design/ and captures <ticket>/index.html into docs/design/<ticket>/
                    --capture runs the scripted interaction declared under "captures" in ui.json and records it

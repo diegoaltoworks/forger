@@ -13,7 +13,7 @@ produce them; do not take them by hand.
 ## Screenshots come from a command (ui.screenshots-in-pr)
 
 `screenshot` starts the app with `start`, waits for `url`, captures every route
-in `routes` at every viewport and theme, writes
+in `routes` (and every named state, below) at every viewport and theme, writes
 `docs/screenshots/<route>-<viewport>-<theme>.png` and stops the app. The names
 are fixed by the config, so a re-run overwrites the same files and the diff
 shows what changed. `/` is named `index`.
@@ -22,6 +22,25 @@ The command uses the project's own Playwright. When it is missing the command
 says how to add it and exits 2, which is an environment problem, not a failure
 of the change. The PR body's Screenshots section links the updated files at the
 head commit.
+
+## A state is captured by name (ui.named-states)
+
+A filtered list, an error or an open dialog is not its own route, so `routes`
+cannot capture it. Declare it under `states` in `.forger/ui.json`: a `name`, a
+`route` (a query string is allowed; `/` by default) and optional `steps` run
+after the page loads and before the capture. A step is one of `wait` (a
+selector to appear), `click` or `tap` (a selector), `fill` (a selector and the
+text to type), `key` (a Playwright key name) or `pause` (milliseconds).
+
+```json
+{"states": [{"name": "open-filtered", "route": "/tasks?status=open",
+  "steps": [{"click": "#filter"}, {"fill": {"selector": "#q", "value": "fix"}}, {"wait": ".row"}]}]}
+```
+
+`screenshot` captures every state at every viewport and theme into
+`docs/screenshots/<state>-<viewport>-<theme>.png`, beside the route images. A
+state name that would overwrite a route's image is refused. Each state named in
+a ticket's "UI states" section needs a `states` entry or a route.
 
 ## Motion is recorded, not described (ui.captures-in-pr)
 
@@ -51,7 +70,7 @@ with each UI change.
 
 The ticket's "UI states" section says what the screen shows when it is empty,
 loading, failed and full. A state that is not named is a state nobody
-designed.
+designed. Each one is captured as a route or as a `states` entry (above).
 
 ## A screen is drawn before it is built (ui.wireframe, slot: design)
 

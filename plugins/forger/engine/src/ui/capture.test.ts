@@ -51,4 +51,19 @@ describe('runScreenshots', () => {
     await expect(runScreenshots(config, '/repo', f.server, f.shooter)).rejects.toThrow('boom');
     expect(f.calls.at(-1)).toBe('stop');
   });
+
+  test('steps of a state travel with its shot, and a plain route carries none', async () => {
+    const withState = parseUiConfig(JSON.stringify({
+      paths: ['a'], start: 's', url: 'http://localhost:9', routes: ['/'], themes: ['light'], viewports: [{name: 'phone', width: 1, height: 2}],
+      states: [{name: 'filtered', route: '/list?f=1', steps: [{click: '#f'}, {fill: {selector: '#q', value: 'x'}}]}],
+    }));
+    const f = fakes();
+    const report = await runScreenshots(withState, '/repo', f.server, f.shooter);
+    expect(report.files).toEqual(['docs/screenshots/index-phone-light.png', 'docs/screenshots/filtered-phone-light.png']);
+    expect(f.shots()[0]).not.toHaveProperty('steps');
+    expect(f.shots()[1]).toEqual({
+      url: 'http://localhost:9/list?f=1', width: 1, height: 2, theme: 'light',
+      steps: [{click: '#f'}, {fill: {selector: '#q', value: 'x'}}], file: '/repo/docs/screenshots/filtered-phone-light.png',
+    });
+  });
 });

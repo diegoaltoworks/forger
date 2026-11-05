@@ -54,4 +54,24 @@ describe('planCaptures into another folder', () => {
     const config = parseUiConfig(JSON.stringify({paths: ['a'], start: 's', routes: ['/t/'], viewports: [{name: 'phone', width: 1, height: 1}], themes: ['light']}));
     expect(planCaptures(config, 'docs/design/t/').map(c => c.file)).toEqual(['docs/design/t/t-phone-light.png']);
   });
+
+  test('a route with a query string is planned under its own file', () => {
+    const c = parseUiConfig(JSON.stringify({paths: ['a'], start: 's', routes: ['/list?filter=open'], viewports: [{name: 'phone', width: 1, height: 1}], themes: ['light']}));
+    expect(planCaptures(c).map(p => [p.url, p.file])).toEqual([['http://localhost:3000/list?filter=open', 'docs/screenshots/list-filter-open-phone-light.png']]);
+  });
+
+  test('a state is planned per viewport and theme, named by the state, with its steps', () => {
+    const c = parseUiConfig(JSON.stringify({
+      paths: ['a'], start: 's', routes: ['/'], viewports: [{name: 'phone', width: 1, height: 2}], themes: ['light', 'dark'],
+      states: [{name: 'filtered', route: '/list?f=1', steps: [{click: '#f'}]}],
+    }));
+    const states = planCaptures(c).filter(p => p.state === 'filtered');
+    expect(states.map(p => p.file)).toEqual(['docs/screenshots/filtered-phone-light.png', 'docs/screenshots/filtered-phone-dark.png']);
+    expect(states[0]).toMatchObject({url: 'http://localhost:3000/list?f=1', steps: [{click: '#f'}]});
+  });
+
+  test('a state that would overwrite a route image is refused', () => {
+    const c = parseUiConfig(JSON.stringify({paths: ['a'], start: 's', routes: ['/about'], states: [{name: 'about'}]}));
+    expect(() => planCaptures(c)).toThrow('both write');
+  });
 });

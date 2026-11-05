@@ -25,6 +25,7 @@ interface RecordingPage extends PlaywrightPage {
   waitForSelector(selector: string): Promise<unknown>;
   click(selector: string): Promise<unknown>;
   tap(selector: string): Promise<unknown>;
+  fill(selector: string, value: string): Promise<unknown>;
   waitForTimeout(ms: number): Promise<unknown>;
   keyboard: {press(key: string): Promise<unknown>};
   video?(): {saveAs(path: string): Promise<unknown>} | null;
@@ -115,6 +116,7 @@ export function playwrightScreenshotter(projectRoot: string, load: (root: string
           try {
             const page = await context.newPage();
             await page.goto(shot.url, {waitUntil: 'networkidle'});
+            for (const step of shot.steps ?? []) await perform(page as RecordingPage, step);
             await page.screenshot({path: shot.file, fullPage: true});
           } finally {
             await context.close();
@@ -132,6 +134,7 @@ async function perform(page: RecordingPage, step: CaptureStep): Promise<void> {
   else if ('key' in step) await page.keyboard.press(step.key);
   else if ('click' in step) await page.click(step.click);
   else if ('tap' in step) await page.tap(step.tap);
+  else if ('fill' in step) await page.fill(step.fill.selector, step.fill.value);
   else await page.waitForTimeout(step.pause);
 }
 

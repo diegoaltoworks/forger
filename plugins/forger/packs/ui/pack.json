@@ -18,6 +18,7 @@
     {"id": "ui.responsive", "rung": "rule", "summary": "Layouts hold at phone width.", "check": null},
     {"id": "ui.screenshots-in-pr", "rung": "template", "summary": "The PR body links the updated screenshots at the head commit.", "check": null},
     {"id": "ui.captures-in-pr", "rung": "template", "summary": "Interactive or animated work is recorded with screenshot --capture, and the PR body links the updated videos at the head commit.", "check": null},
+    {"id": "ui.named-states", "rung": "template", "summary": "A screen state that is not its own route is declared under states in ui.json, and screenshot captures it after its steps.", "check": null},
     {"id": "ui.states", "rung": "template", "summary": "A UI ticket says what the screen shows when empty, loading, failed and full.", "check": null},
     {"id": "ui.wireframe", "rung": "template", "summary": "A ticket that changes a screen gets a wireframe under docs/design/<ticket>/ first, captured with screenshot --wireframe and approved by the owner before the build ticket starts.", "check": null}
   ],
