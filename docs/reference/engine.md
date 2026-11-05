@@ -1,0 +1,41 @@
+# The engine
+
+How the engine decides a run's outcome, recovers and stops. The commands are in
+[`commands.md`](commands.md).
+
+## How the engine runs
+
+Each run's outcome is decided from git, not from the worker's exit code or its
+own completion signal: the base branch moved on the remote (merged), the
+worker's branch is on the remote (pushed), or neither. A run that merged and
+then timed out is a success; a merge whose PR checks had failed or not finished
+is `merged-red`, never a success, and halts the loop naming the PR and the
+failing check; a run that claimed completion and merged nothing is a failure; a
+ticket the backlog reads `completed` with nothing merged halts the loop for
+recovery. The ticket a run is held to is the one the worker took,
+read from its branch, which the log names when it differs from the engine's
+pick.
+
+A run that exits non-zero with an authentication, billing or network error is
+an infrastructure error, not a worker failure: the loop halts at once with the
+reason and the failure counter is left alone. A tracker read refused by
+GitHub's rate limit is one too, naming the limit and its reset time (from
+`gh api rate_limit`); the engine waits for the reset and carries on, never
+charging the wait to a ticket. `resume` clears the HALT and zeroes
+the failure and stall counters, so the first run after a fix starts clean, and
+the first run after any start is never counted as a stall.
+
+One engine works a repo at a time. `run` writes its pid to the lock file and
+refuses to start while that pid is alive; a lock whose pid is dead is taken
+over. If the previous engine died mid-iteration, the new one first closes that
+iteration out, deciding its outcome from git as for any run, and only then
+picks a ticket, so a ticket is not re-run blindly. Each terminal event
+(completed, halted, stalled, timed out, too many failures, engine gone) appends
+one JSON line to the event file, and `status --json` reports the engine, halt,
+counters, current ticket and next pick, so a supervisor reads files and commands
+rather than human text.
+
+The loop stops when the backlog empties, a HALT file appears, it stalls (nothing
+merged for `maxStallIterations` runs in a row), or it hits
+`maxConsecutiveFailures`.
+

@@ -8,12 +8,6 @@
     },
     {
       "opinion": "docs.readme-no-transient",
-      "path": "plugins/forger/README.md",
-      "reason": "Written before the README rule; rewrite to the rule and delete this waiver.",
-      "approved_by": "the owner (issue 208)"
-    },
-    {
-      "opinion": "docs.readme-no-transient",
       "path": "plugins/forger/engine/src/checks/README.md",
       "reason": "Written before the README rule; rewrite to the rule and delete this waiver.",
       "approved_by": "the owner (issue 208)"
@@ -44,12 +38,6 @@
     },
     {
       "opinion": "docs.readme-short-sentences",
-      "path": "README.md",
-      "reason": "Written before the README rule; rewrite to the rule and delete this waiver.",
-      "approved_by": "the owner (issue 208)"
-    },
-    {
-      "opinion": "docs.readme-short-sentences",
       "path": "assets/brand/README.md",
       "reason": "Written before the README rule; rewrite to the rule and delete this waiver.",
       "approved_by": "the owner (issue 208)"
@@ -57,12 +45,6 @@
     {
       "opinion": "docs.readme-short-sentences",
       "path": "docs/skills/README.md",
-      "reason": "Written before the README rule; rewrite to the rule and delete this waiver.",
-      "approved_by": "the owner (issue 208)"
-    },
-    {
-      "opinion": "docs.readme-short-sentences",
-      "path": "plugins/forger/README.md",
       "reason": "Written before the README rule; rewrite to the rule and delete this waiver.",
       "approved_by": "the owner (issue 208)"
     },
