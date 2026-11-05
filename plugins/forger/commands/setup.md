@@ -74,7 +74,7 @@ delete the `.upstream` file. Do not decide a conflict yourself.
 
 When the testing pack was chosen, the result carries `coverage` and `next_steps`:
 whether the gates write the lcov report the pack's `check coverage` needs, and
-the flag for the runner the tool recognised. Relay those lines, offer to edit
+the flag for the test command the tool recognised. Relay those lines, offer to edit
 the gates to write the report, and once a report exists offer
 `check coverage --update` to set the first baseline. Do not guess a flag the
 tool did not give.
