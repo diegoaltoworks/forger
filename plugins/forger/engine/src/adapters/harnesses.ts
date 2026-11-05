@@ -35,3 +35,13 @@ export function agentFor(harness: Harness): AgentRunner {
     },
   };
 }
+
+/**
+ * Why `run` must not start with this harness, or null when it may. A harness
+ * with no hook forger can install cannot refuse a call, so its worker is only
+ * asked to keep the rules; the config says `allow_unguarded` to accept that.
+ */
+export function guardRefusal(harness: Harness, allowUnguarded: boolean): string | null {
+  if (harness.hooks !== null || allowUnguarded) return null;
+  return `the ${harness.id} harness cannot refuse a tool call, so the worker's rules are only requested, not enforced; set allow_unguarded: true in the config to run it anyway`;
+}

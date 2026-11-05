@@ -6,6 +6,7 @@
  */
 
 import type {Harness} from '../ports';
+import {copilotHooks} from './copilot-hooks';
 import {packageAsSkill, skillName, workerSkillName} from './skill-package';
 
 export const copilotHarness: Harness = {
@@ -19,5 +20,5 @@ export const copilotHarness: Harness = {
   commandPath: name => `.github/skills/${skillName(name)}/SKILL.md`,
   pluginRootVar: 'FORGER_ROOT',
   packageCommand: (source, pluginRoot, name) => packageAsSkill(source, pluginRoot, skillName(name ?? 'command')),
-  hooks: null,
+  hooks: copilotHooks,
 };

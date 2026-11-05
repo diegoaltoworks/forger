@@ -65,8 +65,8 @@ The copy is a tested command: `bun "$CLAUDE_PLUGIN_ROOT/bin/work.ts" setup --jso
 chosen opinion packs (default `base`), records them in `.forger/forger.lock.json`, and writes `.forger/` files
 only where they are absent, installs the default `process.md`, the ticket, PR,
 work order, report, retro and rule templates and the hook policy
-(`.forger/hooks.json`), adds the docs check to the gates, installs the harness
-hook that refuses a worker's hand merge, base-branch or forced push, status
+(`.forger/hooks.json`), adds the docs check to the gates, installs the harness's
+guard (a hook or plugin, in the mechanism that harness documents, see [Adapters](adapters.md)) that refuses a worker's hand merge, base-branch or forced push, status
 write and state edit, and gitignores the per-run state. Create the label with
 `gh label create ready-for-agent`.
 

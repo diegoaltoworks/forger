@@ -105,7 +105,7 @@ describe('hooks', () => {
     expect(() => claudeHooks.install('{', command)).toThrow('.claude/settings.json is not valid JSON');
     expect(claudeHooks.installed('{')).toBe(false);
   });
-  test('only claude has hooks forger installs', () => {
-    expect(HARNESSES.filter(h => h.hooks !== null).map(h => h.id)).toEqual(['claude']);
+  test('every shipped harness has a hook forger installs', () => {
+    expect(HARNESSES.filter(h => h.hooks !== null).map(h => h.id)).toEqual(['claude', 'opencode', 'codex', 'copilot']);
   });
 });

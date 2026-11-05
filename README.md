@@ -22,7 +22,7 @@ You need [Bun](https://bun.sh), `gh` and one supported harness. Forger works in 
 | Codex | `git clone https://github.com/diegoaltoworks/forger ~/forger`, then in your repository `bun ~/forger/plugins/forger/bin/work.ts setup --harness codex` |
 | Copilot | `git clone https://github.com/diegoaltoworks/forger ~/forger`, then in your repository `bun ~/forger/plugins/forger/bin/work.ts setup --harness copilot` |
 
-Full steps for each harness: [Getting started](docs/getting-started.md). What each harness adapter does: [Adapters](docs/reference/adapters.md).
+Setup installs the same guards in every harness. Full steps for each harness: [Getting started](docs/getting-started.md). What each harness adapter does: [Adapters](docs/reference/adapters.md).
 
 ## 🚀 Start
 

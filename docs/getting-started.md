@@ -56,7 +56,10 @@ git clone https://github.com/diegoaltoworks/forger ~/forger
 Then, in the repository you want the loop to work on, run setup with your
 harness. It writes the forger commands where the harness reads them:
 `.opencode/commands/` for OpenCode, `.agents/skills/` for Codex and
-`.github/skills/` for Copilot.
+`.github/skills/` for Copilot. It also installs the guard that refuses a worker's
+hand merge and push to the base branch, in the way each harness documents:
+a plugin for OpenCode, a hook file for Codex and Copilot. In Codex, trust the
+project and review the hook with `/hooks`.
 
 ```
 bun ~/forger/plugins/forger/bin/work.ts setup --harness opencode
