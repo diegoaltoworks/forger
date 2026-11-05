@@ -17,6 +17,7 @@ real `CommandRunner` and agent spawn from `adapters/` are handed to the core.
 - `replay.ts` - `replay --file`: reads a requests file and files its issues in order through `replay/`.
 - `contract.ts` - `contract --slot`: gathers the diff, the ticket's criteria and the gates command, hands them to the validators in `pipeline/`, and records the attempt.
 - `intent.ts` - `intent --request`: reads the repo's manifest dependencies and prints the `intent/` classification.
+- `eval.ts` - `eval --slot`: loads a slot's cases, runs the skill on each through the harness agent, hands the results to the scoring in `pipeline/`, and writes the report.
 - One file per command group (`loop.ts`, `check.ts`, `setup.ts`, `facts.ts`,
   ...) - each handler prints its output and sets the exit code; some read or
   write the files their command names.

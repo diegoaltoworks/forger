@@ -1,6 +1,7 @@
 export * from './contract-policy';
 export * from './contracts';
 export * from './contract-suffix';
+export * from './eval';
 export * from './flavour';
 export * from './load';
 export * from './overlay';

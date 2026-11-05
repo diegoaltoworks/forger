@@ -201,6 +201,27 @@ problems shown, then run the built-in step, then decline the ticket with reason
 event. The contract suffix, one string per contract generated from its shape,
 tells a skill where to write its result and in what shape.
 
+### Comparing skills
+
+Whether a built-in or a community skill is better at a slot is measured, not
+argued. `evals/<slot>/<case>/` holds the cases for `review`, `test_first` and
+`diagnose`: `input.md` is the task the skill is given (a diff with a planted
+defect, a red gate's output, a ticket) and `case.json` holds the facts the
+contract validator needs and the properties a good result has.
+
+```
+work.ts eval --slot review --skill builtin
+work.ts eval --slot review --skill some-collection:code-review
+work.ts eval --slot review --skill path/to/SKILL.md --json
+```
+
+`--skill` is `builtin`, an installed skill's name, or a file. The skill runs on
+every case through the project's harness; each result is scored by the slot's
+contract validator plus the case's properties, and the scores are printed and
+written to the output directory as a generated report. The exit code is 1 unless
+every case passes. Run two skills on the same slot to compare them on the same
+cases.
+
 Every `skill` or `file` invocation starts with the engine-owned `preamble`: the
 intent is the ticket and its spec, never ask the owner (an open question is a
 decline), do not commit, push, merge or open pull requests (forger does), and do

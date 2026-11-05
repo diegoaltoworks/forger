@@ -22,6 +22,9 @@ what a given ticket gets for each slot and why.
   then a decline. Pure.
 - `contract-suffix.ts` - the shape of each contract and the suffix that tells a
   skill where to write its result. Pure.
+- `eval.ts` - scoring one result of a slot's skill against an eval case: the
+  slot's contract validator plus the case's properties, and the prompt a case is
+  run with. Pure.
 - `load.ts` - reads `plugins/forger/pipeline/default.json`, the project's
   `.forger/pipeline.json` and the flavours (the project's, then the plugin's).
   Reads files.

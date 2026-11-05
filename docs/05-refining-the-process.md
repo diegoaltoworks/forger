@@ -133,6 +133,15 @@ can hold in mind.
   already records. Notes naming files or flags are verified before they are
   relied on.
 
+## Evals as evidence
+
+A change that swaps the skill behind a slot, or edits a built-in skill, is
+backed by `eval --slot <slot> --skill <name>`: the same fixed cases, scored by
+the slot's contract validator and the case's properties. Run it for the old and
+the new skill and cite the two reports in the proposal. A case a skill misses
+that a real run exposed becomes a new fixture under `plugins/forger/evals/`, so
+the lesson is a test of the skill rather than a sentence in a prompt.
+
 ## Measuring the process
 
 The process is working when, over time:

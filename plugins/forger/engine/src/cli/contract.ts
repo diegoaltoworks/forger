@@ -2,10 +2,8 @@ import {existsSync, readFileSync} from 'fs';
 import {join} from 'path';
 
 import {parseCriteria, appendEvent, checkVerdict, terminalEvent, validatePrBody, type Evidence, type VerdictEntry} from '../loop';
-import {attemptReason, CONTRACT_FOR_SLOT, contractForSlot, CONTRACT_NAMES, NO_FACTS, onContractFailure, validateContract, type ContractFacts, type ContractName} from '../pipeline';
+import {attemptReason, CONTRACT_FOR_SLOT, contractForSlot, CONTRACT_NAMES, NO_FACTS, onContractFailure, TEST_FILE, validateContract, type ContractFacts, type ContractName} from '../pipeline';
 import type {Command, CommandContext} from './command';
-
-const TEST_FILE = /(^|\/)(tests?|__tests__)\/|\.(test|spec)\.[a-z]+$|_test\.[a-z]+$|(^|\/)test_[^/]+$/i;
 
 function lines(out: string): string[] {
   return out.split('\n').map(l => l.trim()).filter(Boolean);
