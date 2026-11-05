@@ -3,6 +3,14 @@
 The supervisor walks the same layers every session, in order, and reports
 against them. Improvising each session is what this replaces.
 
+The supervisor is the **supervisor of one or more loops**, however many repositories they run in. With several repositories
+it runs one watcher (`watch --repos`) and asks for one report (`report --repos`)
+rather than juggling a watcher per repository, and every event and item it gets
+back names the repository it came from. It reads mid-run events as they land,
+not only the terminal ones: a `worker_denied` is reported when it happens, and
+repeated denials on one ticket are a sign the ticket needs restating, not a
+worker to retry.
+
 ## 0. First run: settle the owner's choices
 
 Asked once, written down, refined later (see `05-refining-the-process.md`):
@@ -65,8 +73,10 @@ For each owner message:
 - Exactly one engine, started detached so it survives the session, with the
   loop's identity scoped to its environment.
 - Record the engine's real process id, not its launcher's.
-- Arm a watcher on terminal events: completed, HALT, stalled, timed out, too
-  many failures, engine gone. The watcher must not match its own command line.
+- Arm one watcher, `watch --repos`, over every loop you manage. It follows
+  terminal events (completed, HALT, stalled, timed out, too many failures,
+  engine gone) and mid-run ones (`worker_denied`, `recovered`), and reads event
+  files, so it has no command line to match itself.
 
 ## 5. Watch and verify
 
@@ -90,7 +100,7 @@ that does not, and `setup` adds the check when its token can change the branch
 protection.
 The worker's hook records each call it refused as a `worker_denied` event, with
 the ticket, the rule and the command. It is a mid-run event: `events --json`
-lists it and `await-event` wakes on it, but the run goes on. Report it; denials
+lists it, and `await-event` and `watch` wake on it, but the run goes on. Report it; denials
 repeated on one ticket mean the ticket or the process tells the worker to do
 something it may not.
 `verify` finds a PR's ticket from a `Closes #n` line in its body, then from a
@@ -142,6 +152,11 @@ improvise them:
   before the run list existed reads as one in-flight run while its status is
   `running`.
 - `events`, `await-event`: the terminal-event file, read as data.
+- `watch --repos PATH,PATH`: follows several loops' event files at once and
+  prints each new event, terminal or mid-run, as one JSON line tagged with its
+  repository. It prints at once, reports a repository it cannot read, and exits
+  2 at its timeout. `report --repos PATH,PATH` is the matching report: merged,
+  in progress and waiting on the owner across the loops, each item tagged.
 - `facts --json [--issue N] [--pr N]`: the loop checkout's branch, whether it
   is clean, the base head on `origin`, and an issue's closing PR (or a PR on its
   own): whether it merged and its CI conclusion, `success`, `failure`,

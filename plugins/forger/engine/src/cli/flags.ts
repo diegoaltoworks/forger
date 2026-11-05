@@ -38,6 +38,7 @@ export const FLAGS = {
   presets: {type: 'boolean', default: false},
   seen: {type: 'string', default: '0'},
   timeout: {type: 'string', default: '3600'},
+  repos: {type: 'string'},
   last: {type: 'string'},
   window: {type: 'string'},
   from: {type: 'string'},

@@ -7,6 +7,7 @@ import {describeBlocked} from '../backlog';
 import {buildReport, formatReport, mergedInPeriod, orient as orientPlan, proposedAdrs, reportPeriod, waitingIssues, OWNER_LABELS, type AdrText, type MergedPrFact, type OwnerItem, type WaitingIssue} from '../supervisor';
 import type {Command, CommandContext} from './command';
 import {gatherMeasures} from './measure';
+import {reportRepos} from './multi';
 
 const LAST_REPORT = 'last-report.json';
 
@@ -122,8 +123,12 @@ export const orient: Command = {
 
 export const report: Command = {
   name: 'report',
-  needs: 'loop',
-  flags: ['json', 'since', 'from'],
-  help: '  report [--json] [--since DATE] [--from local|branch]  Merged since the last report (or --since), in progress (real branch), next, waiting on the owner (needs-info, needs-human, needs-triage issues and Proposed ADRs); cost per merged ticket, rework rate, escaped defects, owner interventions',
-  run: supervise('report'),
+  needs: 'none',
+  flags: ['json', 'since', 'from', 'repos'],
+  help: '  report [--json] [--since DATE] [--from local|branch] [--repos PATH,PATH]  One report across the loops at those paths, every item tagged by repository. Merged since the last report (or --since), in progress (real branch), next, waiting on the owner (needs-info, needs-human, needs-triage issues and Proposed ADRs); cost per merged ticket, rework rate, escaped defects, owner interventions',
+  run(ctx) {
+    if (ctx.values.repos !== undefined) return reportRepos(ctx);
+    void ctx.runner;
+    return supervise('report')(ctx);
+  },
 };

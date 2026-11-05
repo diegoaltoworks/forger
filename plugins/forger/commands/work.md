@@ -51,16 +51,20 @@ alive, so a repeated start is harmless. Confirm with `work status --json` that
 `runner.alive` is true and record `runner.pid`; that is the engine's own pid,
 not the launcher's.
 
-## 3. Watch the event file
+## 3. Watch the event files
 
 Terminal events (completed, blocked_on_owner, halted, stalled, timed_out, too_many_failures,
-runner_gone) are JSON lines in the file at `paths.events`. Do not tail the log
-or match a process name.
+runner_gone) and mid-run ones (`worker_denied`, `recovered`) are JSON lines in
+the file at `paths.events`. Do not tail the log, match a process name or build
+a pipeline of your own.
 
-- `work events --json` lists them; remember how many you have seen.
-- `work await-event --seen <n>` blocks until one past that arrives, prints it,
-  and exits 2 on its timeout. Run it in the background; it reads a file, so
-  there is no command-line pattern for it to match.
+- Run `work watch --repos <path>,<path>` in the background, one command for
+  every loop you manage (a single path for one). It prints each new event as
+  one JSON line tagged with its `repo`, the moment it lands. A repository it
+  cannot read shows up as a `watch_error` line, not as silence. It exits 2 at
+  its `--timeout`; start it again.
+- `work events --json` lists a loop's events; `work await-event --seen <n>`
+  blocks for the next one of a single loop and exits 2 on its timeout.
 - A `worker_denied` event is mid-run, not terminal: the worker's hook refused a
   call (its `reason` names the rule and the command) and the run goes on.
   Report it and keep watching; repeated denials on one ticket mean the ticket
@@ -99,7 +103,7 @@ raise the run budget.
 
 ## 5. Report
 
-`work report` prints the four sections: merged, in progress (the real branch),
+`work report` (with `--repos <path>,<path>`, one report across loops, each item tagged by repository) prints the four sections: merged, in progress (the real branch),
 next, and waiting on you, each owner item with a recommendation and its reason.
 Send it in plain words (see `templates/report.md`), and add what it means for a
 user to each merged item. Interrupt at once for a halt, a timeout or anything
