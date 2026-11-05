@@ -82,10 +82,11 @@ the result.
 | A guard that matches text refuses harmless commands | fixed by #192 | [entry](#a-guard-that-matches-text-refuses-harmless-commands---fixed-by-202) |
 | An old stash popped by a shell error | fixed (before tickets were tracked) | [entry](#an-old-stash-popped-by-a-shell-error---fixed-before-tickets-were-tracked) |
 | A stopped engine keeps the state-branch lease | fixed (before tickets were tracked) | [entry](#a-stopped-engine-keeps-the-state-branch-lease---fixed-before-tickets-were-tracked) |
-| The engine runs from a checkout behind origin | fixed (before tickets were tracked) | [entry](#the-engine-runs-from-a-checkout-behind-origin---fixed-before-tickets-were-tracked) |
-| A resume with the wrong GitHub identity | fixed (before tickets were tracked) | [entry](#a-resume-with-the-wrong-github-identity---fixed-before-tickets-were-tracked) |
+| The engine runs from a checkout behind origin | fixed by #238 | [entry](#the-engine-runs-from-a-checkout-behind-origin---fixed-by-250) |
+| A resume with the wrong GitHub identity | fixed by #238 | [entry](#a-resume-with-the-wrong-github-identity---fixed-by-250) |
 | An outside pull request is invisible to the loop | fixed by #264 | [entry](#an-outside-pull-request-is-invisible-to-the-loop---fixed-by-267) |
 | A new gate halts every older install | fixed by #283 | [entry](#a-new-gate-halts-every-older-install---fixed-by-287) |
+| A branch behind main lowers coverage after it merges | fixed by #262 | [entry](#a-branch-behind-main-lowers-coverage-after-it-merges---fixed-by-263) |
 
 <!-- catalogue-index:end -->
 
@@ -751,9 +752,9 @@ the result.
   from another machine is left until it expires. `orient` reports the lease and
   does not return `start` while another machine holds a live one.
 
-### ~~The engine runs from a checkout behind origin~~ - fixed (before tickets were tracked)
+### ~~The engine runs from a checkout behind origin~~ - fixed by #250
 
-**Status:** fixed (before tickets were tracked)
+**Status:** fixed by #238
 
 - **Seen:** the loop's checkout stayed on an old base commit while workers merged many pull requests, engine fixes
   among them. Each restart ran the old engine and nothing said so.
@@ -761,9 +762,9 @@ the result.
 - **Fix:** E: `orient` lists a base branch behind `origin/<base>` as an anomaly while no engine is alive, and `run`
   refuses to start on a behind base branch in a clean checkout. Both name `git pull --ff-only origin <base>`.
 
-### ~~A resume with the wrong GitHub identity~~ - fixed (before tickets were tracked)
+### ~~A resume with the wrong GitHub identity~~ - fixed by #250
 
-**Status:** fixed (before tickets were tracked)
+**Status:** fixed by #238
 
 - **Seen:** `resume`, run from a shell whose GitHub identity could not push the state branch, said it could not write
   the state file, and the HALT stayed.
@@ -794,3 +795,15 @@ the result.
 - **Fix:** E: `run` reads the hooks gate before it starts a worker and refuses with the fix (`work.ts setup`);
   `orient` lists the same condition as an anomaly; `setup` on an older install keeps its config and adds the missing
   policy and harness hook; the hook command names `$FORGER_PLUGIN_ROOT`, so the committed file holds no machine path.
+
+### ~~A branch behind main lowers coverage after it merges~~ - fixed by #263
+
+**Status:** fixed by #262
+
+- **Seen:** a pull request passed its checks on a stale base and merged. The base branch then failed the coverage
+  ratchet (#262), because the merged result had never been tested together.
+- **Cause:** a branch was allowed to merge while behind the base branch, so its checks described a tree that no
+  longer matched the merge.
+- **Recovered by:** fixing the coverage on the base branch by hand.
+- **Fix:** E: the coverage ratchet is held on the merged result (#263). P: branch protection requires a branch to be
+  up to date before it merges.
