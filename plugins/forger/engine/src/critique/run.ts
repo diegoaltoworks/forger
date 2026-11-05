@@ -6,12 +6,12 @@
  * tracker.
  */
 
-import {existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync} from 'fs';
-import {tmpdir} from 'os';
+import {existsSync, mkdirSync, readFileSync, rmSync, writeFileSync} from 'fs';
 import {join} from 'path';
 
 import type {Tier} from '../config';
 import {contractSuffix, NO_FACTS, validateContract} from '../pipeline';
+import {dropCheckout, makeScratch} from '../loop';
 import type {AgentRunner, CommandRunner} from '../ports';
 import {briefFrom, buildCritiqueInput, isVisualChange, splitFindings, ticketFor, type Critique, type Finding, type Severity} from './critique';
 
@@ -31,6 +31,8 @@ export interface CritiqueOptions {
   visualPaths: string[];
   /** Directory holding the critique records. */
   recordsDir: string;
+  /** Where the disposable checkout is made: under the state directory, never the system temp folder. */
+  tmpDir: string;
   tier: Tier;
   model: string;
   /** The command the harness is asked to run; it carries the critic's prompt. */
@@ -69,9 +71,9 @@ export async function critiquePr(run: CommandRunner, agent: AgentRunner, tracker
   if (!head) throw new Error(`cannot read PR #${pr}`);
 
   run(`git fetch origin pull/${pr}/head`);
-  const dir = mkdtempSync(join(tmpdir(), `forger-critique-${pr}-`));
-  run(`git worktree add --detach ${shellQuote(dir)} ${head}`);
+  const dir = makeScratch(opts.tmpDir, `critique-${pr}-`);
   try {
+    run(`git worktree add --detach ${shellQuote(dir)} ${head}`);
     const plans = lines(run(`git -C ${shellQuote(dir)} ls-files 'docs/plan*.md'`));
     const brief = plans.map(p => briefFrom(readFileSync(join(dir, p), 'utf-8'))).find(b => b !== null) ?? null;
     if (brief === null) return {status: 'skipped', pr, reason: 'no plan doc holds a verbatim brief, so there is nothing to judge against'};
@@ -110,7 +112,7 @@ export async function critiquePr(run: CommandRunner, agent: AgentRunner, tracker
     }
     return {status: 'invalid', pr, head, problems};
   } finally {
-    run(`git worktree remove --force ${shellQuote(dir)}`);
+    dropCheckout(run, dir);
   }
 }
 

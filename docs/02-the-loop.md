@@ -35,6 +35,7 @@ chosen by the `harness` config key (ADR 0009).
 | `declined.json` | no | worker (`decline`), engine | the worker's decline of the pick; the next run of that iteration reads it once and deletes it |
 | `worktrees/` | no | `worktree` | one git worktree per ticket, created from the remote base branch and removed after the run |
 | `verdicts/` | no | `verify` | one verdict record per verified PR head commit: a judgement and evidence for each acceptance criterion; a push after it makes it stale |
+| `tmp/` | no | `verify`, `critique` | the disposable checkout of a PR's head each makes, removed when it finishes; kept out of the system temp folder, which may be small and shared |
 | `events.jsonl` | no | engine | append-only terminal events (completed, halted, stalled, timed out, too many failures, engine gone), one JSON line each, for watchers |
 | owner notes (`human.md`) | yes | workers and supervisor | what only the owner can do: switches, checks owed, open choices |
 | memory notes | no (user profile) | supervisor | durable preferences and lessons, one fact per file |

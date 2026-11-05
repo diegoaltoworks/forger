@@ -1,6 +1,6 @@
-import {describe, expect, test} from 'bun:test';
+import {afterAll, describe, expect, test} from 'bun:test';
 
-import {mkdtempSync, writeFileSync} from 'fs';
+import {mkdtempSync, rmSync, writeFileSync} from 'fs';
 import {tmpdir} from 'os';
 import {join} from 'path';
 
@@ -30,8 +30,14 @@ function record(decision: VerdictRecord['decision'], head = HEAD): VerdictRecord
   };
 }
 
+const dirs: string[] = [];
+afterAll(() => {
+  for (const d of dirs.splice(0)) rmSync(d, {recursive: true, force: true});
+});
+
 function verdictsDir(...records: VerdictRecord[]): string {
   const dir = mkdtempSync(join(tmpdir(), 'forger-verdicts-'));
+  dirs.push(dir);
   records.forEach((r, i) => writeFileSync(join(dir, `pr-${r.pr}-${r.head}${i}.json`), JSON.stringify(r)));
   return dir;
 }

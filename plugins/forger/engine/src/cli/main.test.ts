@@ -497,6 +497,7 @@ describe('skills --json', () => {
   test('a file slot is read from a collection root and reported with its path, forbid list and preamble', async () => {
     const root = projectWith({});
     const coll = mkdtempSync(join(tmpdir(), 'forger-coll-'));
+    dirs.push(coll);
     mkdirSync(join(coll, 'skills', 'r'), {recursive: true});
     writeFileSync(join(coll, 'skills', 'r', 'SKILL.md'), 'x');
     writeFileSync(

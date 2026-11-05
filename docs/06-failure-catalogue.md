@@ -62,6 +62,7 @@ the result.
 | The verifier passes a screen that is visibly wrong | fixed by #189, #194, #195 | [entry](#the-verifier-passes-a-screen-that-is-visibly-wrong---fixed-by-225-257-258) |
 | A UI state the screenshot tool cannot reach | fixed by #191 | [entry](#a-ui-state-the-screenshot-tool-cannot-reach---fixed-by-256) |
 | A vague or unsourced criterion decides the outcome | fixed by #196 | [entry](#a-vague-or-unsourced-criterion-decides-the-outcome---fixed-by-228) |
+| The verifier's checkout fills the system temp folder | open, #268 | [entry](#the-verifiers-checkout-fills-the-system-temp-folder) |
 | Faithful but flat | fixed by #230, #235 | [entry](#faithful-but-flat---fixed-by-245-261) |
 | The engine dies with the session | open | [entry](#the-engine-dies-with-the-session) |
 | A watcher on the wrong process | fixed (before tickets were tracked) | [entry](#a-watcher-on-the-wrong-process---fixed-before-tickets-were-tracked) |
@@ -83,7 +84,7 @@ the result.
 | A stopped engine keeps the state-branch lease | fixed (before tickets were tracked) | [entry](#a-stopped-engine-keeps-the-state-branch-lease---fixed-before-tickets-were-tracked) |
 | The engine runs from a checkout behind origin | fixed (before tickets were tracked) | [entry](#the-engine-runs-from-a-checkout-behind-origin---fixed-before-tickets-were-tracked) |
 | A resume with the wrong GitHub identity | fixed (before tickets were tracked) | [entry](#a-resume-with-the-wrong-github-identity---fixed-before-tickets-were-tracked) |
-| An outside pull request is invisible to the loop | open, #264 | [entry](#an-outside-pull-request-is-invisible-to-the-loop) |
+| An outside pull request is invisible to the loop | fixed by #264 | [entry](#an-outside-pull-request-is-invisible-to-the-loop---fixed-by-267) |
 
 <!-- catalogue-index:end -->
 
@@ -507,6 +508,23 @@ the result.
   command with its result, a sourced number or a named UI state. S: spikes record
   a thresholds table with sources, and build tickets cite it.
 
+### The verifier's checkout fills the system temp folder
+
+**Status:** open, #268
+
+- **Seen:** the loop halted with `forger/verify` unable to run: a disk quota
+  error and no verdict. The machine's temp folder was a RAM-backed tmpfs with a
+  per-user quota shared with every other program, and `verify` checked the PR
+  out there and installed its dependencies in it. The engine's own tests also
+  left their temp folders behind, so the folder filled run after run.
+- **Recovered by:** removing the stale `forger-*` folders by hand and running
+  `verify` again.
+- **Fix:** E: #268: `verify` and `critique` check out under `paths.tmp` in the
+  state directory (git-ignored) and remove the folder on success or failure. A
+  verify that runs out of space (`ENOSPC`, `EDQUOT`) is an infrastructure error
+  naming the folder and its free space, never a verdict. Every engine test that
+  makes a temp folder removes it in `afterEach` or `afterAll`.
+
 ## Planning
 
 ### ~~Faithful but flat~~ - fixed by #245, #261
@@ -752,9 +770,9 @@ the result.
 - **Fix:** E: a refused state-branch write names the GitHub identity in use and says the loop's scoped identity must
   be set.
 
-### An outside pull request is invisible to the loop
+### ~~An outside pull request is invisible to the loop~~ - fixed by #267
 
-**Status:** open, #264
+**Status:** fixed by #264
 
 - **Seen:** a contributor opened a pull request with a fix and tests for a ticket. Hours later the loop picked the
   same ticket and built its own fix. The contributor's PR then conflicted with the base and got no reply.

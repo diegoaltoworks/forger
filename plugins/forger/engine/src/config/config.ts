@@ -81,6 +81,8 @@ export interface WorkloopConfig {
     process: string;
     /** One verdict record per verified PR head commit. */
     verdicts: string;
+    /** The disposable checkouts `verify` and `critique` make; removed when each finishes. */
+    tmp: string;
   };
   /**
    * Where the backlog lives. `github`: issues carrying the intake `label`
@@ -203,6 +205,7 @@ export const DEFAULT_CONFIG: WorkloopConfig = {
     declined: `${FORGER_DIR}/declined.json`,
     process: `${FORGER_DIR}/process.md`,
     verdicts: `${FORGER_DIR}/verdicts`,
+    tmp: `${FORGER_DIR}/tmp`,
   },
   tracker: {kind: 'github', label: 'ready-for-agent', ignore: []},
   criteria: {subjective_words: []},

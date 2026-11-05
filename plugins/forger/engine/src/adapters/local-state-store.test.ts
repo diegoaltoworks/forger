@@ -1,12 +1,18 @@
-import {describe, expect, test} from 'bun:test';
-import {existsSync, mkdtempSync, readFileSync, writeFileSync} from 'fs';
+import {afterEach, describe, expect, test} from 'bun:test';
+import {existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync} from 'fs';
 import {tmpdir} from 'os';
 import {join} from 'path';
 
 import {localStateStore} from './local-state-store';
 
+const dirs: string[] = [];
+afterEach(() => {
+  for (const d of dirs.splice(0)) rmSync(d, {recursive: true, force: true});
+});
+
 function setup() {
   const dir = mkdtempSync(join(tmpdir(), 'forger-local-'));
+  dirs.push(dir);
   const paths = {state: join(dir, 'state.json'), events: join(dir, 'events.jsonl'), lease: join(dir, 'lease.json')};
   return {paths, store: localStateStore(paths)};
 }

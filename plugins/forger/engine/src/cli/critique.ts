@@ -5,7 +5,7 @@ import {randomUUID} from 'crypto';
 import {agentFor, findHarness} from '../adapters';
 import {resolveModel, forgerPath} from '../config';
 import {critiquePr, DEFAULT_THRESHOLD, isSeverity, type CritiqueResult} from '../critique';
-import {verdictsHome, verifierTier} from '../loop';
+import {loopRootOf, verdictsHome, verifierTier} from '../loop';
 import {CRITIQUE_SEVERITIES} from '../pipeline';
 import {parseUiConfig, UI_PATH} from '../ui';
 import type {Command, CommandContext} from './command';
@@ -61,6 +61,7 @@ export const critique: Command = {
           threshold,
           visualPaths: visualPaths(ctx),
           recordsDir: join(dirname(verdictsHome(ctx.run(), projectRoot, config.paths.verdicts)), 'critiques'),
+          tmpDir: join(loopRootOf(ctx.run(), projectRoot), config.paths.tmp),
           tier,
           model: resolveModel(tier.model, config.models),
           critiqueCommand: 'forger:critique',

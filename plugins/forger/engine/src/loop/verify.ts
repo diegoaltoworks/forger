@@ -5,8 +5,7 @@
  * sits here behind the injected runner and agent.
  */
 
-import {existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync} from 'fs';
-import {tmpdir} from 'os';
+import {existsSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync} from 'fs';
 import {join} from 'path';
 
 import type {Tier} from '../config';
@@ -19,6 +18,7 @@ import {evidenceHolds, failedCitations, SCREENSHOTS_DIR, type CommandRun, type C
 import {parseCommandLog} from './run-logged';
 import {EVIDENCE_DEMOTION, parseCriteria, parseUiStates, reduceVerdict, type CheckedEntry, type Criterion} from './verdict';
 import {buildVerifierInput, recordVerdict, type VerdictRecord} from './verify-input';
+import {freeBytes, isOutOfSpace, makeScratch, outOfSpaceMessage, removeScratch} from './scratch';
 import {resolveSubject} from './verify-subject';
 import {setVerifyStatus, withoutVerifyStatus, type VerifyStatusOutcome} from './verify-status';
 
@@ -28,6 +28,8 @@ export interface VerifyOptions {
   backlogFile: string;
   /** Directory holding the verdict records. */
   verdictsDir: string;
+  /** Where the disposable checkout is made: under the state directory, never the system temp folder. */
+  tmpDir: string;
   tier: Tier;
   /** The shell command that installs dependencies in the copy; null when there is nothing to install. */
   setup: string | null;
@@ -91,7 +93,7 @@ export function setupCommand(setup: string | null | undefined, gates: string): s
 /** The verifier could not be set up to run: an infrastructure fault, never a verdict on the ticket's criteria. */
 export class VerifyInfraError extends Error {
   constructor(message: string) {
-    super(`infrastructure error: ${message}`);
+    super(`infrastructure error: ${message}`, {cause: message});
     this.name = 'VerifyInfraError';
   }
 }
@@ -152,11 +154,21 @@ export async function verifyPr(run: CommandRunner, agent: AgentRunner, opts: Ver
   if (acceptance.length === 0) throw new Error(`${ticket} has no acceptance criteria to verify`);
 
   run(`git fetch origin pull/${opts.pr}/head`);
-  const dir = mkdtempSync(join(tmpdir(), `forger-verify-${opts.pr}-`));
+  const outOfSpace = (e: unknown): never => {
+    if (!isOutOfSpace(e)) throw e;
+    const cause = e instanceof VerifyInfraError ? e.cause : e instanceof Error ? e.message : String(e);
+    throw new VerifyInfraError(outOfSpaceMessage(opts.tmpDir, freeBytes(opts.tmpDir), String(cause)));
+  };
+  let dir = '';
+  try {
+    dir = makeScratch(opts.tmpDir, `verify-${opts.pr}-`);
+  } catch (e) {
+    outOfSpace(e);
+  }
   const log = `${dir}.commands.jsonl`;
   const runLogged = opts.runLogged ? `${opts.runLogged} --file ${shellQuote(log)}` : undefined;
-  run(`git worktree add --detach ${shellQuote(dir)} ${head}`);
   try {
+    run(`git worktree add --detach ${shellQuote(dir)} ${head}`);
     if (opts.setup) {
       try {
         run(`cd ${shellQuote(dir)} && ${opts.setup}`);
@@ -212,9 +224,28 @@ export async function verifyPr(run: CommandRunner, agent: AgentRunner, opts: Ver
       }
     }
     return writeRecord(opts, {...judged, ...mergeEntries(criteria, mechanical, judged.entries), problems: judged.problems});
+  } catch (e) {
+    return outOfSpace(e);
   } finally {
     rmSync(log, {force: true});
+    dropCheckout(run, dir);
+  }
+}
+
+/** Removes the checkout and its folder; a worktree git cannot remove is pruned once its folder is gone. */
+export function dropCheckout(run: CommandRunner, dir: string): void {
+  let removed = true;
+  try {
     run(`git worktree remove --force ${shellQuote(dir)}`);
+  } catch {
+    removed = false;
+  }
+  removeScratch(dir);
+  if (removed) return;
+  try {
+    run('git worktree prune');
+  } catch {
+    // a stale worktree entry is pruned by git itself later; it holds no space
   }
 }
 
