@@ -36,3 +36,4 @@
 {"event":"picked","at":"2026-11-05T21:16:41.958Z","iteration":148,"ticket":"issue-286","reason":null}
 {"event":"halted","at":"2026-11-05T21:19:52.038Z","iteration":148,"ticket":null,"reason":"acceptance criteria 1 and 2 (grep counts of 2 and 1) conflict with the generated catalogue index that `check docs` requires, so PR #291 cannot pass verify. The owner must restate those counts."}
 {"event":"halt_cleared","at":"2026-11-05T21:22:12.763Z","iteration":148,"ticket":null,"reason":"acceptance criteria 1 and 2 (grep counts of 2 and 1) conflict with the generated catalogue index that `check docs` requires, so PR #291 cannot pass verify. The owner must restate those counts."}
+{"event":"picked","at":"2026-11-05T21:22:56.526Z","iteration":149,"ticket":"issue-288","reason":null}
