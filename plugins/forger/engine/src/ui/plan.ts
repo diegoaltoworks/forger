@@ -4,6 +4,7 @@
  */
 
 import type {CaptureStep} from '../ports';
+import type {StateAssertions} from './assertions';
 import {SCREENSHOT_DIR, UiConfigError, type Theme, type UiConfig} from './ui-config';
 
 export interface Capture {
@@ -12,6 +13,8 @@ export interface Capture {
   /** Set for a named state: the route it loads is in `url`. */
   state?: string;
   steps?: CaptureStep[];
+  /** Set for a named state. */
+  assert?: StateAssertions;
   viewport: string;
   width: number;
   height: number;
@@ -55,6 +58,7 @@ export function planCaptures(config: UiConfig, dir: string = SCREENSHOT_DIR): Ca
           route: state.route,
           state: state.name,
           steps: state.steps,
+          assert: state.assert,
           viewport: v.name,
           width: v.width,
           height: v.height,

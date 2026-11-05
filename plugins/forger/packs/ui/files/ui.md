@@ -42,6 +42,40 @@ text to type), `key` (a Playwright key name) or `pause` (milliseconds).
 state name that would overwrite a route's image is refused. Each state named in
 a ticket's "UI states" section needs a `states` entry or a route.
 
+## A state is checked, not only looked at (tool: ui.assertions)
+
+A screen can render and still be wrong: a region the wrong colour, a canvas cut
+off at the bottom, a banner shown beside the content it should replace. Give a
+state an `assert` object and these defects fail before any model looks:
+
+- `no_console_errors` (on by default; `false` turns it off): no console error or
+  uncaught exception while the state loads.
+- `not_blank`: a selector, or a list, is not one flat colour (a canvas that
+  drew nothing).
+- `in_viewport`: the box of each selector lies inside the viewport (a view cut
+  off at the bottom).
+- `visible` and `hidden`: each selector is shown, or is absent or not shown.
+- `colour`: the dominant hue of a selector's region falls inside a named arc
+  (`red`, `orange`, `yellow`, `green`, `cyan`, `blue`, `purple`, `magenta`) or
+  `[from, to]` degrees, plus an optional `tolerance` in degrees. Greys, black
+  and white have no hue and fail.
+
+```json
+{"states": [{"name": "desert", "route": "/world?biome=desert",
+  "steps": [{"wait": "canvas"}],
+  "assert": {"not_blank": "canvas", "in_viewport": "canvas", "visible": ".hud",
+             "hidden": ".empty-banner",
+             "colour": {"selector": "canvas", "hue": "orange", "tolerance": 15}}}]}
+```
+
+The assertions run at every viewport and theme. `screenshot` runs them while it
+captures: a failure names the state, the viewport, the theme and the assertion,
+the images are still written, and the command exits 1. `check ui --states`
+serves the app and runs the same assertions without writing images, so a CI job
+can fail a PR on them. It needs a browser, so like `check a11y` it runs on its
+own and not inside the umbrella `check`, and exits 2 when Playwright or the app
+is unavailable.
+
 ## Motion is recorded, not described (ui.captures-in-pr)
 
 A still hides motion, feedback and pacing. For interactive or animated work,

@@ -14,12 +14,47 @@ export interface ShotRequest {
   theme: 'light' | 'dark';
   /** Run in order after the page loads and before the capture; a named UI state's setup. */
   steps?: CaptureStep[];
-  /** Absolute path of the image to write. */
-  file: string;
+  /** Absolute path of the image to write; none means the page is only probed. */
+  file?: string;
+  /** What to measure on the page after the steps; the answer comes back as a `PageModel`. */
+  probe?: Probe;
+}
+
+/** The selectors a page model must describe. */
+export interface Probe {
+  /** Selectors whose box and visibility are read. */
+  boxes: string[];
+  /** Selectors whose pixels are sampled; a subset of `boxes` in practice. */
+  pixels: string[];
+}
+
+export interface Box {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+export interface ElementModel {
+  found: boolean;
+  /** Rendered: not display none, not visibility hidden, a box with area. */
+  visible: boolean;
+  box: Box | null;
+  /** Sampled RGB triples (0-255) of the visible part of the element; empty when not sampled. */
+  pixels: Array<[number, number, number]>;
+}
+
+/** What the page showed: its console errors and the probed elements. */
+export interface PageModel {
+  viewport: {width: number; height: number};
+  /** Console error and uncaught exception lines. */
+  console: string[];
+  elements: Record<string, ElementModel>;
 }
 
 export interface Screenshotter {
-  capture(shots: ShotRequest[]): Promise<void>;
+  /** Resolves one `PageModel` per shot, in order, for the shots that asked for a probe; a screenshotter that probes nothing may resolve nothing. */
+  capture(shots: ShotRequest[]): Promise<Array<PageModel | undefined> | void>;
 }
 
 export interface RecordRequest {

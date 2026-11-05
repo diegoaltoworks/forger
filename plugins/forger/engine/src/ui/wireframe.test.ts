@@ -44,8 +44,8 @@ const pageWriter: Screenshotter = {
     for (const s of shots) {
       const page = await (await fetch(s.url)).text();
       const css = await (await fetch(new URL('../wireframe.css', s.url))).text();
-      mkdirSync(dirname(s.file), {recursive: true});
-      writeFileSync(s.file, `${page.includes('<main class="wf-screen">')}|${css.includes('.wf-box')}|${s.width}x${s.height}`);
+      mkdirSync(dirname(s.file as string), {recursive: true});
+      writeFileSync(s.file as string, `${page.includes('<main class="wf-screen">')}|${css.includes('.wf-box')}|${s.width}x${s.height}`);
     }
   },
 };

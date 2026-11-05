@@ -9,6 +9,8 @@ show them (`ui.evidence`), and UI files hold no raw colour literal (`ui.tokens`)
 - `ui.ts` - the rule over a parsed diff. Pure.
 - `tokens.ts` - finds colour literals in file contents, comments blanked. Pure.
 - `a11y.ts` - maps axe results to findings; serious and critical block. Pure.
+- `states-check.ts` - `check ui --states`: serves the app, loads every named state through the
+  `AppServer` and `Screenshotter` ports and maps failed assertions to findings.
 - `ui-check.ts` - reads `.forger/ui.json`, the branch's diff against its
   merge-base and the UI files. Touches the world.
 - `a11y-check.ts` - serves the app, audits every route x viewport x theme

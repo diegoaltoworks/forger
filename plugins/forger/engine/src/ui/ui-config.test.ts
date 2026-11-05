@@ -1,5 +1,6 @@
 import {describe, expect, test} from 'bun:test';
 
+import {DEFAULT_ASSERTIONS} from './assertions';
 import {DEFAULT_THEMES, DEFAULT_VIEWPORTS, UiConfigError, parseUiConfig} from './ui-config';
 
 const base = {paths: ['src/**'], start: 'bun run dev'};
@@ -84,11 +85,19 @@ describe('parseUiConfig', () => {
     test('a file without states has none', () => expect(parseUiConfig(JSON.stringify(base)).states).toEqual([]));
 
     test('keeps a state with its query string and steps', () => {
-      expect(parse([state]).states).toEqual([state]);
+      expect(parse([state]).states).toEqual([{...state, assert: DEFAULT_ASSERTIONS}]);
     });
 
     test('a state without steps or route takes the root and no steps', () => {
-      expect(parse([{name: 'home'}]).states).toEqual([{name: 'home', route: '/', steps: []}]);
+      expect(parse([{name: 'home'}]).states).toEqual([{name: 'home', route: '/', steps: [], assert: DEFAULT_ASSERTIONS}]);
+    });
+
+    test('a state keeps the assertions it declares, validated', () => {
+      const [s] = parse([{name: 'world', assert: {in_viewport: '#view', colour: {selector: '#view', hue: 'orange'}}}]).states;
+      expect(s.assert.in_viewport).toEqual(['#view']);
+      expect(s.assert.colour[0].label).toBe('orange');
+      expect(s.assert.no_console_errors).toBe(true);
+      expect(() => parse([{name: 'world', assert: {in_viewprot: '#view'}}])).toThrow('states[0].assert.in_viewprot is not an assertion');
     });
 
     const bad: Array<[string, unknown, string]> = [

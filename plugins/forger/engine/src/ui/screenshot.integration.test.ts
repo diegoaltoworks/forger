@@ -47,8 +47,8 @@ const pageWriter: Screenshotter = {
   async capture(shots) {
     for (const s of shots) {
       const body = await (await fetch(s.url)).text();
-      mkdirSync(dirname(s.file), {recursive: true});
-      writeFileSync(s.file, `${body}|${s.width}x${s.height}|${s.theme}`);
+      mkdirSync(dirname(s.file as string), {recursive: true});
+      writeFileSync(s.file as string, `${body}|${s.width}x${s.height}|${s.theme}`);
     }
   },
 };
