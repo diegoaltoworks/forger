@@ -129,7 +129,7 @@
     "issue-209"
   ],
   "in_flight": [],
-  "last_error": null,
+  "last_error": "forger/verify cannot run (disk quota error `EDQUOT`, no verdict from the verifier); PR #267 is green locally and ready to verify and merge once space is freed",
   "stall_count": 1,
   "declined_tasks": [
     {
