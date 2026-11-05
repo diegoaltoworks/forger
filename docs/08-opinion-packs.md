@@ -6,7 +6,7 @@ Forger holds opinions about how work is done. A pack is a named, versioned set o
 
 A pack is a directory under `plugins/forger/packs/<name>/`:
 
-- `pack.json`, the manifest: `id`, `version`, `description`, `detect` (rules of the form `file:<path>`, `dir:<path>` or `dep:<name>`), `files`, `opinions`, `checks` and `slots`.
+- `pack.json`, the manifest: `id`, `version`, `description`, `detect` (rules of the form `file:<path>`, `dir:<path>`, `dep:<name>`, `glob:<pattern>` or `table:<name>`), `files`, `opinions`, `checks` and `slots`.
 - The files it installs, each mapped to a path in the project by the manifest.
 
 An opinion has an id of the form `<pack>.<name>`, a one-line summary, a rung and, when its rung is `check`, the id of the check that enforces it. The manifest is validated when it is loaded; a bad manifest is an error that names the field, never a pack that quietly goes missing.
@@ -34,7 +34,7 @@ Read it left to right: `setup` reads each chosen pack's manifest, writes its fil
 
 - `setup --packs base[,<name>...]` installs by pack; the default is `base`.
 - `packs --json` lists the available packs and which are installed.
-- `packs --detect --json` suggests packs not yet installed, each with the rules that matched. The facts come from one thin reader (files, directories and the root `package.json` dependencies); a pack with no `detect` rules is never suggested, only listed. `setup` offers the suggestions and the owner chooses.
+- `packs --detect --json` suggests packs not yet installed, each with the rules that matched. The facts come from one thin reader (files, directories, the root `package.json` dependencies and the table headers of the root `pyproject.toml`); a pack with no `detect` rules is never suggested, only listed. A `glob` rule matches a file name with `*` as a wildcard (the testing pack finds `*.test.ts` and `test_*.py`); a `table` rule matches a header such as `tool.pytest.ini_options`; the docs pack is detected by a `README.md` or a `docs` folder. `setup` offers the suggestions and the owner chooses.
 - `opinions --json` lists every installed opinion with its pack, rung and enforcing check, or none.
 
 ## Checks and waivers

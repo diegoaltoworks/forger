@@ -2,7 +2,7 @@
   "id": "docs",
   "version": "1.1.0",
   "description": "Docs as Markdown in the repo: every concept drawn, the glossary as the vocabulary, links and diagrams that cannot quietly rot.",
-  "detect": [],
+  "detect": ["file:README.md", "dir:docs"],
   "files": [
     {"source": "files/docs.md", "target": ".forger/opinions/docs.md"}
   ],
