@@ -528,3 +528,19 @@ recovered, and where the lasting fix belongs: **E** the engine, **S** a skill
   machine holds for a dead pid is taken over at once and logged, while a lease
   from another machine is left until it expires. `orient` reports the lease and
   does not return `start` while another machine holds a live one.
+
+### The engine runs from a checkout behind origin
+
+- **Seen:** the loop's checkout stayed on an old base commit while workers merged many pull requests, engine fixes
+  among them. Each restart ran the old engine and nothing said so.
+- **Recovered by:** pulling the base branch by hand.
+- **Fix:** E: `orient` lists a base branch behind `origin/<base>` as an anomaly while no engine is alive, and `run`
+  refuses to start on a behind base branch in a clean checkout. Both name `git pull --ff-only origin <base>`.
+
+### A resume with the wrong GitHub identity
+
+- **Seen:** `resume`, run from a shell whose GitHub identity could not push the state branch, said it could not write
+  the state file, and the HALT stayed.
+- **Recovered by:** running `resume` again under the loop's scoped identity.
+- **Fix:** E: a refused state-branch write names the GitHub identity in use and says the loop's scoped identity must
+  be set.

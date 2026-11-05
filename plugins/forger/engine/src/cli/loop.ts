@@ -1,3 +1,4 @@
+import {behindBaseRefusal, readBaseSync} from '../loop';
 import type {Command} from './command';
 
 export const run: Command = {
@@ -6,7 +7,13 @@ export const run: Command = {
   flags: ['iterations', 'continuous'],
   help: `  run [N]          Run N iterations (default: 1)
   run --continuous Run until all tasks complete`,
-  async run({values, positionals, runner}) {
+  async run({values, positionals, runner, run, config}) {
+    const stale = behindBaseRefusal(readBaseSync(run(), config.base_branch), config.base_branch);
+    if (stale) {
+      console.error(`Not starting: ${stale}.`);
+      process.exitCode = 1;
+      return;
+    }
     const iterationArg = positionals[1] || (values.iterations as string);
     const started = await runner.run(parseInt(iterationArg, 10), values.continuous as boolean);
     if (!started) {

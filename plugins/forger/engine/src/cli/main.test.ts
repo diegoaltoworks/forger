@@ -543,6 +543,26 @@ describe('setup --flavour', () => {
 });
 
 describe('supervisor commands', () => {
+  test('orient lists a behind base branch as an anomaly', async () => {
+    process.chdir(projectWith({a: {status: 'not_started', priority: 'P0'}}));
+    const run: CommandRunner = cmd => (cmd.startsWith('git rev-list') ? '2' : 'main');
+    const out = JSON.parse(await capture(['orient', '--json'], run));
+    expect(out.anomalies.join(' ')).toContain('2 commit(s) behind origin/main');
+  });
+  test('run refuses on a behind, clean base branch and names the fix', async () => {
+    process.chdir(projectWith({a: {status: 'not_started', priority: 'P0'}}));
+    const run: CommandRunner = cmd => (cmd.startsWith('git rev-list') ? '2' : '');
+    const err: string[] = [];
+    const orig = console.error;
+    console.error = (m: string) => void err.push(String(m));
+    try {
+      await capture(['run'], run);
+    } finally {
+      console.error = orig;
+      process.exitCode = 0;
+    }
+    expect(err.join('\n')).toContain('git pull --ff-only origin main');
+  });
   test('orient starts a runner when work remains and none is alive', async () => {
     process.chdir(projectWith({a: {status: 'not_started', priority: 'P0'}}));
     const out = JSON.parse(await capture(['orient', '--json'], () => 'main'));

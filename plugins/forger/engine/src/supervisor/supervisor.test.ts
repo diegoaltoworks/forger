@@ -75,6 +75,11 @@ describe('orient', () => {
     expect(orient({...base, status: status(), requiresVerify: true}).anomalies).toEqual([]);
     expect(orient({...base, status: status(), requiresVerify: null}).anomalies).toEqual([]);
   });
+  test('a behind base branch is an anomaly with no engine alive, not with one', () => {
+    const baseSync = {behind: 4, clean: true};
+    expect(orient({...base, status: status(), baseSync}).anomalies.join(' ')).toContain('behind origin/main');
+    expect(orient({...base, status: status({alive: true}), baseSync}).anomalies).toEqual([]);
+  });
   test('a dead runner off the base branch is an anomaly', () => {
     const p = orient({...base, branch: 'feat/x', status: status({pid: 9})});
     expect(p.anomalies.length).toBe(2);
