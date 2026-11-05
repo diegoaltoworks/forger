@@ -1086,3 +1086,76 @@ describe('findProjectRoot', () => {
     expect(findProjectRoot(join(outer, 'repo', 'src'), outer)).toBe(join(outer, 'repo'));
   });
 });
+
+describe('critique', () => {
+  test('a change that is not visual is skipped, naming why', async () => {
+    process.chdir(projectWith({}));
+    const run: CommandRunner = cmd => (cmd.startsWith('gh pr diff') ? 'src/engine.ts' : '');
+    const out = JSON.parse(await capture(['critique', '--pr', '5', '--json'], run));
+    expect(out).toMatchObject({status: 'skipped', pr: 5});
+    expect(process.exitCode ?? 0).toBe(0);
+  });
+
+  test('needs a PR number and a known threshold', async () => {
+    process.chdir(projectWith({}));
+    const err = spyOn(console, 'error').mockImplementation(() => {});
+    await capture(['critique', '--pr', '5', '--threshold', 'urgent']);
+    expect(err.mock.calls.join('\n')).toContain('Usage: critique --pr N');
+    expect(process.exitCode).toBe(1);
+    process.exitCode = 0;
+    err.mockRestore();
+  });
+  test('a visual change is critiqued and its findings above the threshold are filed with the tracker label', async () => {
+    const root = projectWith({}, {kind: 'github', label: 'ready-for-agent'});
+    writeFileSync(join(root, '.forger', 'ui.json'), JSON.stringify({paths: ['src/ui/**'], start: 'bun dev'}));
+    process.chdir(root);
+    const calls: string[] = [];
+    const run: CommandRunner = cmd => {
+      calls.push(cmd);
+      if (cmd.startsWith('gh pr diff')) return 'src/ui/App.tsx';
+      if (cmd.startsWith('gh pr view')) return JSON.stringify({headRefOid: 'abc1234'});
+      if (cmd.startsWith('git worktree add')) {
+        const dir = /--detach '([^']+)'/.exec(cmd)?.[1] as string;
+        mkdirSync(join(dir, 'docs/screenshots'), {recursive: true});
+        writeFileSync(join(dir, 'docs/plan-a.md'), '## Brief, verbatim\n\nA playful demo.\n');
+        writeFileSync(join(dir, 'docs/screenshots/home.png'), 'x');
+        return '';
+      }
+      if (cmd.includes("ls-files 'docs/plan*.md'")) return 'docs/plan-a.md';
+      if (cmd.includes("ls-files 'docs/screenshots/'")) return 'docs/screenshots/home.png';
+      if (cmd.startsWith('gh issue create')) return 'https://example.test/issues/9\n';
+      return '';
+    };
+    const dims = ['feel', 'readability', 'feedback', 'fidelity'].map(name => ({name, score: 2, reason: 'flat'}));
+    const agent = {
+      async run(o: {prompt: string}) {
+        const path = /write your result to (\S+) as JSON/.exec(o.prompt)?.[1] as string;
+        writeFileSync(path, JSON.stringify({dimensions: dims, findings: [{severity: 'high', dimension: 'feel', title: "Make the hero's step audible", body: 'Add a sound.', evidence: 'docs/screenshots/home.png'}]}));
+        return {exitCode: 0, signal: null, output: '', timedOut: false};
+      },
+    };
+    const lines: string[] = [];
+    const spy = spyOn(console, 'log').mockImplementation((...args: unknown[]) => void lines.push(args.join(' ')));
+    try {
+      await main(['critique', '--pr', '5'], {run, agent});
+    } finally {
+      spy.mockRestore();
+    }
+    const create = calls.find(c => c.startsWith('gh issue create')) as string;
+    expect(create).toContain("--label 'ready-for-agent'");
+    expect(create).toContain("Make the hero'\\''s step audible");
+    expect(lines.join('\n')).toContain('filed https://example.test/issues/9 (high, feel)');
+  });
+
+  test('a failure reading the PR is reported and fails the command', async () => {
+    process.chdir(projectWith({}));
+    const err = spyOn(console, 'error').mockImplementation(() => {});
+    await capture(['critique', '--pr', '5'], () => {
+      throw new Error('gh is down');
+    });
+    expect(err.mock.calls.join('\n')).toContain('critique: gh is down');
+    expect(process.exitCode).toBe(1);
+    process.exitCode = 0;
+    err.mockRestore();
+  });
+});

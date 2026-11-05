@@ -36,6 +36,9 @@
     {"id": "merge", "command": "auto-ticket", "inputs": ["pr", "verdict"],
      "slots": [],
      "gate": "merge --json"},
+    {"id": "critique", "command": "critique", "inputs": ["pr", "brief", "captures"],
+     "slots": [{"slot": "critique", "contract": "critique"}],
+     "gate": "contract critique"},
     {"id": "retro", "command": "retro", "inputs": ["measure", "events"],
      "slots": [{"slot": "retro", "contract": "retro_proposals"}],
      "gate": "check"}

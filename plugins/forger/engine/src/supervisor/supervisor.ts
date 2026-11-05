@@ -102,6 +102,7 @@ export const APPROVAL_POLICY = {
   stop_runner_on_wrong_base: 'alone_and_report',
   open_pr_for_pushed_branch: 'alone_and_report',
   resume_after_known_recovery: 'alone_and_report',
+  file_critique_tickets: 'alone_and_report',
   clear_halt: 'owner',
   reset_counters: 'owner',
   close_issues: 'owner',

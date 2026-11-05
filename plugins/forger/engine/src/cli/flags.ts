@@ -23,6 +23,8 @@ export const FLAGS = {
   reason: {type: 'string'},
   detail: {type: 'string'},
   pr: {type: 'string'},
+  threshold: {type: 'string'},
+  force: {type: 'boolean', default: false},
   list: {type: 'boolean'},
   summary: {type: 'boolean', default: false},
   preset: {type: 'string'},

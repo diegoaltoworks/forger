@@ -12,7 +12,7 @@ const facts: ContractFacts = {
     {id: 'c2', text: 'it is documented'},
   ],
   gateCommand: 'bun run check && bun test',
-  fileExists: p => ['w/index.html', 'w/index.png', 'docs/progress/a.html', 'docs/progress/b.html', 'docs/progress/c.html', 'docs/progress/d.html'].includes(p),
+  fileExists: p => ['w/index.html', 'w/index.png', 'docs/progress/a.html', 'docs/progress/b.html', 'docs/progress/c.html', 'docs/progress/d.html', 'docs/screenshots/home.png', 'docs/screenshots/play.webm', 'docs/notes.md'].includes(p),
   fileContains: (p, term) => p === 'GLOSSARY.md' && term === 'Slot',
   isTestFile: p => p.endsWith('.test.ts'),
 };
@@ -190,6 +190,56 @@ const cases: Case[] = [
   },
   {name: 'entry not an object', contract: 'retro_proposals', value: ['x'], problems: ['retro_proposals[0] must be an object', 'retro_proposals[0] has no lesson', 'retro_proposals[0] rung must be one of check, test, tool, doc', 'retro_proposals[0] names no target path']},
 ];
+
+const dims = (score = 3) => ['feel', 'readability', 'feedback', 'fidelity'].map(name => ({name, score, reason: 'because'}));
+const finding = (over: Record<string, unknown> = {}) => ({severity: 'high', dimension: 'feel', title: 'Make the hero a character', body: 'Give it a face.', evidence: 'docs/screenshots/home.png', ...over});
+
+const critiqueCases: Case[] = [
+  {name: 'critique good', contract: 'critique', value: {dimensions: dims(), findings: [finding(), finding({severity: 'medium', evidence: 'docs/screenshots/play.webm'}), finding({severity: 'low'})]}, problems: []},
+  {name: 'critique with no findings', contract: 'critique', value: {dimensions: dims(5), findings: []}, problems: []},
+  {name: 'critique not an object', contract: 'critique', value: [], problems: ['critique must be an object with dimensions and findings']},
+  {
+    name: 'critique dimension problems',
+    contract: 'critique',
+    value: {dimensions: [{name: 'feel', score: 3, reason: 'r'}, {name: 'feel', score: 3, reason: 'r'}, {name: 'taste', score: 9, reason: ''}, {name: 'readability', score: 2.5, reason: 'r'}], findings: []},
+    problems: [
+      'critique.dimensions[1] repeats the dimension feel',
+      'critique.dimensions[2] name must be one of feel, readability, feedback, fidelity',
+      'critique.dimensions[2] score must be a whole number from 1 to 5',
+      'critique.dimensions[2] has no reason',
+      'critique.dimensions[3] score must be a whole number from 1 to 5',
+      'critique.dimensions has no feedback dimension',
+      'critique.dimensions has no fidelity dimension',
+    ],
+  },
+  {name: 'critique lists missing', contract: 'critique', value: {}, problems: ['critique.dimensions must be an array', 'critique.findings must be an array']},
+  {
+    name: 'critique finding problems',
+    contract: 'critique',
+    value: {
+      dimensions: dims(),
+      findings: [
+        finding({severity: 'low'}),
+        finding({severity: 'high', dimension: 'taste', title: 'a\nb', body: ' ', evidence: 'docs/notes.md'}),
+        finding({severity: 'urgent', evidence: 'docs/screenshots/gone.png'}),
+        finding({title: '', evidence: undefined}),
+      ],
+    },
+    problems: [
+      'critique.findings[1] is out of order: list findings most severe first',
+      'critique.findings[1] dimension must be one of feel, readability, feedback, fidelity',
+      'critique.findings[1] title must be one line',
+      'critique.findings[1] has no body: phrase it as a proposed ticket',
+      'critique.findings[1] evidence docs/notes.md is not an image or video',
+      'critique.findings[2] severity must be one of high, medium, low',
+      'critique.findings[2] evidence docs/screenshots/gone.png does not exist',
+      'critique.findings[3] is out of order: list findings most severe first',
+      'critique.findings[3] has no title',
+      'critique.findings[3] cites no capture or screenshot',
+    ],
+  },
+];
+cases.push(...critiqueCases);
 
 describe('validateContract', () => {
   test.each(cases)('$name', ({contract, value, problems}) => {

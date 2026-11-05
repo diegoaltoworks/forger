@@ -90,6 +90,7 @@ describe('approval policy', () => {
     expect(approvalFor('open_pr_for_pushed_branch')).toBe('alone_and_report');
     expect(approvalFor('clear_halt')).toBe('owner');
     expect(approvalFor('resume_after_known_recovery')).toBe('alone_and_report');
+    expect(approvalFor('file_critique_tickets')).toBe('alone_and_report');
     expect(approvalFor('raise_budget')).toBe('never');
   });
   test('an unlisted action needs the owner', () => {

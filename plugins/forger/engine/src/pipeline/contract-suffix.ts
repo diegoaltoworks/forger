@@ -73,6 +73,18 @@ export const SHAPES: Readonly<Record<ContractName, Shape>> = {
     example: [{lesson: 'text', rung: 'check|test|tool|doc', target: 'path'}],
     rules: ['Each proposal names a rung of the refinement ladder and a target path.'],
   },
+  critique: {
+    format: 'json',
+    example: {
+      dimensions: [{name: 'feel|readability|feedback|fidelity', score: 3, reason: 'text'}],
+      findings: [{severity: 'high|medium|low', dimension: 'feel', title: 'one line', body: 'a proposed ticket: the change and why it serves the brief', evidence: 'docs/screenshots/name.png'}],
+    },
+    rules: [
+      'Score each of the four dimensions once, from 1 to 5, with the reason.',
+      'List findings most severe first; each cites an existing capture or screenshot and is phrased as a proposed ticket.',
+      'Judge against the verbatim brief, not against taste; an empty findings list is a valid answer.',
+    ],
+  },
 };
 
 /** Where a slot's result goes, relative to the run's directory. */

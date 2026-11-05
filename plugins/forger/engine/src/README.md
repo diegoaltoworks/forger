@@ -12,6 +12,7 @@ the files inside it.
 | [`backlog/`](backlog/README.md) | The Backlog interface and its GitHub and file adapters |
 | [`checks/`](checks/README.md) | The umbrella `check`, waivers, the CI summary, and one folder per check |
 | [`intent/`](intent/README.md) | Classifying a planning request as product or creative |
+| [`critique/`](critique/README.md) | Holding a visual change to the verbatim brief and filing ranked findings as tickets |
 | [`brand/`](brand/README.md) | The brand rasters and icon, rendered from the SVG sources in `assets/brand/` |
 | [`ui/`](ui/README.md) | The ui pack's config, the capture matrix and the screenshot run |
 | [`migrate/`](migrate/README.md) | Moving a repo from the legacy layout to `.forger/` |
