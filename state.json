@@ -1,6 +1,6 @@
 {
   "iteration": 137,
-  "status": "halted",
+  "status": "ready",
   "last_completed_at": "2026-11-05T07:57:27.347Z",
   "completed_iterations": 123,
   "failed_iterations": 7,
@@ -130,7 +130,7 @@
   ],
   "in_flight": [],
   "last_error": "forger/verify cannot run (disk quota error `EDQUOT`, no verdict from the verifier); PR #267 is green locally and ready to verify and merge once space is freed",
-  "stall_count": 1,
+  "stall_count": 0,
   "declined_tasks": [
     {
       "ticket": "issue-81",
