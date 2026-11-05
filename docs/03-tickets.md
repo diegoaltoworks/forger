@@ -59,6 +59,30 @@ the usual questions and records the owner's answers in the plan doc:
 A creative ticket carries the brief as its owner request and names the moment
 the audience must feel as acceptance.
 
+### Toy first
+
+Slicing by layer (model, then renderer, then flow) suits a product and fails a
+creative brief: every ticket passes and nobody can enjoy the result until the
+last one, by which time nobody is looking. For creative intent the order is:
+
+1. **The toy.** The first ticket makes the core interaction playable end to end
+   with placeholder art: a person can do the thing the brief is about, and the
+   thing answers every action. Its acceptance names the moment the audience must
+   feel, and the owner plays it before the next ticket starts.
+2. **The style pass.** Look, colour, character and motion, judged against the
+   brief and its previews.
+3. **Rigour.** Models, settings, real numbers and extrapolation, behind the
+   interaction that already works.
+4. **Polish.**
+
+Determinism still applies. The toy is allowed to be rough, but each decision it
+makes is moved into a tested command as soon as it stops being a guess; the toy
+is a first slice, not an exemption from principle 0.
+
+`/forger:plan` and `/forger:auto-plan` apply this order when `work intent`
+says the request is creative, and put the toy at the head of the dependency
+chain.
+
 ## Labels
 
 | Label | Means |

@@ -183,6 +183,12 @@ Turn the agreed plan into tickets in the `process.md` shape, for
 - has testable acceptance criteria written in the glossary's vocabulary;
 - carries `priority`, `effort`, and `depends_on` for a mechanical build order.
 
+When the intent is creative, do not slice by layer. The first ticket is the toy:
+the core interaction playable end to end with placeholder art, with the moment
+the audience must feel as its acceptance. The rest depend on it, in this order:
+the style pass, then rigour (models, settings, extrapolation), then polish
+(`docs/03-tickets.md`, "Toy first").
+
 A ticket that changes a screen gets its wireframe first, in the `design` slot,
 when `docs/design/wireframe.css` exists (the ui pack is installed). Built-in:
 copy `docs/design/example/` to `docs/design/<ticket>/`, replace the boxes, run

@@ -62,6 +62,7 @@ the result.
 | The verifier passes a screen that is visibly wrong | fixed by #189, #194, #195 | [entry](#the-verifier-passes-a-screen-that-is-visibly-wrong---fixed-by-225-257-258) |
 | A UI state the screenshot tool cannot reach | fixed by #191 | [entry](#a-ui-state-the-screenshot-tool-cannot-reach---fixed-by-256) |
 | A vague or unsourced criterion decides the outcome | open, #196 | [entry](#a-vague-or-unsourced-criterion-decides-the-outcome) |
+| Faithful but flat | open, #230, #235 | [entry](#faithful-but-flat) |
 | The engine dies with the session | open | [entry](#the-engine-dies-with-the-session) |
 | A watcher on the wrong process | fixed (before tickets were tracked) | [entry](#a-watcher-on-the-wrong-process---fixed-before-tickets-were-tracked) |
 | A watcher that matches its own command | fixed (before tickets were tracked) | [entry](#a-watcher-that-matches-its-own-command---fixed-before-tickets-were-tracked) |
@@ -504,6 +505,32 @@ the result.
 - **Fix:** E: #196: `check ticket` refuses a criterion that is not a test, a
   command with its result, a sourced number or a named UI state. S: spikes record
   a thresholds table with sources, and build tickets cite it.
+
+## Planning
+
+### Faithful but flat
+
+**Status:** open, #230, #235
+
+- **Seen:** an owner asked for a playful, retro-handheld-style demo for a
+  pitch, "think <a famous handheld game>". The loop planned and built it ticket
+  by ticket: correct, tested, offline, accessible, honest numbers. A single-file
+  build from the same brief, with no loop, was judged more playful and closer to
+  the brief. The loop's version was a simulation you watch; the other was a toy
+  you play, with a recognisable scene, colour, character variety and feedback on
+  every action. The first moment anyone could enjoy came several tickets in, and
+  nobody played it until the end.
+- **Cause:** every ticket passed and the whole missed the brief.
+  - No look-and-feel questions were asked before tickets were cut.
+  - A grey wireframe was the only gate on how a screen looked.
+  - Acceptance was limited to what a test can measure.
+  - Work was sliced by layer, so nothing playable existed early.
+  - One recommended answer per choice was accepted wholesale.
+  - Nothing compared the build with the brief.
+- **Recovered by:** the owner comparing the two builds by hand.
+- **Fix:** S: #230 (plan detects creative intent, runs a creative-brief round
+  and records the brief verbatim), #235 (the first ticket for creative work is
+  the toy, then style, rigour and polish).
 
 ## Running the loop
 
