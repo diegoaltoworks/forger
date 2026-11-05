@@ -1,8 +1,8 @@
 # checks/docs
 
 `check docs`: the writing rules (ASCII punctuation, nothing personal, no
-hard-coded skills) and the docs pack's rules (links, images, diagrams, glossary
-terms) over every tracked text file.
+hard-coded skills) and the docs pack's rules (links, images, diagrams,
+glossary terms). It reads every tracked text file.
 
 ## Files
 

@@ -1,10 +1,11 @@
 # hooks
 
-The harness hook that refuses what a worker is only asked not to do: merging
-by hand, pushing to the base branch or forcing a push, writing commit statuses
-or check runs, and editing the engine's state. The same hook guards the
-supervisor: while an engine is alive, no state-changing git in the loop's
-checkout.
+The harness hook that refuses what a worker is only asked not to do. The same
+hook guards the supervisor.
+
+It refuses a merge by hand, a push to the base branch and a forced push. It
+refuses a commit status, a check run and an edit of the engine's state. While
+an engine is alive, it refuses state-changing git in the loop's checkout.
 
 ## Files
 

@@ -1,6 +1,6 @@
 # checks/decisions
 
-`check decisions`: a new dependency or a layer-map change lands with an ADR in
+`check decisions`: a dependency or a layer-map change lands with an ADR in
 the same diff.
 
 ## Files
