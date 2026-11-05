@@ -9,7 +9,7 @@ import {listOpinions, loadPacks, parseLock} from './packs';
 import {runSetup} from './setup';
 
 const PLUGIN_ROOT = resolve(import.meta.dir, '../../..');
-const facts = (f: Partial<RepoFacts>): RepoFacts => ({files: [], dirs: [], deps: [], ...f});
+const facts = (f: Partial<RepoFacts>): RepoFacts => ({files: [], dirs: [], deps: [], tables: [], ...f});
 const available = loadPacks(PLUGIN_ROOT);
 const noLock = {packs: []};
 const dirs: string[] = [];

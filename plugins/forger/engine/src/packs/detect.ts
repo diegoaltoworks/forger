@@ -7,6 +7,8 @@
  * - `file:<path>` a file whose path is `<path>` or ends with `/<path>`
  * - `dir:<path>` a directory matched the same way
  * - `dep:<name>` a dependency (or dev dependency) in the root `package.json`
+ * - `glob:<pattern>` a file whose name matches the pattern, where `*` stands for any run of characters
+ * - `table:<name>` a table header such as `tool.pytest.ini_options` in the root `pyproject.toml`
  */
 
 import {existsSync, readdirSync, readFileSync} from 'fs';
@@ -14,7 +16,7 @@ import {join} from 'path';
 
 import type {LoadedPack, Lock} from './packs';
 
-export const RULE_KINDS = ['file', 'dir', 'dep'] as const;
+export const RULE_KINDS = ['file', 'dir', 'dep', 'glob', 'table'] as const;
 export type RuleKind = (typeof RULE_KINDS)[number];
 
 export interface Rule {
@@ -29,6 +31,8 @@ export interface RepoFacts {
   dirs: string[];
   /** Names in the root package.json `dependencies` and `devDependencies`. */
   deps: string[];
+  /** Table names in the root pyproject.toml, such as `tool.pytest.ini_options`. */
+  tables: string[];
 }
 
 export interface Suggestion {
@@ -46,7 +50,8 @@ export function parseRule(text: string): Rule | null {
   const kind = text.slice(0, at);
   const value = text.slice(at + 1);
   if (!(RULE_KINDS as readonly string[]).includes(kind) || value === '' || /\s/.test(value)) return null;
-  if (kind !== 'dep' && (value.startsWith('/') || value.split('/').includes('..'))) return null;
+  if (kind === 'glob' && value.includes('/')) return null;
+  if (kind !== 'dep' && kind !== 'table' && (value.startsWith('/') || value.split('/').includes('..'))) return null;
   return {kind: kind as RuleKind, value};
 }
 
@@ -54,7 +59,14 @@ function pathMatches(paths: string[], wanted: string): boolean {
   return paths.some(p => p === wanted || p.endsWith(`/${wanted}`));
 }
 
+function globMatches(paths: string[], pattern: string): boolean {
+  const re = new RegExp(`^${pattern.split('*').map(part => part.replace(/[.+?^${}()|[\]\\]/g, '\\$&')).join('.*')}$`);
+  return paths.some(p => re.test(p.slice(p.lastIndexOf('/') + 1)));
+}
+
 export function matchRule(rule: Rule, facts: RepoFacts): boolean {
+  if (rule.kind === 'glob') return globMatches(facts.files, rule.value);
+  if (rule.kind === 'table') return facts.tables.includes(rule.value);
   if (rule.kind === 'file') return pathMatches(facts.files, rule.value);
   if (rule.kind === 'dir') return pathMatches(facts.dirs, rule.value);
   return facts.deps.includes(rule.value);
@@ -115,5 +127,9 @@ export function readRepoFacts(root: string): RepoFacts {
     };
     deps = [...new Set([...field('dependencies'), ...field('devDependencies')])];
   }
-  return {files: files.sort(), dirs: dirs.sort(), deps: deps.sort()};
+  const tomlPath = join(root, 'pyproject.toml');
+  const tables = existsSync(tomlPath)
+    ? [...readFileSync(tomlPath, 'utf-8').matchAll(/^\s*\[\[?\s*([^\][]+?)\s*\]\]?\s*(?:#.*)?$/gm)].map(m => m[1])
+    : [];
+  return {files: files.sort(), dirs: dirs.sort(), deps: deps.sort(), tables: [...new Set(tables)].sort()};
 }
