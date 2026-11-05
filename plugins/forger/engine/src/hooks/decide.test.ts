@@ -173,3 +173,38 @@ describe('the supervisor', () => {
     expect(sup('cd /elsewhere && git reset --hard')).toBe(true);
   });
 });
+
+describe('the read-only rule resolves the repository a git command acts on', () => {
+  const at = {engineAlive: true, cwd: '/repo', loopRoot: '/repo', worktreesDir: '/repo/.forger/worktrees'};
+  const allowed = (command: string) => decideSupervisor(bash(command), at).allow;
+
+  test('the read-only rule allows a git commit with -C naming another repository', () => {
+    expect(allowed('git -C /other commit -m x')).toBe(true);
+    expect(allowed('git --git-dir=/other/.git commit -m x')).toBe(true);
+    expect(allowed('git --git-dir /other/.git --work-tree /other commit -m x')).toBe(true);
+    expect(allowed('git --work-tree=/other reset --hard')).toBe(true);
+  });
+
+  test('the read-only rule allows cd to another repository then git commit', () => {
+    expect(allowed('cd /other && git commit -m x')).toBe(true);
+  });
+
+  test('the read-only rule still refuses a git commit in the engine\'s checkout', () => {
+    expect(allowed('git commit -m x')).toBe(false);
+    expect(allowed('git -C /repo commit -m x')).toBe(false);
+    expect(allowed('git --git-dir=/repo/.git commit -m x')).toBe(false);
+    expect(allowed('git --work-tree=/repo reset --hard')).toBe(false);
+  });
+
+  test('a path it cannot resolve is refused as before', () => {
+    expect(allowed('git -C "$REPO" commit -m x')).toBe(false);
+    expect(allowed('cd "$REPO" && git commit -m x')).toBe(false);
+    expect(allowed('git -C ~/other commit -m x')).toBe(false);
+  });
+
+  test('a git command quoted in a heredoc body is not refused', () => {
+    expect(allowed('gh issue create --body-file - <<EOF\nrefused: git commit -m x\nEOF')).toBe(true);
+    expect(allowed("gh issue create --body \"git commit -m x\"")).toBe(true);
+    expect(allowed('cat <<-\'EOF\'\n\tgit reset --hard\n\tEOF\ngit commit -m x')).toBe(false);
+  });
+});

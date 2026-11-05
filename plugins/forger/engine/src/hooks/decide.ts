@@ -145,16 +145,23 @@ function breaksStatus(words: string[]): boolean {
 
 const GIT_VALUED = new Set(['-C', '-c', '--git-dir', '--work-tree', '--namespace', '--exec-path', '--super-prefix', '--config-env']);
 
-/** The git subcommand and its arguments, and the directory a `-C` moves it to. */
-export function gitArgs(words: string[]): {args: string[]; dirs: string[]} | null {
+/** The git subcommand and its arguments, the directories `-C` moves it through, and the repository `--git-dir` and `--work-tree` name. */
+export function gitArgs(words: string[]): {args: string[]; dirs: string[]; gitDir?: string; workTree?: string} | null {
   if (programName(words[0]) !== 'git') return null;
   const rest = words.slice(1);
   const dirs: string[] = [];
+  let gitDir: string | undefined;
+  let workTree: string | undefined;
   while (rest.length > 0 && rest[0].startsWith('-')) {
-    if (rest[0] === '-C') dirs.push(rest[1] ?? '.');
-    rest.splice(0, GIT_VALUED.has(rest[0]) ? 2 : 1);
+    const word = rest[0];
+    if (word === '-C') dirs.push(rest[1] ?? '.');
+    if (word === '--git-dir') gitDir = rest[1];
+    else if (word.startsWith('--git-dir=')) gitDir = word.slice('--git-dir='.length);
+    if (word === '--work-tree') workTree = rest[1];
+    else if (word.startsWith('--work-tree=')) workTree = word.slice('--work-tree='.length);
+    rest.splice(0, GIT_VALUED.has(word) ? 2 : 1);
   }
-  return {args: rest, dirs};
+  return {args: rest, dirs, gitDir, workTree};
 }
 
 const PUSH_VALUED = new Set(['-o', '--push-option', '--repo', '--receive-pack', '--exec']);
@@ -289,6 +296,22 @@ function within(dir: string, root: string): boolean {
   return dir === root || dir.startsWith(`${root.replace(/\/$/, '')}/`);
 }
 
+/** A path the shell would expand is a path this reader cannot resolve. */
+const UNRESOLVABLE = /[$`~*?]/;
+
+/** The directory a git command acts on; the loop's checkout when it cannot be told. */
+function repositoryOf(git: NonNullable<ReturnType<typeof gitArgs>>, cwd: string, loopRoot: string): string {
+  const named = [...git.dirs, git.workTree, git.gitDir].filter((p): p is string => p !== undefined);
+  if (named.some(p => UNRESOLVABLE.test(p))) return loopRoot;
+  const base = git.dirs.reduce((d, c) => resolve(d, c), cwd);
+  if (git.workTree !== undefined) return resolve(base, git.workTree);
+  if (git.gitDir !== undefined) {
+    const dir = resolve(base, git.gitDir);
+    return dir.endsWith('/.git') ? dir.slice(0, -'/.git'.length) : dir;
+  }
+  return base;
+}
+
 /** The supervisor's hook: while an engine is alive, no state-changing git in the loop's checkout. */
 export function decideSupervisor(call: ToolCall, facts: SupervisorFacts): HookDecision {
   if (!facts.engineAlive) return ALLOW;
@@ -298,12 +321,12 @@ export function decideSupervisor(call: ToolCall, facts: SupervisorFacts): HookDe
   for (const {words} of segments(command)) {
     if (words.length === 0) continue;
     if (words[0] === 'cd' || words[0] === 'pushd') {
-      cwd = resolve(cwd, words[1] ?? facts.loopRoot);
+      cwd = words[1] === undefined || UNRESOLVABLE.test(words[1]) ? facts.loopRoot : resolve(cwd, words[1]);
       continue;
     }
     const git = gitArgs(words);
     if (!git) continue;
-    const dir = git.dirs.reduce((d, c) => resolve(d, c), cwd);
+    const dir = repositoryOf(git, cwd, facts.loopRoot);
     if (!within(dir, facts.loopRoot) || within(dir, facts.worktreesDir)) continue;
     const sub = git.args[0];
     if (!STATE_CHANGING_GIT.includes(sub)) continue;

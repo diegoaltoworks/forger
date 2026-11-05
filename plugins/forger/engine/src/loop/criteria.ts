@@ -44,12 +44,16 @@ const BACKTICKED_COMMAND = /`[^`]*\s[^`]*`/;
 const GATES = /\bgates?\b.*\b(?:green|pass(?:es)?)\b/i;
 const UI_STATE = /\bui state\b|\bscreenshots?\b/i;
 
+/** Text a command is said to print is quoted data, whatever words it holds. */
+const QUOTED_OUTPUT = /(\b(?:prints?|outputs?|reports?)\b[^"'`]*?)(?:"[^"]*"|(?<![\w])'[^']*')/gi;
+
 function escapeRegex(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 /** The subjective words a criterion uses, lower case. A word joined by a hyphen to another is part of a longer word. */
 export function subjectiveWordsIn(text: string, extra: string[] = []): string[] {
+  text = text.replace(QUOTED_OUTPUT, '$1');
   const found: string[] = [];
   for (const word of [...SUBJECTIVE_WORDS, ...extra]) {
     const w = word.trim().toLowerCase();

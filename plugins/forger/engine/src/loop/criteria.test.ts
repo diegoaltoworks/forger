@@ -68,3 +68,14 @@ describe('checkTicketCriteria', () => {
     expect(checkTicketCriteria('## Acceptance\n- [ ] `bun test` passes\n- [ ] Gates green').ok).toBe(true);
   });
 });
+
+describe('quoted expected output', () => {
+  test('a subjective word inside a quoted expected output is not flagged', () => {
+    expect(subjectiveWordsIn('`work.ts check hooks` prints "hooks check: clean"')).toEqual([]);
+    expect(subjectiveWordsIn("the command reports 'all clean' and exits 0")).toEqual([]);
+  });
+
+  test('a subjective word outside the quotes is still flagged', () => {
+    expect(subjectiveWordsIn('the code is clean and prints "ok"')).toEqual(['clean']);
+  });
+});
