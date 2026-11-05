@@ -2,7 +2,9 @@ import {ensureLabels, requireVerifyStatus, VERIFY_STATUS_CONTEXT, type RequireOu
 import {forgerPath, loadConfig} from '../config';
 import {flavourRef, loadFlavour} from '../pipeline';
 import {findHarness} from '../adapters';
-import {formatSetup, formatUpgrade, loadPresets, offerPresets, parsePackList, runSetup, runUpgrade} from '../packs';
+import {coverageAdvice, formatCoverageAdvice, formatSetup, formatUpgrade, readRepoFacts, type CoverageAdvice, loadPresets, offerPresets, parsePackList, runSetup, runUpgrade} from '../packs';
+import {existsSync, readFileSync} from 'fs';
+import {join} from 'path';
 import type {Command, CommandContext} from './command';
 
 /** setup runs before any `.forger/` exists, so outside a repository it acts where it was run. */
@@ -41,6 +43,22 @@ function formatRequire(r: RequireOutcome | undefined, branch: string): string[] 
   if (!r) return [];
   if (r.error) return [`! could not make ${branch} require ${VERIFY_STATUS_CONTEXT}: ${r.error}; add it to the branch protection by hand`];
   return r.added ? [`check   ${VERIFY_STATUS_CONTEXT} required on ${branch}`] : [];
+}
+
+const DEFAULT_REPORT = 'coverage/lcov.info';
+
+/** Only when the testing pack is chosen; unreadable repository facts skip the advice rather than fail setup. */
+function coverageNextStep(ctx: CommandContext, chosen: string[]): CoverageAdvice | undefined {
+  if (!chosen.includes('testing')) return undefined;
+  const root = setupRoot(ctx);
+  try {
+    const settingsPath = forgerPath(root, '.forger/testing.json');
+    const settings = existsSync(settingsPath) ? (JSON.parse(readFileSync(settingsPath, 'utf-8')) as {coverage_report?: unknown}) : {};
+    const report = typeof settings.coverage_report === 'string' ? settings.coverage_report : DEFAULT_REPORT;
+    return coverageAdvice({gates: loadConfig(root).gates, report, reportExists: existsSync(join(root, report)), facts: readRepoFacts(root)});
+  } catch {
+    return undefined;
+  }
 }
 
 export const setup: Command = {
@@ -100,9 +118,10 @@ export const setup: Command = {
     }
     const labels = createLabels(ctx);
     const verifyCheck = requireVerify(ctx);
+    const coverage = coverageNextStep(ctx, parsePackList(values.packs));
     const offered = offerPresets(loadPresets(pluginRoot), installedSkills());
     const presets = offered.map(p => p.name);
-    if (values.json) console.log(JSON.stringify({...result, presets, labels, ...(verifyCheck ? {verify_check: verifyCheck} : {})}));
+    if (values.json) console.log(JSON.stringify({...result, presets, labels, ...(verifyCheck ? {verify_check: verifyCheck} : {}), ...(coverage ? {coverage, next_steps: coverage.next_steps} : {})}));
     else
       console.log(
         [
@@ -110,6 +129,7 @@ export const setup: Command = {
           ...labels.created.map(l => `label   ${l}`),
           ...(labels.error ? [`! ${labels.error}`] : []),
           ...formatRequire(verifyCheck, loadConfig(setupRoot(ctx)).base_branch),
+          ...(coverage ? [formatCoverageAdvice(coverage)] : []),
         ].join('\n')
       );
   },

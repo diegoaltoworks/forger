@@ -41,6 +41,8 @@ does not. The name is the sentence a failing run prints.
 writes (`coverage_report`) with the generated baseline file
 (`coverage_baseline`) and fails on a drop. `check coverage --update` raises the
 baseline when coverage has risen and never lowers it; commit the raised file
-with the work that earned it. The number lives only in that generated file,
+with the work that earned it. The report must exist before the check can run: make the gates write it (for
+example `bun test --coverage --coverage-reporter=lcov`, or the pytest, vitest
+and jest equivalents), and `setup` says when it is missing. The number lives only in that generated file,
 never in a doc. A drop that is deliberate is a recorded waiver, not an edited
 baseline.

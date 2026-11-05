@@ -72,6 +72,13 @@ difference and ask the owner whether to merge, keep theirs or take the pack's;
 a `removed` or `deleted` file only needs mentioning. Once the owner has decided,
 delete the `.upstream` file. Do not decide a conflict yourself.
 
+When the testing pack was chosen, the result carries `coverage` and `next_steps`:
+whether the gates write the lcov report the pack's `check coverage` needs, and
+the flag for the runner the tool recognised. Relay those lines, offer to edit
+the gates to write the report, and once a report exists offer
+`check coverage --update` to set the first baseline. Do not guess a flag the
+tool did not give.
+
 ## 3. Label
 
 When the tracker is `github`: create the intake label if missing:
