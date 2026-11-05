@@ -4,7 +4,7 @@ import {dirname, isAbsolute, join, resolve} from 'path';
 
 import {gitStateStore, localStateFor} from '../adapters';
 import {isProjectRoot, loadConfig, type WorkloopConfig} from '../config';
-import {decideSupervisor, decideWorker, DEFAULT_POLICY, HOOKS_POLICY_PATH, parseHookPolicy, type HookDecision, type HookPolicy, type ToolCall} from '../hooks';
+import {decideSupervisor, decideWorker, DEFAULT_POLICY, HOOKS_POLICY_PATH, parseHookPolicy, toolCalls, type HookDecision, type HookPayload, type HookPolicy, type ToolCall} from '../hooks';
 import {eventLine, RunnerLock, terminalEvent, workerIdentity, type TerminalEvent} from '../loop';
 import type {Command} from './command';
 
@@ -17,9 +17,7 @@ export interface HookIo {
   appendEvent(loopRoot: string, config: WorkloopConfig, event: TerminalEvent): void;
 }
 
-export interface HookInput {
-  tool_name?: unknown;
-  tool_input?: unknown;
+export interface HookInput extends HookPayload {
   cwd?: unknown;
 }
 
@@ -65,8 +63,8 @@ function statePaths(config: WorkloopConfig): string[] {
 /** One hook call: the role from the environment, the facts from the checkout, the decision, and a refusal recorded. */
 export function runHook(input: HookInput, env: Record<string, string | undefined>, io: HookIo, now: Date = new Date()): HookRun {
   const allow: HookRun = {decision: {allow: true}, role: 'none'};
-  if (typeof input.tool_name !== 'string' || typeof input.tool_input !== 'object' || input.tool_input === null) return allow;
-  const call: ToolCall = {tool_name: input.tool_name, tool_input: input.tool_input as Record<string, unknown>};
+  const calls = toolCalls(input);
+  if (calls.length === 0) return allow;
   const cwd = typeof input.cwd === 'string' && isAbsolute(input.cwd) ? input.cwd : process.cwd();
   const projectRoot = nearestRoot(cwd);
   if (projectRoot === null) return allow;
@@ -74,16 +72,14 @@ export function runHook(input: HookInput, env: Record<string, string | undefined
   const config = loadConfig(loopRoot);
   const worker = workerIdentity(env);
   if (!worker) {
-    const decision = decideSupervisor(call, {
-      engineAlive: io.engineAlive(loopRoot, config),
-      cwd,
-      loopRoot,
-      worktreesDir: join(loopRoot, dirname(config.paths.state), 'worktrees'),
-    });
-    return {decision, role: 'supervisor'};
+    const facts = {engineAlive: io.engineAlive(loopRoot, config), cwd, loopRoot, worktreesDir: join(loopRoot, dirname(config.paths.state), 'worktrees')};
+    const refused = calls.map(call => decideSupervisor(call, facts)).find(d => !d.allow);
+    return {decision: refused ?? {allow: true}, role: 'supervisor'};
   }
   const branch = io.git(cwd, 'branch --show-current')?.trim() || null;
-  const decision = decideWorker(policyAt(io, loopRoot), call, {baseBranch: config.base_branch, currentBranch: branch, statePaths: statePaths(config)});
+  const policy = policyAt(io, loopRoot);
+  const facts = {baseBranch: config.base_branch, currentBranch: branch, statePaths: statePaths(config)};
+  const decision = calls.map((call: ToolCall) => decideWorker(policy, call, facts)).find(d => !d.allow) ?? {allow: true as const};
   if (decision.allow) return {decision, role: 'worker'};
   try {
     io.appendEvent(loopRoot, config, terminalEvent('worker_denied', worker.iteration, worker.ticket, `${decision.rule}: ${decision.command}`, now));

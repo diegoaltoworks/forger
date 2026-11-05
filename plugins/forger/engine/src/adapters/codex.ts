@@ -7,6 +7,7 @@
  */
 
 import type {Harness} from '../ports';
+import {codexHooks} from './codex-hooks';
 import {packageAsSkill, skillName, workerSkillName} from './skill-package';
 
 export const codexHarness: Harness = {
@@ -21,5 +22,5 @@ export const codexHarness: Harness = {
   commandPath: name => `.agents/skills/${skillName(name)}/SKILL.md`,
   pluginRootVar: 'FORGER_ROOT',
   packageCommand: (source, pluginRoot, name) => packageAsSkill(source, pluginRoot, skillName(name ?? 'command')),
-  hooks: null,
+  hooks: codexHooks,
 };

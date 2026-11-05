@@ -129,6 +129,7 @@ describe('model-agnostic', () => {
     expect(checkText('docs/getting-started.md', 'a Claude session', [], names)).toEqual([]);
     expect(checkText('docs/reference/adapters.md', 'a Claude session', [], names)).toEqual([]);
     expect(checkText('plugins/forger/README.md', 'a Claude session', [], names).map(x => x.rule)).toEqual(['model-agnostic']);
+    expect(checkText('docs/adr/0018-a-harness-decision.md', 'a Claude session', [], names)).toEqual([]);
     expect(checkText('docs/skills/pstack.md', 'a Claude session', [], names)).toEqual([]);
     expect(checkText('plugins/forger/engine/src/adapters/README.md', 'claude', [], names)).toEqual([]);
     expect(checkText('src/a.ts', '// claude', [], names)).toEqual([]);

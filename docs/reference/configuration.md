@@ -9,7 +9,8 @@ Every field of `.forger/workloop.config.json`.
 | Field | Meaning |
 |---|---|
 | `repo` | If set, only tickets with this `repo` (or none) are worked here. `null` = no filter. |
-| `harness` | The harness that runs the worker: `claude` (default) or `opencode`. |
+| `harness` | The harness that runs the worker: `claude` (default), `opencode`, `codex` or `copilot`. |
+| `allow_unguarded` | `true` lets `run` start with a harness that cannot refuse a tool call. Default `false`. |
 | `worker_command` | Slash command the engine invokes per iteration. Default `forger:auto-ticket`. |
 | `gates` | The quality-gate command; surfaced to the worker. |
 | `base_branch` | Branch an iteration must land on. Merge verification checks HEAD against it. |

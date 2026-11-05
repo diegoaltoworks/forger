@@ -65,6 +65,8 @@ export interface WorkloopConfig {
   parallelism: number;
   /** The harness that runs the worker: `claude` (default), `opencode`, `codex` or `copilot`. */
   harness: string;
+  /** Run with a harness that cannot refuse a tool call (see docs/reference/adapters.md); off by default. */
+  allow_unguarded: boolean;
   paths: {
     backlog: string;
     state: string;
@@ -140,6 +142,7 @@ export interface WorkloopConfigInput {
   verifier?: Tier | null;
   verify?: Partial<WorkloopConfig['verify']>;
   harness?: string;
+  allow_unguarded?: boolean;
   parallelism?: number;
   limits?: Partial<WorkloopConfig['limits']>;
   paths?: Partial<WorkloopConfig['paths']>;
@@ -163,6 +166,7 @@ export const DEFAULT_CONFIG: WorkloopConfig = {
   gates: '',
   base_branch: 'main',
   harness: 'claude',
+  allow_unguarded: false,
   parallelism: 1,
   /**
    * P0 is the foundation. A subtle error there is both expensive and invisible,

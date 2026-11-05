@@ -6,6 +6,7 @@
  */
 
 import type {Harness} from '../ports';
+import {opencodeHooks} from './opencode-hooks';
 
 /** A command name OpenCode accepts: the worker command's colon becomes a hyphen. */
 export function opencodeCommandName(name: string): string {
@@ -33,5 +34,5 @@ export const opencodeHarness: Harness = {
   packageCommand(source, pluginRoot) {
     return stripClaudeFrontmatter(source).replace(/\$\{CLAUDE_PLUGIN_ROOT\}|\$CLAUDE_PLUGIN_ROOT/g, pluginRoot);
   },
-  hooks: null,
+  hooks: opencodeHooks,
 };
