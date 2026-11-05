@@ -120,7 +120,10 @@
       "ticket": "issue-107",
       "pid": null,
       "session_id": "c8a89d20-f78b-4cec-9561-96629f823f4e",
-      "snapshot": null,
+      "snapshot": {
+        "baseSha": "",
+        "reflogLength": 1
+      },
       "started_at": "2026-11-05T00:27:49.493Z",
       "plan": {
         "stages": [
