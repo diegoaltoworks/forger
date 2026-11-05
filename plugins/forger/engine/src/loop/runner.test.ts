@@ -862,3 +862,44 @@ describe('AutomationRunner declines', () => {
     expect(readState(root).declined_tasks).toEqual([]);
   });
 });
+
+describe('AutomationRunner pre-pick refusal', () => {
+  test('relabels and comments on an uncheckable GitHub ticket, skips a checkable one, and records no decline', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'forger-runner-'));
+    dirs.push(root);
+    const config = mergeConfig({tracker: {kind: 'github', label: 'ready-for-agent'}});
+    const data = {
+      features: {
+        'issue-1': {priority: 'P1', status: 'not_started', depends_on: [], body: '## Acceptance\n- [ ] It feels nice'},
+        'issue-2': {priority: 'P1', status: 'not_started', depends_on: [], body: '## Acceptance\n- [ ] `bun run check` exits 0'},
+      },
+    } as unknown as BacklogData;
+    const commands: string[] = [];
+    const runner = new AutomationRunner(root, config, backlogFrom(() => data, config), {
+      stateStore: localStateFor(root, config),
+      agent: {run: async () => ({exitCode: 0, signal: null, output: '', timedOut: false})},
+      gitRunner: cmd => (commands.push(cmd), cmd.includes('--json labels') ? 'needs-info\n' : ''),
+    });
+    await runner.refuseUncheckable();
+    expect(commands.some(c => c.includes('gh issue edit 1') && c.includes('--add-label needs-info') && c.includes("--remove-label 'ready-for-agent'"))).toBe(true);
+    expect(commands.some(c => c.includes('gh issue comment 1') && c.includes('It feels nice'))).toBe(true);
+    expect(commands.some(c => / 2( |$)/.test(c) && c.startsWith('gh issue'))).toBe(false);
+    const state = runner['store'].load();
+    expect(state.declined_tasks).toEqual([]);
+    expect(state.consecutive_declines).toBe(0);
+  });
+
+  test('a local tracker is never checked', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'forger-runner-'));
+    dirs.push(root);
+    const config = mergeConfig({});
+    const commands: string[] = [];
+    const runner = new AutomationRunner(root, config, backlogFrom(() => backlog, config), {
+      stateStore: localStateFor(root, config),
+      agent: {run: async () => ({exitCode: 0, signal: null, output: '', timedOut: false})},
+      gitRunner: cmd => (commands.push(cmd), ''),
+    });
+    await runner.refuseUncheckable();
+    expect(commands).toEqual([]);
+  });
+});

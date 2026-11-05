@@ -60,6 +60,12 @@ export interface CheckOutput {
   gaps: Gap[];
 }
 
+/** The project's `.forger/waivers.json`; none when the file is absent. */
+export function loadWaivers(projectRoot: string): Waiver[] {
+  const file = forgerPath(projectRoot, WAIVERS_PATH);
+  return existsSync(file) ? parseWaivers(readFileSync(file, 'utf-8')) : [];
+}
+
 /** Every check forger can run; a pack's manifest names these by id. */
 export const CHECKS: Record<string, (ctx: CheckContext) => Finding[] | CheckOutput> = {
   docs: ctx => runDocsCheck(ctx.projectRoot, ctx.run),
@@ -130,8 +136,7 @@ export function runChecks(projectRoot: string, pluginRoot: string, run: CommandR
   const lock = parseLock(readFileSync(lockPath, 'utf-8'));
   const available = loadPacks(pluginRoot);
   const ids = checksToRun(available, lock);
-  const waiversPath = forgerPath(projectRoot, WAIVERS_PATH);
-  const waivers = existsSync(waiversPath) ? parseWaivers(readFileSync(waiversPath, 'utf-8')) : [];
+  const waivers = loadWaivers(projectRoot);
   const ctx: CheckContext = {projectRoot, run, spec, harness};
   const outputs = ids.map(check => {
     const out = CHECKS[check](ctx);
