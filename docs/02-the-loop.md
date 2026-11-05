@@ -249,7 +249,7 @@ branch that does not require it.
 ## Skill slots in the loop
 
 Each point of judgement is a skill slot with a built-in step (`skills --json`
-lists them, the plugin README tabulates them). Beyond building a ticket, three
+lists them, [`reference/skill-slots.md`](reference/skill-slots.md) tabulates them). Beyond building a ticket, three
 slots cover the stages around it, each with a named output:
 
 - `risk` (output `risk_report`) runs after the review and before the verifier.

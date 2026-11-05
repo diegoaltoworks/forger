@@ -98,7 +98,7 @@ Stopping behaviour:
   - Stops if the HALT file exists
   - Stops on maxConsecutiveFailures consecutive failures
 
-Config: .forger/workloop.config.json in the consumer repo (see plugin README).`;
+Config: .forger/workloop.config.json in the consumer repo (see docs/reference/configuration.md).`;
 
 export function renderHelp(commands: Command[] = COMMANDS): string {
   return `

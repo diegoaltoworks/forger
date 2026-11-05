@@ -49,10 +49,11 @@ export function isShipped(file: string): boolean {
 
 /**
  * Prose outside these files names roles, not models or vendors. The adapter
- * docs are where a harness and its models are named once, honestly; a collection's page
- * is one, since its install differs per harness.
+ * docs are where a harness and its models are named once, honestly; the install
+ * path is one, since it is a harness's own commands, and so is a collection's page,
+ * since its install differs per harness.
  */
-const ADAPTER_DOCS = [/^plugins\/forger\/README\.md$/, /(^|\/)adapters\/README\.md$/, /^docs\/skills\/[^/]+\.md$/];
+const ADAPTER_DOCS = [/^README\.md$/, /^docs\/getting-started\.md$/, /^docs\/reference\/[^/]+\.md$/, /(^|\/)adapters\/README\.md$/, /^docs\/skills\/[^/]+\.md$/];
 
 export function isAdapterDoc(file: string): boolean {
   return ADAPTER_DOCS.some(r => r.test(file));

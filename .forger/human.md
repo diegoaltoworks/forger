@@ -14,7 +14,7 @@ clears items.
 - **Run the engine from source**: `bun plugins/forger/bin/work.ts run --continuous`
   from the repository root.
 - **The worker is forger itself**, installed at local scope from this checkout:
-  the plugin install commands in the plugin README's install section, with
+  the install commands in `docs/reference/install.md`, with
   this checkout as the marketplace and `--scope local`.
 - **Create `.forger-denylist`** (untracked) with the personal and
   project-specific terms the docs check must reject, one per line.

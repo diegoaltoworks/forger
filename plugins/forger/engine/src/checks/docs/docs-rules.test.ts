@@ -119,7 +119,10 @@ describe('model-agnostic', () => {
   test('applies to Markdown outside the adapter docs, and is waivable by opinion', () => {
     const v = checkText('docs/a.md', 'a Claude session', [], names);
     expect(v.map(x => [x.rule, x.opinion])).toEqual([['model-agnostic', 'base.model-agnostic']]);
-    expect(checkText('plugins/forger/README.md', 'a Claude session', [], names)).toEqual([]);
+    expect(checkText('README.md', 'a Claude session', [], names)).toEqual([]);
+    expect(checkText('docs/getting-started.md', 'a Claude session', [], names)).toEqual([]);
+    expect(checkText('docs/reference/adapters.md', 'a Claude session', [], names)).toEqual([]);
+    expect(checkText('plugins/forger/README.md', 'a Claude session', [], names).map(x => x.rule)).toEqual(['model-agnostic']);
     expect(checkText('docs/skills/pstack.md', 'a Claude session', [], names)).toEqual([]);
     expect(checkText('plugins/forger/engine/src/adapters/README.md', 'claude', [], names)).toEqual([]);
     expect(checkText('src/a.ts', '// claude', [], names)).toEqual([]);

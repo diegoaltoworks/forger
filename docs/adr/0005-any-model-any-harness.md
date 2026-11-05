@@ -6,7 +6,7 @@ A model is chosen per role for cost and quality, never because a decision depend
 
 ## Consequences
 
-- Prose names the role (the worker, the supervisor, the agent adapter), not a model or a vendor. The plugin README's adapter section is the one place that says what ships today.
+- Prose names the role (the worker, the supervisor, the agent adapter), not a model or a vendor. The adapter reference (`docs/reference/adapters.md`) is the one place that says what ships today.
 - `check docs` flags a configured list of model and vendor names in Markdown outside the adapter docs; the rule is `base.model-agnostic` and is waivable like any other.
 - A second harness is a new file in `adapters/` implementing `AgentRunner`, plus its own packaging of the commands; the loop and the engine do not change.
 - Tickets, logs and docs name the tier; only the adapter sees the model id.
