@@ -1,9 +1,8 @@
 # Automating community skills through the factory
 
-Forger carries a complete set of its own steps, and any installed skill
-collection can take over a step. This page shows how the two fit: the pipeline
-the loop runs, the slot at each stage, which skill each collection offers there,
-and one request travelling through all of it.
+Forger carries its own steps, and any installed skill collection can take over
+a step. This page shows the pipeline, the slot at each stage, the skill each
+collection offers there, and one request through all of it.
 
 The collections have a page each: [agent-skills](agent-skills.md),
 [mattpocock-skills](mattpocock-skills.md) and [pstack](pstack.md).
@@ -16,12 +15,14 @@ Each stage names its command, its inputs, the skill slots it runs, and the gate
 that must hold before the next stage. A project overlays its own stages in
 `.forger/`.
 
-A **flavour** picks, per slot, an ordered list of candidates: a skill or a file,
-each with optional conditions on the ticket (labels, paths, installed packs). The
-first candidate whose conditions hold and which is installed wins. Forger's own
-step is always the last candidate, so a missing skill never stalls the loop.
-`default` is forger's own step for every slot; the collection flavours map a
-collection onto the slots it fits; `mixed` takes the strongest fit per slot
+A **flavour** picks, per slot, an ordered list of candidates. A candidate is a
+skill or a file, with optional conditions on the ticket (labels, paths,
+installed packs). The first candidate whose conditions hold and which is
+installed wins. Forger's own step is always the last candidate. So a missing
+skill never stalls the loop.
+
+`default` is forger's own step for every slot. The collection flavours map a
+collection onto the slots it fits. `mixed` takes the strongest fit per slot
 across all three.
 
 `pipeline --json` shows the outcome for one ticket, the winner per slot and why
@@ -44,11 +45,12 @@ flowchart LR
     C --> T[retro: retro]
 ```
 
-Every slot hands its result through an output contract, and a gate checks it
-before the stage ends. A skill written for a human runs unattended: the engine
-wraps each invocation in a preamble (never ask the owner, never commit, push or
-merge, never route to another skill or start a loop), and a flavour's `forbid`
-list names the skills of its collection that own the process and so must not run.
+Every slot hands its result through an output contract. A gate checks it
+before the stage ends. A skill written for a human runs unattended, so the
+engine wraps each invocation in a preamble. The preamble says: never ask the
+owner, never commit, push or merge, never route to another skill, never start
+a loop. A flavour's `forbid` list names the skills of its collection that own
+the process. Those skills must not run.
 
 ## What each collection offers per stage
 
@@ -82,21 +84,21 @@ bun plugins/forger/bin/work.ts setup --flavour mixed
 
 `setup --preset <name>` is the same command. `/forger:setup` lists the flavours
 whose collection is installed and offers each. The config pins the choice as
-`name@version`, so a flavour that changes under you is refused until you move the
-pin. To change one slot only, set it in the config's `skills` map, which wins per
-slot; to change a candidate order or add a condition, copy the flavour to
+`name@version`. Forger refuses a flavour that changes under you until you move
+the pin. To change one slot only, set it in the config's `skills` map, which
+wins per slot. To change a candidate order or add a condition, copy the flavour to
 `.forger/flavours/` and edit it.
 
 ## One request through the mixed flavour
 
 The owner says: "let people export their settings".
 
-1. **Intake.** `plan` runs the interview slot: `grilling` from mattpocock-skills
-   puts the open decisions to the owner (which format, which settings), one at a
-   time with a recommended answer. The glossary slot runs `domain-modeling`,
-   which records the term "export" in `GLOSSARY.md`. A ticket labelled `ui` also
-   gets the design slot, which has no collection fit, so forger's wireframe step
-   runs.
+1. **Intake.** The interview slot of `plan` runs `grilling` from
+   mattpocock-skills. It puts the open decisions to the owner, such as the
+   format and the settings. It asks one at a time, with a recommended answer. The glossary slot runs
+   `domain-modeling`, which records the term "export" in `GLOSSARY.md`. A ticket
+   labelled `ui` also gets the design slot. That slot has no collection fit, so
+   forger's wireframe step runs.
 2. **Plan.** `auto-plan` turns the decisions into tickets in the backlog. No slot
    runs here.
 3. **Build.** The worker takes one ticket. `test_first` runs `tdd` from
@@ -112,7 +114,7 @@ The owner says: "let people export their settings".
    it.
 7. **Verify and merge.** Tools, no slots: `verify` records a verdict for the
    head, and `merge` squash-merges only on green.
-8. **Retro.** `retro` reads mattpocock-skills' retro skill as a file and proposes
-   how the process should change, which the refinement loop then lands.
+8. **Retro.** `retro` reads the retro skill of mattpocock-skills as a file.
+   It proposes how the process should change. The refinement loop lands it.
 
 Run `pipeline --json` on the real ticket to see which candidate won each slot.

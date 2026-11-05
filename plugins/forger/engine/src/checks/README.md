@@ -10,8 +10,8 @@ reads the tree and hands it to them.
 - `waivers.ts` - findings, waivers and path globs, shared by every check. Pure.
 - `gaps.ts` - coverage gaps (a check that could not measure something) and the
   modality-to-severity mapping. Pure.
-- `files.ts` - the files a check scans: tracked, and untracked but not ignored,
-  so the local gates see a new file before it is committed.
+- `files.ts` - the files a check scans: tracked, and untracked but not ignored.
+  The local gates see an unstaged file before it is committed.
 - `ci.ts` - the CI job summary and the workflow the loop's CI runs. Pure.
 - `docs/`, `arch/`, `decisions/`, `hooks/`, `safety/`, `spec/`, `testing/`, `ui/` - one check each; see
   their READMEs.

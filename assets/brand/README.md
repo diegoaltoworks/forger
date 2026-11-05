@@ -29,10 +29,9 @@ repository.
 
 ## Type
 
-The wordmark and the social preview are set in Outfit (weights 600 and 500),
-licensed under the SIL Open Font License 1.1. The glyphs are converted to
-outlines in the SVGs, so nothing renders with a font at runtime and Outfit is
-not needed to use the files.
+The wordmark and the social preview use Outfit (weights 600 and 500). Outfit
+is under the SIL Open Font License. The SVGs hold the glyphs as outlines.
+No font loads at runtime, so you do not need Outfit to use the files.
 
 ## Regenerating the rasters
 
