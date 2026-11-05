@@ -5,7 +5,9 @@ import {join} from 'path';
 import {readBaseSync, decideHalt, pidAlive, viewLease, standingHalt, parseAllEvents, GhTrackerHalt, requiresVerifyStatus, handedOver, listRepoLabels, loopLabels, missingLabels, readAllVerdicts, verdictsHome} from '../loop';
 import {describeBlocked} from '../backlog';
 import {buildReport, formatReport, mergedInPeriod, orient as orientPlan, proposedAdrs, reportPeriod, waitingIssues, OWNER_LABELS, type AdrText, type MergedPrFact, type OwnerItem, type WaitingIssue} from '../supervisor';
+import {hooksGateProblems, hooksGateRefusal} from '../checks';
 import type {Command, CommandContext} from './command';
+import {harnessOfRoot} from './harness-of';
 import {gatherMeasures} from './measure';
 import {reportRepos} from './multi';
 
@@ -46,6 +48,15 @@ function haltReasonOf(file: string | null, tracker: {label: boolean; reason: str
   return d.halted ? (file !== null && d.source === 'file' ? file : d.reason) : null;
 }
 
+/** Not fatal: an unreadable lock or waiver file leaves the gate unreported, and `run` reports it when it refuses. */
+function hooksGate(ctx: CommandContext): string | null {
+  try {
+    return hooksGateRefusal(hooksGateProblems(ctx.projectRoot, ctx.pluginRoot, harnessOfRoot(ctx.projectRoot)));
+  } catch {
+    return null;
+  }
+}
+
 function supervise(which: 'orient' | 'report') {
   return (ctx: CommandContext): void => {
     const {values, projectRoot, config, runner} = ctx;
@@ -70,6 +81,7 @@ function supervise(which: 'orient' | 'report') {
       blockers: ctx.backlog.blocked().map(b => describeBlocked([b])),
       missingLabels: missing,
       requiresVerify,
+      hooksGate: hooksGate(ctx),
       status,
       haltReason: haltReasonOf(
         existsSync(haltFile) ? readFileSync(haltFile, 'utf-8') : null,

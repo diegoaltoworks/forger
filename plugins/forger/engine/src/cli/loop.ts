@@ -1,5 +1,7 @@
 import {findHarness, guardRefusal} from '../adapters';
 import {watchRepos} from './multi';
+import {harnessOfRoot} from './harness-of';
+import {hooksGateProblems, hooksGateRefusal} from '../checks';
 import {behindBaseRefusal, readBaseSync} from '../loop';
 import type {Command} from './command';
 
@@ -9,10 +11,16 @@ export const run: Command = {
   flags: ['iterations', 'continuous'],
   help: `  run [N]          Run N iterations (default: 1)
   run --continuous Run until all tasks complete`,
-  async run({values, positionals, runner, run, config}) {
+  async run({values, positionals, runner, run, config, projectRoot, pluginRoot}) {
     const unguarded = guardRefusal(findHarness(config.harness), config.allow_unguarded);
     if (unguarded) {
       console.error(`Not starting: ${unguarded}.`);
+      process.exitCode = 1;
+      return;
+    }
+    const hooks = hooksGateRefusal(hooksGateProblems(projectRoot, pluginRoot, harnessOfRoot(projectRoot)));
+    if (hooks) {
+      console.error(`Not starting: ${hooks}.`);
       process.exitCode = 1;
       return;
     }

@@ -42,6 +42,9 @@ export const PLUGIN_ROOT_VAR = 'FORGER_PLUGIN_ROOT'; // same name as loop/worker
 /** The check command the gates end with: it names the variable, so the committed line holds no machine path. */
 export const CHECK_COMMAND = 'bun "$' + PLUGIN_ROOT_VAR + '/bin/work.ts" check';
 
+/** The hook command the committed harness settings hold: it names the variable, so the file works on every clone. */
+export const HOOK_COMMAND_LINE = 'bun "$' + PLUGIN_ROOT_VAR + '/bin/work.ts" hook';
+
 const ABSOLUTE_CHECK = /\bbun\s+"?[/~][^\s"]*\/bin\/work\.ts"?\s+check\b/g;
 
 /** Gates written by an older setup name the plugin by absolute path; this swaps them for the variable form. */
@@ -107,11 +110,11 @@ function installCommands(projectRoot: string, pluginRoot: string, harness: Harne
 }
 
 /** The harness's hook settings with forger's hook added; a settings file that already runs it is kept. */
-function installHook(projectRoot: string, pluginRoot: string, harness: Harness): SetupEntry[] {
+function installHook(projectRoot: string, harness: Harness): SetupEntry[] {
   if (!harness.hooks) return [];
   const target = join(projectRoot, harness.hooks.path);
   const existing = existsSync(target) ? readFileSync(target, 'utf-8') : null;
-  const text = harness.hooks.install(existing, `bun ${join(pluginRoot, 'bin', 'work.ts')} hook`);
+  const text = harness.hooks.install(existing, HOOK_COMMAND_LINE);
   if (text === existing) return [{path: harness.hooks.path, action: 'kept'}];
   mkdirSync(dirname(target), {recursive: true});
   writeFileSync(target, text);
@@ -157,7 +160,7 @@ export function runSetup(projectRoot: string, pluginRoot: string, opts: SetupOpt
 
   if (opts.harness) files.push(...installCommands(projectRoot, pluginRoot, opts.harness));
   const hookHarness = opts.hookHarness ?? opts.harness;
-  if (hookHarness) files.push(...installHook(projectRoot, pluginRoot, hookHarness));
+  if (hookHarness) files.push(...installHook(projectRoot, hookHarness));
 
   const ignorePath = join(projectRoot, '.gitignore');
   const merged = mergeGitignore(existsSync(ignorePath) ? readFileSync(ignorePath, 'utf-8') : '', gitignoreLines(detectLayout(projectRoot).dir));

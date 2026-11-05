@@ -156,7 +156,8 @@ The hook is the one that stops a mistake before it lands.
 
 `setup` installs `work hook` as a PreToolUse hook in the harness's project
 settings (`.claude/settings.json` for the default harness, which every worktree
-checks out with the code). The engine names the worker's role, ticket and iteration in
+checks out with the code). The command it writes names `$FORGER_PLUGIN_ROOT`, which the engine exports to the worker,
+so the committed file holds no machine path. The engine names the worker's role, ticket and iteration in
 the worker's environment; the hook reads them and judges each shell and edit
 call against `.forger/hooks.json`. The decision is a pure function of the
 policy and the call, and it reads through chains (`&&`, `;`, pipes), wrappers

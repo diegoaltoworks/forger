@@ -5,6 +5,7 @@ import {join} from 'path';
 
 import {claudeHooks, execRunner, gitStateStore} from '../adapters';
 import {renderHookPolicy} from '../hooks';
+import {HOOK_COMMAND_LINE} from '../packs';
 import {findProjectRoot, main} from './main';
 import type {CommandRunner} from '../ports';
 
@@ -394,7 +395,7 @@ describe('setup --json', () => {
     expect(first.files).toContainEqual({path: '.forger/hooks.json', action: 'written'});
     const settings = readFileSync(join(root, '.claude', 'settings.json'), 'utf-8');
     expect(JSON.parse(settings).permissions).toEqual({allow: ['Bash(ls)']});
-    expect(JSON.parse(settings).hooks.PreToolUse[0].hooks[0].command).toMatch(/bin\/work\.ts hook$/);
+    expect(JSON.parse(settings).hooks.PreToolUse[0].hooks[0].command).toBe(HOOK_COMMAND_LINE);
     expect(JSON.parse(readFileSync(join(root, '.forger', 'hooks.json'), 'utf-8')).rules).toEqual(['merge', 'push-base', 'status-write', 'state-edit']);
     const second = JSON.parse(await capture(['setup', '--json']));
     expect(second.files).toContainEqual({path: '.claude/settings.json', action: 'kept'});
@@ -601,6 +602,60 @@ describe('setup --flavour', () => {
       err.mockRestore();
       process.exitCode = 0;
     }
+  });
+});
+
+describe('hooks gate before a worker starts', () => {
+  /** A repository set up before the hooks gate existed: the base pack is locked, but there is no hook policy and no harness hook. */
+  function olderInstall(): string {
+    const root = projectWith({a: {status: 'not_started', priority: 'P0'}});
+    writeFileSync(join(root, '.forger', 'forger.lock.json'), JSON.stringify({packs: [{id: 'base', version: '1.1.0', files: []}]}));
+    return root;
+  }
+
+  test('run refuses to start a worker when the hooks gate fails and names setup', async () => {
+    process.chdir(olderInstall());
+    const err: string[] = [];
+    const orig = console.error;
+    console.error = (m: string) => void err.push(String(m));
+    try {
+      await capture(['run'], () => 'main');
+      expect(process.exitCode).toBe(1);
+    } finally {
+      console.error = orig;
+      process.exitCode = 0;
+    }
+    expect(err.join('\n')).toContain('Not starting: the hooks gate fails');
+    expect(err.join('\n')).toContain('work.ts setup');
+  });
+
+  test('orient reports a failing hooks gate as an anomaly', async () => {
+    process.chdir(olderInstall());
+    const out = JSON.parse(await capture(['orient', '--json'], () => 'main'));
+    expect(out.anomalies.join(' ')).toContain('run `work.ts setup`');
+  });
+
+  test('setup on an older install keeps the config and adds the hook policy and harness hook', async () => {
+    const root = olderInstall();
+    const config = readFileSync(join(root, '.forger', 'workloop.config.json'), 'utf-8');
+    process.chdir(root);
+    const out = JSON.parse(await capture(['setup', '--json', '--tracker', 'local']));
+    expect(out.files).toContainEqual({path: '.forger/workloop.config.json', action: 'kept'});
+    expect(out.files).toContainEqual({path: '.forger/hooks.json', action: 'written'});
+    expect(out.files).toContainEqual({path: '.claude/settings.json', action: 'written'});
+    expect(readFileSync(join(root, '.forger', 'workloop.config.json'), 'utf-8')).toBe(config);
+    const after = JSON.parse(await capture(['orient', '--json'], () => 'main'));
+    expect(after.anomalies.join(' ')).not.toContain('hooks gate');
+  });
+
+  test('setup writes a hook command with no absolute home path', async () => {
+    const root = realpathSync(mkdtempSync(join(tmpdir(), 'forger-cli-setup-')));
+    dirs.push(root);
+    process.chdir(root);
+    await capture(['setup', '--json', '--tracker', 'local']);
+    const command = JSON.parse(readFileSync(join(root, '.claude', 'settings.json'), 'utf-8')).hooks.PreToolUse[0].hooks[0].command as string;
+    expect(command).toBe(HOOK_COMMAND_LINE);
+    expect(command).not.toMatch(/\/(home|Users)\//);
   });
 });
 
