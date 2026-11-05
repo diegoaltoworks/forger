@@ -3,10 +3,6 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "bun test --coverage --coverage-reporter=lcov",
-    "typecheck": "tsc --noEmit"
-  },
-  "devDependencies": {
-    "@types/bun": "latest"
+    "test": "bun test --coverage --coverage-reporter=lcov"
   }
 }
