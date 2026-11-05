@@ -1,0 +1,7 @@
+{"type":"thread.started","thread_id":"t1"}
+{"type":"turn.started"}
+{"type":"item.completed","item":{"id":"item_1","type":"agent_message","text":"Built it.\n\nGates are green."}}
+{"type":"turn.completed","usage":{"input_tokens":1000000,"cached_input_tokens":400000,"output_tokens":100000,"reasoning_output_tokens":0}}
+{"type":"turn.started"}
+{"type":"item.completed","item":{"id":"item_2","type":"agent_message","text":"<process>complete</process>"}}
+{"type":"turn.completed","usage":{"input_tokens":1000000,"cached_input_tokens":1000000,"output_tokens":0,"reasoning_output_tokens":0}}

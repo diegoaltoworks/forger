@@ -4,6 +4,7 @@
  * inputs.
  */
 
+import type {SpendLimit} from '../ports';
 import type {StoredPlan} from '../pipeline';
 import {declinedTickets, type DeclineReason} from './decline';
 import {currentTicket, type AutomationState} from './state';
@@ -21,6 +22,8 @@ export interface StatusInputs {
   next: string | null;
   maxStallIterations: number;
   maxConsecutiveFailures: number;
+  /** Whether the engine can stop a worker for passing its budget, over the models the config can pick. */
+  spendLimit: SpendLimit;
 }
 
 export interface InFlightStatus {
@@ -35,7 +38,7 @@ export interface InFlightStatus {
 }
 
 export interface StatusReport {
-  runner: {pid: number | null; alive: boolean};
+  runner: {pid: number | null; alive: boolean; spendLimit: SpendLimit};
   status: string;
   halted: boolean;
   iteration: number;
@@ -62,7 +65,7 @@ export interface StatusReport {
 export function buildStatus(i: StatusInputs): StatusReport {
   const s = i.state;
   return {
-    runner: {pid: i.runnerPid, alive: i.runnerAlive},
+    runner: {pid: i.runnerPid, alive: i.runnerAlive, spendLimit: i.spendLimit},
     status: s.status,
     halted: i.halted || s.status === 'halted',
     iteration: s.iteration,

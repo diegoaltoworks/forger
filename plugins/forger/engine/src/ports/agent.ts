@@ -38,7 +38,18 @@ export interface AgentRunOptions {
   abort?: AbortSignal;
 }
 
+/**
+ * Whether the engine can stop a worker for passing its budget: `harness` when the harness caps it
+ * itself, `engine` when the engine reads the reported spend, `none` when neither can, `partial` when
+ * only some of the models asked about are covered.
+ */
+export type SpendLimit = 'harness' | 'engine' | 'none' | 'partial';
+
 /** Runs one worker iteration to completion or to its deadline. */
 export interface AgentRunner {
   run(opts: AgentRunOptions): Promise<AgentResult>;
+  /** The spend limit that holds for a run on each of `models`; absent when the runner cannot say. */
+  spendLimit?(models: string[]): SpendLimit;
+  /** The harness's id, for the log line that says it has no spend limit. */
+  harnessId?: string;
 }

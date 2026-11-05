@@ -110,6 +110,10 @@ export async function runIteration(
   }
 
   const {timeoutMinutes, killGraceSeconds} = ctx.config.limits;
+  const model = resolveModel(tier.model, ctx.config.models);
+  if (ctx.agent.spendLimit?.([model]) === 'none') {
+    ctx.logger.log('WARN', `The ${ctx.agent.harnessId ?? 'harness'} harness reports no usage for ${model}: this run has no spend limit, only the ${timeoutMinutes} minute timeout`);
+  }
   const base = ctx.config.base_branch;
   // With workers side by side another worker's merge moves base too, so only
   // the PR's own state can say this run merged.
@@ -125,7 +129,7 @@ export async function runIteration(
     prompt,
     sessionId,
     tier,
-    model: resolveModel(tier.model, ctx.config.models),
+    model,
     workerCommand: ctx.config.worker_command,
     cwd: root,
     env: workerEnv(attemptedTask, iteration, ctx.pluginRoot),

@@ -1,12 +1,16 @@
 /**
  * The OpenCode harness: `opencode run` headless, with commands installed as
  * markdown files in the project's `.opencode/commands/`. OpenCode takes the
- * prompt as an argument, has no spend cap, and names a model `provider/model`,
+ * prompt as an argument, has no spend cap flag, and names a model `provider/model`,
  * so a project using it maps the roles under `models` to such ids.
+ *
+ * Usage: `run --format json` prints raw JSON events (https://opencode.ai/docs/cli/), and the
+ * step-finish part of OpenCode's message schema carries `cost` in USD (the SDK's `StepFinishPart`).
  */
 
 import type {Harness} from '../ports';
 import {opencodeHooks} from './opencode-hooks';
+import {opencodeSpentUsd, opencodeText} from './usage';
 
 /** A command name OpenCode accepts: the worker command's colon becomes a hyphen. */
 export function opencodeCommandName(name: string): string {
@@ -23,10 +27,13 @@ export function stripClaudeFrontmatter(source: string): string {
 
 export const opencodeHarness: Harness = {
   id: 'opencode',
+  usage: 'cost',
+  spentUsd: opencodeSpentUsd,
+  plainText: opencodeText,
   spawn({prompt, model, workerCommand, sessionId}) {
     return {
       command: 'opencode',
-      args: ['run', '--auto', '--model', model, '--command', opencodeCommandName(workerCommand), '--title', `forger-${sessionId.slice(0, 8)}`, prompt],
+      args: ['run', '--format', 'json', '--auto', '--model', model, '--command', opencodeCommandName(workerCommand), '--title', `forger-${sessionId.slice(0, 8)}`, prompt],
     };
   },
   commandPath: name => `.opencode/commands/forger-${name}.md`,

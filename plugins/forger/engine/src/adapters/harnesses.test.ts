@@ -29,7 +29,7 @@ describe('spawn', () => {
   test('opencode runs the worker command with the prompt as its argument', () => {
     expect(opencodeHarness.spawn({...opts, model: 'anthropic/sonnet'})).toEqual({
       command: 'opencode',
-      args: ['run', '--auto', '--model', 'anthropic/sonnet', '--command', 'forger-auto-ticket', '--title', 'forger-01234567', 'do the ticket'],
+      args: ['run', '--format', 'json', '--auto', '--model', 'anthropic/sonnet', '--command', 'forger-auto-ticket', '--title', 'forger-01234567', 'do the ticket'],
     });
   });
 });
@@ -60,7 +60,7 @@ describe('skill harnesses', () => {
   test('codex execs with the prompt on stdin, after the worker skill mention', () => {
     expect(codexHarness.spawn({...opts, model: 'gpt-5'})).toEqual({
       command: 'codex',
-      args: ['exec', '--dangerously-bypass-approvals-and-sandbox', '--model', 'gpt-5'],
+      args: ['exec', '--json', '--dangerously-bypass-approvals-and-sandbox', '--model', 'gpt-5'],
       input: '$forger-auto-ticket\n\ndo the ticket',
     });
   });
@@ -114,6 +114,7 @@ describe('the run budget', () => {
   const fake = (reports: boolean) => ({
     ...claudeHarness,
     id: 'fake',
+    usage: reports ? ('cost' as const) : ('none' as const),
     spawn: () => ({command: 'bash', args: ['-c', 'echo "cost: 1.00"; sleep 0.2; echo "cost: 30.00"; sleep 30']}),
     ...(reports ? {spentUsd: (out: string) => { const m = [...out.matchAll(/cost: ([\d.]+)/g)].pop(); return m ? Number(m[1]) : null; }} : {}),
   });

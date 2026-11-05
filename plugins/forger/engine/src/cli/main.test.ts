@@ -45,7 +45,7 @@ describe('status --json', () => {
   test('reports the runner, halt, counters, current ticket and next pick', async () => {
     process.chdir(projectWith({a: {status: 'not_started', priority: 'P0'}}));
     const out = JSON.parse(await capture(['status', '--json']));
-    expect(out.runner).toEqual({pid: null, alive: false});
+    expect(out.runner).toEqual({pid: null, alive: false, spendLimit: 'harness'});
     expect(out.halted).toBe(false);
     expect(out.next_pick).toBe('a');
     expect(out.current_ticket).toBeNull();

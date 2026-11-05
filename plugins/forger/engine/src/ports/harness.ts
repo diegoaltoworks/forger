@@ -6,6 +6,8 @@
  * table-tested without spawning anything.
  */
 
+import type {ModelPrice} from '../config';
+
 import type {AgentRunOptions} from './agent';
 
 export interface SpawnSpec {
@@ -18,10 +20,18 @@ export interface SpawnSpec {
 export interface Harness {
   id: string;
   /**
-   * The spend, in USD, the harness's own output reports so far, or null when it states none.
-   * Absent for a harness that reports no usage: its worker runs under the timeout alone.
+   * What the harness's headless output reports of usage: `cap` when the harness enforces the budget
+   * itself, `cost` when the output states USD, `tokens` when it states token counts only (the cost then
+   * needs a price from the config), `none` when it states nothing and the worker runs under the timeout alone.
    */
-  spentUsd?(output: string): number | null;
+  usage: 'cap' | 'cost' | 'tokens' | 'none';
+  /**
+   * The spend, in USD, the harness's own output reports so far, or null when it states none.
+   * A `tokens` harness prices the counts with `price`, and states none without one.
+   */
+  spentUsd?(output: string, price?: ModelPrice): number | null;
+  /** The worker's own words, decoded from a structured output stream, when the harness prints one. */
+  plainText?(output: string): string;
   /** How the worker is started headless for one iteration. */
   spawn(opts: AgentRunOptions): SpawnSpec;
   /**

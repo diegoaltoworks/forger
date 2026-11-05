@@ -1,0 +1,6 @@
+{"type":"step_start","timestamp":1,"sessionID":"ses_1","part":{"type":"step-start"}}
+{"type":"text","timestamp":2,"sessionID":"ses_1","part":{"type":"text","text":"Built it.\n\nGates are green."}}
+{"type":"step_finish","timestamp":3,"sessionID":"ses_1","part":{"type":"step-finish","cost":0.0125,"tokens":{"input":1200,"output":85,"reasoning":0,"cache":{"read":1024,"write":0}}}}
+{"type":"step_start","timestamp":4,"sessionID":"ses_1","part":{"type":"step-start"}}
+{"type":"text","timestamp":5,"sessionID":"ses_1","part":{"type":"text","text":"<process>complete</process>"}}
+{"type":"step_finish","timestamp":6,"sessionID":"ses_1","part":{"type":"step-finish","cost":0.0075,"tokens":{"input":1500,"output":20,"reasoning":0,"cache":{"read":1200,"write":0}}}}

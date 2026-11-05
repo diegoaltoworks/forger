@@ -18,6 +18,7 @@ function status(over: {alive?: boolean; pid?: number | null; halted?: boolean; r
     next: 'next-one',
     maxStallIterations: 5,
     maxConsecutiveFailures: 3,
+    spendLimit: 'none' as const,
   });
 }
 

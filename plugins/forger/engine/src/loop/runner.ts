@@ -9,7 +9,7 @@
 import {existsSync, mkdirSync, readdirSync, readFileSync} from 'fs';
 import {join} from 'path';
 
-import {forgerPath, type WorkloopConfig} from '../config';
+import {forgerPath, resolveModel, type WorkloopConfig} from '../config';
 import {describeBlocked, pick, schedule, startDecision, type Backlog, type FolderMap, type Schedulable} from '../backlog';
 import {capturing, type AgentRunner, type CapturingRunner, type CommandRunner, type StateStore} from '../ports';
 import {type AutomationState, currentTicket, LoopStore} from './state';
@@ -648,7 +648,13 @@ export class AutomationRunner {
       next: this.getNextTaskName(),
       maxStallIterations: this.config.limits.maxStallIterations,
       maxConsecutiveFailures: this.config.limits.maxConsecutiveFailures,
+      spendLimit: this.agent.spendLimit?.(this.modelsInPlay()) ?? 'none',
     });
+  }
+
+  private modelsInPlay(): string[] {
+    const tiers = [...Object.values(this.config.model_by_priority), ...(this.config.verifier ? [this.config.verifier] : [])];
+    return [...new Set(tiers.map(t => resolveModel(t.model, this.config.models)))];
   }
 
   showStatus(): void {

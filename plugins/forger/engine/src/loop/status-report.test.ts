@@ -27,9 +27,10 @@ describe('buildStatus', () => {
         next: 'b',
         maxStallIterations: 5,
         maxConsecutiveFailures: 3,
+        spendLimit: 'none' as const,
       })
     ).toEqual({
-      runner: {pid: 77, alive: true},
+      runner: {pid: 77, alive: true, spendLimit: 'none'},
       status: 'running',
       halted: false,
       iteration: 3,
@@ -62,9 +63,10 @@ describe('buildStatus', () => {
       next: null,
       maxStallIterations: 5,
       maxConsecutiveFailures: 3,
+      spendLimit: 'none' as const,
     };
     const r = buildStatus({...base, state: defaultState(), halted: true});
-    expect(r.runner).toEqual({pid: 5, alive: false});
+    expect(r.runner).toEqual({pid: 5, alive: false, spendLimit: 'none'});
     expect(r.halted).toBe(true);
     expect(buildStatus({...base, state: {...defaultState(), status: 'halted'}, halted: false}).halted).toBe(true);
   });
@@ -80,6 +82,7 @@ describe('buildStatus', () => {
       next: null,
       maxStallIterations: 5,
       maxConsecutiveFailures: 3,
+      spendLimit: 'none' as const,
     };
     const run = (ticket: string, pid: number | null) => ({ticket, pid, session_id: `s-${ticket}`, snapshot: null, started_at: 't'});
 
