@@ -21,3 +21,4 @@
 {"event":"halted","at":"2026-11-05T08:05:15.856Z","iteration":137,"ticket":null,"reason":"forger/verify cannot run (disk quota error `EDQUOT`, no verdict from the verifier); PR #267 is green locally and ready to verify and merge once space is freed"}
 {"event":"halt_cleared","at":"2026-11-05T08:22:26.259Z","iteration":137,"ticket":null,"reason":"forger/verify cannot run (disk quota error `EDQUOT`, no verdict from the verifier); PR #267 is green locally and ready to verify and merge once space is freed"}
 {"event":"lease_takeover","at":"2026-11-05T08:22:46.183Z","iteration":137,"ticket":null,"reason":"took over the lease from Diego-X1:3379849:e83a6f07 on Diego-X1"}
+{"event":"picked","at":"2026-11-05T08:23:04.913Z","iteration":138,"ticket":"issue-268","reason":null}
