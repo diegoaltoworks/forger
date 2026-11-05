@@ -14,3 +14,4 @@
 {"event":"picked","at":"2026-11-05T01:26:03.128Z","iteration":133,"ticket":"issue-207","reason":null}
 {"event":"picked","at":"2026-11-05T01:34:07.682Z","iteration":134,"ticket":"issue-235","reason":null}
 {"event":"blocked_on_owner","at":"2026-11-05T01:36:54.975Z","iteration":134,"ticket":null,"reason":"issue-209 blocked by issue-208 (closed); issue-210 blocked by issue-208 (closed)"}
+{"event":"blocked_on_owner","at":"2026-11-05T06:47:03.779Z","iteration":134,"ticket":null,"reason":"issue-209 blocked by issue-208 (closed); issue-210 blocked by issue-208 (closed)"}
