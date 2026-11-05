@@ -1,6 +1,6 @@
 {
   "iteration": 148,
-  "status": "halted",
+  "status": "ready",
   "last_completed_at": "2026-11-05T21:16:30.018Z",
   "completed_iterations": 133,
   "failed_iterations": 7,
@@ -140,7 +140,7 @@
   ],
   "in_flight": [],
   "last_error": "acceptance criteria 1 and 2 (grep counts of 2 and 1) conflict with the generated catalogue index that `check docs` requires, so PR #291 cannot pass verify. The owner must restate those counts.",
-  "stall_count": 1,
+  "stall_count": 0,
   "declined_tasks": [
     {
       "ticket": "issue-81",
