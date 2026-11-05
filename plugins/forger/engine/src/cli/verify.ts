@@ -3,7 +3,7 @@ import {randomUUID} from 'crypto';
 
 import {agentFor, findHarness, slcrProvider} from '../adapters';
 import {resolveModel} from '../config';
-import {setupCommand, verdictsHome, verifierTier, verifyPr, type VerifyResult} from '../loop';
+import {loopRootOf, setupCommand, verdictsHome, verifierTier, verifyPr, type VerifyResult} from '../loop';
 import type {Command, CommandContext} from './command';
 
 /** Verifies one PR's head with the project's verifier; shared by `verify` and `recover`. */
@@ -15,6 +15,7 @@ export function verifyOne(ctx: CommandContext, pr: number): Promise<VerifyResult
     trackerKind: config.tracker.kind,
     backlogFile: join(projectRoot, config.paths.backlog),
     verdictsDir: verdictsHome(ctx.run(), projectRoot, config.paths.verdicts),
+    tmpDir: join(loopRootOf(ctx.run(), projectRoot), config.paths.tmp),
     tier,
     setup: setupCommand(config.verify.setup, config.gates),
     model: resolveModel(tier.model, config.models),

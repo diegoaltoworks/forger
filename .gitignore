@@ -11,3 +11,4 @@ node_modules/
 .forger-denylist
 coverage/
 .forger/verdicts/
+.forger/tmp/

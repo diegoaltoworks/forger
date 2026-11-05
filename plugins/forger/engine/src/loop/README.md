@@ -30,6 +30,7 @@ Pure:
 - `verify-input.ts` - what the verifier is given (criteria, diff and gate result,
   never the worker's claims), the tier it runs on, and its reply read into a
   verdict record: invalid output is recorded `cannot_tell` for every criterion.
+- `scratch.ts` - the disposable checkout folders of `verify` and `critique`, under `paths.tmp` and never the system temp folder, and an out-of-space failure (`ENOSPC`, `EDQUOT`) told apart and named with the folder's free space.
 - `verdict-store.ts` - reading verdict records, and their one home: the main
   checkout's `paths.verdicts`, found through the git directory a worktree shares
   with it, so a record outlives the worktree. A merged head with no record counts

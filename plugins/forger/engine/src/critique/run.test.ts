@@ -57,6 +57,7 @@ function setup(world: World) {
     threshold: 'medium',
     visualPaths: ['src/ui/**'],
     recordsDir: join(records, 'critiques'),
+    tmpDir: join(records, 'tmp'),
     tier: {role: 'fast', budget: 1} as unknown as CritiqueOptions['tier'],
     model: 'm',
     critiqueCommand: 'forger:critique',

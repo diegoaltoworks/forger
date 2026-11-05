@@ -1,5 +1,5 @@
 import {afterEach, describe, expect, test} from 'bun:test';
-import {existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync} from 'fs';
+import {existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, realpathSync, rmSync, writeFileSync} from 'fs';
 import {tmpdir} from 'os';
 import {join} from 'path';
 
@@ -21,7 +21,9 @@ const view = JSON.stringify({number: 5, state: 'OPEN', headRefOid: 'deadbeef', h
 const issueBody = '## Acceptance\n- [ ] first\n- [ ] second\n';
 
 function fixture() {
-  const verdicts = join(tmp(), 'verdicts');
+  const root = tmp();
+  const verdicts = join(root, 'verdicts');
+  const scratch = join(root, '.forger', 'tmp');
   const calls: string[] = [];
   const run: CommandRunner = cmd => {
     calls.push(cmd);
@@ -45,6 +47,7 @@ function fixture() {
     trackerKind: 'github',
     backlogFile: '',
     verdictsDir: verdicts,
+    tmpDir: scratch,
     tier: {model: 'deep', budget: 1},
     setup: null,
     model: 'opus',
@@ -54,7 +57,7 @@ function fixture() {
     sessionId: 's',
     now: () => new Date('2026-01-01T00:00:00Z'),
   };
-  return {run, calls, prompts, cwds, agentSaying, opts, verdicts};
+  return {run, calls, prompts, cwds, agentSaying, opts, verdicts, scratch};
 }
 
 describe('verifyPr', () => {
@@ -87,6 +90,72 @@ describe('verifyPr', () => {
     expect(f.calls[add]).toContain(f.cwds[0]);
     expect(f.calls.some(c => c.startsWith('chmod'))).toBe(false);
     expect(f.calls.some(c => c.startsWith('git worktree remove --force'))).toBe(true);
+  });
+
+  test('verify checks out under the state directory and removes it', async () => {
+    const f = fixture();
+    let during = false;
+    const agent: AgentRunner = {
+      async run(o) {
+        during = existsSync(o.cwd);
+        return f.agentSaying('x').run(o);
+      },
+    };
+    await verifyPr(f.run, agent, f.opts);
+    expect(f.cwds[0].startsWith(f.scratch + '/')).toBe(true);
+    expect(during).toBe(true);
+    expect(existsSync(f.cwds[0])).toBe(false);
+    expect(readdirSync(f.scratch)).toEqual([]);
+  });
+
+  test('the checkout folder is removed even when git cannot remove the worktree', async () => {
+    const f = fixture();
+    const run: CommandRunner = cmd => {
+      if (cmd.startsWith('git worktree remove')) throw new Error('not a working tree');
+      return f.run(cmd);
+    };
+    await verifyPr(run, f.agentSaying('x'), f.opts);
+    expect(readdirSync(f.scratch)).toEqual([]);
+    expect(f.calls).toContain('git worktree prune');
+  });
+
+  test('a verify that runs out of space is an infrastructure error naming the folder', async () => {
+    const f = fixture();
+    const run: CommandRunner = cmd => {
+      if (cmd.includes('bun install')) throw Object.assign(new Error('write failed: Disk quota exceeded'), {code: 'EDQUOT'});
+      return f.run(cmd);
+    };
+    const err = await verifyPr(run, f.agentSaying('x'), {...f.opts, setup: 'bun install'}).catch(e => e);
+    expect(err).toBeInstanceOf(VerifyInfraError);
+    expect(err.message).toContain(`out of space in ${f.scratch}`);
+    expect(err.message).toMatch(/free/);
+    expect(err.message.match(/infrastructure error/g)).toHaveLength(1);
+    expect(f.prompts).toEqual([]);
+    expect(existsSync(verdictFile(f.verdicts, 5, 'deadbeef'))).toBe(false);
+    expect(readdirSync(f.scratch)).toEqual([]);
+  });
+
+  test('a checkout that cannot be made for lack of space is an infrastructure error', async () => {
+    const f = fixture();
+    const run: CommandRunner = cmd => {
+      if (cmd.startsWith('git worktree add')) throw new Error('fatal: could not create work tree dir: No space left on device');
+      return f.run(cmd);
+    };
+    const err = await verifyPr(run, f.agentSaying('x'), f.opts).catch(e => e);
+    expect(err).toBeInstanceOf(VerifyInfraError);
+    expect(err.message).toContain(f.scratch);
+    expect(readdirSync(f.scratch)).toEqual([]);
+  });
+
+  test('a failure that is not about space passes through unchanged', async () => {
+    const f = fixture();
+    const run: CommandRunner = cmd => {
+      if (cmd.startsWith('git worktree add')) throw new Error('fatal: bad object');
+      return f.run(cmd);
+    };
+    const err = await verifyPr(run, f.agentSaying('x'), f.opts).catch(e => e);
+    expect(err).not.toBeInstanceOf(VerifyInfraError);
+    expect(err.message).toBe('fatal: bad object');
   });
 
   test('the setup runs in the copy before the model starts', async () => {

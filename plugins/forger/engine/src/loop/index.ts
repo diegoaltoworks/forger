@@ -31,6 +31,7 @@ export * from './evidence-check';
 export * from './run-logged';
 export * from './verdict';
 export * from './verdict-store';
+export * from './scratch';
 export * from './verify';
 export * from './verify-input';
 export * from './verify-status';

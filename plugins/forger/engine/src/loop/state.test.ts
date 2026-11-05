@@ -1,11 +1,21 @@
-import {describe, expect, test} from 'bun:test';
+import {afterEach, describe, expect, test} from 'bun:test';
 
-import {mkdtempSync} from 'fs';
+import {mkdtempSync, rmSync} from 'fs';
 import {tmpdir} from 'os';
 import {join} from 'path';
 
 import type {StateStore} from '../ports';
 import {defaultState, endRun, LoopStore, migrateState, stallUpdate, startRun, updateRun} from './state';
+
+const dirs: string[] = [];
+afterEach(() => {
+  for (const d of dirs.splice(0)) rmSync(d, {recursive: true, force: true});
+});
+function haltDir(): string {
+  const d = mkdtempSync(join(tmpdir(), 'forger-halt-'));
+  dirs.push(d);
+  return d;
+}
 
 describe('defaultState', () => {
   test('starts ready with empty history', () => {
@@ -126,7 +136,7 @@ describe('run list helpers', () => {
 
 describe('LoopStore with a tracker halt', () => {
   function setup(label: boolean) {
-    const dir = mkdtempSync(join(tmpdir(), 'halt-'));
+    const dir = haltDir();
     const calls: string[] = [];
     let on = label;
     const tracker = {
@@ -173,7 +183,7 @@ describe('LoopStore with a tracker halt', () => {
   });
 
   test('a tracker outage falls back to the local file', () => {
-    const broken = new LoopStore({readState: () => null, writeState: () => {}} as unknown as StateStore, join(mkdtempSync(join(tmpdir(), 'halt-')), 'HALT'), {
+    const broken = new LoopStore({readState: () => null, writeState: () => {}} as unknown as StateStore, join(haltDir(), 'HALT'), {
       read: () => ({label: false, reason: null}),
       set: () => {
         throw new Error('down');
