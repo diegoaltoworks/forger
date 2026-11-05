@@ -145,12 +145,37 @@ improvise them:
   worker declined, and the owner measures from `measure` (cost, rework, escaped
   defects, interventions).
 - `approval <action>`: who may do an action, from the table below.
+- `critique --pr N [--threshold high|medium|low] [--force] [--json]`: after a
+  merged change the audience sees (a ui path or a capture in the diff), run the
+  critique below. A change that is not visual, a plan with no verbatim brief and
+  a PR with no capture are skipped with the reason.
 - `recover [--json]`: the standing halt's recovery, from a table in the engine
   keyed by the halt's event kind. An `unverified` halt runs `verify` on the
   merged head: a pass resumes the loop and writes a `recovered` event (seen in
   `events` and in the report's recovered section); a block or unclear keeps the
   HALT and files a ticket for the revert, citing the verdict. Every other kind
   keeps the HALT, and the report gives the one recommended action for it.
+
+## Critique
+
+Verification checks a ticket's criteria; nothing in it asks whether the whole
+still serves the owner's brief. On creative work every ticket can pass while the
+product misses the point. After a merge whose diff changes what the audience
+sees, run `critique --pr <n>` (the `critique` stage of the pipeline, the
+`critique` slot, the `critique` output contract).
+
+A fresh-context critic that can look at images gets the verbatim brief and the
+reading of its references from the plan doc, and the captures and screenshots
+committed under `docs/screenshots/`. It scores feel, readability at a glance,
+feedback on actions and fidelity to the reference's intent, and returns
+findings ranked by severity, each tied to a capture and phrased as a proposed
+ticket. `contract --slot critique` validates the answer; a broken one is retried
+once, then dropped.
+
+Findings at or above the threshold become tickets in the project's tracker; the
+rest are reported. Filing is the supervisor's alone-and-report action
+(`file_critique_tickets`). The record is kept beside the verdicts. A critique
+never blocks a merge and sets no status: it feeds the backlog.
 
 ## Read-only on the loop's checkout
 
@@ -175,6 +200,7 @@ it, and an action it does not list needs the owner.
 | Stop an engine that is about to build on a wrong base | yes, report at once | |
 | Open a PR for a worker's pushed, gated branch | yes, report it | |
 | Resume after a known-recovery halt whose check passes | yes, report it | |
+| File the tickets a critique raises above its threshold | yes, report them | |
 | Clear any other HALT, reset counters | | yes |
 | Close issues, delete branches with unmerged work | | yes |
 | Touch production data or secrets | | yes |

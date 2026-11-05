@@ -30,10 +30,12 @@ describe('contractSuffix', () => {
       'When you finish, write your result to r/verify.json as JSON in this shape: [{"criterion":"c1","verdict":"met|not_met|cannot_tell","evidence":[{"kind":"file|command|test|check","ref":"text"}]}]. Judge every criterion of the ticket once. A met or not_met criterion carries evidence that resolves.',
     retro_proposals:
       'When you finish, write your result to r/retro.json as JSON in this shape: [{"lesson":"text","rung":"check|test|tool|doc","target":"path"}]. Each proposal names a rung of the refinement ladder and a target path.',
+    critique:
+      'When you finish, write your result to r/critique.json as JSON in this shape: {"dimensions":[{"name":"feel|readability|feedback|fidelity","score":3,"reason":"text"}],"findings":[{"severity":"high|medium|low","dimension":"feel","title":"one line","body":"a proposed ticket: the change and why it serves the brief","evidence":"docs/screenshots/name.png"}]}. Score each of the four dimensions once, from 1 to 5, with the reason. List findings most severe first; each cites an existing capture or screenshot and is phrased as a proposed ticket. Judge against the verbatim brief, not against taste; an empty findings list is a valid answer.',
   };
   const slotOf: Record<string, string> = {
     decisions: 'interview', glossary_entries: 'glossary', wireframe: 'design', concepts: 'prototype', tests_written: 'test_first', diagnosis: 'diagnose',
-    review_findings: 'review', risk_report: 'risk', pr_body: 'pr_body', rebase_clean: 'merge_conflicts', verdict: 'verify', retro_proposals: 'retro',
+    review_findings: 'review', risk_report: 'risk', pr_body: 'pr_body', rebase_clean: 'merge_conflicts', verdict: 'verify', retro_proposals: 'retro', critique: 'critique',
   };
 
   test.each(CONTRACT_NAMES)('%s', name => {

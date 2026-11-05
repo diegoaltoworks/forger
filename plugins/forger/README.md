@@ -124,6 +124,7 @@ judgement work are named **skill slots**, and each has a built-in forger step:
 | `merge_conflicts` | `auto-ticket` | resolve by hand, re-run the gates |
 | `risk` | `auto-ticket` | list what the change touches beyond the diff, run the tests for it (input to the worker, never a verdict) |
 | `pr_body` | `auto-ticket` | write the PR body by `docs/03-tickets.md`; `pr-body` keeps `Closes #<n>` and the review sections |
+| `critique` | `critique` | after a merged change the audience sees: score the captures against the verbatim brief on feel, readability, feedback and fidelity, and rank findings as proposed tickets; those above a threshold are filed, none blocks a merge |
 | `retro` | `retro` | the retro steps as written |
 
 `test_first`, `review` and `diagnose` ship as full skills under

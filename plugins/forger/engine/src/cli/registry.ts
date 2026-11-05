@@ -32,6 +32,7 @@ import {orient, report} from './supervisor';
 import {linkBlockersCommand} from './link-blockers';
 import {recover} from './recover';
 import {verify} from './verify';
+import {critique} from './critique';
 import {rebase, worktree} from './worktree';
 
 export const COMMANDS: Command[] = [
@@ -56,6 +57,7 @@ export const COMMANDS: Command[] = [
   facts,
   merge,
   verify,
+  critique,
   runLogged,
   decline,
   prBody,

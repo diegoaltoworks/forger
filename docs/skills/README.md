@@ -40,7 +40,8 @@ flowchart LR
     K --> PR[pr: pr_body, merge_conflicts on conflict]
     PR --> V[verify]
     V --> M[merge]
-    M --> T[retro: retro]
+    M --> C[critique: critique on visual changes]
+    C --> T[retro: retro]
 ```
 
 Every slot hands its result through an output contract, and a gate checks it
@@ -65,6 +66,7 @@ An empty cell means the collection has no genuine fit and forger's own step runs
 | risk | risk | `doubt-driven-development`, `security-and-hardening` | - | `blast-radius` (file) |
 | pr | pr_body | - | `pr` | - |
 | pr | merge_conflicts | - | - | - |
+| critique | critique | - | - | - |
 | retro | retro | - | `retro` (file) | `reflect` (file) |
 
 A skill that refuses model invocation, or that a human invokes by name, runs as a

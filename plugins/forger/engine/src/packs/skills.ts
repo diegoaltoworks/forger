@@ -33,6 +33,7 @@ export const SLOTS: readonly SlotDefinition[] = [
   {slot: 'merge_conflicts', usedBy: 'auto-ticket', builtin: 'Resolve the conflict by hand and re-run the gates'},
   {slot: 'risk', usedBy: 'auto-ticket', output: 'risk_report', builtin: 'List what the change touches beyond the diff and run the tests for it'},
   {slot: 'pr_body', usedBy: 'auto-ticket', output: 'pr_body', builtin: 'Write the PR body by docs/03-tickets.md'},
+  {slot: 'critique', usedBy: 'critique', output: 'critique', builtinFile: 'skills/critique/SKILL.md', builtin: 'Score the captures against the verbatim brief on feel, readability, feedback and fidelity; rank findings as proposed tickets'},
   {slot: 'retro', usedBy: 'retro', output: 'retro_proposals', builtin: 'Walk the retro steps: capture, cause, form, write, land'},
 ];
 

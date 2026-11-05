@@ -13,6 +13,7 @@ real `CommandRunner` and agent spawn from `adapters/` are handed to the core.
 - `command.ts`, `flags.ts` - the command shape, the stages and the flag table.
   Pure.
 - `pipeline.ts` - `pipeline --json`: reads the ticket's labels and knock-on through `gh`, hands them to `pipeline/`.
+- `critique.ts` - `critique --pr`: wires the PR, the tracker (`gh issue create`) and the agent into `critique/`.
 - `contract.ts` - `contract --slot`: gathers the diff, the ticket's criteria and the gates command, hands them to the validators in `pipeline/`, and records the attempt.
 - `intent.ts` - `intent --request`: reads the repo's manifest dependencies and prints the `intent/` classification.
 - One file per command group (`loop.ts`, `check.ts`, `setup.ts`, `facts.ts`,

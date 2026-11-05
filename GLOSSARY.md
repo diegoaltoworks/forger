@@ -48,6 +48,9 @@ A work the owner names as a touchstone ("think <X>", "in the style of"). It is r
 **Prototype**:
 A throwaway single-file concept built before tickets on creative work, so the owner reacts to something real. Two or three are built, differing on the axis the brief leaves open; the chosen one is archived under `docs/progress/` as the reference and is never merged into the product source.
 
+**Critique**:
+A fresh-context look at a visual change against the owner's verbatim brief, after the ticket's own criteria have passed. It scores named dimensions and ranks findings phrased as proposed tickets; findings above a threshold are filed, and a critique never blocks a merge.
+
 **Skill slot**:
 A named point where a model does judgement work, with a built-in forger step that an installed skill can replace through the `skills` section of the config.
 _Avoid_: hook (when meaning a skill slot), plugin point

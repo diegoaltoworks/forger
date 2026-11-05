@@ -84,6 +84,7 @@ Every slot has a contract: the shape of the result the next stage consumes, and 
 | pr_body | `pr_body` | markdown | `contract --slot pr_body`: keeps `Closes #<n>` and the ticket's review sections (`docs/03-tickets.md`) |
 | merge_conflicts | `rebase_clean` | the `rebase --json` result | `rebase --json` reports `clean`, then the gates |
 | verify | `verdict` | the verdict record (ADR 0010) | `verify --json` through `loop/verdict.ts` (exists) |
+| critique | `critique` | `{dimensions: [{name, score, reason}], findings: [{severity, dimension, title, body, evidence}]}`: the four dimensions feel, readability, feedback and fidelity once each, scored 1 to 5; findings most severe first, each citing an existing image or video | `contract --slot critique`: the dimensions are complete and scored, findings are ordered, each evidence path exists. Runs in the `critique` stage after a merge; never blocks it |
 | retro | `retro_proposals` | `[{lesson, rung: check, test, tool or doc, target}]` | `contract --slot retro`: each proposal names a rung of the refinement ladder (`docs/05-refining-the-process.md`) and a target path |
 
 **When a result fails its contract.** A pure policy, `onContractFailure(attempt, slot)`, decides; the command only acts on it:

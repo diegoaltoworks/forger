@@ -74,6 +74,11 @@ anomaly); `work report --json` gives the rest. A ticket marked completed with
 nothing merged is not done. A worker that timed out after pushing has made
 progress.
 
+After a merge, run `work critique --pr <n>` for the merged PR. It skips by
+itself unless the diff changes what the audience sees, and files the findings
+above its threshold as tickets (an alone-and-report action); mention the filed
+and reported findings in the report. It never blocks the loop.
+
 ## 4. Approval policy
 
 Ask `work approval <action>`; it prints `alone`, `alone_and_report`, `owner` or
@@ -84,7 +89,8 @@ Alone: file, label and order tickets; add them to the backlog by PR and merge
 it when checks pass; start the engine and attach a watcher; record notes and
 process rules by PR; open a PR for a worker's pushed, gated branch (report it);
 stop an engine about to build on a wrong base (report at once); resume after a
-known-recovery halt whose check passed, through `recover` (report it).
+known-recovery halt whose check passed, through `recover` (report it); file the
+tickets a critique raises (report them).
 
 Owner's word: clear any other HALT or reset counters; close issues or delete branches
 with unmerged work; touch production data or secrets; publish outside the

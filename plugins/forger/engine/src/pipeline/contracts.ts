@@ -17,7 +17,8 @@ export type ContractName =
   | 'pr_body'
   | 'rebase_clean'
   | 'verdict'
-  | 'retro_proposals';
+  | 'retro_proposals'
+  | 'critique';
 
 /** The contract each built-in slot leaves. A slot an overlay adds names its own contract in the definition. */
 export const CONTRACT_FOR_SLOT: Readonly<Record<string, ContractName>> = {
@@ -33,6 +34,7 @@ export const CONTRACT_FOR_SLOT: Readonly<Record<string, ContractName>> = {
   merge_conflicts: 'rebase_clean',
   verify: 'verdict',
   retro: 'retro_proposals',
+  critique: 'critique',
 };
 
 export const CONTRACT_NAMES = [...new Set(Object.values(CONTRACT_FOR_SLOT))] as ContractName[];
@@ -232,6 +234,47 @@ function retroProposals(value: unknown): string[] {
   return problems;
 }
 
+/** The dimensions a critique scores, in the order they are reported. */
+export const CRITIQUE_DIMENSIONS = ['feel', 'readability', 'feedback', 'fidelity'] as const;
+/** Finding severities, most severe first; a critique lists its findings in this order. */
+export const CRITIQUE_SEVERITIES = ['high', 'medium', 'low'] as const;
+export const CRITIQUE_SCORE_MAX = 5;
+const CAPTURE_FILE = /\.(png|jpe?g|gif|webp|webm|mp4)$/i;
+
+function critique(value: unknown, f: ContractFacts): string[] {
+  if (!isObj(value)) return ['critique must be an object with dimensions and findings'];
+  const problems: string[] = [];
+  const dims = entries(value.dimensions, 'critique.dimensions', problems);
+  const seen = new Set<string>();
+  dims?.forEach((d, i) => {
+    const at = `critique.dimensions[${i}]`;
+    const name = d.name as (typeof CRITIQUE_DIMENSIONS)[number];
+    if (!CRITIQUE_DIMENSIONS.includes(name)) problems.push(`${at} name must be one of ${CRITIQUE_DIMENSIONS.join(', ')}`);
+    else if (seen.has(name)) problems.push(`${at} repeats the dimension ${name}`);
+    else seen.add(name);
+    if (!int(d.score) || d.score < 1 || d.score > CRITIQUE_SCORE_MAX) problems.push(`${at} score must be a whole number from 1 to ${CRITIQUE_SCORE_MAX}`);
+    if (!text(d.reason)) problems.push(`${at} has no reason`);
+  });
+  if (dims) for (const name of CRITIQUE_DIMENSIONS) if (!seen.has(name)) problems.push(`critique.dimensions has no ${name} dimension`);
+  const findings = entries(value.findings, 'critique.findings', problems);
+  let rank = 0;
+  findings?.forEach((e, i) => {
+    const at = `critique.findings[${i}]`;
+    const sev = CRITIQUE_SEVERITIES.indexOf(e.severity as (typeof CRITIQUE_SEVERITIES)[number]);
+    if (sev === -1) problems.push(`${at} severity must be one of ${CRITIQUE_SEVERITIES.join(', ')}`);
+    else if (sev < rank) problems.push(`${at} is out of order: list findings most severe first`);
+    else rank = sev;
+    if (!CRITIQUE_DIMENSIONS.includes(e.dimension as (typeof CRITIQUE_DIMENSIONS)[number])) problems.push(`${at} dimension must be one of ${CRITIQUE_DIMENSIONS.join(', ')}`);
+    if (!text(e.title)) problems.push(`${at} has no title`);
+    else if (/\r|\n/.test(e.title.trim())) problems.push(`${at} title must be one line`);
+    if (!text(e.body)) problems.push(`${at} has no body: phrase it as a proposed ticket`);
+    if (!text(e.evidence)) problems.push(`${at} cites no capture or screenshot`);
+    else if (!CAPTURE_FILE.test(e.evidence)) problems.push(`${at} evidence ${e.evidence} is not an image or video`);
+    else if (!f.fileExists(e.evidence)) problems.push(`${at} evidence ${e.evidence} does not exist`);
+  });
+  return problems;
+}
+
 /** The contracts forger validates itself, as pure functions. The others are validated by the loop's validators. */
 export const VALIDATORS: Partial<Record<ContractName, (value: unknown, facts: ContractFacts) => string[]>> = {
   decisions: v => decisions(v),
@@ -243,6 +286,7 @@ export const VALIDATORS: Partial<Record<ContractName, (value: unknown, facts: Co
   review_findings: reviewFindings,
   risk_report: v => riskReport(v),
   retro_proposals: v => retroProposals(v),
+  critique,
 };
 
 export interface ContractResult {
