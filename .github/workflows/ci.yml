@@ -33,3 +33,17 @@ jobs:
       - name: Job summary
         if: always()
         run: bun plugins/forger/bin/work.ts check --summary >> "$GITHUB_STEP_SUMMARY" || true
+
+  # Setup bugs fail here, not on a new repository. A fixture is a directory under
+  # test/fixtures/projects/; the job needs no change to cover a new one.
+  setup-fixtures:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.14
+      - name: Assertions
+        run: bun test test/fixtures/assertions.test.ts
+      - name: Setup on each fixture
+        run: bun test/fixtures/run.integration.ts
