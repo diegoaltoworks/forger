@@ -144,7 +144,10 @@
       "ticket": "issue-297",
       "pid": null,
       "session_id": "f7438175-d408-445f-9eb0-7a7f808fc027",
-      "snapshot": null,
+      "snapshot": {
+        "baseSha": "",
+        "reflogLength": 1
+      },
       "started_at": "2026-11-06T04:29:35.160Z",
       "plan": {
         "stages": [
