@@ -7,7 +7,7 @@ ARG HARNESS_PACKAGE=@anthropic-ai/claude-code
 ARG FORGER_VERSION=main
 
 RUN apt-get update \
- && apt-get install -y --no-install-recommends ca-certificates curl git gh nodejs npm python3 python3-pip pipx \
+ && apt-get install -y --no-install-recommends ca-certificates curl git gh nodejs npm python3 python3-pip pipx chromium \
  && rm -rf /var/lib/apt/lists/* \
  && npm install -g "${HARNESS_PACKAGE}" \
  && pipx install uv || true

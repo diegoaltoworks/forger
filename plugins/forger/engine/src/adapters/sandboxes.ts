@@ -27,7 +27,7 @@ export function sandboxSite(config: Pick<WorkloopConfig, 'base_branch' | 'harnes
 /** A backend whose output has every credential value redacted. */
 export function sandboxFor(id: string, git: CapturingRunner, site?: SandboxSite): Sandbox {
   const known = new Set<string>();
-  const names = site?.credentials ? [...site.credentials.variables, site.credentials.github.variable, 'GH_TOKEN', 'GITHUB_TOKEN'] : CREDENTIAL_VARIABLES;
+  const names = site?.credentials ? [...site.credentials.variables, site.credentials.github.variable, site.credentials.github.read_variable, 'GH_TOKEN', 'GITHUB_TOKEN'] : CREDENTIAL_VARIABLES;
   if (id === 'host') return redactingSandbox(hostSandbox(git), known, names);
   if (id === 'docker') {
     if (!site) throw new Error('The docker sandbox needs the project root, the plugin root and the base branch');

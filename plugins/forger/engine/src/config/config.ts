@@ -83,12 +83,12 @@ export interface WorkloopConfig {
   sandbox: string;
   /**
    * What a sandboxed run is given (ADR 0019). `github` names where the one repository-scoped token
-   * comes from: `env` reads the variable `variable`; `app` mints an installation token per run from the
+   * comes from: `env` reads the variable `variable` (a read-only run, the verifier's, reads `read_variable` and never the write token); `app` mints an installation token per run from the
    * GitHub App whose id and private key sit in the two named variables. `model` names, per harness id,
    * which kind of model credential to pass: an `api_key` or a `subscription` token.
    */
   credentials: {
-    github: {source: 'env' | 'app'; variable: string; app_id_variable: string; app_key_variable: string};
+    github: {source: 'env' | 'app'; variable: string; read_variable: string; app_id_variable: string; app_key_variable: string};
     model: Record<string, CredentialKind>;
   };
   paths: {
@@ -196,7 +196,7 @@ export const DEFAULT_CONFIG: WorkloopConfig = {
   allow_unguarded: false,
   sandbox: 'host',
   credentials: {
-    github: {source: 'env', variable: 'GH_TOKEN', app_id_variable: 'FORGER_APP_ID', app_key_variable: 'FORGER_APP_PRIVATE_KEY'},
+    github: {source: 'env', variable: 'GH_TOKEN', read_variable: 'GH_READ_TOKEN', app_id_variable: 'FORGER_APP_ID', app_key_variable: 'FORGER_APP_PRIVATE_KEY'},
     model: {},
   },
   parallelism: 1,

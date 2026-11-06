@@ -101,18 +101,22 @@ export function dockerSandbox(git: CapturingRunner, options: DockerSandboxOption
       const ticketFromPath = spec.cwd.split('/').pop() ?? 'worker';
       const branch = head !== '' && head !== 'HEAD' ? head : ticketBranch(ticketFromPath);
       const name = containerName(ticketFromPath, nonce());
-      const input = {name, image: image.image, repoKey: repoKey(url), origin: url, baseBranch, branch, command: spec.command, args: spec.args, passthrough};
+      const input = {name, image: image.image, repoKey: repoKey(url), origin: url, baseBranch, branch, command: spec.command, args: spec.args, passthrough, ref: spec.ref};
       const remove = () => void git(`docker rm -f ${quote(name)}`);
       const run = async (): Promise<SupervisedResult> => {
         let extra = spec.env;
+        let token: string | null = null;
         if (plan) {
-          const minted = await githubToken({github: plan.github, env: hostEnv, origin: url, api: options.api ?? fetchGithubApi, nowSeconds: Math.floor((options.now ?? Date.now)() / 1000)});
+          const minted = await githubToken({github: plan.github, env: hostEnv, origin: url, api: options.api ?? fetchGithubApi, nowSeconds: Math.floor((options.now ?? Date.now)() / 1000), readOnly: spec.readOnly});
           if (!minted.ok) return {exitCode: 1, signal: null, output: minted.error, timedOut: false};
-          if (minted.token) {
-            options.secrets?.add(minted.token);
-            extra = {...spec.env, GH_TOKEN: minted.token};
+          token = minted.token;
+          if (token) {
+            options.secrets?.add(token);
+            extra = {...spec.env, GH_TOKEN: token};
           }
         }
+        // The host's own write token must not reach a read-only run through the inherited environment.
+        if (spec.readOnly) extra = {...extra, GH_TOKEN: token ?? '', GITHUB_TOKEN: token ?? ''};
         return runSupervised({...spec, command: 'docker', args: runArgs(input), env: runEnv(input, extra), abort});
       };
       const result = run().finally(remove);

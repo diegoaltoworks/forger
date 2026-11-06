@@ -51,6 +51,8 @@ export function agentFor(harness: Harness, prices: Record<string, ModelPrice>, s
         timeoutMs: opts.timeoutMinutes * 60 * 1000,
         graceMs: opts.killGraceSeconds * 1000,
         abort: opts.abort,
+        readOnly: opts.readOnly,
+        ref: opts.ref,
         spendLimitUsd: engineLimit ? opts.tier.budget : undefined,
         spentUsd: engineLimit ? (output: string) => harness.spentUsd!(output, price) : undefined,
       }).result;
