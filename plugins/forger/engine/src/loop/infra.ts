@@ -6,7 +6,7 @@
  * exit code and the output.
  */
 
-export type InfraCategory = 'authentication' | 'billing' | 'network' | 'delivery';
+export type InfraCategory = 'authentication' | 'billing' | 'network' | 'delivery' | 'limit';
 
 export type ExitClass = {kind: 'worker'} | {kind: 'infrastructure'; category: InfraCategory; reason: string};
 
@@ -14,6 +14,8 @@ interface Signature {
   category: InfraCategory;
   pattern: RegExp;
 }
+
+const LIMIT = /forger: sandbox limit exceeded \((\w+ \S+)\)/;
 
 const SIGNATURES: Signature[] = [
   {category: 'authentication', pattern: /invalid api key/i},
@@ -48,6 +50,10 @@ export function classifyExit(exitCode: number, output: string, timedOut: boolean
       category: 'delivery',
       reason: `Infrastructure error (delivery): the prompt did not reach the worker: ${inputError}`,
     };
+  }
+  const limit = LIMIT.exec(output);
+  if (limit) {
+    return {kind: 'infrastructure', category: 'limit', reason: `Infrastructure error (limit): the sandbox's ${limit[1]} limit was exceeded; raise sandbox_limits in the config, then resume`};
   }
   for (const {category, pattern} of SIGNATURES) {
     if (pattern.test(output)) {

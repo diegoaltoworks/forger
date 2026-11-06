@@ -3,7 +3,7 @@
 import type {WorkloopConfig} from '../config';
 import type {CapturingRunner, Sandbox} from '../ports';
 import {credentialPlan, type CredentialPlan} from './credentials';
-import {CREDENTIAL_VARIABLES} from './docker-plan';
+import {CREDENTIAL_VARIABLES, type ContainerLimits} from './docker-plan';
 import {dockerSandbox} from './docker-sandbox';
 import {findHarness} from './harnesses';
 import {hostSandbox} from './host-sandbox';
@@ -17,11 +17,12 @@ export interface SandboxSite {
   pluginRoot: string;
   baseBranch: string;
   credentials?: CredentialPlan;
+  limits?: ContainerLimits;
 }
 
 /** The site for the configured harness and credentials. */
-export function sandboxSite(config: Pick<WorkloopConfig, 'base_branch' | 'harness' | 'credentials'>, projectRoot: string, pluginRoot: string): SandboxSite {
-  return {projectRoot, pluginRoot, baseBranch: config.base_branch, credentials: credentialPlan(config, findHarness(config.harness))};
+export function sandboxSite(config: Pick<WorkloopConfig, 'base_branch' | 'harness' | 'credentials' | 'sandbox_limits'>, projectRoot: string, pluginRoot: string): SandboxSite {
+  return {projectRoot, pluginRoot, baseBranch: config.base_branch, credentials: credentialPlan(config, findHarness(config.harness)), limits: config.sandbox_limits};
 }
 
 /** A backend whose output has every credential value redacted. */

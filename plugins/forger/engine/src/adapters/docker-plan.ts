@@ -86,6 +86,20 @@ export function repoKey(origin: string): string {
   return slug.slice(-48) || 'repo';
 }
 
+export interface ContainerLimits {
+  memory: string;
+  cpus: number;
+  pids: number;
+  tmp: string;
+}
+
+export const DEFAULT_LIMITS: ContainerLimits = {memory: '4g', cpus: 2, pids: 512, tmp: '1g'};
+
+/** The `docker run` flags for the limits. Swap is capped with memory, so the memory limit is a real one. */
+export function limitArgs(l: ContainerLimits): string[] {
+  return ['--memory', l.memory, '--memory-swap', l.memory, '--cpus', String(l.cpus), '--pids-limit', String(l.pids), '--tmpfs', `/tmp:rw,size=${l.tmp}`];
+}
+
 export interface RunInput {
   name: string;
   image: string;
@@ -99,6 +113,7 @@ export interface RunInput {
   passthrough: string[];
   /** A ref of origin to check out detached, instead of the ticket branch. */
   ref?: string;
+  limits?: ContainerLimits;
 }
 
 const SCRIPT = [
@@ -111,17 +126,17 @@ const SCRIPT = [
   'exec "$@"',
 ].join('\n');
 
-/** The `docker run` arguments: the image, the clone, the caches, and no mount of the host. */
+/** The `docker run` arguments: the image, the limits, the clone, the caches, and no mount of the host. */
 export function runArgs(input: RunInput): string[] {
   const env = [...new Set([...input.passthrough, 'FORGER_BASE', 'FORGER_ORIGIN', 'FORGER_BRANCH', ...(input.ref ? ['FORGER_REF'] : []), ...CACHES.map(c => c.env)])];
   return [
     'run',
-    '--rm',
     '-i',
     '--name',
     input.name,
     '--security-opt',
     'no-new-privileges',
+    ...limitArgs(input.limits ?? DEFAULT_LIMITS),
     '-w',
     WORKDIR,
     ...CACHES.flatMap(c => ['--mount', `type=volume,source=${cacheVolume(input.repoKey, c.name)},target=${c.path}`]),
@@ -175,4 +190,9 @@ export function dockerCheck(result: {exitCode: number; stderr: string}): DockerC
       'on a rootless install, run `systemctl --user start docker` and point the client at its socket with `export DOCKER_HOST=unix://$XDG_RUNTIME_DIR/docker.sock`',
     ],
   };
+}
+
+/** The marker line the infrastructure classifier reads when a container hit a limit. */
+export function limitMarker(limit: 'memory', value: string): string {
+  return `forger: sandbox limit exceeded (${limit} ${value}): the container was killed for it`;
 }

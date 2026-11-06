@@ -14,7 +14,7 @@ import type {CapturingRunner, Sandbox, SupervisedResult} from '../ports';
 import {ticketBranch, worktreeWorkspace} from '../loop';
 import type {CredentialPlan} from './credentials';
 import {fetchGithubApi, githubToken, type GithubApi} from './github-token';
-import {CREDENTIAL_VARIABLES, containerName, imagePlan, repoKey, runArgs, runEnv, type DevcontainerFile, type ImagePlan} from './docker-plan';
+import {CREDENTIAL_VARIABLES, DEFAULT_LIMITS, containerName, limitMarker, type ContainerLimits, imagePlan, repoKey, runArgs, runEnv, type DevcontainerFile, type ImagePlan} from './docker-plan';
 import {runSupervised} from './supervise';
 
 export interface DockerSandboxOptions {
@@ -26,6 +26,7 @@ export interface DockerSandboxOptions {
   nonce?: () => string;
   /** Which model variables and which GitHub token source a run gets; without it the harnesses' variables pass as set. */
   credentials?: CredentialPlan;
+  limits?: ContainerLimits;
   /** Receives each token minted for a run, so the wrapper that redacts output knows it. */
   secrets?: Set<string>;
   env?: Record<string, string | undefined>;
@@ -101,8 +102,23 @@ export function dockerSandbox(git: CapturingRunner, options: DockerSandboxOption
       const ticketFromPath = spec.cwd.split('/').pop() ?? 'worker';
       const branch = head !== '' && head !== 'HEAD' ? head : ticketBranch(ticketFromPath);
       const name = containerName(ticketFromPath, nonce());
-      const input = {name, image: image.image, repoKey: repoKey(url), origin: url, baseBranch, branch, command: spec.command, args: spec.args, passthrough, ref: spec.ref};
+      const input = {name, image: image.image, repoKey: repoKey(url), origin: url, baseBranch, branch, command: spec.command, args: spec.args, passthrough, ref: spec.ref, limits: options.limits ?? DEFAULT_LIMITS};
       const remove = () => void git(`docker rm -f ${quote(name)}`);
+      const limits = options.limits ?? DEFAULT_LIMITS;
+      // The docker client's own end does not always stop the container; stop it, then remove it, and say so.
+      const settle = (done: SupervisedResult): SupervisedResult => {
+        const notes: string[] = [];
+        if (done.timedOut) {
+          const stopped = git(`docker stop -t 0 ${quote(name)}`);
+          notes.push(stopped.exitCode === 0 ? `forger: stopped container ${name} after the ${Math.round(spec.graceMs / 1000)}s grace period` : `forger: container ${name} was already gone when the grace period ended`);
+        } else if (done.exitCode !== 0) {
+          const killed = git(`docker inspect -f '{{.State.OOMKilled}}' ${quote(name)}`);
+          if (killed.exitCode === 0 && killed.stdout.trim() === 'true') notes.push(limitMarker('memory', limits.memory));
+        }
+        const removed = git(`docker rm -f ${quote(name)}`);
+        if (done.timedOut) notes.push(removed.exitCode === 0 ? `forger: removed container ${name}` : `forger: container ${name} could not be removed: ${removed.stderr}`);
+        return notes.length > 0 ? {...done, output: `${done.output}\n${notes.join('\n')}\n`} : done;
+      };
       const run = async (): Promise<SupervisedResult> => {
         let extra = spec.env;
         let token: string | null = null;
@@ -119,7 +135,10 @@ export function dockerSandbox(git: CapturingRunner, options: DockerSandboxOption
         if (spec.readOnly) extra = {...extra, GH_TOKEN: token ?? '', GITHUB_TOKEN: token ?? ''};
         return runSupervised({...spec, command: 'docker', args: runArgs(input), env: runEnv(input, extra), abort});
       };
-      const result = run().finally(remove);
+      const result = run().then(settle, e => {
+        remove();
+        throw e;
+      });
       return {
         result,
         end: () => {

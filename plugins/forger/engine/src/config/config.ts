@@ -29,6 +29,13 @@ export type CredentialKind = 'api_key' | 'subscription';
 /** A skill slot maps to an installed skill name, or to a SKILL.md the worker reads and follows. */
 export type SkillMapping = string | {file: string};
 
+export interface SandboxLimits {
+  memory: string;
+  cpus: number;
+  pids: number;
+  tmp: string;
+}
+
 export interface WorkloopConfig {
   /** Only tickets with this `repo` (or no `repo`) are worked here. null = no filter. */
   repo: string | null;
@@ -81,6 +88,11 @@ export interface WorkloopConfig {
   allow_unguarded: boolean;
   /** Where workers run: `host` (default), a worktree on this machine. */
   sandbox: string;
+  /**
+   * Per-run limits a container sandbox applies: `memory` and `tmp` take a docker size such as `4g`,
+   * `cpus` is a number of CPUs, `pids` the most processes.
+   */
+  sandbox_limits: SandboxLimits;
   /**
    * What a sandboxed run is given (ADR 0019). `github` names where the one repository-scoped token
    * comes from: `env` reads the variable `variable` (a read-only run, the verifier's, reads `read_variable` and never the write token); `app` mints an installation token per run from the
@@ -169,6 +181,7 @@ export interface WorkloopConfigInput {
   harness?: string;
   allow_unguarded?: boolean;
   sandbox?: string;
+  sandbox_limits?: Partial<SandboxLimits>;
   credentials?: {github?: Partial<WorkloopConfig['credentials']['github']>; model?: Record<string, CredentialKind>};
   parallelism?: number;
   limits?: Partial<WorkloopConfig['limits']>;
@@ -195,6 +208,7 @@ export const DEFAULT_CONFIG: WorkloopConfig = {
   harness: 'claude',
   allow_unguarded: false,
   sandbox: 'host',
+  sandbox_limits: {memory: '4g', cpus: 2, pids: 512, tmp: '1g'},
   credentials: {
     github: {source: 'env', variable: 'GH_TOKEN', read_variable: 'GH_READ_TOKEN', app_id_variable: 'FORGER_APP_ID', app_key_variable: 'FORGER_APP_PRIVATE_KEY'},
     model: {},
@@ -280,6 +294,15 @@ export function validateCredentials(c: WorkloopConfig['credentials']): void {
   }
 }
 
+const SIZE = /^[1-9][0-9]*[bkmg]?$/i;
+
+function validateSandboxLimits(l: SandboxLimits): void {
+  if (typeof l.memory !== 'string' || !SIZE.test(l.memory)) throw new Error(`sandbox_limits.memory must be a size such as "4g", got ${JSON.stringify(l.memory)}`);
+  if (typeof l.tmp !== 'string' || !SIZE.test(l.tmp)) throw new Error(`sandbox_limits.tmp must be a size such as "1g", got ${JSON.stringify(l.tmp)}`);
+  if (typeof l.cpus !== 'number' || !(l.cpus > 0)) throw new Error(`sandbox_limits.cpus must be a positive number, got ${JSON.stringify(l.cpus)}`);
+  if (!Number.isInteger(l.pids) || l.pids < 1) throw new Error(`sandbox_limits.pids must be a positive integer, got ${JSON.stringify(l.pids)}`);
+}
+
 /**
  * Merge a partial user config over a base, one level deep for each nested
  * section so a user who overrides only `limits.timeoutMinutes` keeps every
@@ -299,6 +322,8 @@ export function mergeConfig(
     model: {...base.credentials.model, ...(user.credentials?.model ?? {})},
   };
   validateCredentials(credentials);
+  const sandboxLimits = {...base.sandbox_limits, ...(user.sandbox_limits ?? {})};
+  validateSandboxLimits(sandboxLimits);
   return {
     ...base,
     ...user,
@@ -315,6 +340,7 @@ export function mergeConfig(
       ...(user.effort_multiplier ?? {}),
     },
     verify: {...base.verify, ...(user.verify ?? {})},
+    sandbox_limits: sandboxLimits,
     limits: {...base.limits, ...(user.limits ?? {})},
     paths: {...base.paths, ...(user.paths ?? {})},
     tracker: {...base.tracker, ...(user.tracker ?? {})},

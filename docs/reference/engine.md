@@ -16,7 +16,7 @@ recovery. The ticket a run is held to is the one the worker took,
 read from its branch, which the log names when it differs from the engine's
 pick.
 
-A run that exits non-zero with an authentication, billing or network error is
+A run that exits non-zero with an authentication, billing, network or sandbox-limit error is
 an infrastructure error, not a worker failure: the loop halts at once with the
 reason and the failure counter is left alone. A tracker read refused by
 GitHub's rate limit is one too, naming the limit and its reset time (from

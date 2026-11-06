@@ -3,6 +3,12 @@ import {describe, expect, test} from 'bun:test';
 import {DEFAULT_CONFIG, mergeConfig, resolveModel} from './config';
 
 describe('mergeConfig', () => {
+  test('sandbox limits merge over the defaults and reject a bad value', () => {
+    expect(mergeConfig({sandbox_limits: {memory: '8g'}}).sandbox_limits).toEqual({...DEFAULT_CONFIG.sandbox_limits, memory: '8g'});
+    expect(() => mergeConfig({sandbox_limits: {memory: 'lots'}})).toThrow('sandbox_limits.memory');
+    expect(() => mergeConfig({sandbox_limits: {cpus: 0}})).toThrow('sandbox_limits.cpus');
+  });
+
   test('empty user config yields the defaults', () => {
     expect(mergeConfig({})).toEqual(DEFAULT_CONFIG);
   });
