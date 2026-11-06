@@ -147,7 +147,10 @@
       "ticket": "issue-305",
       "pid": null,
       "session_id": "eeb74278-5d61-4558-b7af-f8e5bd4abc9e",
-      "snapshot": null,
+      "snapshot": {
+        "baseSha": "",
+        "reflogLength": 1
+      },
       "started_at": "2026-11-06T04:40:57.055Z",
       "plan": {
         "stages": [
