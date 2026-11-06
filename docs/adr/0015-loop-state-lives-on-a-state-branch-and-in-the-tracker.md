@@ -2,7 +2,7 @@
 
 Status: Proposed
 
-The engine's state sits in files in one checkout, so the loop stops when that machine sleeps and the supervisor has to read it from the same machine. The harness half of "tied to one harness and one machine" was settled by ADR 0009 (everything forger owns is under `.forger/`); this ADR is the machine half, and it is written so the CI-native mode in the roadmap needs no second move.
+The engine's state sits in files in one checkout, so the loop's state depends on one machine staying up and the supervisor has to read it from that same machine. The harness half of "tied to one harness and one machine" was settled by ADR 0009 (everything forger owns is under `.forger/`); this ADR is the machine half, and it is written so the CI-native mode in the roadmap needs no second move.
 
 ## Context
 
