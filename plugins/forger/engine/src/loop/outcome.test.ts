@@ -138,6 +138,14 @@ describe('decideOutcome', () => {
     expect(o.error).toBe(o.halt);
   });
 
+  test('a ticket whose status reads completed in the working tree with no merged PR is not counted', () => {
+    const o = decideOutcome({...nothing, claim: 'complete', backlogCompleted: true, merged: false});
+    expect(o.status).not.toBe('completed');
+    expect(o.result).toBe('failure');
+    expect(o.merged).toBe(false);
+    expect(o.halt).not.toBeNull();
+  });
+
   test('backlog divergence is reported even when the worker asked to stop', () => {
     const o = decideOutcome({...nothing, claim: 'stop', stopReason: 'x', backlogCompleted: true});
     expect(o.result).toBe('failure');
