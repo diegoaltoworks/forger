@@ -8,6 +8,7 @@ import type {AgentResult, AgentRunOptions, CommandResult} from '../ports';
 import {localStateFor} from '../adapters';
 import {mergeConfig} from '../config';
 import {AutomationRunner} from './runner';
+import type {WorkspaceSandbox} from './worktree-workspace';
 
 const dirs: string[] = [];
 afterEach(() => {
@@ -30,7 +31,7 @@ const only = (...ids: string[]): BacklogData => ({
 
 const ok = (stdout = ''): CommandResult => ({stdout, stderr: '', exitCode: 0});
 
-function setup(parallelism: number, tickets: BacklogData, agent: (o: AgentRunOptions) => Promise<AgentResult>, git: (cmd: string) => string = () => '', capture: (cmd: string) => CommandResult = () => ok()) {
+function setup(parallelism: number, tickets: BacklogData, agent: (o: AgentRunOptions) => Promise<AgentResult>, git: (cmd: string) => string = () => '', capture: (cmd: string) => CommandResult = () => ok(), sandbox?: WorkspaceSandbox) {
   const root = mkdtempSync(join(tmpdir(), 'forger-parallel-'));
   dirs.push(root);
   mkdirSync(join(root, '.forger'), {recursive: true});
@@ -57,6 +58,7 @@ function setup(parallelism: number, tickets: BacklogData, agent: (o: AgentRunOpt
       return capture(cmd);
     },
     folderMap: map,
+    sandbox,
     sleep: ms => new Promise(r => setTimeout(r, Math.min(ms, 2))),
   });
   return {runner, root, calls, captured, peak: () => peak};
@@ -78,6 +80,21 @@ describe('parallelism 1', () => {
 });
 
 describe('parallelism 2', () => {
+  test('the runner takes each worker\'s workspace from the sandbox, not from git', async () => {
+    const prepared: string[] = [];
+    const cleaned: string[] = [];
+    const fake: WorkspaceSandbox = {
+      prepare: r => (prepared.push(r.ticket), {ok: true, ticket: r.ticket, path: `/sandbox/${r.ticket}`}),
+      cleanup: r => (cleaned.push(r.ticket), null),
+    };
+    const t = setup(2, only('tk_a', 'tk_b'), slow, () => '', () => ok(), fake);
+    await t.runner.run(2);
+    expect(prepared.sort()).toEqual(['tk_a', 'tk_b']);
+    expect(cleaned.sort()).toEqual(['tk_a', 'tk_b']);
+    expect(t.calls.map(c => c.cwd).sort()).toEqual(['/sandbox/tk_a', '/sandbox/tk_b']);
+    expect(t.captured.some(c => c.includes('worktree'))).toBe(false);
+  });
+
   test('starts two compatible tickets together, each in its own worktree', async () => {
     const t = setup(2, only('tk_a', 'tk_b'), slow);
     await t.runner.run(2);

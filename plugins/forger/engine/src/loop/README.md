@@ -50,6 +50,8 @@ Pure:
 - `worktree.ts` - a worktree per ticket, and the rebase of its branch on the
   base (ADR 0011). Names are pure. Git calls go through an injected capturing
   `CommandRunner`.
+- `worktree-workspace.ts` - the workspace half of a `Sandbox` as a git worktree, which the engine uses when
+  no sandbox is given.
 - `parallel.ts` - the parts of the parallel loop that decide or compose
   (ADR 0011). It holds the git calls aimed at a worktree and the folder map
   the scheduling rule reads. It also holds the conflict check after a worker's

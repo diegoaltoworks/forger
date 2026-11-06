@@ -10,6 +10,8 @@ world, and is tested against real processes.
   output. One keeps stdout, stderr and the exit code.
 - `supervise.ts` - spawns a worker as its own process group and ends the whole
   group at the deadline.
+- `host-sandbox.ts` - the `host` `Sandbox`: a git worktree, the worker as its own process group, the timeout.
+- `sandboxes.ts` - the sandboxes by id, and `sandboxFor`, which the config's `sandbox` key picks.
 - `svg-raster.ts` - the brand `Rasteriser` over resvg; text is already outlines, so no font is loaded.
 - `static-server.ts` - the `AppServer` port over one folder served in-process, for wireframes
 - `app-server.ts` - the `AppServer` port over a shell command in its own process

@@ -77,6 +77,8 @@ export interface WorkloopConfig {
   harness: string;
   /** Run with a harness that cannot refuse a tool call (see docs/reference/adapters.md); off by default. */
   allow_unguarded: boolean;
+  /** Where workers run: `host` (default), a worktree on this machine. */
+  sandbox: string;
   paths: {
     backlog: string;
     state: string;
@@ -154,6 +156,7 @@ export interface WorkloopConfigInput {
   verify?: Partial<WorkloopConfig['verify']>;
   harness?: string;
   allow_unguarded?: boolean;
+  sandbox?: string;
   parallelism?: number;
   limits?: Partial<WorkloopConfig['limits']>;
   paths?: Partial<WorkloopConfig['paths']>;
@@ -178,6 +181,7 @@ export const DEFAULT_CONFIG: WorkloopConfig = {
   base_branch: 'main',
   harness: 'claude',
   allow_unguarded: false,
+  sandbox: 'host',
   parallelism: 1,
   /**
    * P0 is the foundation. A subtle error there is both expensive and invisible,

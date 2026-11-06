@@ -25,7 +25,7 @@ there is one model mapping and several harnesses, named here and nowhere else in
   credentials for an API key or a subscription token. See
   [ADR 0019](../adr/0019-workers-run-in-a-sandbox-behind-an-adapter.md). It is not built yet; workers run on the host.
 
-## Sandbox credentials
+## Credentials in a sandbox
 
 Proposed in [ADR 0019](../adr/0019-workers-run-in-a-sandbox-behind-an-adapter.md); not yet used by the engine. Credentials reach a sandboxed worker only as environment variables.
 
@@ -35,6 +35,23 @@ Proposed in [ADR 0019](../adr/0019-workers-run-in-a-sandbox-behind-an-adapter.md
 | `codex` | `CODEX_API_KEY` for `codex exec`, or `OPENAI_API_KEY` | Sign in with ChatGPT once with `codex login`; the cached `auth.json` is the credential. A headless run needs that file, which is a file and not a variable, so the backend writes it into the container's private home at start from a variable and removes it at end. | https://developers.openai.com/codex/auth |
 | `copilot` | none: Copilot is billed to the subscription | A fine-grained personal access token with the Copilot Requests permission, passed as `COPILOT_GITHUB_TOKEN`. | https://docs.github.com/en/copilot/how-tos/copilot-cli |
 | `opencode` | the provider's own variable, for example `ANTHROPIC_API_KEY` or `OPENAI_API_KEY` | Sign in once with `opencode auth login`; the cached `auth.json` is the credential, handled like Codex's. Which providers allow a subscription for headless use is the provider's rule. | https://opencode.ai/docs/providers/ |
+
+## Sandbox
+
+Where a worker runs and under what limits is the `Sandbox` seam ([ADR 0019](../adr/0019-workers-run-in-a-sandbox-behind-an-adapter.md)). The `Harness` decides what command runs; the sandbox decides where. The engine and the verifier start workers only through it. Set `sandbox` in the config to pick the backend (see [configuration](configuration.md)).
+
+A sandbox does four things:
+
+- **prepare** a workspace for a ticket and return its path, or say why it could not;
+- **start** the harness command in a workspace with its environment, input and limits (the timeout, its grace period and the spend limit), and return the worker's output and exit;
+- **end** a running worker and everything it started;
+- **clean up** the workspace, and the ticket's branch when asked.
+
+| Backend | What it is |
+|---|---|
+| `host` | The default. A git worktree, the worker as its own process group on this machine, and the timeout. |
+
+The `docker` and `remote` backends are proposed in the ADR and are not shipped.
 
 ## Run limits
 

@@ -2,7 +2,7 @@ import {existsSync, readFileSync} from 'fs';
 import {dirname, join} from 'path';
 import {randomUUID} from 'crypto';
 
-import {agentFor, findHarness} from '../adapters';
+import {agentFor, execCapture, findHarness, sandboxFor} from '../adapters';
 import {resolveModel, forgerPath} from '../config';
 import {critiquePr, DEFAULT_THRESHOLD, isSeverity, type CritiqueResult} from '../critique';
 import {loopRootOf, verdictsHome, verifierTier} from '../loop';
@@ -53,7 +53,7 @@ export const critique: Command = {
       const label = config.tracker.kind === 'github' ? ` --label ${quote(config.tracker.label)}` : '';
       const result = await critiquePr(
         ctx.run(),
-        ctx.deps.agent ?? agentFor(findHarness(config.harness), config.model_prices),
+        ctx.deps.agent ?? agentFor(findHarness(config.harness), config.model_prices, sandboxFor(config.sandbox, execCapture(ctx.projectRoot))),
         {fileTicket: (title, body) => ctx.run()(`gh issue create --title ${quote(title)} --body ${quote(body)}${label}`).trim()},
         {
           pr,

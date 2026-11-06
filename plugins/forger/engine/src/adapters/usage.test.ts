@@ -4,10 +4,12 @@ import {join} from 'path';
 
 import {codexHarness} from './codex';
 import {copilotHarness} from './copilot';
+import {hostSandbox} from './host-sandbox';
 import {agentFor, spendLimitOf} from './harnesses';
 import {opencodeHarness} from './opencode';
 import {claudeHarness} from './claude';
 
+const noGit = () => ({stdout: '', stderr: '', exitCode: 1});
 const sample = (name: string) => readFileSync(join(import.meta.dir, 'fixtures', name), 'utf8');
 const price = {input: 2, output: 8, cached_input: 0.5};
 
@@ -41,10 +43,10 @@ describe('which runs have a spend limit', () => {
   });
   test('a run in a harness with no usage has no spend limit', () => {
     expect(spendLimitOf(copilotHarness, 'gpt-5', {'gpt-5': price})).toBe('none');
-    expect(agentFor(copilotHarness).spendLimit!(['gpt-5'])).toBe('none');
-    expect(agentFor(copilotHarness).harnessId).toBe('copilot');
+    expect(agentFor(copilotHarness, {}, hostSandbox(noGit)).spendLimit!(['gpt-5'])).toBe('none');
+    expect(agentFor(copilotHarness, {}, hostSandbox(noGit)).harnessId).toBe('copilot');
   });
   test('models only some of which are priced are reported as partial', () => {
-    expect(agentFor(codexHarness, {a: price}).spendLimit!(['a', 'b'])).toBe('partial');
+    expect(agentFor(codexHarness, {a: price}, hostSandbox(noGit)).spendLimit!(['a', 'b'])).toBe('partial');
   });
 });

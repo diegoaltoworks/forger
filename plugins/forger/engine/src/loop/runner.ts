@@ -18,8 +18,8 @@ import {Logger, colors} from './logger';
 import {RateLimitError, rateLimitWaitMs} from './infra';
 import type {StoredPlan} from '../pipeline';
 import {type IterationContext, type Placement, closeOrphan, runIteration} from './iteration';
-import {conflictAfterAttempt, finishWorktree, folderMapFrom, inWorktree} from './parallel';
-import {createWorktree, worktreePath} from './worktree';
+import {conflictAfterAttempt, folderMapFrom, inWorktree} from './parallel';
+import {worktreeWorkspace, type WorkspaceSandbox} from './worktree-workspace';
 import {pidAlive, RunnerLock} from './lock';
 import {criterionOptions, refuseUncheckable} from './ticket-check';
 import {eventLine, terminalEvent, type EventKind, type TerminalEventKind} from './events';
@@ -41,6 +41,8 @@ export interface RunnerDeps {
   lease?: LeaseSettings;
   /** The agent spawn; a runner built without one can report and watch, but refuses to run an iteration. */
   agent?: AgentRunner;
+  /** Prepares and cleans up each worker's workspace; the git worktree when absent. */
+  sandbox?: WorkspaceSandbox;
   gitRunner: CommandRunner;
   /** Where state and events are kept. */
   stateStore: StateStore;
@@ -99,6 +101,7 @@ export class AutomationRunner {
   private outputDir: string;
   private gitRunner: CommandRunner;
   private agent: AgentRunner;
+  private sandbox: WorkspaceSandbox;
   private uuid: () => string;
   private lock: RunnerLock;
   private isAliveFn: (pid: number) => boolean;
@@ -136,6 +139,7 @@ export class AutomationRunner {
     this.leaseSettings = deps.lease;
     this.onSignal = deps.onSignal ?? ((signal, handler) => void process.on(signal, handler));
     this.exit = deps.exit ?? (code => process.exit(code));
+    this.sandbox = deps.sandbox ?? worktreeWorkspace(this.gitCapture);
     this.agent = deps.agent ?? {run: () => Promise.reject(new Error('no agent runner was given to this runner'))};
     this.uuid = deps.uuid ?? (() => crypto.randomUUID());
     this.now = deps.now ?? Date.now;
@@ -447,9 +451,9 @@ export class AutomationRunner {
   private placeWorker(ticket: string, abort: AbortSignal): Placement | string {
     const stateDir = join(this.projectRoot, this.config.paths.state, '..');
     const o = {ticket, baseBranch: this.config.base_branch, stateDir};
-    const made = createWorktree(this.gitCapture, o);
+    const made = this.sandbox.prepare(o);
     if (!made.ok) return `worktree for ${ticket}: ${made.error}`;
-    const cwd = worktreePath(stateDir, ticket);
+    const cwd = made.path;
     return {
       ticket,
       cwd,
@@ -457,7 +461,7 @@ export class AutomationRunner {
       abort,
       conflicts: () => conflictAfterAttempt(this.gitCapture, o),
       finish: conflicted => {
-        const failed = finishWorktree(this.gitCapture, o, conflicted);
+        const failed = this.sandbox.cleanup(o, conflicted);
         if (failed) this.logger.log('WARN', `Could not remove the worktree for ${ticket}: ${failed}`);
       },
     };

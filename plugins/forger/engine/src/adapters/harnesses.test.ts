@@ -4,9 +4,11 @@ import type {AgentRunOptions} from '../ports';
 import {claudeHarness} from './claude';
 import {codexHarness} from './codex';
 import {copilotHarness} from './copilot';
+import {hostSandbox} from './host-sandbox';
 import {agentFor, findHarness, HARNESSES} from './harnesses';
 import {opencodeCommandName, opencodeHarness, stripClaudeFrontmatter} from './opencode';
 
+const noGit = () => ({stdout: '', stderr: '', exitCode: 1});
 const opts: AgentRunOptions = {
   prompt: 'do the ticket',
   sessionId: '0123456789abcdef',
@@ -119,7 +121,7 @@ describe('the run budget', () => {
     ...(reports ? {spentUsd: (out: string) => { const m = [...out.matchAll(/cost: ([\d.]+)/g)].pop(); return m ? Number(m[1]) : null; }} : {}),
   });
   const run = (reports: boolean, timeoutMinutes: number) =>
-    agentFor(fake(reports)).run({...opts, cwd: process.cwd(), timeoutMinutes, killGraceSeconds: 1});
+    agentFor(fake(reports), {}, hostSandbox(noGit)).run({...opts, cwd: process.cwd(), timeoutMinutes, killGraceSeconds: 1});
 
   test('a run that passes its spend limit is stopped and logged, for a harness that reports usage', async () => {
     const r = await run(true, 1);

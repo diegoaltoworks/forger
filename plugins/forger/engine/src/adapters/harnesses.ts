@@ -4,12 +4,12 @@
  */
 
 import type {ModelPrice} from '../config';
-import type {AgentRunner, Harness, SpendLimit} from '../ports';
+import type {AgentRunner, Harness, Sandbox, SpendLimit} from '../ports';
 import {claudeHarness} from './claude';
 import {codexHarness} from './codex';
 import {copilotHarness} from './copilot';
 import {opencodeHarness} from './opencode';
-import {runSupervised} from './supervise';
+import {hostSandbox} from './host-sandbox';
 
 export const HARNESSES: Harness[] = [claudeHarness, opencodeHarness, codexHarness, copilotHarness];
 
@@ -30,7 +30,8 @@ export function spendLimitOf(harness: Harness, model: string, prices: Record<str
   return 'engine';
 }
 
-export function agentFor(harness: Harness, prices: Record<string, ModelPrice> = {}): AgentRunner {
+/** The agent a harness yields; its workers start only through `sandbox`. */
+export function agentFor(harness: Harness, prices: Record<string, ModelPrice>, sandbox: Sandbox): AgentRunner {
   return {
     harnessId: harness.id,
     spendLimit(models) {
@@ -41,7 +42,7 @@ export function agentFor(harness: Harness, prices: Record<string, ModelPrice> = 
       const spec = harness.spawn(opts);
       const engineLimit = spendLimitOf(harness, opts.model, prices) === 'engine';
       const price = Object.prototype.hasOwnProperty.call(prices, opts.model) ? prices[opts.model] : undefined;
-      const result = await runSupervised({
+      const result = await sandbox.start({
         command: spec.command,
         args: spec.args,
         cwd: opts.cwd,
@@ -52,7 +53,7 @@ export function agentFor(harness: Harness, prices: Record<string, ModelPrice> = 
         abort: opts.abort,
         spendLimitUsd: engineLimit ? opts.tier.budget : undefined,
         spentUsd: engineLimit ? (output: string) => harness.spentUsd!(output, price) : undefined,
-      });
+      }).result;
       // The claim and the stop reason are read from the worker's words, which a JSON stream escapes.
       const text = harness.plainText?.(result.output);
       return text ? {...result, output: `${result.output}\n${text}\n`} : result;
