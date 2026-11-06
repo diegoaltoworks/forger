@@ -21,10 +21,10 @@ Each prints a version or `Logged in`. A `command not found` names the tool to
 install first. Then check the harness you chose:
 
 ```
-claude --version
-opencode --version
-codex --version
-copilot --version
+claude --version    # Claude Code
+opencode --version    # OpenCode
+codex --version    # Codex
+copilot --version    # Copilot
 ```
 
 ## 📦 2. Install forger
@@ -64,9 +64,9 @@ a plugin for OpenCode, a hook file for Codex and Copilot. In Codex, trust the
 project and review the hook with `/hooks`.
 
 ```
-bun ~/forger/plugins/forger/bin/work.ts setup --harness opencode
-bun ~/forger/plugins/forger/bin/work.ts setup --harness codex
-bun ~/forger/plugins/forger/bin/work.ts setup --harness copilot
+bun ~/forger/plugins/forger/bin/work.ts setup --harness opencode    # OpenCode
+bun ~/forger/plugins/forger/bin/work.ts setup --harness codex    # Codex
+bun ~/forger/plugins/forger/bin/work.ts setup --harness copilot    # Copilot
 ```
 
 Run only the line for your harness. It prints every file as `written` or
@@ -88,15 +88,14 @@ variables per harness.
 ## 🛠️ 3. Set up the repository
 
 Open a session at the root of the repository you want the loop to work on and
-run the setup command. Claude Code names it `/forger:setup`. The other
-harnesses name it `forger-setup`: `/forger-setup` in OpenCode and Copilot,
-`$forger-setup` in Codex.
+run the setup command for your harness.
 
-```
-/forger:setup
-/forger-setup
-$forger-setup
-```
+| Harness | Command |
+|---|---|
+| Claude Code | `/forger:setup` |
+| OpenCode | `/forger-setup` |
+| Codex | `$forger-setup` |
+| Copilot | `/forger-setup` |
 
 It asks for the gates command, the base branch and the tracker, and offers
 skill flavours and opinion packs. It then prints every file under `.forger/`
@@ -114,13 +113,14 @@ worker treats the gotchas as rules.
 
 ## 📝 4. Plan the first tickets
 
-Use the line for your harness, as in step 3.
+Use the row for your harness.
 
-```
-/forger:plan
-/forger-plan
-$forger-plan
-```
+| Harness | Command |
+|---|---|
+| Claude Code | `/forger:plan` |
+| OpenCode | `/forger-plan` |
+| Codex | `$forger-plan` |
+| Copilot | `/forger-plan` |
 
 The planner reads the repository, asks you numbered questions, each with a
 recommendation, and then writes a plan doc and the tickets. On GitHub each
@@ -129,13 +129,14 @@ the tickets it created, in build order.
 
 ## 🚀 5. Start the loop
 
-Use the line for your harness, as in step 3.
+Use the row for your harness.
 
-```
-/forger:work
-/forger-work
-$forger-work
-```
+| Harness | Command |
+|---|---|
+| Claude Code | `/forger:work` |
+| OpenCode | `/forger-work` |
+| Codex | `$forger-work` |
+| Copilot | `/forger-work` |
 
 The supervisor starts one engine, or attaches to the one already running. It
 prints the engine's pid and the first ticket, then reports each event as it
@@ -159,16 +160,16 @@ and the next pick. `backlog` lists the workable tickets.
 ## 🩹 7. Recover from a halt
 
 The loop halts on trouble it cannot fix alone, such as a red merge or an
-authentication error. `the work command and `status` print the reason. Fix the
+authentication error. The work command and `status` print the reason. Fix the
 cause first: look for a pushed branch with no merged pull request. Then clear
 the halt and start again:
 
 ```
 bun <forger>/bin/work.ts resume
-/forger:work
 ```
 
-`resume` clears the halt and the failure counters.
+`resume` clears the halt and the failure counters. Then run the work command for
+your harness, from the table in [step 5](#5-start-the-loop).
 
 ## 📚 Next
 
