@@ -660,6 +660,18 @@ describe('AutomationRunner single runner', () => {
     expect(allEventsOf(root).filter(e => e.event === 'halt_cleared')).toHaveLength(1);
   });
 
+  test('a halt label removed by hand records an uncaused halt_cleared', async () => {
+    let label = false;
+    const tracker = {read: () => ({label, reason: label ? 'x' : null}), set: () => { label = true; }, clear: () => { label = false; }, writeStatus: () => {}};
+    const root = mkdtempSync(join(tmpdir(), 'forger-runner-'));
+    dirs.push(root);
+    const runner = new AutomationRunner(root, fast, backlogFrom(() => backlog, fast), {stateStore: localStateFor(root, fast), agent: {run: async () => fail}, gitRunner: () => '', haltTracker: tracker});
+    runner.halt('boom');
+    label = false;
+    await runner.run(1);
+    expect(allEventsOf(root).filter(e => e.event === 'halt_cleared')).toEqual([expect.objectContaining({cause: null, not_a_defect: null})]);
+  });
+
   test('resume with nothing halted records nothing', () => {
     const {runner, root} = runnerWith(fail);
     runner.clearHalt();

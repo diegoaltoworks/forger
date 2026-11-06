@@ -745,6 +745,65 @@ describe('supervisor commands', () => {
     }
   });
 
+  describe('resume', () => {
+    const eventsOf = (root: string) => readFileSync(join(root, '.forger', 'events.jsonl'), 'utf-8').trim().split('\n').map(l => JSON.parse(l));
+    const halted = () => {
+      const root = projectWith({a: {status: 'not_started'}});
+      writeFileSync(join(root, '.forger', 'HALT'), 'boom');
+      process.chdir(root);
+      return root;
+    };
+    async function resume(argv: string[], run?: CommandRunner): Promise<void> {
+      const err = spyOn(console, 'error').mockImplementation(() => {});
+      try {
+        await capture(['resume', ...argv], run);
+      } finally {
+        err.mockRestore();
+      }
+    }
+
+    test('resume without a cause or a not-a-defect reason exits non-zero and leaves the halt', async () => {
+      const root = halted();
+      try {
+        await resume([]);
+        expect(process.exitCode).toBe(1);
+        expect(existsSync(join(root, '.forger', 'HALT'))).toBe(true);
+        expect(existsSync(join(root, '.forger', 'events.jsonl'))).toBe(false);
+      } finally {
+        process.exitCode = 0;
+      }
+    });
+
+    test('resume with a cause records the issue in halt_cleared', async () => {
+      const root = halted();
+      await resume(['--cause', '12']);
+      expect(existsSync(join(root, '.forger', 'HALT'))).toBe(false);
+      expect(eventsOf(root)).toEqual([expect.objectContaining({event: 'halt_cleared', cause: 12, not_a_defect: null})]);
+    });
+
+    test('resume with a cause that is not an issue in the tracker is refused', async () => {
+      const root = projectWith({a: {status: 'not_started'}}, {kind: 'github'});
+      writeFileSync(join(root, '.forger', 'HALT'), 'boom');
+      process.chdir(root);
+      try {
+        await resume(['--cause', '999'], cmd => {
+          if (cmd.startsWith('gh issue view 999')) throw new Error('not found');
+          return '';
+        });
+        expect(process.exitCode).toBe(1);
+        expect(existsSync(join(root, '.forger', 'HALT'))).toBe(true);
+      } finally {
+        process.exitCode = 0;
+      }
+    });
+
+    test('resume with a not-a-defect reason records the reason in halt_cleared', async () => {
+      const root = halted();
+      await resume(['--not-a-defect', 'transient outage']);
+      expect(eventsOf(root)).toEqual([expect.objectContaining({event: 'halt_cleared', cause: null, not_a_defect: 'transient outage'})]);
+    });
+  });
+
   test('orient surfaces a halt with the reason from the HALT file', async () => {
     const root = projectWith({a: {status: 'not_started'}});
     writeFileSync(join(root, '.forger', 'HALT'), 'cut off before merge');

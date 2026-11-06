@@ -6,6 +6,7 @@ export * from './decline';
 export * from './decline-io';
 export * from './events';
 export * from './halt-label';
+export * from './halt-clear';
 export * from './halt-tracker';
 export * from './handover';
 export * from './handover-io';

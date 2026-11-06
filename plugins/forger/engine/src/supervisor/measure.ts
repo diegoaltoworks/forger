@@ -4,7 +4,7 @@
  * events and CI's run list. Pure; the CLI gathers the inputs.
  */
 
-import type {ScheduleRecord, TerminalEvent, VerdictRecord} from '../loop';
+import {formatHaltClears, haltClearCounts, type HaltClearCounts, type ScheduleRecord, type TerminalEvent, type VerdictRecord} from '../loop';
 import {formatStoredPlan, parsePlanLine, type StoredPlan} from '../pipeline';
 import {computeRework, formatRework, type ReworkInputs, type ReworkMeasures} from './rework';
 import {computeParallelMeasures, type ParallelMeasures} from './parallel-measures';
@@ -73,6 +73,8 @@ export interface Measures {
   owner_interventions: {total: number; by_event: Record<string, number>};
   /** Why the count above cannot be trusted (events missing for runs in the window); null when it can. */
   interventions_unknown: string | null;
+  /** How cleared halts were explained: with a cause, as not a defect, or with no reason (ADR 0012). */
+  halt_clears: HaltClearCounts;
   /** Rework and escaped defects over merged PRs (ADR 0013); null when the tracker could not be read. */
   change_rework: ReworkMeasures | null;
   events: Record<string, number>;
@@ -157,6 +159,8 @@ export interface MeasureInputs {
   iterations: IterationRecord[];
   budgets: BudgetRecord[];
   events: TerminalEvent[];
+  /** The `halt_cleared` events; absent reads as none. */
+  clears?: TerminalEvent[];
   ciRuns: CiRun[];
   /** Session id -> cost in dollars, null when its transcript is missing; absent reads as none known. */
   sessionCosts?: Record<string, number | null>;
@@ -313,6 +317,7 @@ export function computeMeasures(inputs: MeasureInputs): Measures {
     rework: {redone_tickets: rework.redone},
     owner_interventions: {total: Object.values(interventions).reduce((a, b) => a + b, 0), by_event: interventions},
     interventions_unknown: eventsGap(windowed, inputs.events),
+    halt_clears: haltClearCounts((inputs.clears ?? []).filter(e => first === null || e.iteration >= first)),
     change_rework: inputs.changes === undefined ? null : computeRework(inputs.changes),
     events,
     tickets: [...perTicket.values()],
@@ -342,6 +347,7 @@ export function formatMeasures(m: Measures): string {
     `verification: blocked ${pct(m.verification.blocked_share)} (${m.verification.blocked} of ${m.verification.verified}), passed then failed ${pct(m.verification.passed_then_failed_share)} (${m.verification.passed_then_failed} of ${m.verification.passed})`,
     ...formatParallel(m.parallel),
     `merged tickets: ${m.merged.tickets}, redone ${m.rework.redone_tickets}, owner interventions ${m.interventions_unknown === null ? m.owner_interventions.total : `unknown (${m.interventions_unknown})`}`,
+    ...formatHaltClears(m.halt_clears),
     ...(m.change_rework === null ? ['rework and escaped defects: unknown'] : formatRework(m.change_rework)),
     `events: ${Object.entries(m.events).map(([k, v]) => `${k} ${v}`).join(', ') || 'none'}`,
     ...(m.not_on_this_machine?.length ? [`not on this machine: ${m.not_on_this_machine.join(', ')}`] : []),

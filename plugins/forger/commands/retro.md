@@ -26,6 +26,8 @@ words, or the failure, with its date and where it was seen. Do not paraphrase.
 
 - `work check --json`: the checks' state and the waivers in force, including stale ones.
 - `work measure --json [--last N]`: runs and failures by cause, terminal events,
+  how cleared halts were explained (a not-a-defect reason that keeps coming back
+  is a ticket),
   and time, budget cap and CI rounds per ticket. Compare the ticket in question
   with the rest before blaming it.
 - For a failure, build the timeline in `.forger/templates/retro.md` from the
