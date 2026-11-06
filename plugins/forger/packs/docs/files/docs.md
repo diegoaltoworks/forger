@@ -41,14 +41,13 @@ The check catches both before a merge. Diagram parsing is structural: the
 diagram type is known, flowchart brackets and quotes balance, arrows have both
 ends and subgraphs close.
 
-## A failure catalogue states what is fixed
+## A failure catalogue is two tables
 
-A catalogue of failures keeps every entry, fixed or not: the list is what the
-project defends against, and a fixed entry is how a regression is recognised.
-Each entry carries one `**Status:**` line naming its fix tickets, and the
-tracker decides whether it is open or fixed. A fixed entry's heading is struck
-through with the merged PR. The check fails on an entry with no status, or a
-status that disagrees with the tracker.
+A catalogue of failures is an Open table and a Fixed table, one row per failure,
+each row linking its issues and, once fixed, the merged PRs. The row says what
+the failure looks like in one line; the issue holds the detail. The tracker
+decides which table a row is in. The check fails on an Open row with no open
+issue, on a row that disagrees with the tracker, and on an entry section.
 
 ## READMEs are a launch pad in Simplified Technical English
 

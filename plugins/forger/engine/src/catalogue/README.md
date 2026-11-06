@@ -1,13 +1,13 @@
 # catalogue
 
-The failure catalogue's status: which entries are open, which are fixed, and
-the tracker facts that decide it.
+The failure catalogue: an Open table and a Fixed table, and the tracker facts
+that decide which table a row belongs in.
 
 ## Files
 
-- `catalogue.ts` - parsing entries and their `**Status:**` lines, rewriting an
-  entry from tracker facts, the generated index, and the check's findings. Pure.
-- `tracker.ts` - the fix tickets' facts from GitHub, through a `CommandRunner`
+- `catalogue.ts` - the two tables and the check's findings. It moves a row to
+  the table the tracker names. Pure.
+- `tracker.ts` - the issues' facts from GitHub, through a `CommandRunner`
   handed in. Pure over it.
 
 ## Entry point

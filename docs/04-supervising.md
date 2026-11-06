@@ -158,6 +158,10 @@ When the backlog empties, stop the cadence with a final list of owner items.
 After a halt, a timeout, a misbuilt ticket or an owner correction, and
 periodically: run the refinement loop in `05-refining-the-process.md`.
 
+A failure seen is added to [the failure catalogue](06-failure-catalogue.md): open
+an issue for it, then add the Open row that links it. `work catalogue --update`
+moves the row to Fixed once the issue closes by a merged PR.
+
 To see which skill ran in which slot of a run, read its `plan` in `status --json`
 while it is in flight, or the per-ticket plan lines of `measure` afterwards.
 
