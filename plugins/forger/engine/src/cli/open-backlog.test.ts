@@ -63,4 +63,39 @@ describe('openBacklog', () => {
     const backlog = openBacklog(project(), mergeConfig({tracker: {kind: 'github'}}), () => response);
     expect(backlog.next()).toBe('issue-4');
   });
+
+  test('ticket status is read from the state branch and the tracker, not the working tree', () => {
+    const root = project();
+    writeFileSync(
+      join(root, '.forger', 'backlog.json'),
+      JSON.stringify({features: {'issue-4': {status: 'completed'}, 'issue-5': {status: 'completed'}}})
+    );
+    const issue = (number: number, closer: unknown): unknown => ({
+      number,
+      state: closer ? 'CLOSED' : 'OPEN',
+      labels: {nodes: [{name: 'ready-for-agent'}]},
+      timelineItems: {nodes: closer ? [{closer}] : []},
+      blockedBy: {nodes: []},
+    });
+    const response = JSON.stringify([
+      {
+        data: {
+          repository: {
+            issues: {
+              nodes: [
+                issue(4, null),
+                issue(5, {__typename: 'PullRequest', merged: false}),
+                issue(6, {__typename: 'PullRequest', merged: true}),
+              ],
+            },
+          },
+        },
+      },
+    ]);
+    const backlog = openBacklog(root, mergeConfig({tracker: {kind: 'github'}}), () => response);
+    expect(backlog.isCompleted('issue-4')).toBe(false);
+    expect(backlog.isCompleted('issue-5')).toBe(false);
+    expect(backlog.isCompleted('issue-6')).toBe(true);
+    expect(backlog.next()).toBe('issue-4');
+  });
 });
