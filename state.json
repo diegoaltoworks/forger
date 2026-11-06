@@ -146,7 +146,7 @@
     "issue-307"
   ],
   "in_flight": [],
-  "last_error": null,
+  "last_error": "Ticket #308 is handed over as `needs-human`: criterion c4 names a file that doesn't exist (`docs/reference/config.md` instead of `configuration.md`), so the verifier can't decide it.",
   "stall_count": 1,
   "declined_tasks": [
     {
