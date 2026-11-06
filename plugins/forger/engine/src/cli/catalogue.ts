@@ -1,7 +1,7 @@
 import {existsSync, readFileSync, writeFileSync} from 'fs';
 import {join} from 'path';
 
-import {CATALOGUE_PATH, checkCatalogue, parseCatalogue, formatStatus, ticketsOf, trackerFacts, updateCatalogue} from '../catalogue';
+import {CATALOGUE_PATH, checkCatalogue, parseCatalogue, ticketsOf, trackerFacts, updateCatalogue} from '../catalogue';
 import type {Command} from './command';
 
 export const catalogue: Command = {
@@ -9,9 +9,10 @@ export const catalogue: Command = {
   needs: 'root',
   flags: ['json', 'update'],
   help: `  catalogue [--json] [--update]
-                   List the failure catalogue's entries and their status; --update asks the tracker
-                   and rewrites each entry's status line, its struck heading with the merged PRs,
-                   and the generated index; exit non-zero when the catalogue and the tracker disagree`,
+                   List the failure catalogue's Open and Fixed rows; --update asks the tracker and moves
+                   each row to the table it belongs in (Fixed once every issue is closed by a merged PR,
+                   naming the PRs; Open again when an issue is open); exit non-zero when the catalogue
+                   and the tracker disagree`,
   run(ctx) {
     const path = join(ctx.projectRoot, CATALOGUE_PATH);
     if (!existsSync(path)) {
@@ -29,10 +30,14 @@ export const catalogue: Command = {
     const next = ctx.values.update ? updateCatalogue(text, facts) : text;
     if (next !== text) writeFileSync(path, next);
     const problems = checkCatalogue(next, facts);
-    const entries = parseCatalogue(next).map(e => ({title: e.title, status: e.status ? formatStatus(e.status) : null}));
+    const parsed = parseCatalogue(next);
+    const entries = [
+      ...parsed.open.map(r => ({title: r.title, status: 'open', issues: r.tickets, prs: r.prs})),
+      ...parsed.fixed.map(r => ({title: r.title, status: 'fixed', issues: r.tickets, prs: r.prs})),
+    ];
     if (ctx.values.json) console.log(JSON.stringify({updated: next !== text, entries, problems}));
     else {
-      for (const e of entries) console.log(`${e.status ?? 'no status'}\t${e.title}`);
+      for (const e of entries) console.log(`${e.status}\t${e.title}`);
       for (const p of problems) console.error(`${CATALOGUE_PATH}:${p.line}: ${p.rule}: ${p.detail}`);
       if (next !== text) console.log(`catalogue: updated ${CATALOGUE_PATH}`);
     }

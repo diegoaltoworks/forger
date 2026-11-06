@@ -3,7 +3,7 @@ import {mkdirSync, mkdtempSync, rmSync, writeFileSync} from 'fs';
 import {tmpdir} from 'os';
 import {join} from 'path';
 
-import {INDEX_END, INDEX_START, CATALOGUE_OPINION, updateCatalogue, type TicketFacts} from '../../catalogue';
+import {CATALOGUE_OPINION, type TicketFacts} from '../../catalogue';
 import {DOCS_OPINIONS} from './docs-content';
 import {README_OPINIONS} from './docs-readme';
 import {installedPackIds, runDocsCheck, runDocsWarnings} from './docs-check';
@@ -162,29 +162,46 @@ describe('README rule', () => {
 
 describe('the failure catalogue', () => {
   const lock = {'.forger/forger.lock.json': JSON.stringify({packs: [{id: 'docs', version: '1.0.0', files: []}]})};
-  const fact = (merged: number | null): TicketFacts => new Map([[205, {closed: merged !== null, mergedPr: merged}]]);
-  const body = `# Failure catalogue\n\n${INDEX_START}\n${INDEX_END}\n\n## G\n\n### A hang\n\n**Status:** open, #205\n`;
-  const rules = (root: string, facts: TicketFacts | null) =>
-    runDocsCheck(root, lister(['docs/06-failure-catalogue.md']), ['docs'], () => facts).map(v => v.rule);
+  const fact = (merged: number | 'open'): TicketFacts => new Map([[205, merged === 'open' ? {closed: false, mergedPr: null} : {closed: true, mergedPr: merged}]]);
+  const tables = (open: string, fixed: string) =>
+    [
+      '# Failure catalogue',
+      '',
+      '## Open',
+      '',
+      '| Failure | What it looks like | Issue |',
+      '|---|---|---|',
+      ...(open ? [open] : []),
+      '',
+      '## Fixed',
+      '',
+      '| Failure | What it looked like | Fixed by |',
+      '|---|---|---|',
+      ...(fixed ? [fixed] : []),
+      '',
+    ].join('\n');
+  const I = '[#205](https://github.com/o/r/issues/205)';
+  const body = tables(`| A hang | hangs | ${I} |`, '');
+  const rules = (text: string, facts: TicketFacts | null, packs = ['docs']) =>
+    runDocsCheck(repo({'docs/06-failure-catalogue.md': text, ...lock}), lister(['docs/06-failure-catalogue.md']), packs, () => facts).map(v => v.rule);
 
-  test('passes when the statuses and index match the tracker', () => {
-    const root = repo({'docs/06-failure-catalogue.md': updateCatalogue(body, fact(260)), ...lock});
-    expect(rules(root, fact(260))).toEqual([]);
+  test('passes when the tables match the tracker', () => {
+    expect(rules(body, fact('open'))).toEqual([]);
   });
-  test('fails an entry with no status', () => {
-    const root = repo({'docs/06-failure-catalogue.md': body.replace('**Status:** open, #205\n', ''), ...lock});
-    expect(rules(root, fact(null))).toEqual(['catalogue-no-status']);
+  test('fails an Open row with no open issue', () => {
+    expect(rules(tables('| A hang | hangs | |', ''), null)).toEqual(['catalogue-open-no-issue']);
+    expect(rules(body, new Map([[205, {closed: true, mergedPr: null}]]))).toEqual(['catalogue-open-no-issue']);
   });
-  test('fails a status the tracker has overtaken', () => {
-    const root = repo({'docs/06-failure-catalogue.md': updateCatalogue(body, fact(null)), ...lock});
-    expect(rules(root, fact(260))).toEqual(['catalogue-stale-status']);
+  test('fails a catalogue entry section', () => {
+    expect(rules(`${body}\n### A hang\n`, fact('open'))).toEqual(['catalogue-entry-section']);
+  });
+  test('fails a row the tracker has overtaken', () => {
+    expect(rules(tables('', `| A hang | hung | ${I} - merged in [#9](https://github.com/o/r/pull/9) |`), fact('open'))).toEqual(['catalogue-stale-status']);
   });
   test('checks only the structure when the tracker cannot be reached', () => {
-    const root = repo({'docs/06-failure-catalogue.md': updateCatalogue(body, fact(null)), ...lock});
-    expect(rules(root, null)).toEqual([]);
+    expect(rules(body, null)).toEqual([]);
   });
   test('does not run without the docs pack', () => {
-    const root = repo({'docs/06-failure-catalogue.md': body.replace('**Status:** open, #205\n', '')});
-    expect(runDocsCheck(root, lister(['docs/06-failure-catalogue.md']), [], () => null)).toEqual([]);
+    expect(rules(tables('| A hang | hangs | |', ''), null, [])).toEqual([]);
   });
 });

@@ -1,14 +1,14 @@
 /**
- * The failure catalogue's entries and their status. Each entry carries one
- * `**Status:**` line naming its fix tickets; the tracker decides whether the
- * entry is open or fixed, and a heading struck through with the merged PRs
- * shows it. Everything here is pure: the tracker's answers arrive as facts.
+ * The failure catalogue: an Open table and a Fixed table, one row per failure.
+ * The tracker decides which table a row belongs in: a row is fixed once every
+ * issue in it is closed by a merged PR. Everything here is pure: the tracker's
+ * answers arrive as facts.
  */
 
 export const CATALOGUE_PATH = 'docs/06-failure-catalogue.md';
 export const CATALOGUE_OPINION = 'docs.catalogue-status';
-export const INDEX_START = '<!-- catalogue-index:start -->';
-export const INDEX_END = '<!-- catalogue-index:end -->';
+export const UNTRACKED = 'before tickets were tracked';
+const MERGED_IN = ' - merged in ';
 
 /** What the tracker says about one ticket. `mergedPr` is set only when a merged PR closed it. */
 export interface TicketFact {
@@ -18,178 +18,198 @@ export interface TicketFact {
 
 export type TicketFacts = ReadonlyMap<number, TicketFact>;
 
-export type Status =
-  | {kind: 'open'; tickets: number[]}
-  | {kind: 'fixed'; tickets: number[]}
-  | {kind: 'untracked'};
+export type Section = 'open' | 'fixed';
 
-export interface Entry {
+export interface Row {
   title: string;
-  /** 0-based line of the heading, and the exclusive end of the entry. */
-  start: number;
-  end: number;
-  /** The status line, or null when the entry has none or it does not parse. */
-  status: Status | null;
-  /** 0-based line of the status line, or -1. */
-  statusLine: number;
+  /** One line on what the failure looks like. */
+  looks: string;
+  /** The issues that fix it; empty for a failure fixed before tickets were tracked. */
+  tickets: number[];
+  /** The merged PRs that closed them; only a fixed row has any. */
+  prs: number[];
+  /** 0-based line in the text. */
+  line: number;
 }
 
-const HEADING = /^### (?:~~(.+?)~~ - fixed .+|(.+))$/;
-const STATUS = /^\*\*Status:\*\* (.*)$/;
-const UNTRACKED = 'fixed (before tickets were tracked)';
+export interface Catalogue {
+  open: Row[];
+  fixed: Row[];
+  /** `###` headings: the per-entry sections the catalogue no longer has. */
+  entrySections: number[];
+  /** Whether each section heading is present, once. */
+  hasOpen: boolean;
+  hasFixed: boolean;
+}
 
 const refs = (s: string): number[] => [...s.matchAll(/#(\d+)/g)].map(m => Number(m[1]));
 
-/** The status a line spells, or null when it spells none. */
-export function parseStatus(text: string): Status | null {
-  const t = text.trim();
-  if (t === UNTRACKED) return {kind: 'untracked'};
-  const open = /^open((?:, #\d+)*)$/.exec(t);
-  if (open) return {kind: 'open', tickets: refs(open[1])};
-  const fixed = /^fixed by (#\d+(?:, #\d+)*)$/.exec(t);
-  return fixed ? {kind: 'fixed', tickets: refs(fixed[1])} : null;
+const cells = (line: string): string[] =>
+  line
+    .trim()
+    .replace(/^\|/, '')
+    .replace(/\|$/, '')
+    .split('|')
+    .map(c => c.trim());
+
+function parseRow(line: string, i: number): Row | null {
+  const [title, looks, by = ''] = cells(line);
+  if (!title || /^-+$/.test(title) || title === 'Failure') return null;
+  const [issues, merged = ''] = by.split(MERGED_IN);
+  return {title, looks: looks ?? '', tickets: refs(issues), prs: refs(merged), line: i};
 }
 
-export function formatStatus(s: Status): string {
-  if (s.kind === 'untracked') return UNTRACKED;
-  const list = s.tickets.map(n => `#${n}`).join(', ');
-  return s.kind === 'open' ? ['open', ...(list ? [list] : [])].join(', ') : `fixed by ${list}`;
-}
-
-export function parseCatalogue(text: string): Entry[] {
-  const lines = text.split('\n');
-  const entries: Entry[] = [];
-  let open: Entry | null = null;
-  const close = (end: number): void => {
-    if (open) entries.push({...open, end});
-    open = null;
-  };
-  lines.forEach((line, i) => {
-    if (/^#{1,2} /.test(line)) return close(i);
-    const heading = HEADING.exec(line);
-    if (heading) {
-      close(i);
-      open = {title: (heading[1] ?? heading[2]).trim(), start: i, end: i, status: null, statusLine: -1};
+export function parseCatalogue(text: string): Catalogue {
+  const out: Catalogue = {open: [], fixed: [], entrySections: [], hasOpen: false, hasFixed: false};
+  let section: Section | null = null;
+  text.split('\n').forEach((line, i) => {
+    if (/^### /.test(line)) out.entrySections.push(i);
+    if (/^#{1,2} /.test(line)) {
+      section = /^## Open\s*$/.test(line) ? 'open' : /^## Fixed\s*$/.test(line) ? 'fixed' : null;
+      if (section === 'open') out.hasOpen = true;
+      if (section === 'fixed') out.hasFixed = true;
       return;
     }
-    const status = open && open.statusLine < 0 ? STATUS.exec(line) : null;
-    if (open && status) {
-      open.statusLine = i;
-      open.status = parseStatus(status[1]);
-    }
+    if (!section || !line.startsWith('|')) return;
+    const row = parseRow(line, i);
+    if (row) out[section].push(row);
   });
-  close(lines.length);
-  return entries;
-}
-
-/** What an entry's status should be, given the tracker. Null when a ticket is unknown to it. */
-export function decide(status: Status, facts: TicketFacts): {status: Status; prs: number[]} | null {
-  if (status.kind === 'untracked' || status.tickets.length === 0) return {status, prs: []};
-  const seen = status.tickets.map(n => facts.get(n));
-  if (seen.some(f => f === undefined)) return null;
-  const prs = (seen as TicketFact[]).map(f => f.mergedPr);
-  if (prs.every((p): p is number => p !== null)) return {status: {kind: 'fixed', tickets: status.tickets}, prs: [...new Set(prs)]};
-  return {status: {kind: 'open', tickets: status.tickets}, prs: []};
-}
-
-function headingFor(title: string, status: Status, prs: number[]): string {
-  if (status.kind === 'open') return `### ${title}`;
-  return status.kind === 'untracked' ? `### ~~${title}~~ - fixed (before tickets were tracked)` : `### ~~${title}~~ - fixed by ${prs.map(p => `#${p}`).join(', ')}`;
-}
-
-/**
- * The entry's lines (the slice from its heading) rewritten from tracker facts: the status line and the
- * heading. Applying it again changes nothing. An entry the tracker cannot
- * answer for, or with no parseable status, comes back as it was.
- */
-export function rewriteEntry(lines: string[], entry: Entry, facts: TicketFacts): string[] {
-  if (!entry.status) return lines;
-  const decided = decide(entry.status, facts);
-  if (!decided) return lines;
-  const out = [...lines];
-  out[0] = headingFor(entry.title, decided.status, decided.prs);
-  out[entry.statusLine - entry.start] = `**Status:** ${formatStatus(decided.status)}`;
   return out;
 }
 
-/** GitHub's anchor for a heading. */
-export function anchorOf(heading: string): string {
-  return heading
-    .replace(/^#+ /, '')
-    .replace(/[`~*]/g, '')
-    .toLowerCase()
-    .replace(/[^\p{L}\p{N}\s_-]/gu, '')
-    .replace(/\s/g, '-');
+/** Facts the tracker holds for every ticket of the catalogue, for one lookup. */
+export function ticketsOf(text: string): number[] {
+  const c = parseCatalogue(text);
+  return [...new Set([...c.open, ...c.fixed].flatMap(r => r.tickets))];
 }
 
-/** The index table, one row per entry, from the entries as they stand in `lines`. */
-export function renderIndex(lines: string[]): string[] {
-  const rows = parseCatalogue(lines.join('\n')).map(e => {
-    const status = e.status ? formatStatus(e.status) : 'no status';
-    return `| ${e.title} | ${status} | [entry](#${anchorOf(lines[e.start])}) |`;
-  });
-  return ['| Entry | Status | Link |', '|---|---|---|', ...rows];
+/** The repository's URL as the catalogue already links it, or null when it links nothing. */
+export function baseOf(text: string): string | null {
+  return /(https:\/\/github\.com\/[^/\s)]+\/[^/\s)]+)\/(?:issues|pull)\/\d+/.exec(text)?.[1] ?? null;
 }
 
-/** The text with the index between its markers regenerated; a text without markers is returned as it was. */
-export function withIndex(text: string): string {
-  const lines = text.split('\n');
-  const a = lines.indexOf(INDEX_START);
-  const b = lines.indexOf(INDEX_END);
-  if (a < 0 || b < a) return text;
-  return [...lines.slice(0, a + 1), '', ...renderIndex(lines), '', ...lines.slice(b)].join('\n');
+const link = (base: string | null, kind: 'issues' | 'pull', n: number): string => (base ? `[#${n}](${base}/${kind}/${n})` : `#${n}`);
+
+function cellOf(section: Section, row: Row, base: string | null): string {
+  const issues = row.tickets.map(n => link(base, 'issues', n)).join(', ');
+  if (section === 'open') return issues;
+  if (row.tickets.length === 0) return UNTRACKED;
+  return `${issues}${MERGED_IN}${row.prs.map(n => link(base, 'pull', n)).join(', ')}`;
 }
 
-/** The whole catalogue rewritten from tracker facts, index included. */
+const HEADERS: Record<Section, string[]> = {
+  open: ['| Failure | What it looks like | Issue |', '|---|---|---|'],
+  fixed: ['| Failure | What it looked like | Fixed by |', '|---|---|---|'],
+};
+
+export function renderRow(section: Section, row: Row, base: string | null): string {
+  return `| ${row.title} | ${row.looks} | ${cellOf(section, row, base)} |`;
+}
+
+/** Which table a row belongs in, and the PRs that closed it. Null when a ticket is unknown to the tracker. */
+export function decide(row: Row, facts: TicketFacts): {section: Section; prs: number[]} | null {
+  if (row.tickets.length === 0) return {section: 'fixed', prs: []};
+  const seen = row.tickets.map(n => facts.get(n));
+  if (seen.some(f => f === undefined)) return null;
+  const prs = (seen as TicketFact[]).map(f => f.mergedPr);
+  return prs.every((p): p is number => p !== null) ? {section: 'fixed', prs: [...new Set(prs)]} : {section: 'open', prs: []};
+}
+
+/** True when none of the row's issues is open, so an Open row has nothing left to fix it. */
+function noOpenIssue(row: Row, facts: TicketFacts): boolean {
+  return !row.tickets.some(n => facts.get(n)?.closed === false);
+}
+
+/**
+ * The text with every row in the table the tracker says it belongs in, and
+ * each row's PRs named. Applying it again changes nothing. A row the tracker
+ * cannot answer for stays where it is; a row with no issue in the Open table
+ * stays there too, for the check to name.
+ */
 export function updateCatalogue(text: string, facts: TicketFacts): string {
-  const lines = text.split('\n');
-  for (const entry of parseCatalogue(text)) {
-    lines.splice(entry.start, entry.end - entry.start, ...rewriteEntry(lines.slice(entry.start, entry.end), entry, facts));
+  const c = parseCatalogue(text);
+  const base = baseOf(text);
+  const placed: Record<Section, Row[]> = {open: [], fixed: []};
+  const moved: Record<Section, Row[]> = {open: [], fixed: []};
+  for (const section of ['open', 'fixed'] as const) {
+    for (const row of c[section]) {
+      const decided = section === 'open' && row.tickets.length === 0 ? {section, prs: row.prs} : decide(row, facts);
+      const to = decided?.section ?? section;
+      const next = {...row, prs: decided ? decided.prs : row.prs};
+      (to === section ? placed : moved)[to].push(next);
+    }
   }
-  return withIndex(lines.join('\n'));
+  const rows = (section: Section): string[] => [...placed[section], ...moved[section]].map(r => renderRow(section, r, base));
+  return replaceTables(text, {open: rows('open'), fixed: rows('fixed')});
+}
+
+/** The text with each section's table lines replaced; a section with no table gets one under its heading. */
+function replaceTables(text: string, rows: Record<Section, string[]>): string {
+  const lines = text.split('\n');
+  const out: string[] = [];
+  let section: Section | null = null;
+  let pending: Section | null = null;
+  const flush = (): void => {
+    if (pending) out.push(...HEADERS[pending], ...rows[pending], '');
+    pending = null;
+  };
+  for (const line of lines) {
+    if (/^#{1,2} /.test(line)) {
+      flush();
+      section = /^## Open\s*$/.test(line) ? 'open' : /^## Fixed\s*$/.test(line) ? 'fixed' : null;
+      out.push(line);
+      if (section) {
+        out.push('');
+        pending = section;
+      }
+      continue;
+    }
+    if (section && (line.startsWith('|') || (pending && line === ''))) continue;
+    flush();
+    out.push(line);
+  }
+  flush();
+  return out.join('\n').replace(/\n{3,}/g, '\n\n').replace(/\n*$/, '\n');
 }
 
 export interface CatalogueProblem {
   line: number;
-  rule: 'catalogue-no-status' | 'catalogue-stale-status' | 'catalogue-stale-index';
+  rule:
+    | 'catalogue-no-table'
+    | 'catalogue-entry-section'
+    | 'catalogue-open-no-issue'
+    | 'catalogue-fixed-no-merge'
+    | 'catalogue-stale-status';
   detail: string;
 }
 
 /**
- * Entries with no status, entries whose status or heading disagree with the
- * tracker, and an index that does not match. Without facts only the structure
- * is checked.
+ * A catalogue without both tables, one with an entry section, an Open row with
+ * no open issue, and rows that disagree with the tracker. Without facts only
+ * the structure is checked.
  */
 export function checkCatalogue(text: string, facts: TicketFacts | null): CatalogueProblem[] {
-  const lines = text.split('\n');
+  const c = parseCatalogue(text);
   const problems: CatalogueProblem[] = [];
-  for (const entry of parseCatalogue(text)) {
-    if (!entry.status) {
-      problems.push({
-        line: entry.start + 1,
-        rule: 'catalogue-no-status',
-        detail: `"${entry.title}" has no parseable **Status:** line ("open, #n", "fixed by #n" or "${UNTRACKED}")`,
-      });
-      continue;
-    }
-    if (!facts) continue;
-    const before = lines.slice(entry.start, entry.end);
-    const after = rewriteEntry(before, entry, facts);
-    if (after.some((l, i) => l !== before[i])) {
-      problems.push({
-        line: entry.start + 1,
-        rule: 'catalogue-stale-status',
-        detail: `"${entry.title}" disagrees with the tracker; run \`catalogue --update\``,
-      });
+  if (!c.hasOpen) problems.push({line: 1, rule: 'catalogue-no-table', detail: 'there is no "## Open" section'});
+  if (!c.hasFixed) problems.push({line: 1, rule: 'catalogue-no-table', detail: 'there is no "## Fixed" section'});
+  for (const i of c.entrySections) {
+    problems.push({line: i + 1, rule: 'catalogue-entry-section', detail: 'an entry section; a failure is one row in a table, and its issue holds the detail'});
+  }
+  for (const row of c.open) {
+    if (row.tickets.length === 0) {
+      problems.push({line: row.line + 1, rule: 'catalogue-open-no-issue', detail: `"${row.title}" is Open and links no issue; open one for it`});
+    } else if (facts && row.tickets.every(n => facts.has(n)) && noOpenIssue(row, facts)) {
+      problems.push({line: row.line + 1, rule: 'catalogue-open-no-issue', detail: `"${row.title}" is Open and none of its issues is open; open one, or run \`catalogue --update\``});
     }
   }
-  if (problems.length === 0 && withIndex(text) !== text) {
-    problems.push({line: lines.indexOf(INDEX_START) + 1, rule: 'catalogue-stale-index', detail: 'the index does not match the entries; run `catalogue --update`'});
+  for (const row of c.fixed) {
+    if (row.tickets.length > 0 && row.prs.length === 0) {
+      problems.push({line: row.line + 1, rule: 'catalogue-fixed-no-merge', detail: `"${row.title}" is Fixed but names no merged PR`});
+    }
+  }
+  if (facts && problems.every(p => p.rule !== 'catalogue-open-no-issue') && updateCatalogue(text, facts) !== text) {
+    problems.push({line: 1, rule: 'catalogue-stale-status', detail: 'a row disagrees with the tracker; run `catalogue --update`'});
   }
   return problems;
-}
-
-/** Every ticket the entries name, for one tracker lookup. */
-export function ticketsOf(text: string): number[] {
-  return [...new Set(parseCatalogue(text).flatMap(e => (e.status && e.status.kind !== 'untracked' ? e.status.tickets : [])))];
 }
