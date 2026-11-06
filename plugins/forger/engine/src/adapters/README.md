@@ -13,6 +13,9 @@ world, and is tested against real processes.
 - `host-sandbox.ts` - the `host` `Sandbox`: a git worktree, the worker as its own process group, the timeout.
 - `docker-plan.ts` - the pure half of the `docker` sandbox: the image choice, the `docker run` arguments and the reading of `docker info`.
 - `docker-sandbox.ts` - the `docker` `Sandbox`: one container per worker that clones origin, with no host mounts.
+- `credentials.ts` - the pure half of credentials: the variable per harness and kind, the app JWT and `redact`.
+- `github-token.ts` - the run's one GitHub token: a variable, or one minted for the repository through an injected `GithubApi`.
+- `redacting-sandbox.ts` - wraps any `Sandbox` so credential values are removed from the output the engine records.
 - `sandboxes.ts` - the sandboxes by id, and `sandboxFor`, which the config's `sandbox` key picks.
 - `svg-raster.ts` - the brand `Rasteriser` over resvg; text is already outlines, so no font is loaded.
 - `static-server.ts` - the `AppServer` port over one folder served in-process, for wireframes

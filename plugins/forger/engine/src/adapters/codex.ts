@@ -17,6 +17,7 @@ import {packageAsSkill, skillName, workerSkillName} from './skill-package';
 
 export const codexHarness: Harness = {
   id: 'codex',
+  credentials: {api_key: ['CODEX_API_KEY', 'OPENAI_API_KEY'], subscription: null, howTo: 'Codex signs in with a cached auth file, not a variable, so only an API key (CODEX_API_KEY) works in a sandbox'},
   usage: 'tokens',
   spentUsd: codexSpentUsd,
   plainText: codexText,

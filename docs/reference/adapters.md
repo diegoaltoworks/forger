@@ -26,14 +26,18 @@ there is one model mapping and several harnesses, named here and nowhere else in
 
 ## Credentials in a sandbox
 
-Set in the environment that starts the run ([ADR 0019](../adr/0019-workers-run-in-a-sandbox-behind-an-adapter.md)). The `docker` backend passes these variables to the container by name, so no secret appears in a command line, and `GH_TOKEN` or `GITHUB_TOKEN` lets the container push. Credentials reach a sandboxed worker only as environment variables.
+Set in the environment that starts the run ([ADR 0019](../adr/0019-workers-run-in-a-sandbox-behind-an-adapter.md)). The config's `credentials` section picks what a run gets (see [configuration](configuration.md)); `setup --credential api_key|subscription` records the kind for the harness and says how to make a subscription token for headless use.
+
+- **GitHub.** One token per run, scoped to the one repository. `source: env` reads it from a variable. `source: app` mints a GitHub App installation token per run for that repository alone, from the app id and private key in the environment, so it expires on its own. The container receives it as `GH_TOKEN`.
+- **The model.** The kind the config names for the harness decides which variable the container receives; the table below is what each adapter maps. A kind the CLI documents no variable for is refused before the container starts, naming the kind that works.
+- **Redaction.** The container receives variables by name, so no secret appears in a command line, an image or a layer. Every worker's output is scanned and the values of these variables, and of a minted token, are replaced before the engine records it, so the iteration log, the events file and a verdict never hold one.
 
 | Harness | API key variable | Subscription token | Source |
 |---|---|---|---|
 | `claude` | `ANTHROPIC_API_KEY` | Run `claude setup-token` once on a machine with a browser; it prints a long-lived token. Pass it as `CLAUDE_CODE_OAUTH_TOKEN`. | https://docs.claude.com/en/docs/claude-code/github-actions and https://docs.claude.com/en/docs/claude-code/iam |
-| `codex` | `CODEX_API_KEY` for `codex exec`, or `OPENAI_API_KEY` | Sign in with ChatGPT once with `codex login`; the cached `auth.json` is the credential. A headless run needs that file, which is a file and not a variable, so the backend writes it into the container's private home at start from a variable and removes it at end. | https://developers.openai.com/codex/auth |
+| `codex` | `CODEX_API_KEY` for `codex exec`, or `OPENAI_API_KEY` | None as a variable: signing in with ChatGPT caches an `auth.json` file, which is a file and not a variable, so a sandbox takes the API key only. | https://developers.openai.com/codex/auth |
 | `copilot` | none: Copilot is billed to the subscription | A fine-grained personal access token with the Copilot Requests permission, passed as `COPILOT_GITHUB_TOKEN`. | https://docs.github.com/en/copilot/how-tos/copilot-cli |
-| `opencode` | the provider's own variable, for example `ANTHROPIC_API_KEY` or `OPENAI_API_KEY` | Sign in once with `opencode auth login`; the cached `auth.json` is the credential, handled like Codex's. Which providers allow a subscription for headless use is the provider's rule. | https://opencode.ai/docs/providers/ |
+| `opencode` | the provider's own variable; the adapter passes `ANTHROPIC_API_KEY` and `OPENAI_API_KEY` | None as a variable: `opencode auth login` caches an `auth.json` file, so a sandbox takes the provider's API key only. | https://opencode.ai/docs/providers/ |
 
 ## Sandbox
 

@@ -17,8 +17,21 @@ export interface SpawnSpec {
   input?: string;
 }
 
+/**
+ * The variables a harness's CLI reads its model credential from, by kind. `subscription` is null when the
+ * CLI documents no variable for a subscription token (its sign-in is a cached file, or it has none), so
+ * the choice is refused and not guessed. An `api_key` list holds every variable the CLI accepts.
+ */
+export interface HarnessCredentials {
+  api_key: string[];
+  subscription: string | null;
+  /** How the owner makes a credential for headless use, said by `setup`. */
+  howTo: string;
+}
+
 export interface Harness {
   id: string;
+  credentials: HarnessCredentials;
   /**
    * What the harness's headless output reports of usage: `cap` when the harness enforces the budget
    * itself, `cost` when the output states USD, `tokens` when it states token counts only (the cost then

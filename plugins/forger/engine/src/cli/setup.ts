@@ -5,7 +5,7 @@ import {findHarness} from '../adapters';
 import {coverageAdvice, formatCoverageAdvice, formatSetup, formatUpgrade, readRepoFacts, type CoverageAdvice, loadPresets, offerPresets, parsePackList, runSetup, runUpgrade} from '../packs';
 import {existsSync, readFileSync} from 'fs';
 import {join} from 'path';
-import {formatSandboxSetup, setupSandbox, type SandboxSetup} from './setup-sandbox';
+import {formatCredentialSetup, formatSandboxSetup, setupCredential, setupSandbox, type CredentialSetup, type SandboxSetup} from './setup-sandbox';
 import type {Command, CommandContext} from './command';
 
 /** setup runs before any `.forger/` exists, so outside a repository it acts where it was run. */
@@ -65,8 +65,8 @@ function coverageNextStep(ctx: CommandContext, chosen: string[]): CoverageAdvice
 export const setup: Command = {
   name: 'setup',
   needs: 'none',
-  flags: ['json', 'gates', 'base-branch', 'tracker', 'flavour', 'preset', 'packs', 'upgrade', 'harness', 'sandbox'],
-  help: `  setup [--json] [--gates CMD] [--base-branch B] [--tracker KIND] [--flavour NAME] [--packs A,B] [--harness H] [--sandbox S] [--upgrade]
+  flags: ['json', 'gates', 'base-branch', 'tracker', 'flavour', 'preset', 'packs', 'upgrade', 'harness', 'sandbox', 'credential'],
+  help: `  setup [--json] [--gates CMD] [--base-branch B] [--tracker KIND] [--flavour NAME] [--packs A,B] [--harness H] [--sandbox S] [--credential KIND] [--upgrade]
                    Install the chosen opinion packs (default base) into .forger/, never overwriting,
                    and record them in .forger/forger.lock.json. On a GitHub tracker it creates the loop
                    labels and makes the base branch require the forger/verify check, when the token can.
@@ -76,6 +76,8 @@ export const setup: Command = {
                    --preset NAME is the same
                    --harness H sets the harness (claude, opencode, codex, copilot) and installs its commands
                    --sandbox S sets where workers run (host or docker); docker also checks that the Docker API is reachable
+                   --credential KIND sets whether the harness's model credential is an api_key or a subscription token,
+                   and says how to make a subscription token for headless use
                    --upgrade brings installed packs to this plugin's version: untouched files take the
                    new version, refined files are kept, files both sides changed get <file>.upstream`,
   run(ctx) {
@@ -129,17 +131,28 @@ export const setup: Command = {
       }
       if (box.docker && !box.docker.reachable) process.exitCode = 1;
     }
+    let credential: CredentialSetup | undefined;
+    if (values.credential) {
+      try {
+        credential = setupCredential(setupRoot(ctx), findHarness(values.harness ?? loadConfig(setupRoot(ctx)).harness), values.credential);
+      } catch (e) {
+        console.error((e as Error).message);
+        process.exitCode = 1;
+        return;
+      }
+    }
     const labels = createLabels(ctx);
     const verifyCheck = requireVerify(ctx);
     const coverage = coverageNextStep(ctx, parsePackList(values.packs));
     const offered = offerPresets(loadPresets(pluginRoot), installedSkills());
     const presets = offered.map(p => p.name);
-    if (values.json) console.log(JSON.stringify({...result, presets, labels, ...(box ? {sandbox: box} : {}), ...(verifyCheck ? {verify_check: verifyCheck} : {}), ...(coverage ? {coverage, next_steps: coverage.next_steps} : {})}));
+    if (values.json) console.log(JSON.stringify({...result, presets, labels, ...(box ? {sandbox: box} : {}), ...(credential ? {credential} : {}), ...(verifyCheck ? {verify_check: verifyCheck} : {}), ...(coverage ? {coverage, next_steps: coverage.next_steps} : {})}));
     else
       console.log(
         [
           formatSetup(result, presets),
           ...(box ? formatSandboxSetup(box) : []),
+          ...(credential ? formatCredentialSetup(credential) : []),
           ...labels.created.map(l => `label   ${l}`),
           ...(labels.error ? [`! ${labels.error}`] : []),
           ...formatRequire(verifyCheck, loadConfig(setupRoot(ctx)).base_branch),

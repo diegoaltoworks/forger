@@ -34,6 +34,7 @@ export const FLAGS = {
   packs: {type: 'string'},
   harness: {type: 'string'},
   sandbox: {type: 'string'},
+  credential: {type: 'string'},
   upgrade: {type: 'boolean'},
   detect: {type: 'boolean', default: false},
   presets: {type: 'boolean', default: false},

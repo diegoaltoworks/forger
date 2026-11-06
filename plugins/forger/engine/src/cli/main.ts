@@ -10,7 +10,7 @@ import {realpathSync} from 'fs';
 import {resolve} from 'path';
 import {parseArgs} from 'util';
 
-import {agentFor, execCapture, sandboxFor, gitStateStore, localStateFor, execRunner, findHarness} from '../adapters';
+import {agentFor, execCapture, sandboxFor, sandboxSite, gitStateStore, localStateFor, execRunner, findHarness} from '../adapters';
 import type {Backlog} from '../backlog';
 import {detectLayout, isProjectRoot, legacyWarning, loadConfig, resolveProjectRoot, type WorkloopConfig} from '../config';
 import {AutomationRunner, DEFAULT_LEASE_TTL_SECONDS, GhTrackerHalt, type LeaseSettings} from '../loop';
@@ -73,7 +73,7 @@ function contextFor(base: Pick<CommandContext, 'values' | 'positionals' | 'deps'
       return (store ??= from === 'branch' ? gitStateStore({repo: ctx.projectRoot, branch: ctx.config.state.branch}) : localStateFor(ctx.projectRoot, ctx.config));
     },
     get runner() {
-      const box = sandboxFor(ctx.config.sandbox, execCapture(ctx.projectRoot), {projectRoot: ctx.projectRoot, pluginRoot: ctx.pluginRoot, baseBranch: ctx.config.base_branch});
+      const box = sandboxFor(ctx.config.sandbox, execCapture(ctx.projectRoot), sandboxSite(ctx.config, ctx.projectRoot, ctx.pluginRoot));
       return (runner ??= new AutomationRunner(ctx.projectRoot, ctx.config, ctx.backlog, {stateStore: ctx.stateStore, lease: leaseSettingsFor(ctx.config), gitRunner: execRunner(ctx.projectRoot), gitCapture: execCapture(ctx.projectRoot), sandbox: box, agent: agentFor(findHarness(ctx.config.harness), ctx.config.model_prices, box), pluginRoot: ctx.pluginRoot, resolvePlan: ticket => storedPlanFor(ctx, ticket), haltTracker: ctx.config.tracker.kind === 'github' ? new GhTrackerHalt(execRunner(ctx.projectRoot)) : undefined}));
     },
   };

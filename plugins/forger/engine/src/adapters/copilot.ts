@@ -14,6 +14,7 @@ import {packageAsSkill, skillName, workerSkillName} from './skill-package';
 
 export const copilotHarness: Harness = {
   id: 'copilot',
+  credentials: {api_key: [], subscription: 'COPILOT_GITHUB_TOKEN', howTo: 'create a fine-grained personal access token with the Copilot Requests permission and export it as COPILOT_GITHUB_TOKEN'},
   usage: 'none',
   spawn({prompt, model, workerCommand}) {
     return {

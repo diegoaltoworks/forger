@@ -11,6 +11,7 @@ Every field of `.forger/workloop.config.json`.
 | `repo` | If set, only tickets with this `repo` (or none) are worked here. `null` = no filter. |
 | `harness` | The harness that runs the worker: `claude` (default), `opencode`, `codex` or `copilot`. |
 | `sandbox` | Where workers run: `host` (default), a git worktree on this machine, or `docker`, one container per worker. See [adapters](adapters.md). |
+| `credentials` | `{ github, model }`. `github` is `{ source, variable, app_id_variable, app_key_variable }`: `source` `env` (default) reads the run's one GitHub token from `variable` (default `GH_TOKEN`); `app` mints a GitHub App installation token per run, limited to the one repository, from the app id and private key in the two named variables. `model` maps a harness id to `api_key` or `subscription`, and the harness's adapter maps the kind to the variable its CLI reads (see [adapters](adapters.md#credentials-in-a-sandbox)); a harness with no entry receives every variable it can read. Credentials reach a sandbox only as environment variables, and their values are redacted from the logs. Default `env` and no `model` entries. |
 | `allow_unguarded` | `true` lets `run` start with a harness that cannot refuse a tool call. Default `false`. |
 | `worker_command` | Slash command the engine invokes per iteration. Default `forger:auto-ticket`. |
 | `gates` | The quality-gate command; surfaced to the worker. |
@@ -28,3 +29,17 @@ Every field of `.forger/workloop.config.json`.
 | `state` | `{ home, branch }`. `home` is `local` (default: state and events sit in files beside the engine) or `branch` (they live on `branch` of the remote, default `forger-state`, and the engine holds a lease while it runs; ADR 0015). Move existing state with `migrate --state`; roll back by setting `home` back to `local`, nothing is deleted. Other values are refused when the config loads. |
 | `tracker` | `{ kind, label, ignore }`. `kind` is `github` (default: issues are the backlog), `local`, or `none` (both read `backlog.json`). `label` is the intake label, default `ready-for-agent`. `ignore` lists labels whose issues are not work, a trailing `*` matching a prefix (`["wayfinder:*"]`); default none. |
 
+
+## Credentials
+
+```json
+{
+  "credentials": {
+    "github": {"source": "app"},
+    "model": {"claude": "subscription"}
+  }
+}
+```
+
+The kind for a harness is `api_key` or `subscription`; `setup --credential` writes it.
+A subscription run is bounded by the plan's own usage limits, not by the budget cap.

@@ -1326,3 +1326,24 @@ describe('critique', () => {
     err.mockRestore();
   });
 });
+
+describe('setup --credential', () => {
+  test('records the kind per harness and says how to make a subscription token', async () => {
+    const root = realpathSync(mkdtempSync(join(tmpdir(), 'forger-cli-setup-')));
+    dirs.push(root);
+    process.chdir(root);
+    const out = JSON.parse(await capture(['setup', '--json', '--gates', 'make test', '--tracker', 'local', '--credential', 'subscription']));
+    expect(out.credential).toMatchObject({harness: 'claude', kind: 'subscription', variables: ['CLAUDE_CODE_OAUTH_TOKEN']});
+    expect(out.credential.howTo).toContain('setup-token');
+    expect(JSON.parse(readFileSync(join(root, '.forger', 'workloop.config.json'), 'utf-8')).credentials.model).toEqual({claude: 'subscription'});
+  });
+
+  test('refuses a kind the harness has no variable for', async () => {
+    const root = realpathSync(mkdtempSync(join(tmpdir(), 'forger-cli-setup-')));
+    dirs.push(root);
+    process.chdir(root);
+    await capture(['setup', '--json', '--gates', 'make test', '--tracker', 'local', '--harness', 'codex', '--credential', 'subscription']);
+    expect(process.exitCode).toBe(1);
+    process.exitCode = 0;
+  });
+});

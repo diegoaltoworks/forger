@@ -1,7 +1,7 @@
 import {join} from 'path';
 import {randomUUID} from 'crypto';
 
-import {agentFor, execCapture, findHarness, sandboxFor, slcrProvider} from '../adapters';
+import {agentFor, execCapture, findHarness, sandboxFor, sandboxSite, slcrProvider} from '../adapters';
 import {resolveModel} from '../config';
 import {loopRootOf, setupCommand, verdictsHome, verifierTier, verifyPr, type VerifyResult} from '../loop';
 import type {Command, CommandContext} from './command';
@@ -10,7 +10,7 @@ import type {Command, CommandContext} from './command';
 export function verifyOne(ctx: CommandContext, pr: number): Promise<VerifyResult> {
   const {config, projectRoot} = ctx;
   const tier = verifierTier(config);
-  return verifyPr(ctx.run(), ctx.deps.agent ?? agentFor(findHarness(config.harness), config.model_prices, sandboxFor(config.sandbox, execCapture(projectRoot), {projectRoot, pluginRoot: ctx.pluginRoot, baseBranch: config.base_branch})), {
+  return verifyPr(ctx.run(), ctx.deps.agent ?? agentFor(findHarness(config.harness), config.model_prices, sandboxFor(config.sandbox, execCapture(projectRoot), sandboxSite(config, projectRoot, ctx.pluginRoot))), {
     pr,
     trackerKind: config.tracker.kind,
     backlogFile: join(projectRoot, config.paths.backlog),
