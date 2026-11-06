@@ -6,9 +6,10 @@ that decide which table a row belongs in.
 ## Files
 
 - `catalogue.ts` - the two tables and the check's findings. It moves a row to
-  the table the tracker names. Pure.
+  the table the tracker names. It reads the facts as they will be once the
+  branch's own ticket merges. Pure.
 - `tracker.ts` - the issues' facts from GitHub, through a `CommandRunner`
-  handed in. Pure over it.
+  handed in, and the ticket the checked-out branch works. Pure over it.
 
 ## Entry point
 

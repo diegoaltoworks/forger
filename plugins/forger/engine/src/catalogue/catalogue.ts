@@ -184,11 +184,29 @@ export interface CatalogueProblem {
 }
 
 /**
+ * The facts as the tracker will hold them once the branch working `ticket`
+ * merges. A PR cannot see its own issue closed before it merges, so a Fixed row
+ * naming the ticket and its PR counts that ticket closed by the PR the row
+ * names: the one no other ticket in the row was closed by.
+ */
+export function factsOnMerge(text: string, facts: TicketFacts, ticket: number | null): TicketFacts {
+  if (ticket === null || facts.get(ticket)?.closed !== false) return facts;
+  const row = parseCatalogue(text).fixed.find(r => r.tickets.includes(ticket));
+  if (!row) return facts;
+  const others = new Set(row.tickets.filter(n => n !== ticket).map(n => facts.get(n)?.mergedPr));
+  const pr = row.prs.find(p => !others.has(p)) ?? row.prs[0];
+  if (pr === undefined) return facts;
+  return new Map([...facts, [ticket, {closed: true, mergedPr: pr}]]);
+}
+
+/**
  * A catalogue without both tables, one with an entry section, an Open row with
  * no open issue, and rows that disagree with the tracker. Without facts only
- * the structure is checked.
+ * the structure is checked. `ticket` is the one the branch being checked
+ * works, judged as it will be after its merge (see `factsOnMerge`).
  */
-export function checkCatalogue(text: string, facts: TicketFacts | null): CatalogueProblem[] {
+export function checkCatalogue(text: string, tracker: TicketFacts | null, ticket: number | null = null): CatalogueProblem[] {
+  const facts = tracker && factsOnMerge(text, tracker, ticket);
   const c = parseCatalogue(text);
   const problems: CatalogueProblem[] = [];
   if (!c.hasOpen) problems.push({line: 1, rule: 'catalogue-no-table', detail: 'there is no "## Open" section'});

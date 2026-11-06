@@ -1,7 +1,7 @@
 import {describe, expect, test} from 'bun:test';
 
-import {checkCatalogue, parseCatalogue, ticketsOf, updateCatalogue, type TicketFacts} from './catalogue';
-import {factFromIssue, parseFacts, trackerFacts} from './tracker';
+import {checkCatalogue, factsOnMerge, parseCatalogue, ticketsOf, updateCatalogue, type TicketFacts} from './catalogue';
+import {branchTicket, factFromIssue, parseFacts, trackerFacts} from './tracker';
 
 const facts = (o: Record<number, number | 'closed' | 'open'>): TicketFacts =>
   new Map(
@@ -109,6 +109,35 @@ describe('checkCatalogue', () => {
   });
   test('without facts only the structure is checked', () => {
     expect(checkCatalogue(doc([openRow('A', 5)], []), null)).toEqual([]);
+  });
+});
+
+describe('a Fixed row on its own ticket branch', () => {
+  const fixed = doc([], [fixedRow('B', 6, 9)]);
+  test('passes when its only open issue is the branch ticket', () => {
+    expect(checkCatalogue(fixed, facts({6: 'open'}), 6)).toEqual([]);
+  });
+  test('fails when its open issue is another ticket', () => {
+    expect(checkCatalogue(fixed, facts({6: 'open'}), 7).map(p => p.rule)).toEqual(['catalogue-stale-status']);
+  });
+  test('the branch ticket counts closed by the PR no other ticket in the row was closed by', () => {
+    const two = doc([], [`| B | hung | ${I(5)}, ${I(6)} - merged in ${P(8)}, ${P(9)} |`]);
+    expect(factsOnMerge(two, facts({5: 8, 6: 'open'}), 6).get(6)).toEqual({closed: true, mergedPr: 9});
+    expect(checkCatalogue(two, facts({5: 8, 6: 'open'}), 6)).toEqual([]);
+  });
+  test('leaves the facts alone off a ticket branch, for a closed ticket, or with no Fixed row', () => {
+    const f = facts({6: 'open'});
+    expect(factsOnMerge(fixed, f, null)).toBe(f);
+    expect(factsOnMerge(doc([openRow('A', 6)], []), f, 6)).toBe(f);
+    expect(factsOnMerge(fixed, facts({6: 9}), 6).get(6)).toEqual({closed: true, mergedPr: 9});
+  });
+});
+
+describe('branchTicket', () => {
+  test('reads the ticket of a feat/issue-<n> branch, else null', () => {
+    expect(branchTicket(() => 'feat/issue-42\n')).toBe(42);
+    expect(branchTicket(() => 'main')).toBeNull();
+    expect(branchTicket(() => { throw new Error('not a repo'); })).toBeNull();
   });
 });
 

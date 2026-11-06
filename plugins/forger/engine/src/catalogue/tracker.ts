@@ -43,3 +43,13 @@ export function trackerFacts(run: CommandRunner, numbers: number[]): TicketFacts
     return null;
   }
 }
+
+/** The ticket the checked-out branch works (`feat/issue-<n>`), or null off a ticket branch or outside git. */
+export function branchTicket(run: CommandRunner): number | null {
+  try {
+    const m = /^feat\/issue-(\d+)$/.exec(run('git branch --show-current').trim());
+    return m ? Number(m[1]) : null;
+  } catch {
+    return null;
+  }
+}
