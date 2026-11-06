@@ -46,6 +46,7 @@ function sceneRunner(scene: GitScene, spawned: () => boolean) {
   return (cmd: string): string => {
     const after = spawned();
     if (cmd === 'git branch --show-current') return 'main';
+    if (scene.branch && cmd === `git log -3 --format="%h %s" ${scene.branch}`) return 'abc1234 third\ndef5678 second\n9990000 first';
     if (cmd === 'git rev-parse origin/main') return after && scene.merge ? 'bbb' : 'aaa';
     if (cmd === 'git merge-base --is-ancestor aaa bbb && echo yes') return 'yes';
     if (cmd === 'git reflog --format=%gs') {
@@ -251,6 +252,33 @@ describe('AutomationRunner iteration log', () => {
     const state = readState(root);
     expect(state.status).toBe('timeout');
     expect(state.last_error).toBe('Timeout after 7 minutes, ended by SIGKILL');
+  });
+});
+
+describe('AutomationRunner timed-out log', () => {
+  const timedOut: AgentResult = {exitCode: 1, signal: 'SIGKILL', output: 'step one\nlast words\n', timedOut: true};
+
+  test("a timed-out run's log names the branch, last commits and PR state", async () => {
+    const {runner, root} = runnerWith(timedOut, {branch: 'feat/the_ticket', prCheck: 'SUCCESS'});
+    await runner.runIteration(1);
+    const log = iterationLog(root, 1);
+    expect(log).toContain('branch: feat/the_ticket\n');
+    expect(log).toContain('last commits:\n  abc1234 third\n  def5678 second\n  9990000 first\n');
+    expect(log).toContain('pr: #75 OPEN\n');
+  });
+
+  test("a timed-out run's log ends with the worker's last output", async () => {
+    const {runner, root} = runnerWith(timedOut, {branch: 'feat/the_ticket'});
+    await runner.runIteration(1);
+    const log = iterationLog(root, 1);
+    expect(log).toContain('pr: none\n');
+    expect(log.endsWith('=== output ===\nstep one\nlast words\n')).toBe(true);
+  });
+
+  test('a run that did not time out prints no progress', async () => {
+    const {runner, root} = runnerWith({exitCode: 0, signal: null, output: 'x', timedOut: false}, {branch: 'feat/the_ticket'});
+    await runner.runIteration(1);
+    expect(iterationLog(root, 1)).not.toContain('last commits');
   });
 });
 

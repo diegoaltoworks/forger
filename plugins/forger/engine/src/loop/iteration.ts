@@ -68,6 +68,11 @@ export interface Placement {
   finish(conflicted: boolean): void;
 }
 
+function lastCommits(git: CommandRunner, branch: string): string[] {
+  const out = git(`git log -3 --format="%h %s" ${branch}`);
+  return out === '' ? [] : out.split('\n');
+}
+
 function verify(ctx: IterationContext): string | null {
   const {state, log, output, halt, lock, events, declined, verdicts} = ctx.config.paths;
   const ignore = [state, log, output, halt, lock, events, declined, verdicts, ...ctx.config.local_only];
@@ -165,6 +170,9 @@ export async function runIteration(
     startedAt,
     parallelism: ctx.config.parallelism,
     plan,
+    ...(result.timedOut
+      ? {progress: {branch: gitFacts.branch, commits: gitFacts.branch ? lastCommits(git, gitFacts.branch) : [], pr: gitFacts.pr ? {number: gitFacts.pr.number, state: gitFacts.pr.state} : null}}
+      : {}),
   };
   writeFileSync(outputFile, formatIterationLog(logFacts));
   if (result.overSpend) ctx.logger.log('WARN', `Spend limit $${result.overSpend.limitUsd} passed (reported $${result.overSpend.spentUsd}); worker stopped`);
