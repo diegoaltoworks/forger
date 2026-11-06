@@ -69,6 +69,18 @@ function unknownCommand(line: string): string | null {
   return PREREQUISITES.includes(tool) ? null : `"${tool}" is neither a forger command nor a prerequisite`;
 }
 
+describe('docs/reference/commands.md', () => {
+  test('every command in the engine\'s usage has one row in docs/reference/commands.md, and every row is a command', () => {
+    const text = read('docs/reference/commands.md');
+    const section = text.slice(text.indexOf('## The engine CLI'));
+    const rows = section
+      .split('\n')
+      .filter(l => /^\| `/.test(l))
+      .map(l => /^\| `([a-z-]+)/.exec(l)?.[1] ?? '');
+    expect([...rows].sort()).toEqual([...CLI].sort());
+  });
+});
+
 describe('the root README', () => {
   test('root README heading order', () => {
     const text = read('README.md');
