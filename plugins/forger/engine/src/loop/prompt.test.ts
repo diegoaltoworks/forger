@@ -12,6 +12,15 @@ describe('buildPrompt', () => {
     expect(out).toContain('Squash merge onto develop');
   });
 
+  test('the worker\'s prompt carries the run\'s deadline', () => {
+    const cfg = mergeConfig({limits: {killGraceSeconds: 45}});
+    const out = buildPrompt(cfg, 1, [], 'issue-1', false, new Date('2030-01-02T03:04:05.000Z'));
+    expect(out).toContain('Deadline: 2030-01-02T03:04:05.000Z');
+    expect(out).toContain('FORGER_DEADLINE');
+    expect(out).toContain('45s');
+    expect(buildPrompt(cfg, 1, [], 'issue-1')).not.toContain('Deadline:');
+  });
+
   test('includes the gate command when configured', () => {
     const cfg = mergeConfig({gates: 'bun run check'});
     expect(buildPrompt(cfg, 1, [], 'issue-1')).toContain('(`bun run check`)');

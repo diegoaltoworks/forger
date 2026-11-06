@@ -111,6 +111,25 @@ describe('runSupervised', () => {
     });
     expect(r.timedOut).toBe(true);
     expect(r.signal).toBe('SIGTERM');
+    expect(r.output).toContain('SIGTERM');
+    expect(r.output).not.toContain('SIGKILL');
+  });
+
+  test('a run past its deadline is signalled, given the grace period, then ended, and the log records both', async () => {
+    const r = await runSupervised({
+      command: 'bash',
+      args: ['-c', "trap '' TERM; while true; do sleep 0.1; done"],
+      cwd: tmp(),
+      input: '',
+      timeoutMs: 200,
+      graceMs: 400,
+    });
+    expect(r.timedOut).toBe(true);
+    expect(r.signal).toBe('SIGKILL');
+    const termAt = r.output.indexOf('(SIGTERM)');
+    const killAt = r.output.indexOf('(SIGKILL)');
+    expect(termAt).toBeGreaterThan(-1);
+    expect(killAt).toBeGreaterThan(termAt);
   });
 
   test('resolves when the worker exits even if a leftover child holds the pipes', async () => {

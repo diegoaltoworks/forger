@@ -57,12 +57,18 @@ function worktreeSection(config: WorkloopConfig, pick: string): string {
   ].join('\n');
 }
 
+/** The worker learns its deadline here and in FORGER_DEADLINE, so it can push before it is signalled. */
+function deadlineLine(deadline: Date, graceSeconds: number): string {
+  return `- Deadline: ${deadline.toISOString()} (also in the FORGER_DEADLINE environment variable). The engine signals you then and ends your process group ${graceSeconds}s later. Check it before any long wait, and push as soon as the gates are green.`;
+}
+
 export function buildPrompt(
   config: WorkloopConfig,
   iteration: number,
   completedTasks: string[],
   pick: string | null,
-  inWorktree = false
+  inWorktree = false,
+  deadline?: Date
 ): string {
   const completed = completedTasks.join(', ') || 'none';
   const gatesClause = config.gates ? ` (\`${config.gates}\`)` : '';
@@ -74,7 +80,7 @@ export function buildPrompt(
 ## Context
 - Previous completed tasks: ${completed}
 - Check ${config.paths.state} for full iteration history
-- Follow ${config.paths.process} workflow strictly
+- Follow ${config.paths.process} workflow strictly${deadline ? `\n${deadlineLine(deadline, config.limits.killGraceSeconds)}` : ''}
 
 ## Requirements
 1. Read the inbox for human instructions FIRST

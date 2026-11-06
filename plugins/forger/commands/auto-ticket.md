@@ -55,6 +55,12 @@ Human instructions first: acknowledge new `.forger/inbox/*.md` items (prefix
 with a clock) and add them to the backlog - as an issue with the intake label on GitHub,
 otherwise in `backlog.json` with a priority. Then continue.
 
+### Deadline
+The prompt and the `FORGER_DEADLINE` environment variable give the run's deadline.
+The engine signals you then and ends your process group after a grace period.
+Check `FORGER_DEADLINE` before any long wait (a slow gate, a CI wait), and push
+the moment the gates are green; a pushed branch survives a kill, a local one does not.
+
 ### 2. Read the ticket named in the prompt
 The prompt names the ticket to build: the engine's pick. Do not choose another
 and do not re-derive the order. On GitHub, ticket `issue-<n>` is issue #<n>:

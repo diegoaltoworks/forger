@@ -204,7 +204,9 @@ describe('AutomationRunner iteration log', () => {
   test('names the worker role, its ticket and its iteration in the worker environment, for its hook', async () => {
     const {runner, calls} = runnerWith({exitCode: 0, signal: null, output: '', timedOut: false});
     await runner.runIteration(1);
-    expect(calls[0].env).toEqual({FORGER_ROLE: 'worker', FORGER_TICKET: 'the_ticket', FORGER_ITERATION: '1'});
+    const {FORGER_DEADLINE, ...identity} = calls[0].env ?? {};
+    expect(identity).toEqual({FORGER_ROLE: 'worker', FORGER_TICKET: 'the_ticket', FORGER_ITERATION: '1'});
+    expect(Number.isNaN(Date.parse(FORGER_DEADLINE))).toBe(false);
   });
 
   test('gives the agent the tier role and the model id the role maps to', async () => {

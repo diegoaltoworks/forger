@@ -99,10 +99,15 @@ export function runSupervised(opts: SupervisedOptions): Promise<SupervisedResult
       resolve(result);
     };
 
+    const kill = (): void => {
+      output += `\nforger: grace period of ${Math.round(graceMs / 1000)}s over; ending the worker's process group (SIGKILL)\n`;
+      signalGroup(pid, 'SIGKILL');
+    };
     const deadline = setTimeout(() => {
       timedOut = true;
+      output += `\nforger: deadline reached; signalled the worker (SIGTERM), ${Math.round(graceMs / 1000)}s grace period starts\n`;
       signalGroup(pid, 'SIGTERM');
-      killTimer = setTimeout(() => signalGroup(pid, 'SIGKILL'), graceMs);
+      killTimer = setTimeout(kill, graceMs);
     }, timeoutMs);
 
     const onAbort = (): void => {
