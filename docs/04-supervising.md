@@ -92,8 +92,12 @@ Once the PR is merged or closed the ticket is workable again.
 
 ## 4. Dispatch
 
-- Exactly one engine, started detached so it survives the session, with the
-  loop's identity scoped to its environment.
+- Exactly one engine, started with `run --continuous --detach` so it survives
+  the session, with the loop's identity scoped to its environment. Under the
+  docker sandbox the engine is a container with a restart policy, named for the
+  repository; it starts worker containers through the Docker API socket it is
+  given and mounts no host home folder. Under the host sandbox it starts in a
+  new session and process group. `orient` and `status` show which.
 - Record the engine's real process id, not its launcher's.
 - Arm one watcher, `watch --repos`, over every loop you manage. It follows
   terminal events (completed, HALT, stalled, timed out, too many failures,

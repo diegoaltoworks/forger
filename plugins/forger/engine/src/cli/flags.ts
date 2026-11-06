@@ -9,6 +9,7 @@ import type {parseArgs} from 'util';
 export const FLAGS = {
   iterations: {type: 'string', short: 'n', default: '1'},
   continuous: {type: 'boolean', default: false},
+  detach: {type: 'boolean', default: false},
   json: {type: 'boolean', default: false},
   update: {type: 'boolean', default: false},
   states: {type: 'boolean', default: false},

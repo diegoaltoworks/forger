@@ -19,6 +19,8 @@ export interface CliDeps {
   stateStore?: StateStore;
   installedSkills?: () => string[];
   collectionRoots?: () => string[];
+  /** Starts a command in a new session and returns its pid; the real one spawns a detached process. */
+  spawnSession?: (argv: string[], cwd: string) => number;
 }
 
 /** none: runs anywhere; root: needs the consumer repo; config: and its config; loop: and the backlog and runner. */

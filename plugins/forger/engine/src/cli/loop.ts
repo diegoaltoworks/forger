@@ -3,15 +3,19 @@ import {watchRepos} from './multi';
 import {harnessOfRoot} from './harness-of';
 import {hooksGateProblems, hooksGateRefusal} from '../checks';
 import {behindBaseRefusal, readBaseSync} from '../loop';
+import {detachEngine, engineStartLine, readEngineStart} from './detach';
 import type {Command} from './command';
 
 export const run: Command = {
   name: 'run',
   needs: 'loop',
-  flags: ['iterations', 'continuous'],
+  flags: ['iterations', 'continuous', 'detach'],
   help: `  run [N]          Run N iterations (default: 1)
-  run --continuous Run until all tasks complete`,
-  async run({values, positionals, runner, run, config, projectRoot, pluginRoot}) {
+  run --continuous Run until all tasks complete
+  run --continuous --detach
+                   Start the engine so it outlives this session: a container with a restart policy under the docker sandbox, else a new session`,
+  async run(ctx) {
+    const {values, positionals, runner, run, config, projectRoot, pluginRoot} = ctx;
     const unguarded = guardRefusal(findHarness(config.harness), config.allow_unguarded);
     if (unguarded) {
       console.error(`Not starting: ${unguarded}.`);
@@ -30,6 +34,10 @@ export const run: Command = {
       process.exitCode = 1;
       return;
     }
+    if (values.detach) {
+      detachEngine(ctx);
+      return;
+    }
     const iterationArg = positionals[1] || (values.iterations as string);
     const started = await runner.run(parseInt(iterationArg, 10), values.continuous as boolean);
     if (!started) {
@@ -44,9 +52,13 @@ export const status: Command = {
   needs: 'loop',
   flags: ['json', 'from'],
   help: '  status [--json] [--from local|branch] Show current status, runner pid and liveness; --from branch reads the state branch of a clone',
-  run({values, runner}) {
-    if (values.json) console.log(JSON.stringify(runner.statusReport()));
-    else runner.showStatus();
+  run(ctx) {
+    const {values, runner} = ctx;
+    if (values.json) console.log(JSON.stringify({...runner.statusReport(), engine_start: readEngineStart(ctx)}));
+    else {
+      runner.showStatus();
+      console.log(engineStartLine(ctx));
+    }
   },
 };
 
