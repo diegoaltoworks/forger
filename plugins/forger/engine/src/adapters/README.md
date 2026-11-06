@@ -11,6 +11,8 @@ world, and is tested against real processes.
 - `supervise.ts` - spawns a worker as its own process group and ends the whole
   group at the deadline.
 - `host-sandbox.ts` - the `host` `Sandbox`: a git worktree, the worker as its own process group, the timeout.
+- `docker-plan.ts` - the pure half of the `docker` sandbox: the image choice, the `docker run` arguments and the reading of `docker info`.
+- `docker-sandbox.ts` - the `docker` `Sandbox`: one container per worker that clones origin, with no host mounts.
 - `sandboxes.ts` - the sandboxes by id, and `sandboxFor`, which the config's `sandbox` key picks.
 - `svg-raster.ts` - the brand `Rasteriser` over resvg; text is already outlines, so no font is loaded.
 - `static-server.ts` - the `AppServer` port over one folder served in-process, for wireframes

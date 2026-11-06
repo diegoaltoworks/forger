@@ -74,6 +74,13 @@ Run only the line for your harness. It prints every file as `written` or
 engine starts its workers with it. To update later, pull the clone and run the
 same line again: it rewrites the commands that changed.
 
+To run each worker in its own container instead of on this machine, add
+`--sandbox docker`. Setup records it in the config and checks that the Docker
+API is reachable, saying how to fix it when it is not, rootless mode included.
+Give the run an API key or a subscription token in its environment; the
+[adapters reference](reference/adapters.md#sandbox) lists the variables per
+harness.
+
 ## 🛠️ 3. Set up the repository
 
 Open a session at the root of the repository you want the loop to work on and

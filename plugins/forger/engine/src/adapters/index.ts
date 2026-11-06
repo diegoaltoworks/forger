@@ -19,5 +19,7 @@ export * from './claude-hooks';
 export * from './codex-hooks';
 export * from './copilot-hooks';
 export * from './opencode-hooks';
+export * from './docker-plan';
+export * from './docker-sandbox';
 export * from './host-sandbox';
 export * from './sandboxes';

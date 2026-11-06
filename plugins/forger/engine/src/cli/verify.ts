@@ -10,7 +10,7 @@ import type {Command, CommandContext} from './command';
 export function verifyOne(ctx: CommandContext, pr: number): Promise<VerifyResult> {
   const {config, projectRoot} = ctx;
   const tier = verifierTier(config);
-  return verifyPr(ctx.run(), ctx.deps.agent ?? agentFor(findHarness(config.harness), config.model_prices, sandboxFor(config.sandbox, execCapture(projectRoot))), {
+  return verifyPr(ctx.run(), ctx.deps.agent ?? agentFor(findHarness(config.harness), config.model_prices, sandboxFor(config.sandbox, execCapture(projectRoot), {projectRoot, pluginRoot: ctx.pluginRoot, baseBranch: config.base_branch})), {
     pr,
     trackerKind: config.tracker.kind,
     backlogFile: join(projectRoot, config.paths.backlog),

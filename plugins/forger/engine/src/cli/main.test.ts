@@ -403,6 +403,36 @@ describe('setup --json', () => {
   });
 });
 
+describe('setup --sandbox', () => {
+  test('setup --sandbox docker reports an unreachable Docker API and names the fix', async () => {
+    const root = realpathSync(mkdtempSync(join(tmpdir(), 'forger-cli-setup-')));
+    dirs.push(root);
+    process.chdir(root);
+    const unreachable: CommandRunner = cmd => {
+      if (cmd.startsWith('docker info')) throw new Error('Cannot connect to the Docker daemon at unix:///var/run/docker.sock');
+      return '';
+    };
+    const out = JSON.parse(await capture(['setup', '--json', '--gates', 'make test', '--tracker', 'local', '--sandbox', 'docker'], unreachable));
+    expect(out.sandbox.docker.reachable).toBe(false);
+    expect(out.sandbox.docker.fix.join('\n')).toContain('rootless');
+    expect(process.exitCode).toBe(1);
+    process.exitCode = 0;
+    expect(JSON.parse(readFileSync(join(root, '.forger', 'workloop.config.json'), 'utf-8')).sandbox).toBe('docker');
+  });
+
+  test('a reachable Docker API passes and an unknown sandbox is refused', async () => {
+    const root = realpathSync(mkdtempSync(join(tmpdir(), 'forger-cli-setup-')));
+    dirs.push(root);
+    process.chdir(root);
+    const out = JSON.parse(await capture(['setup', '--json', '--gates', 'make test', '--tracker', 'local', '--sandbox', 'docker'], () => '27.0'));
+    expect(out.sandbox).toEqual({sandbox: 'docker', docker: {reachable: true, fix: []}});
+    expect(process.exitCode ?? 0).toBe(0);
+    await capture(['setup', '--json', '--sandbox', 'nope']);
+    expect(process.exitCode).toBe(1);
+    process.exitCode = 0;
+  });
+});
+
 describe('setup with the testing pack', () => {
   test('carries the missing lcov report and the runner flag as next steps', async () => {
     const root = realpathSync(mkdtempSync(join(tmpdir(), 'forger-cli-setup-')));

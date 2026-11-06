@@ -73,7 +73,7 @@ function contextFor(base: Pick<CommandContext, 'values' | 'positionals' | 'deps'
       return (store ??= from === 'branch' ? gitStateStore({repo: ctx.projectRoot, branch: ctx.config.state.branch}) : localStateFor(ctx.projectRoot, ctx.config));
     },
     get runner() {
-      const box = sandboxFor(ctx.config.sandbox, execCapture(ctx.projectRoot));
+      const box = sandboxFor(ctx.config.sandbox, execCapture(ctx.projectRoot), {projectRoot: ctx.projectRoot, pluginRoot: ctx.pluginRoot, baseBranch: ctx.config.base_branch});
       return (runner ??= new AutomationRunner(ctx.projectRoot, ctx.config, ctx.backlog, {stateStore: ctx.stateStore, lease: leaseSettingsFor(ctx.config), gitRunner: execRunner(ctx.projectRoot), gitCapture: execCapture(ctx.projectRoot), sandbox: box, agent: agentFor(findHarness(ctx.config.harness), ctx.config.model_prices, box), pluginRoot: ctx.pluginRoot, resolvePlan: ticket => storedPlanFor(ctx, ticket), haltTracker: ctx.config.tracker.kind === 'github' ? new GhTrackerHalt(execRunner(ctx.projectRoot)) : undefined}));
     },
   };

@@ -20,14 +20,13 @@ there is one model mapping and several harnesses, named here and nowhere else in
   (frontmatter, plugin root) and never copies their text per harness. OpenCode takes a model as
   `provider/model`, so map the roles under `models` to such ids.
 
-- **Sandbox.** Where a worker's process runs, and with what limits, is proposed to sit behind a `Sandbox`
-  seam beside `Harness`, with `host` (today), `docker` and a later `remote` backend, and per-harness
-  credentials for an API key or a subscription token. See
-  [ADR 0019](../adr/0019-workers-run-in-a-sandbox-behind-an-adapter.md). It is not built yet; workers run on the host.
+- **Sandbox.** Where a worker's process runs, and with what limits, sits behind a `Sandbox` seam beside
+  `Harness`, with `host` and `docker` backends shipped and a later `remote` backend proposed. See
+  [ADR 0019](../adr/0019-workers-run-in-a-sandbox-behind-an-adapter.md) and the [Sandbox](#sandbox) section.
 
 ## Credentials in a sandbox
 
-Proposed in [ADR 0019](../adr/0019-workers-run-in-a-sandbox-behind-an-adapter.md); not yet used by the engine. Credentials reach a sandboxed worker only as environment variables.
+Set in the environment that starts the run ([ADR 0019](../adr/0019-workers-run-in-a-sandbox-behind-an-adapter.md)). The `docker` backend passes these variables to the container by name, so no secret appears in a command line, and `GH_TOKEN` or `GITHUB_TOKEN` lets the container push. Credentials reach a sandboxed worker only as environment variables.
 
 | Harness | API key variable | Subscription token | Source |
 |---|---|---|---|
@@ -50,8 +49,18 @@ A sandbox does four things:
 | Backend | What it is |
 |---|---|
 | `host` | The default. A git worktree, the worker as its own process group on this machine, and the timeout. |
+| `docker` | One container per worker. See below. |
 
-The `docker` and `remote` backends are proposed in the ADR and are not shipped.
+The `remote` backend is proposed in the ADR and is not shipped.
+
+### The docker backend
+
+Set `sandbox` to `docker`, or run `setup --sandbox docker`, which writes the config and checks that the Docker API answers. When it does not, setup says what to do: start the daemon, join the `docker` group, or on a rootless install start the user service and set `DOCKER_HOST` to its socket.
+
+- **Image.** The repository's own, when `.devcontainer/` names an `image` or a `build` with a Dockerfile (or holds a `Dockerfile`); else forger's base image from `plugins/forger/sandbox/`, which carries git, `gh`, the common runtimes, one harness CLI and the forger plugin. The base image takes the harness package and the forger version as build arguments. A repository's own image must carry the harness CLI itself.
+- **Run.** One container per worker, removed when the worker ends or is ended. It clones the repository from origin at the base branch, checks out the ticket's branch (from origin when it exists there) and runs the harness command. An ssh remote is cloned over https, so a `GH_TOKEN` or `GITHUB_TOKEN` is what lets the container fetch a private repository and push.
+- **Mounts.** None from the host: not the working tree, the home folder or `/tmp`. The only mounts are named volumes for the bun, uv and npm caches, shared between runs of one repository.
+- **Outcomes.** The engine reads them from the tracker and git, as with `host`, and never opens a file in the container. The host keeps a worktree for the ticket only as its own anchor; the container never sees it, so the engine's early check for a branch that conflicts with the base does not see the container's commits, and a conflict surfaces at the pull request instead.
 
 ## Run limits
 
