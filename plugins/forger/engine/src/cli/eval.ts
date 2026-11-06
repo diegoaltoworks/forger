@@ -3,7 +3,7 @@ import {tmpdir} from 'os';
 import {join} from 'path';
 import {randomUUID} from 'crypto';
 
-import {agentFor, findHarness} from '../adapters';
+import {agentFor, execCapture, findHarness, sandboxFor} from '../adapters';
 import {resolveModel} from '../config';
 import {resolveSlot, SLOTS, UNATTENDED_PREAMBLE, withBuiltinFile} from '../packs';
 import {contractSuffix, evalContract, evalPrompt, resultFile, scoreCase, summarise, type CaseScore, type EvalCase} from '../pipeline';
@@ -68,7 +68,7 @@ export const evalCommand: Command = {
     }
     if (cases.length === 0) return fail(`no cases under evals/${slot}/`);
 
-    const agent = ctx.deps.agent ?? agentFor(findHarness(config.harness), config.model_prices);
+    const agent = ctx.deps.agent ?? agentFor(findHarness(config.harness), config.model_prices, sandboxFor(config.sandbox, execCapture(ctx.projectRoot)));
     const tier = config.model_by_priority.default;
     const scores: CaseScore[] = [];
     for (const c of cases) {

@@ -4,3 +4,4 @@ export * from './ui';
 export * from './harness';
 export * from './spec';
 export * from './state-store';
+export * from './sandbox';
