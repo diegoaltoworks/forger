@@ -45,11 +45,13 @@ Act on the action, never on your own reading of a label:
 
 ## 2. Start exactly one engine
 
-Run `work run --continuous` detached, with the loop's scoped identity in its
-environment only. The engine refuses a second engine while the lock holder is
-alive, so a repeated start is harmless. Confirm with `work status --json` that
-`runner.alive` is true and record `runner.pid`; that is the engine's own pid,
-not the launcher's.
+Run `work run --continuous --detach`, with the loop's scoped identity in its
+environment only. Under the docker sandbox the engine starts as a container
+with a restart policy, named for the repository; under the host sandbox it
+starts in a new session. Either way no session owns it. The engine refuses a
+second engine while the lock holder is alive, so a repeated start is harmless.
+Confirm with `work status --json` that `runner.alive` is true and record
+`runner.pid`; `engine_start` says how it was started.
 
 ## 3. Watch the event files
 

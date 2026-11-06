@@ -26,3 +26,4 @@ export * from './docker-plan';
 export * from './docker-sandbox';
 export * from './host-sandbox';
 export * from './sandboxes';
+export * from './detach-plan';

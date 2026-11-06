@@ -4,6 +4,7 @@ import {join} from 'path';
 
 import {readBaseSync, decideHalt, pidAlive, viewLease, standingHalt, parseAllEvents, GhTrackerHalt, requiresVerifyStatus, handedOver, listRepoLabels, loopLabels, missingLabels, readAllVerdicts, verdictsHome} from '../loop';
 import {describeBlocked} from '../backlog';
+import {engineStartLine, readEngineStart} from './detach';
 import {buildReport, formatReport, mergedInPeriod, orient as orientPlan, proposedAdrs, reportPeriod, waitingIssues, OWNER_LABELS, type AdrText, type MergedPrFact, type OwnerItem, type WaitingIssue} from '../supervisor';
 import {hooksGateProblems, hooksGateRefusal} from '../checks';
 import type {Command, CommandContext} from './command';
@@ -102,7 +103,7 @@ function supervise(which: 'orient' | 'report') {
       }
     }
     const events = parseAllEvents(ctx.stateStore.readEvents());
-    const out = which === 'orient' ? plan : buildReport({
+    const out = which === 'orient' ? {...plan, engine_start: readEngineStart(ctx)} : buildReport({
           ownerWaiting: ownerWaiting(ctx),
           merged,
           period,
@@ -121,7 +122,7 @@ function supervise(which: 'orient' | 'report') {
     }
     if (values.json) console.log(JSON.stringify(out));
     else if (which === 'report') console.log(formatReport(out as ReturnType<typeof buildReport>));
-    else console.log([`${plan.action}: ${plan.reason}`, ...plan.anomalies.map(a => `! ${a}`)].join('\n'));
+    else console.log([`${plan.action}: ${plan.reason}`, engineStartLine(ctx), ...plan.anomalies.map(a => `! ${a}`)].join('\n'));
   };
 }
 
