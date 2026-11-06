@@ -159,7 +159,10 @@
       "ticket": "issue-330",
       "pid": null,
       "session_id": "e9caa535-81cf-4221-b390-cc15b921ce08",
-      "snapshot": null,
+      "snapshot": {
+        "baseSha": "",
+        "reflogLength": 1
+      },
       "started_at": "2026-11-06T07:52:07.185Z",
       "plan": {
         "stages": [
