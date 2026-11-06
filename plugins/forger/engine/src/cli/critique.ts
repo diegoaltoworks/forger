@@ -53,7 +53,7 @@ export const critique: Command = {
       const label = config.tracker.kind === 'github' ? ` --label ${quote(config.tracker.label)}` : '';
       const result = await critiquePr(
         ctx.run(),
-        ctx.deps.agent ?? agentFor(findHarness(config.harness), config.model_prices, sandboxFor(config.sandbox, execCapture(ctx.projectRoot))),
+        ctx.deps.agent ?? agentFor(findHarness(config.harness), config.model_prices, sandboxFor(config.sandbox, execCapture(ctx.projectRoot), {projectRoot: ctx.projectRoot, pluginRoot: ctx.pluginRoot, baseBranch: config.base_branch})),
         {fileTicket: (title, body) => ctx.run()(`gh issue create --title ${quote(title)} --body ${quote(body)}${label}`).trim()},
         {
           pr,

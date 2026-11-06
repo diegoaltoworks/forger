@@ -10,7 +10,7 @@ Every field of `.forger/workloop.config.json`.
 |---|---|
 | `repo` | If set, only tickets with this `repo` (or none) are worked here. `null` = no filter. |
 | `harness` | The harness that runs the worker: `claude` (default), `opencode`, `codex` or `copilot`. |
-| `sandbox` | Where workers run: `host` (default), a git worktree on this machine. See [adapters](adapters.md). |
+| `sandbox` | Where workers run: `host` (default), a git worktree on this machine, or `docker`, one container per worker. See [adapters](adapters.md). |
 | `allow_unguarded` | `true` lets `run` start with a harness that cannot refuse a tool call. Default `false`. |
 | `worker_command` | Slash command the engine invokes per iteration. Default `forger:auto-ticket`. |
 | `gates` | The quality-gate command; surfaced to the worker. |

@@ -33,6 +33,7 @@ export const FLAGS = {
   flavour: {type: 'string'},
   packs: {type: 'string'},
   harness: {type: 'string'},
+  sandbox: {type: 'string'},
   upgrade: {type: 'boolean'},
   detect: {type: 'boolean', default: false},
   presets: {type: 'boolean', default: false},
