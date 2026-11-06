@@ -24,6 +24,15 @@ export interface IterationLogFacts {
   parallelism?: number;
   /** The resolved pipeline plan the run started with. */
   plan?: StoredPlan | null;
+  /** Where a timed-out worker got to; only a timed-out run's log prints it. */
+  progress?: TimeoutProgress;
+}
+
+export interface TimeoutProgress {
+  branch: string | null;
+  /** The newest commits on the branch, one line each. */
+  commits: string[];
+  pr: {number: number; state: string} | null;
 }
 
 function outcome(f: IterationLogFacts): string {
@@ -33,6 +42,16 @@ function outcome(f: IterationLogFacts): string {
   }
   if (f.signal) return `ended by ${f.signal}`;
   return `exited with code ${f.exitCode}`;
+}
+
+function progressLines(f: IterationLogFacts): string[] {
+  if (!f.timedOut || !f.progress) return [];
+  const {branch, commits, pr} = f.progress;
+  return [
+    `branch: ${branch ?? 'none'}`,
+    ...(commits.length > 0 ? ['last commits:', ...commits.map(c => `  ${c}`)] : ['last commits: none']),
+    `pr: ${pr ? `#${pr.number} ${pr.state}` : 'none'}`,
+  ];
 }
 
 export function formatIterationLog(f: IterationLogFacts): string {
@@ -46,6 +65,7 @@ export function formatIterationLog(f: IterationLogFacts): string {
     ...(f.plan ? [`plan: ${planLine(f.plan)}`] : []),
     `elapsed: ${f.elapsedSeconds}s`,
     `outcome: ${outcome(f)}`,
+    ...progressLines(f),
     ...(f.status !== undefined ? [`status: ${f.status}`] : []),
     '=== output ===',
     body.endsWith('\n') ? body : `${body}\n`,

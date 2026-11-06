@@ -139,7 +139,7 @@ the same ticket is not picked again. `decline` reads the issue's labels back and
 and `limits.maxConsecutiveDeclines` declines in a row halt the loop with a line
 naming each ticket and reason; `report` lists the declined tickets. A record for
 a different ticket is a failure. The iteration log header always prints the engine's pick next to the
-ticket the run was held to. The full table is in ADR 0008.
+ticket the run was held to. A timed-out run's log also names the worker's branch, its last commits and the PR with its state, and ends with the worker's output. The full table is in ADR 0008.
 
 A green merge is the only progress. Failures count toward a halt; a run that
 merged and then timed out is still a success, with a warning. A merge made on
