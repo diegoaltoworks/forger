@@ -233,3 +233,10 @@ using `retro upstream`.
 - **On demand:** when the owner asks "how do we stop this happening again".
 
 The supervisor proposes; the owner approves changes to the playbook itself.
+
+## Writing to the catalogue, an ADR or a ticket
+
+Describe the failure in general terms. Leave out the specifics of one person's
+setup: the kind of computer, how many accounts it holds, or which other projects
+sit beside it. A rule rests on general grounds such as least privilege,
+isolation, reproducibility and running on more than one machine.

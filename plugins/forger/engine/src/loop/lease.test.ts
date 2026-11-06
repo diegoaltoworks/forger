@@ -4,7 +4,7 @@ import {decideLease, holderPid, viewLease, type Lease, type LocalProbe} from './
 
 const lease: Lease = {
   holder: 'a',
-  host: 'machine',
+  host: 'host-a',
   acquired_at: '2026-01-01T00:00:00.000Z',
   renewed_at: '2026-01-01T00:10:00.000Z',
   ttl_seconds: 900,
@@ -28,14 +28,14 @@ describe('decideLease', () => {
       lease,
       'b',
       '2026-01-01T00:25:00.000Z',
-      {action: 'takeover', previousHolder: 'a', previousHost: 'machine'},
+      {action: 'takeover', previousHolder: 'a', previousHost: 'host-a'},
     ],
     [
       'expired foreign lease',
       lease,
       'b',
       '2026-01-01T03:00:00.000Z',
-      {action: 'takeover', previousHolder: 'a', previousHost: 'machine'},
+      {action: 'takeover', previousHolder: 'a', previousHost: 'host-a'},
     ],
     ['garbage: a string', 'nope', 'b', '2026-01-01T00:11:00.000Z', {action: 'acquire'}],
     ['garbage: missing fields', {holder: 'a'}, 'b', '2026-01-01T00:11:00.000Z', {action: 'acquire'}],
@@ -64,46 +64,46 @@ describe('decideLease', () => {
 });
 
 describe('a lease held by a dead local engine', () => {
-  const mine: Lease = {...lease, holder: 'machine:4242:ab12cd34', host: 'machine'};
+  const mine: Lease = {...lease, holder: 'host-a:4242:ab12cd34', host: 'host-a'};
   const now = at('2026-01-01T00:11:00.000Z');
-  const local = (alive: boolean): {host: string; isAlive: () => boolean} => ({host: 'machine', isAlive: () => alive});
+  const local = (alive: boolean): {host: string; isAlive: () => boolean} => ({host: 'host-a', isAlive: () => alive});
 
   test('is taken over before it expires', () => {
-    expect(decideLease(mine, 'b', now, local(false))).toEqual({action: 'takeover', previousHolder: mine.holder, previousHost: 'machine'});
+    expect(decideLease(mine, 'b', now, local(false))).toEqual({action: 'takeover', previousHolder: mine.holder, previousHost: 'host-a'});
   });
   test('is refused while its pid lives', () => {
     expect(decideLease(mine, 'b', now, local(true)).action).toBe('refuse');
   });
   test('from another host is refused though the pid is gone here', () => {
-    expect(decideLease(mine, 'b', now, {host: 'desktop', isAlive: () => false}).action).toBe('refuse');
+    expect(decideLease(mine, 'b', now, {host: 'host-b', isAlive: () => false}).action).toBe('refuse');
   });
   test('a holder without a pid is left to expire', () => {
     expect(decideLease({...mine, holder: 'odd'}, 'b', now, local(false)).action).toBe('refuse');
   });
   test('holderPid reads host:pid:nonce', () => {
-    expect(holderPid('machine:4242:ab12cd34')).toBe(4242);
+    expect(holderPid('host-a:4242:ab12cd34')).toBe(4242);
     expect(holderPid('odd')).toBe(null);
   });
 });
 
 describe('viewLease', () => {
   const probe = (host: string, alive: boolean): LocalProbe => ({host, isAlive: () => alive});
-  const mine: Lease = {...lease, holder: 'machine:4242:ab12cd34', host: 'machine'};
+  const mine: Lease = {...lease, holder: 'host-a:4242:ab12cd34', host: 'host-a'};
   const now = at('2026-01-01T00:11:00.000Z');
   test.each([
-    ['none', null, probe('machine', true), 'none'],
-    ['own live', mine, probe('machine', true), 'own'],
-    ['stale local', mine, probe('machine', false), 'stale_local'],
-    ['live elsewhere', mine, probe('desktop', false), 'live_elsewhere'],
-    ['expired', {...mine, renewed_at: '2025-01-01T00:00:00.000Z'}, probe('desktop', false), 'expired'],
+    ['none', null, probe('host-a', true), 'none'],
+    ['own live', mine, probe('host-a', true), 'own'],
+    ['stale local', mine, probe('host-a', false), 'stale_local'],
+    ['live elsewhere', mine, probe('host-b', false), 'live_elsewhere'],
+    ['expired', {...mine, renewed_at: '2025-01-01T00:00:00.000Z'}, probe('host-b', false), 'expired'],
   ])('%s', (_n, input, probe, state) => {
     expect(viewLease(input, now, probe).state).toBe(state as never);
   });
   test('reports holder and expiry', () => {
-    expect(viewLease(mine, now, probe('desktop', true))).toEqual({
+    expect(viewLease(mine, now, probe('host-b', true))).toEqual({
       state: 'live_elsewhere',
       holder: mine.holder,
-      host: 'machine',
+      host: 'host-a',
       expires_at: '2026-01-01T00:25:00.000Z',
     });
   });
