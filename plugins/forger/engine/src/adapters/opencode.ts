@@ -27,6 +27,7 @@ export function stripClaudeFrontmatter(source: string): string {
 
 export const opencodeHarness: Harness = {
   id: 'opencode',
+  credentials: {api_key: ['ANTHROPIC_API_KEY', 'OPENAI_API_KEY'], subscription: null, howTo: 'opencode signs in with a cached auth file, not a variable, so only the provider API key works in a sandbox'},
   usage: 'cost',
   spentUsd: opencodeSpentUsd,
   plainText: opencodeText,

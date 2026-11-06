@@ -77,9 +77,13 @@ same line again: it rewrites the commands that changed.
 To run each worker in its own container instead of on this machine, add
 `--sandbox docker`. Setup records it in the config and checks that the Docker
 API is reachable, saying how to fix it when it is not, rootless mode included.
-Give the run an API key or a subscription token in its environment; the
-[adapters reference](reference/adapters.md#sandbox) lists the variables per
-harness.
+Choose how the worker pays for the model with `--credential api_key` or
+`--credential subscription`; for a subscription, setup says how to make a token
+for headless use. Put the token in the environment that starts the run. A run
+pushes with one GitHub token scoped to the repository, read from a variable or
+minted per run from a GitHub App. The
+[adapters reference](reference/adapters.md#credentials-in-a-sandbox) lists the
+variables per harness.
 
 ## 🛠️ 3. Set up the repository
 

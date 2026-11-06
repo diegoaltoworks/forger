@@ -24,6 +24,8 @@ export interface ModelPrice {
   cached_input?: number;
 }
 
+export type CredentialKind = 'api_key' | 'subscription';
+
 /** A skill slot maps to an installed skill name, or to a SKILL.md the worker reads and follows. */
 export type SkillMapping = string | {file: string};
 
@@ -79,6 +81,16 @@ export interface WorkloopConfig {
   allow_unguarded: boolean;
   /** Where workers run: `host` (default), a worktree on this machine. */
   sandbox: string;
+  /**
+   * What a sandboxed run is given (ADR 0019). `github` names where the one repository-scoped token
+   * comes from: `env` reads the variable `variable`; `app` mints an installation token per run from the
+   * GitHub App whose id and private key sit in the two named variables. `model` names, per harness id,
+   * which kind of model credential to pass: an `api_key` or a `subscription` token.
+   */
+  credentials: {
+    github: {source: 'env' | 'app'; variable: string; app_id_variable: string; app_key_variable: string};
+    model: Record<string, CredentialKind>;
+  };
   paths: {
     backlog: string;
     state: string;
@@ -157,6 +169,7 @@ export interface WorkloopConfigInput {
   harness?: string;
   allow_unguarded?: boolean;
   sandbox?: string;
+  credentials?: {github?: Partial<WorkloopConfig['credentials']['github']>; model?: Record<string, CredentialKind>};
   parallelism?: number;
   limits?: Partial<WorkloopConfig['limits']>;
   paths?: Partial<WorkloopConfig['paths']>;
@@ -182,6 +195,10 @@ export const DEFAULT_CONFIG: WorkloopConfig = {
   harness: 'claude',
   allow_unguarded: false,
   sandbox: 'host',
+  credentials: {
+    github: {source: 'env', variable: 'GH_TOKEN', app_id_variable: 'FORGER_APP_ID', app_key_variable: 'FORGER_APP_PRIVATE_KEY'},
+    model: {},
+  },
   parallelism: 1,
   /**
    * P0 is the foundation. A subtle error there is both expensive and invisible,
@@ -251,6 +268,18 @@ export function validateState(state: WorkloopConfig['state']): void {
   }
 }
 
+/** Credential settings the run can honour: a known GitHub source and a known kind per harness. Throws otherwise. Pure. */
+export function validateCredentials(c: WorkloopConfig['credentials']): void {
+  if (c.github.source !== 'env' && c.github.source !== 'app') {
+    throw new Error(`credentials.github.source must be "env" or "app", got ${JSON.stringify(c.github.source)}`);
+  }
+  for (const [harness, kind] of Object.entries(c.model)) {
+    if (kind !== 'api_key' && kind !== 'subscription') {
+      throw new Error(`credentials.model.${harness} must be "api_key" or "subscription", got ${JSON.stringify(kind)}`);
+    }
+  }
+}
+
 /**
  * Merge a partial user config over a base, one level deep for each nested
  * section so a user who overrides only `limits.timeoutMinutes` keeps every
@@ -265,10 +294,16 @@ export function mergeConfig(
   }
   const state = {...base.state, ...(user.state ?? {})};
   validateState(state);
+  const credentials = {
+    github: {...base.credentials.github, ...(user.credentials?.github ?? {})},
+    model: {...base.credentials.model, ...(user.credentials?.model ?? {})},
+  };
+  validateCredentials(credentials);
   return {
     ...base,
     ...user,
     state,
+    credentials,
     models: {...base.models, ...(user.models ?? {})},
     model_prices: {...base.model_prices, ...(user.model_prices ?? {})},
     model_by_priority: {

@@ -12,6 +12,8 @@ import {join} from 'path';
 
 import type {CapturingRunner, Sandbox, SupervisedResult} from '../ports';
 import {ticketBranch, worktreeWorkspace} from '../loop';
+import type {CredentialPlan} from './credentials';
+import {fetchGithubApi, githubToken, type GithubApi} from './github-token';
 import {CREDENTIAL_VARIABLES, containerName, imagePlan, repoKey, runArgs, runEnv, type DevcontainerFile, type ImagePlan} from './docker-plan';
 import {runSupervised} from './supervise';
 
@@ -22,6 +24,13 @@ export interface DockerSandboxOptions {
   /** Names of the variables passed to the container; the harnesses' credentials by default. */
   passthrough?: string[];
   nonce?: () => string;
+  /** Which model variables and which GitHub token source a run gets; without it the harnesses' variables pass as set. */
+  credentials?: CredentialPlan;
+  /** Receives each token minted for a run, so the wrapper that redacts output knows it. */
+  secrets?: Set<string>;
+  env?: Record<string, string | undefined>;
+  api?: GithubApi;
+  now?: () => number;
 }
 
 function quote(s: string): string {
@@ -38,7 +47,9 @@ function readDevcontainer(root: string): {file: DevcontainerFile | null; dockerf
 export function dockerSandbox(git: CapturingRunner, options: DockerSandboxOptions): Sandbox {
   const {projectRoot, pluginRoot, baseBranch} = options;
   const workspace = worktreeWorkspace(git);
-  const passthrough = options.passthrough ?? CREDENTIAL_VARIABLES.filter(v => process.env[v] !== undefined);
+  const hostEnv = options.env ?? process.env;
+  const plan = options.credentials;
+  const passthrough = options.passthrough ?? (plan ? [...plan.variables, 'GH_TOKEN'] : CREDENTIAL_VARIABLES).filter(v => hostEnv[v] !== undefined || v === 'GH_TOKEN');
   const nonce = options.nonce ?? (() => Math.random().toString(36).slice(2, 8));
   let origin: string | null = null;
   let prepared: {image: string} | {error: string} | null = null;
@@ -82,19 +93,29 @@ export function dockerSandbox(git: CapturingRunner, options: DockerSandboxOption
         return {result: Promise.resolve(failed), end: () => own.abort()};
       }
       const url = originUrl();
+      if (plan?.error) {
+        const failed: SupervisedResult = {exitCode: 1, signal: null, output: plan.error, timedOut: false};
+        return {result: Promise.resolve(failed), end: () => own.abort()};
+      }
       const head = git(`git -C ${quote(spec.cwd)} rev-parse --abbrev-ref HEAD`).stdout;
       const ticketFromPath = spec.cwd.split('/').pop() ?? 'worker';
       const branch = head !== '' && head !== 'HEAD' ? head : ticketBranch(ticketFromPath);
       const name = containerName(ticketFromPath, nonce());
       const input = {name, image: image.image, repoKey: repoKey(url), origin: url, baseBranch, branch, command: spec.command, args: spec.args, passthrough};
       const remove = () => void git(`docker rm -f ${quote(name)}`);
-      const result = runSupervised({
-        ...spec,
-        command: 'docker',
-        args: runArgs(input),
-        env: runEnv(input, spec.env),
-        abort,
-      }).finally(remove);
+      const run = async (): Promise<SupervisedResult> => {
+        let extra = spec.env;
+        if (plan) {
+          const minted = await githubToken({github: plan.github, env: hostEnv, origin: url, api: options.api ?? fetchGithubApi, nowSeconds: Math.floor((options.now ?? Date.now)() / 1000)});
+          if (!minted.ok) return {exitCode: 1, signal: null, output: minted.error, timedOut: false};
+          if (minted.token) {
+            options.secrets?.add(minted.token);
+            extra = {...spec.env, GH_TOKEN: minted.token};
+          }
+        }
+        return runSupervised({...spec, command: 'docker', args: runArgs(input), env: runEnv(input, extra), abort});
+      };
+      const result = run().finally(remove);
       return {
         result,
         end: () => {

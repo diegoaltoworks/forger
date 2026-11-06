@@ -8,6 +8,7 @@ import {claudeHooks} from './claude-hooks';
 
 export const claudeHarness: Harness = {
   id: 'claude',
+  credentials: {api_key: ['ANTHROPIC_API_KEY'], subscription: 'CLAUDE_CODE_OAUTH_TOKEN', howTo: 'run `claude setup-token` once on a machine with a browser; it prints a long-lived token to export as CLAUDE_CODE_OAUTH_TOKEN'},
   usage: 'cap',
   spawn({prompt, sessionId, tier, model}) {
     return {
