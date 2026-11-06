@@ -1,6 +1,6 @@
 {
-  "iteration": 156,
-  "status": "ready",
+  "iteration": 157,
+  "status": "running",
   "last_completed_at": "2026-11-06T04:55:27.816Z",
   "completed_iterations": 140,
   "failed_iterations": 7,
@@ -145,7 +145,15 @@
     "issue-306",
     "issue-307"
   ],
-  "in_flight": [],
+  "in_flight": [
+    {
+      "ticket": null,
+      "pid": null,
+      "session_id": "8580a847-b6b2-4596-8e65-48ae4c568a11",
+      "snapshot": null,
+      "started_at": "2026-11-06T05:07:50.502Z"
+    }
+  ],
   "last_error": "Ticket #308 is handed over as `needs-human`: criterion c4 names a file that doesn't exist (`docs/reference/config.md` instead of `configuration.md`), so the verifier can't decide it.",
   "stall_count": 0,
   "declined_tasks": [
