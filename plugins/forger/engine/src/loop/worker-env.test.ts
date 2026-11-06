@@ -11,6 +11,11 @@ describe('worker environment', () => {
     expect(workerEnv('t', 1, '/opt/p').FORGER_PLUGIN_ROOT).toBe('/opt/p');
     expect('FORGER_PLUGIN_ROOT' in workerEnv('t', 1)).toBe(false);
   });
+  test('the worker\'s environment carries the run\'s deadline', () => {
+    const d = new Date('2030-01-02T03:04:05.000Z');
+    expect(workerEnv('t', 1, undefined, d).FORGER_DEADLINE).toBe('2030-01-02T03:04:05.000Z');
+    expect('FORGER_DEADLINE' in workerEnv('t', 1)).toBe(false);
+  });
   test('a process the engine did not start is no worker', () => {
     expect(workerIdentity({})).toBeNull();
     expect(workerIdentity({FORGER_ROLE: 'supervisor'})).toBeNull();

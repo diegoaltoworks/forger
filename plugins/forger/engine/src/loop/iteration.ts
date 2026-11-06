@@ -107,14 +107,15 @@ export async function runIteration(
   ctx.store.save(state);
   if (attemptedTask) ctx.emit('picked', iteration, attemptedTask, null);
 
-  const prompt = buildPrompt(ctx.config, iteration, state.completed_tasks, attemptedTask, placement !== undefined);
+  const {timeoutMinutes, killGraceSeconds} = ctx.config.limits;
+  const deadline = new Date(Date.now() + timeoutMinutes * 60 * 1000);
+  const prompt = buildPrompt(ctx.config, iteration, state.completed_tasks, attemptedTask, placement !== undefined, deadline);
   const tier = ctx.backlog.tier(attemptedTask);
   ctx.logger.log('INFO', `Running the agent (session: ${sessionId.slice(0, 8)}...)`);
   if (attemptedTask) {
     ctx.logger.log('INFO', `Ticket: ${attemptedTask} [${tier.model}, $${tier.budget}] session ${sessionId}`);
   }
 
-  const {timeoutMinutes, killGraceSeconds} = ctx.config.limits;
   const model = resolveModel(tier.model, ctx.config.models);
   if (ctx.agent.spendLimit?.([model]) === 'none') {
     ctx.logger.log('WARN', `The ${ctx.agent.harnessId ?? 'harness'} harness reports no usage for ${model}: this run has no spend limit, only the ${timeoutMinutes} minute timeout`);
@@ -137,7 +138,7 @@ export async function runIteration(
     model,
     workerCommand: ctx.config.worker_command,
     cwd: root,
-    env: workerEnv(attemptedTask, iteration, ctx.pluginRoot),
+    env: workerEnv(attemptedTask, iteration, ctx.pluginRoot, deadline),
     timeoutMinutes,
     killGraceSeconds,
     abort: placement?.abort,

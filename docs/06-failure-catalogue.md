@@ -18,7 +18,6 @@ the next `work catalogue --update` moves the row back to Open.
 
 | Failure | What it looks like | Issue |
 |---|---|---|
-| A timed-out run leaves an empty log | A run far past its timeout goes unnoticed because its log holds nothing. | [#294](https://github.com/diegoaltoworks/forger/issues/294) |
 | The worker gets no warning before the deadline | A worker is killed at its deadline with no chance to push or hand over. | [#295](https://github.com/diegoaltoworks/forger/issues/295) |
 | The engine dies with the session | An engine started from a supervising session ends when the session restarts. | [#296](https://github.com/diegoaltoworks/forger/issues/296) |
 
@@ -77,3 +76,4 @@ the next `work catalogue --update` moves the row back to Open.
 | A new gate halts every older install | A new gate is red on every repository set up before it existed, and each loop halts. | [#283](https://github.com/diegoaltoworks/forger/issues/283) - merged in [#287](https://github.com/diegoaltoworks/forger/pull/287) |
 | A branch behind main lowers coverage after it merges | A PR passes on a stale base and the merged result fails the coverage ratchet. | [#262](https://github.com/diegoaltoworks/forger/issues/262) - merged in [#263](https://github.com/diegoaltoworks/forger/pull/263) |
 | A ticket marked completed before it merged | A ticket reads completed before its PR merges, and the next one starts on a base without it. | [#293](https://github.com/diegoaltoworks/forger/issues/293) - merged in [#319](https://github.com/diegoaltoworks/forger/pull/319) |
+| A timed-out run leaves an empty log | A run far past its timeout goes unnoticed because its log holds nothing. | [#294](https://github.com/diegoaltoworks/forger/issues/294) - merged in [#320](https://github.com/diegoaltoworks/forger/pull/320) |

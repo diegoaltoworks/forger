@@ -9,14 +9,18 @@ export const WORKER_ROLE_VAR = 'FORGER_ROLE';
 export const WORKER_TICKET_VAR = 'FORGER_TICKET';
 export const WORKER_ITERATION_VAR = 'FORGER_ITERATION';
 
+/** When the engine will signal the worker, as an ISO time; the grace period follows before the kill. */
+export const WORKER_DEADLINE_VAR = 'FORGER_DEADLINE';
+
 /** The plugin's root, which the gates setup writes name instead of a machine path. */
 export const PLUGIN_ROOT_VAR = 'FORGER_PLUGIN_ROOT';
 
-export function workerEnv(ticket: string | null, iteration: number, pluginRoot?: string): Record<string, string> {
+export function workerEnv(ticket: string | null, iteration: number, pluginRoot?: string, deadline?: Date): Record<string, string> {
   return {
     [WORKER_ROLE_VAR]: 'worker',
     [WORKER_TICKET_VAR]: ticket ?? '',
     [WORKER_ITERATION_VAR]: String(iteration),
+    ...(deadline ? {[WORKER_DEADLINE_VAR]: deadline.toISOString()} : {}),
     ...(pluginRoot ? {[PLUGIN_ROOT_VAR]: pluginRoot} : {}),
   };
 }
