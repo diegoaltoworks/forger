@@ -22,7 +22,8 @@ import {conflictAfterAttempt, folderMapFrom, inWorktree} from './parallel';
 import {worktreeWorkspace, type WorkspaceSandbox} from './worktree-workspace';
 import {pidAlive, RunnerLock} from './lock';
 import {criterionOptions, refuseUncheckable} from './ticket-check';
-import {eventLine, terminalEvent, type EventKind, type TerminalEventKind} from './events';
+import {eventLine, terminalEvent, type EventKind, type TerminalEvent, type TerminalEventKind} from './events';
+import {UNCAUSED, type HaltClearWhy} from './halt-clear';
 import {appendSchedule} from './schedule-log';
 import {buildStatus, type StatusReport} from './status-report';
 
@@ -206,9 +207,9 @@ export class AutomationRunner {
     if (refused.length > 0) await this.refreshBacklog();
   }
 
-  private emit(kind: EventKind, iteration: number, ticket: string | null, reason: string | null): void {
+  private emit(kind: EventKind, iteration: number, ticket: string | null, reason: string | null, extra: Pick<TerminalEvent, 'cause' | 'not_a_defect'> = {}): void {
     const now = new Date();
-    this.stateStore.appendEvent(eventLine(terminalEvent(kind, iteration, ticket, reason, now)), now);
+    this.stateStore.appendEvent(eventLine(terminalEvent(kind, iteration, ticket, reason, now, extra)), now);
   }
 
   halt(reason: string, kind: TerminalEventKind = 'halted'): void {
@@ -227,14 +228,17 @@ export class AutomationRunner {
     this.clearHalt('recovered', detail);
   }
 
-  clearHalt(kind: 'halt_cleared' | 'recovered' = 'halt_cleared', detail: string | null = null): void {
+  clearHalt(kind: 'halt_cleared' | 'recovered' = 'halt_cleared', detail: string | null = null, why: HaltClearWhy = UNCAUSED): void {
     const before = this.store.load();
     const wasHalted = this.store.isHalted() || before.status === 'halted';
     if (this.store.isHalted()) {
       this.store.clearHalt();
       this.logger.log('INFO', 'Cleared HALT file');
     }
-    if (wasHalted) this.emit(kind, before.iteration, currentTicket(before), detail ?? before.last_error);
+    if (wasHalted) {
+      const extra = kind === 'halt_cleared' ? {cause: why.cause, not_a_defect: why.notADefect} : {};
+      this.emit(kind, before.iteration, currentTicket(before), detail ?? before.last_error, extra);
+    }
     // The counters that tripped the halt would trip it again on the first
     // iteration after the human has fixed the cause.
     const state = this.store.load();

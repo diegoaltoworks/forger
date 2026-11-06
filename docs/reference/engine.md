@@ -21,9 +21,14 @@ an infrastructure error, not a worker failure: the loop halts at once with the
 reason and the failure counter is left alone. A tracker read refused by
 GitHub's rate limit is one too, naming the limit and its reset time (from
 `gh api rate_limit`); the engine waits for the reset and carries on, never
-charging the wait to a ticket. `resume` clears the HALT and zeroes
-the failure and stall counters, so the first run after a fix starts clean, and
-the first run after any start is never counted as a stall.
+charging the wait to a ticket. `resume` requires `--cause <issue>` (with a GitHub tracker the issue must exist)
+or `--not-a-defect "<why>"`; with neither it exits non-zero and clears nothing.
+It clears the HALT and zeroes the failure and stall counters, so the first run
+after a fix starts clean, and the first run after any start is never counted as
+a stall. The failure is not lost: `halt_cleared` records the last error beside
+the `cause` or `not_a_defect`, and both are null when the halt label was removed
+by hand. `measure` counts clears with a cause, as not a defect and with no
+reason; `report` lists each uncaused clear under waiting on you.
 
 One engine works a repo at a time. `run` writes its pid to the lock file and
 refuses to start while that pid is alive; a lock whose pid is dead is taken

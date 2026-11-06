@@ -13,15 +13,15 @@ export type RecoveryAction =
   | {action: 'keep'; recommendation: string};
 
 const KEEP: Record<string, string> = {
-  merged_red: 'fix the base branch, or revert the red merge, then resume',
-  halted: 'check for a pushed branch with no merged PR, finish or discard it, then resume',
-  stalled: 'read the worker log for why nothing changed, then resume',
-  timed_out: 'check whether the worker pushed a branch before it was killed, open its PR if so, then resume',
-  too_many_failures: 'read the last failure, fix its cause, then resume',
-  runner_gone: 'check the branch for unmerged work, then resume',
+  merged_red: 'fix the base branch, or revert the red merge, then resume with --cause <issue>',
+  halted: 'check for a pushed branch with no merged PR, finish or discard it, then resume with --cause <issue>',
+  stalled: 'read the worker log for why nothing changed, then resume with --cause <issue>',
+  timed_out: 'check whether the worker pushed a branch before it was killed, open its PR if so, then resume with --cause <issue>',
+  too_many_failures: 'read the last failure, fix its cause, then resume with --cause <issue>',
+  runner_gone: 'check the branch for unmerged work, then resume with --cause <issue>',
 };
 
-const FALLBACK = 'look at the halt reason and the branch before resuming';
+const FALLBACK = 'look at the halt reason and the branch, then resume with --cause <issue> or --not-a-defect "<why>"';
 
 /** The recovery for a halt of this kind. */
 export function recoveryFor(kind: string): RecoveryAction {
@@ -78,7 +78,7 @@ export async function recover(halt: TerminalEvent | null, ports: RecoveryPorts):
   const plan = recoveryFor(kind);
   if (plan.action === 'keep') return {recovered: false, kind, detail: plan.recommendation};
   const pr = mergedPrOf(halt.reason);
-  if (pr === null) return {recovered: false, kind, detail: 'the halt names no PR to verify; review what landed, then resume'};
+  if (pr === null) return {recovered: false, kind, detail: 'the halt names no PR to verify; review what landed, then resume with --cause <issue>'};
   const v = await ports.verify(pr);
   if (v.decision === 'pass') {
     const detail = `PR #${pr} verified after the merge: pass`;

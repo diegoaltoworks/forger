@@ -105,6 +105,7 @@ export function gatherMeasures(ctx: CommandContext): Measures {
     verdicts: readAllVerdicts(verdictsHome(ctx.run(), projectRoot, config.paths.verdicts)),
     schedule: readSchedule(join(outDir, 'schedule-decisions.jsonl')),
     events: parseEvents(ctx.stateStore.readEvents()),
+    clears: parseAllEvents(ctx.stateStore.readEvents()).filter(e => e.event === 'halt_cleared'),
     ciRuns,
     last: values.last === undefined ? null : parseInt(values.last, 10),
   });

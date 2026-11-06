@@ -4,6 +4,8 @@
  * checkout; no I/O.
  */
 
+import type {TerminalEvent} from '../loop';
+import {uncausedClears} from '../loop';
 import type {OwnerItem} from './supervisor';
 
 /** Issue labels that park a ticket until the owner decides. */
@@ -128,4 +130,13 @@ export function mergedInPeriod(prs: MergedPrFact[], period: Period): string[] {
     .filter(p => period.since === null || Date.parse(p.mergedAt) >= Date.parse(period.since))
     .sort((a, b) => Date.parse(a.mergedAt) - Date.parse(b.mergedAt))
     .map(p => `#${p.number} ${p.title}`);
+}
+
+/** Every halt cleared with no cause and no reason: the failure was set aside and nothing says why. */
+export function uncausedClearItems(events: TerminalEvent[]): OwnerItem[] {
+  return uncausedClears(events).map(e => ({
+    question: `A halt was cleared with no reason (${e.at}): ${e.reason ?? 'no error recorded'}`,
+    recommendation: 'file the cause as an issue, or record that it was not a defect, so the failure is not lost',
+    because: 'the halt label was removed by hand, or resume ran before it needed a reason, so the failure has no recorded cause',
+  }));
 }

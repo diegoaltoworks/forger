@@ -162,14 +162,21 @@ and the next pick. `backlog` lists the workable tickets.
 The loop halts on trouble it cannot fix alone, such as a red merge or an
 authentication error. The work command and `status` print the reason. Fix the
 cause first: look for a pushed branch with no merged pull request. Then clear
-the halt and start again:
+the halt and start again, saying why it was safe to clear. Give the issue that
+fixes or tracks the cause, or, for something that was not a defect such as a
+transient outage, the reason:
 
 ```
-bun <forger>/bin/work.ts resume
+bun <forger>/bin/work.ts resume --cause <issue>
+bun <forger>/bin/work.ts resume --not-a-defect "<why>"
 ```
 
-`resume` clears the halt and the failure counters. Then run the work command for
-your harness, from the table in [step 5](#5-start-the-loop).
+`resume` without either refuses and clears nothing. The counters reset so the
+next run starts fresh, but the failure is kept: the `halt_cleared` event records
+it with your cause or reason, and `report` and `retro` read it. A halt cleared
+by removing the tracker's halt label is recorded as uncaused, and `report` lists
+it under waiting on you. Then run the work command for your harness, from the
+table in [step 5](#5-start-the-loop).
 
 ## 📚 Next
 

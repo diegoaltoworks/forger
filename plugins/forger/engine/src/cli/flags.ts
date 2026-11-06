@@ -24,6 +24,8 @@ export const FLAGS = {
   attempt: {type: 'string'},
   remove: {type: 'boolean', default: false},
   reason: {type: 'string'},
+  cause: {type: 'string'},
+  'not-a-defect': {type: 'string'},
   detail: {type: 'string'},
   pr: {type: 'string'},
   threshold: {type: 'string'},

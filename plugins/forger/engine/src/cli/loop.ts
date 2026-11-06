@@ -2,7 +2,7 @@ import {findHarness, guardRefusal} from '../adapters';
 import {watchRepos} from './multi';
 import {harnessOfRoot} from './harness-of';
 import {hooksGateProblems, hooksGateRefusal} from '../checks';
-import {behindBaseRefusal, readBaseSync} from '../loop';
+import {behindBaseRefusal, parseHaltClear, readBaseSync, RESUME_FORMS} from '../loop';
 import {detachEngine, engineStartLine, readEngineStart} from './detach';
 import type {Command} from './command';
 
@@ -90,10 +90,24 @@ export const watch: Command = {
 export const resume: Command = {
   name: 'resume',
   needs: 'loop',
-  flags: [],
-  help: '  resume           Clear HALT and resume',
-  run({runner}) {
-    runner.clearHalt();
+  flags: ['cause', 'not-a-defect'],
+  help: `  resume --cause <issue> | --not-a-defect "<why>"
+                   Clear HALT and resume; the issue that fixes or tracks the cause, or why it was not a defect, is recorded with the failure`,
+  run(ctx) {
+    const {runner, values, config} = ctx;
+    const parsed = parseHaltClear(values.cause, values['not-a-defect']);
+    if (!parsed.ok) {
+      console.error(`Not resuming: ${parsed.problem}. The halt stays. Give one of:\n  ${RESUME_FORMS}`);
+      process.exitCode = 1;
+      return;
+    }
+    const {cause} = parsed.why;
+    if (cause !== null && config.tracker.kind === 'github' && ctx.capture()(`gh issue view ${cause} --json number`).exitCode !== 0) {
+      console.error(`Not resuming: #${cause} is not an issue in the tracker. The halt stays. Give the issue that fixes or tracks the cause, or use --not-a-defect "<why>".`);
+      process.exitCode = 1;
+      return;
+    }
+    runner.clearHalt('halt_cleared', null, parsed.why);
     console.log('Halt cleared. You can now run automation again.');
     runner.showStatus();
   },

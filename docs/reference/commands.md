@@ -47,7 +47,7 @@ $ bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts status --json
 | `run` | Runs the loop for N iterations, or until the backlog is done with `--continuous`; `--detach` keeps it alive after the session ends. |
 | `status` | Shows the engine's pid and liveness, any halt, the counters, the current ticket and the next pick. |
 | `halt` | Halts the loop by hand, with an optional reason. |
-| `resume` | Clears a halt and carries on. |
+| `resume` | Clears a halt and carries on. Needs `--cause <issue>` or `--not-a-defect "<why>"`, recorded with the failure. |
 | `reset` | Resets the state to start fresh. |
 | `recover` | Recovers the standing halt when its recovery is known and checkable, and says the one action otherwise. |
 | `worktree` | Creates a ticket's own worktree and branch from the remote base branch. |

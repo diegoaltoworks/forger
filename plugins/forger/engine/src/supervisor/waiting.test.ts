@@ -1,6 +1,7 @@
 import {describe, expect, test} from 'bun:test';
 
-import {mergedInPeriod, proposedAdrs, recommendationFrom, reportPeriod, waitingIssues} from './waiting';
+import {terminalEvent} from '../loop';
+import {mergedInPeriod, proposedAdrs, recommendationFrom, reportPeriod, uncausedClearItems, waitingIssues} from './waiting';
 
 describe('recommendationFrom', () => {
   test('the paragraph under a Recommendation heading', () => {
@@ -60,5 +61,16 @@ describe('the period', () => {
   test('Merged lists only the merges inside the period, oldest first', () => {
     expect(mergedInPeriod(prs, reportPeriod('2026-11-02T00:00:00Z', null))).toEqual(['#2 b', '#3 c']);
     expect(mergedInPeriod(prs, reportPeriod(undefined, null))).toEqual(['#1 a', '#2 b', '#3 c']);
+  });
+});
+
+describe('uncausedClearItems', () => {
+  test('the report lists an uncaused halt clear under waiting on you', () => {
+    const items = uncausedClearItems([
+      terminalEvent('halt_cleared', 1, null, 'boom', new Date(0), {cause: null, not_a_defect: null}),
+      terminalEvent('halt_cleared', 2, null, 'fine', new Date(0), {cause: 5, not_a_defect: null}),
+    ]);
+    expect(items).toHaveLength(1);
+    expect(items[0].question).toContain('boom');
   });
 });
