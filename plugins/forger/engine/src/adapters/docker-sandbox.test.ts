@@ -5,6 +5,7 @@ import {join} from 'path';
 
 import type {CommandResult} from '../ports';
 import {cloneUrl, dockerCheck, imagePlan, parseJsonc, repoKey, runArgs} from './docker-plan';
+import {classifyExit} from '../loop';
 import {dockerSandbox} from './docker-sandbox';
 
 const dirs: string[] = [];
@@ -58,7 +59,7 @@ describe('the docker sandbox', () => {
     expect(done.output).toContain('BASE=main ORIGIN=https://github.com/acme/widgets.git BRANCH=feat/issue-7');
     expect(done.output).toContain('KEY=secret');
     const args = done.output.split('\n').find(l => l.startsWith('ARGS'))!;
-    expect(args).toContain('run --rm -i --name forger-issue-7-n1');
+    expect(args).toContain('run -i --name forger-issue-7-n1');
     expect(args).not.toContain('secret');
     expect(args).toContain('source=forger-cache-github-com-acme-widgets-bun,target=/cache/bun');
     expect(args).toContain('source=forger-cache-github-com-acme-widgets-uv,target=/cache/uv');
@@ -71,7 +72,7 @@ describe('the docker sandbox', () => {
     const args = runArgs({name: 'n', image: 'img', repoKey: 'k', origin: 'https://x/y', baseBranch: 'main', branch: 'feat/a', command: 'claude', args: [], passthrough: []});
     expect(args.filter(a => a === '-v' || a === '--volume')).toEqual([]);
     for (const a of args.filter(a => a.startsWith('type='))) expect(a).toMatch(/^type=volume,source=forger-cache-/);
-    expect(args.join(' ')).not.toMatch(/ \/tmp|\/home/);
+    expect(args.filter(a => a !== '/tmp:rw,size=1g').join(' ')).not.toMatch(/ \/tmp|\/home/);
   });
 
   test('the docker sandbox uses the devcontainer image when the repository has one', () => {
@@ -94,6 +95,72 @@ describe('the docker sandbox', () => {
     const box = dockerSandbox(cmd => (cmd.startsWith('docker build') ? {stdout: '', stderr: 'no space', exitCode: 1} : ok('https://x/y.git')), {projectRoot: root, pluginRoot: '/p', baseBranch: 'main'});
     const w = box.prepare({ticket: 'issue-7', baseBranch: 'main', stateDir: root});
     expect(w).toEqual({ok: false, ticket: 'issue-7', error: expect.stringContaining('no space')});
+  });
+});
+
+/** A site whose docker is a script, and whose engine-side docker calls are answered by `reply`. */
+function limitSite(script: string, reply: (cmd: string) => CommandResult | null, limits?: {memory: string; cpus: number; pids: number; tmp: string}) {
+  const root = mkdtempSync(join(tmpdir(), 'forger-docker-'));
+  dirs.push(root);
+  const calls: string[] = [];
+  const git = (cmd: string): CommandResult => {
+    calls.push(cmd);
+    if (cmd.startsWith('git remote get-url')) return ok(SSH_REMOTE);
+    if (cmd.includes('rev-parse --abbrev-ref')) return ok('feat/issue-7');
+    return reply(cmd) ?? ok();
+  };
+  const box = dockerSandbox(git, {projectRoot: root, pluginRoot: '/plugin', baseBranch: 'main', passthrough: [], nonce: () => 'n1', limits});
+  const bin = mkdtempSync(join(tmpdir(), 'forger-fakebin-'));
+  dirs.push(bin);
+  writeFileSync(join(bin, 'docker'), `#!/bin/sh\n${script}\n`, {mode: 0o755});
+  const cwd = join(root, '.forger', 'worktrees', 'issue-7');
+  mkdirSync(cwd, {recursive: true});
+  const start = async (graceMs: number, timeoutMs: number) => {
+    const path = process.env.PATH;
+    process.env.PATH = `${bin}:${path}`;
+    try {
+      return await box.start({command: 'claude', args: [], cwd, input: 'p', timeoutMs, graceMs}).result;
+    } finally {
+      process.env.PATH = path;
+    }
+  };
+  return {calls, start};
+}
+
+describe('the docker sandbox limits', () => {
+  test('the docker sandbox applies the configured memory, CPU, process and tmp limits', async () => {
+    const {start} = limitSite('echo "ARGS $*"', () => null, {memory: '2g', cpus: 1.5, pids: 100, tmp: '256m'});
+    const done = await start(100, 5000);
+    const args = done.output.split('\n').find(l => l.startsWith('ARGS'))!;
+    expect(args).toContain('--memory 2g --memory-swap 2g');
+    expect(args).toContain('--cpus 1.5');
+    expect(args).toContain('--pids-limit 100');
+    expect(args).toContain('--tmpfs /tmp:rw,size=256m');
+  });
+
+  test('a run past its deadline stops the container after the grace period and logs both', async () => {
+    const {calls, start} = limitSite('sleep 30', () => null);
+    const done = await start(100, 200);
+    expect(done.timedOut).toBe(true);
+    expect(done.output).toContain("forger: stopped container forger-issue-7-n1 after the 0s grace period");
+    expect(done.output).toContain('forger: removed container forger-issue-7-n1');
+    expect(calls.indexOf("docker stop -t 0 'forger-issue-7-n1'")).toBeGreaterThan(-1);
+    expect(calls.indexOf("docker stop -t 0 'forger-issue-7-n1'")).toBeLessThan(calls.indexOf("docker rm -f 'forger-issue-7-n1'"));
+  });
+
+  test('a run killed for memory is an infrastructure error that names the limit', async () => {
+    const {start} = limitSite('echo working; exit 137', cmd => (cmd.startsWith('docker inspect') ? ok('true\n') : null), {memory: '2g', cpus: 2, pids: 512, tmp: '1g'});
+    const done = await start(100, 5000);
+    expect(done.exitCode).toBe(137);
+    const exit = classifyExit(done.exitCode, done.output, done.timedOut);
+    expect(exit.kind).toBe('infrastructure');
+    expect(exit.kind === 'infrastructure' && exit.reason).toContain('memory 2g');
+  });
+
+  test('a failed run that was not out of memory stays a worker failure', async () => {
+    const {start} = limitSite('exit 1', cmd => (cmd.startsWith('docker inspect') ? ok('false\n') : null));
+    const done = await start(100, 5000);
+    expect(classifyExit(done.exitCode, done.output, done.timedOut).kind).toBe('worker');
   });
 });
 
