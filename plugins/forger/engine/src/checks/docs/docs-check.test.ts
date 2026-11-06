@@ -199,6 +199,17 @@ describe('the failure catalogue', () => {
   test('fails a row the tracker has overtaken', () => {
     expect(rules(tables('', `| A hang | hung | ${I} - merged in [#9](https://github.com/o/r/pull/9) |`), fact('open'))).toEqual(['catalogue-stale-status']);
   });
+  const onBranch = (branch: string) => (cmd: string) => (cmd === 'git branch --show-current' ? branch : 'docs/06-failure-catalogue.md');
+  const fixedRow = tables('', `| A hang | hung | ${I} - merged in [#9](https://github.com/o/r/pull/9) |`);
+  const branchRules = (branch: string) =>
+    runDocsCheck(repo({'docs/06-failure-catalogue.md': fixedRow, ...lock}), onBranch(branch), ['docs'], () => fact('open')).map(v => v.rule);
+  test("a Fixed row whose open issue is the current branch's ticket passes the docs check", () => {
+    expect(branchRules('feat/issue-205')).toEqual([]);
+  });
+  test('a Fixed row whose open issue is another ticket fails the docs check', () => {
+    expect(branchRules('feat/issue-206')).toEqual(['catalogue-stale-status']);
+    expect(branchRules('main')).toEqual(['catalogue-stale-status']);
+  });
   test('checks only the structure when the tracker cannot be reached', () => {
     expect(rules(body, null)).toEqual([]);
   });

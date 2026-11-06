@@ -1,7 +1,7 @@
 import {existsSync, readFileSync, writeFileSync} from 'fs';
 import {join} from 'path';
 
-import {CATALOGUE_PATH, checkCatalogue, parseCatalogue, ticketsOf, trackerFacts, updateCatalogue} from '../catalogue';
+import {branchTicket, CATALOGUE_PATH, checkCatalogue, factsOnMerge, parseCatalogue, ticketsOf, trackerFacts, updateCatalogue} from '../catalogue';
 import type {Command} from './command';
 
 export const catalogue: Command = {
@@ -21,7 +21,10 @@ export const catalogue: Command = {
       return;
     }
     const text = readFileSync(path, 'utf-8');
-    const facts = trackerFacts(ctx.run(), ticketsOf(text));
+    const run = ctx.run();
+    const tracker = trackerFacts(run, ticketsOf(text));
+    const ticket = branchTicket(run);
+    const facts = tracker && factsOnMerge(text, tracker, ticket);
     if (!facts) {
       console.error('catalogue: the tracker could not be reached (gh needs a repository and a token)');
       process.exitCode = 1;

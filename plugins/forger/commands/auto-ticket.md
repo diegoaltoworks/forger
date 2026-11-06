@@ -134,6 +134,11 @@ Documentation is part of Definition of Done, every iteration:
 - With `local` or `none`, set the ticket `status: "completed"` in
   `backlog.json`. On GitHub do not: the merge closing the issue is the status.
 - Update `.forger/inbox/*.md` (clock -> check) for anything you finished.
+- When the ticket's issue is in the Open table of the failure catalogue
+  (`docs/06-failure-catalogue.md`), move that row to the Fixed table in the
+  same PR, naming the PR once it is open, and push again before `verify`. On
+  the ticket's own branch `check docs` accepts the row while the issue is
+  still open; the merge closes it.
 
 ### 8. Commit + PR
 The PR body comes from the `pr_body` slot. Built-in: write it by

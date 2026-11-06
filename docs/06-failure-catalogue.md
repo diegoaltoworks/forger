@@ -10,6 +10,11 @@ belongs in, naming the merged PRs. `check docs` fails on an Open row with no
 open issue, on a row that disagrees with the tracker, and on an entry section
 (a `###` heading).
 
+A PR that fixes a failure moves its row to Fixed itself, naming the PR. Its
+issue closes only when the PR merges, so on the branch `feat/issue-<n>` the
+check treats issue `<n>` as closed by the PR its Fixed row names; any other
+open issue in a Fixed row still fails.
+
 To add a failure, open an issue for it, then add a row to the Open table linking
 that issue. A failure seen again gets its new open issue added to its Fixed row;
 the next `work catalogue --update` moves the row back to Open.
@@ -18,7 +23,6 @@ the next `work catalogue --update` moves the row back to Open.
 
 | Failure | What it looks like | Issue |
 |---|---|---|
-| The engine dies with the session | An engine started from a supervising session ends when the session restarts. | [#296](https://github.com/diegoaltoworks/forger/issues/296) |
 
 ## Fixed
 
@@ -77,3 +81,4 @@ the next `work catalogue --update` moves the row back to Open.
 | A ticket marked completed before it merged | A ticket reads completed before its PR merges, and the next one starts on a base without it. | [#293](https://github.com/diegoaltoworks/forger/issues/293) - merged in [#319](https://github.com/diegoaltoworks/forger/pull/319) |
 | A timed-out run leaves an empty log | A run far past its timeout goes unnoticed because its log holds nothing. | [#294](https://github.com/diegoaltoworks/forger/issues/294) - merged in [#320](https://github.com/diegoaltoworks/forger/pull/320) |
 | The worker gets no warning before the deadline | A worker is killed at its deadline with no chance to push or hand over. | [#295](https://github.com/diegoaltoworks/forger/issues/295) - merged in [#321](https://github.com/diegoaltoworks/forger/pull/321) |
+| The engine dies with the session | An engine started from a supervising session ends when the session restarts. | [#296](https://github.com/diegoaltoworks/forger/issues/296) - merged in [#323](https://github.com/diegoaltoworks/forger/pull/323) |

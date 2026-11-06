@@ -117,7 +117,8 @@ gets it at the next setup or update.
    row linking it in [the failure catalogue](06-failure-catalogue.md). A failure
    seen again gets its new open issue added to its Fixed row. `work catalogue
    --update` moves a row to Fixed once every issue in it is closed by a merged
-   PR, and back to Open when one is open. Rows stay.
+   PR, and back to Open when one is open. Rows stay. The PR that fixes a
+   failure moves its row to Fixed itself, so main never holds a stale row.
 
 ## Hygiene
 
