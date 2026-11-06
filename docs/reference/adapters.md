@@ -20,6 +20,22 @@ there is one model mapping and several harnesses, named here and nowhere else in
   (frontmatter, plugin root) and never copies their text per harness. OpenCode takes a model as
   `provider/model`, so map the roles under `models` to such ids.
 
+- **Sandbox.** Where a worker's process runs, and with what limits, is proposed to sit behind a `Sandbox`
+  seam beside `Harness`, with `host` (today), `docker` and a later `remote` backend, and per-harness
+  credentials for an API key or a subscription token. See
+  [ADR 0019](../adr/0019-workers-run-in-a-sandbox-behind-an-adapter.md). It is not built yet; workers run on the host.
+
+## Sandbox credentials
+
+Proposed in [ADR 0019](../adr/0019-workers-run-in-a-sandbox-behind-an-adapter.md); not yet used by the engine. Credentials reach a sandboxed worker only as environment variables.
+
+| Harness | API key variable | Subscription token | Source |
+|---|---|---|---|
+| `claude` | `ANTHROPIC_API_KEY` | Run `claude setup-token` once on a machine with a browser; it prints a long-lived token. Pass it as `CLAUDE_CODE_OAUTH_TOKEN`. | https://docs.claude.com/en/docs/claude-code/github-actions and https://docs.claude.com/en/docs/claude-code/iam |
+| `codex` | `CODEX_API_KEY` for `codex exec`, or `OPENAI_API_KEY` | Sign in with ChatGPT once with `codex login`; the cached `auth.json` is the credential. A headless run needs that file, which is a file and not a variable, so the backend writes it into the container's private home at start from a variable and removes it at end. | https://developers.openai.com/codex/auth |
+| `copilot` | none: Copilot is billed to the subscription | A fine-grained personal access token with the Copilot Requests permission, passed as `COPILOT_GITHUB_TOKEN`. | https://docs.github.com/en/copilot/how-tos/copilot-cli |
+| `opencode` | the provider's own variable, for example `ANTHROPIC_API_KEY` or `OPENAI_API_KEY` | Sign in once with `opencode auth login`; the cached `auth.json` is the credential, handled like Codex's. Which providers allow a subscription for headless use is the provider's rule. | https://opencode.ai/docs/providers/ |
+
 ## Run limits
 
 The engine enforces a run's limits itself, whatever the harness. Every run has the wall-clock timeout
