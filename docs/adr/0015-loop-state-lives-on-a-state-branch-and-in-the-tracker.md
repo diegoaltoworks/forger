@@ -2,7 +2,7 @@
 
 Status: Proposed
 
-The engine's state sits in files in one checkout, so the loop stops when that machine sleeps and the supervisor has to read it from the same machine. The harness half of "tied to one harness and one laptop" was settled by ADR 0009 (everything forger owns is under `.forger/`); this ADR is the laptop half, and it is written so the CI-native mode in the roadmap needs no second move.
+The engine's state sits in files in one checkout, so the loop stops when that machine sleeps and the supervisor has to read it from the same machine. The harness half of "tied to one harness and one machine" was settled by ADR 0009 (everything forger owns is under `.forger/`); this ADR is the machine half, and it is written so the CI-native mode in the roadmap needs no second move.
 
 ## Context
 
@@ -69,7 +69,7 @@ The owner acts from the tracker, so the owner-facing state lives there:
 
 ### 4. How it meets #65 and CI-native
 
-The `.forger/` move is done, so this ADR only adds a home per file. A new config key `state.home` takes `local` (default, today's behaviour) or `branch`, with `state.branch` defaulting to `forger-state`. In CI-native mode the workflow checks out the state branch next to the code: the same `branch` store, the lease replacing the concurrency group as the cross-run guard, and the concurrency group kept as a cheap first filter. One mechanism serves a laptop, a persistent machine and CI.
+The `.forger/` move is done, so this ADR only adds a home per file. A new config key `state.home` takes `local` (default, today's behaviour) or `branch`, with `state.branch` defaulting to `forger-state`. In CI-native mode the workflow checks out the state branch next to the code: the same `branch` store, the lease replacing the concurrency group as the cross-run guard, and the concurrency group kept as a cheap first filter. One mechanism serves a machine, a persistent machine and CI.
 
 ### 5. Migration without losing history
 
@@ -96,7 +96,7 @@ Rolling back is setting `state.home` to `local`; nothing is deleted.
 ## Consequences
 
 - Every decision (the home of a file, the lease verdict, the migration split, the HALT read) is a pure function or a tested command; the prompt keeps none of it (ADR 0002).
-- A sleeping laptop no longer stops a loop that another machine or CI can resume; the lease expires and a second engine takes over.
+- A sleeping machine no longer stops a loop that another machine or CI can resume; the lease expires and a second engine takes over.
 - The state branch is one more branch to keep out of reviewers' way; it carries no code and is never merged.
 - Pushes to the state branch can fail on a network blip. The store retries a bounded number of times and treats a failed renewal as a lost lease, which halts the worker rather than running unguarded.
 - The cost is a store port to maintain and a second read path in the supervisor. Opting in is by config, so the local loop keeps its simplicity.

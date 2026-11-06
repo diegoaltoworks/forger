@@ -13,6 +13,7 @@ import {CATALOGUE_OPINION, CATALOGUE_PATH, checkCatalogue, ticketsOf, trackerFac
 import {loadConfig} from '../../config';
 import type {CommandRunner} from '../../ports';
 import {projectFiles} from '../files';
+import {checkRoadmap, ROADMAP_OPINION, ROADMAP_PATH} from './docs-roadmap';
 import {checkCommandSlots, slotsByCommand, type DefinitionShape} from './docs-slots';
 import {checkReadme, isCheckedReadme, type ReadmeFinding} from './docs-readme';
 import {checkText, parseDenylist} from './docs-rules';
@@ -77,6 +78,13 @@ export function catalogueFindings(
   return checkCatalogue(text, lookup(ticketsOf(text))).map(p => ({file: CATALOGUE_PATH, line: p.line, rule: p.rule, opinion: CATALOGUE_OPINION, detail: p.detail}));
 }
 
+/** Roadmap items that link no issue. */
+export function roadmapFindings(projectRoot: string): Finding[] {
+  const path = join(projectRoot, ROADMAP_PATH);
+  if (!existsSync(path)) return [];
+  return checkRoadmap(readFileSync(path, 'utf-8')).map(p => ({file: ROADMAP_PATH, line: p.line, rule: p.rule, opinion: ROADMAP_OPINION, detail: p.detail}));
+}
+
 export function runDocsCheck(
   projectRoot: string,
   run: CommandRunner,
@@ -107,6 +115,6 @@ export function runDocsCheck(
     if (slots && COMMAND_FILE.test(file)) out.push(...checkCommandSlots(file, text, slots));
   }
   out.push(...readmeFindings(projectRoot, run, packs).filter(f => f.severity === 'fail'));
-  if (packs.includes('docs')) out.push(...catalogueFindings(projectRoot, run, lookup));
+  if (packs.includes('docs')) out.push(...catalogueFindings(projectRoot, run, lookup), ...roadmapFindings(projectRoot));
   return out;
 }

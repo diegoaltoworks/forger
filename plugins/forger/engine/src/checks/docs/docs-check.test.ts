@@ -7,6 +7,7 @@ import {CATALOGUE_OPINION, type TicketFacts} from '../../catalogue';
 import {DOCS_OPINIONS} from './docs-content';
 import {README_OPINIONS} from './docs-readme';
 import {installedPackIds, runDocsCheck, runDocsWarnings} from './docs-check';
+import {ROADMAP_OPINION} from './docs-roadmap';
 import {loadPacks} from '../../packs';
 
 const dirs: string[] = [];
@@ -139,7 +140,7 @@ describe('the shipped docs pack', () => {
   test('declares an opinion for every rule id the content rules emit', () => {
     const pack = loadPacks(join(import.meta.dir, '..', '..', '..', '..')).find(p => p.manifest.id === 'docs');
     const declared = pack!.manifest.opinions.filter(o => o.check === 'docs').map(o => o.id);
-    expect(declared.sort()).toEqual([...new Set([...Object.values(DOCS_OPINIONS), ...Object.values(README_OPINIONS), CATALOGUE_OPINION])].sort());
+    expect(declared.sort()).toEqual([...new Set([...Object.values(DOCS_OPINIONS), ...Object.values(README_OPINIONS), CATALOGUE_OPINION, ROADMAP_OPINION])].sort());
   });
 });
 
@@ -203,5 +204,17 @@ describe('the failure catalogue', () => {
   });
   test('does not run without the docs pack', () => {
     expect(rules(tables('| A hang | hangs | |', ''), null, [])).toEqual([]);
+  });
+});
+
+describe('the roadmap', () => {
+  const lock = {'.forger/forger.lock.json': JSON.stringify({packs: [{id: 'docs', version: '1.0.0', files: []}]})};
+  const rules = (text: string) => runDocsCheck(repo({'docs/07-roadmap.md': text, ...lock}), lister(['docs/07-roadmap.md'])).map(v => v.rule);
+
+  test('check docs fails on a roadmap item with no issue link', () => {
+    expect(rules('# Roadmap\n\n## 1. Work\n\n- an item\n')).toEqual(['roadmap-item-no-issue']);
+  });
+  test('passes an item that links its issue', () => {
+    expect(rules('# Roadmap\n\n## 1. Work\n\n- an item [#1](https://github.com/o/r/issues/1)\n')).toEqual([]);
   });
 });

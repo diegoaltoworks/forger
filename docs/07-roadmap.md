@@ -1,90 +1,32 @@
 # Roadmap
 
-In order. Each step is useful on its own, and each makes the next one smaller.
+Work not yet done, in order. Each item links the issue that tracks it. Built work
+is not listed; open failures are in the Open table of
+[the failure catalogue](06-failure-catalogue.md#open).
 
-## 1. Engine fixes
+## 1. Prove forger off itself
 
-From the failure catalogue, with a test for each outcome:
+- Run the first replay of the owner requests on the sample repository and record the report: [#109](https://github.com/diegoaltoworks/forger/issues/109).
+- Prove the loop in OpenCode, Codex and Copilot, one merged ticket each: [#275](https://github.com/diegoaltoworks/forger/issues/275), within [the harness plan](https://github.com/diegoaltoworks/forger/issues/270).
 
-- Count `completed` only when the PR is merged; read status from the base
-  branch.
-- Pass the deadline to the worker and warn before it.
-- Add the branch, last commits and PR state to a timed-out run's iteration log.
-- `status --json`, the engine's own process id in a file, and a terminal-event
-  file for watchers.
-- Adopt labelled issues from the tracker, with `depends_on`.
-- Refuse to start an engine whose tracker access is not a scoped token, so a
-  loop never acts as the machine's global account.
-- Start the engine detached from the session that launched it, and write its
-  own process id for `status`.
-- Run the cheap checks (commit message, docs) before the long gates, so a
-  rejection comes in seconds.
+## 2. Opinion packs and the spec pack
 
-Already in place, with a test each: killing the worker's whole process group on
-timeout, deciding an outcome from facts, telling infrastructure errors from
-worker failures, clearing a HALT together with its counters, ignoring local-only
-paths when checking the tree, one engine at a time with orphan close-out, and
-progress measured by merges.
+- Opinion packs a project adopts and refines: [#33](https://github.com/diegoaltoworks/forger/issues/33).
+- A TypeScript spec provider proven on fixtures: [#82](https://github.com/diegoaltoworks/forger/issues/82).
+- Trial the spec pack on a product repository: [#81](https://github.com/diegoaltoworks/forger/issues/81).
 
-## 2. A `manage` skill for the supervisor
+## 3. Creative projects
 
-Turns `docs/04-supervising.md` and `docs/05-refining-the-process.md` into a
-skill, so every session walks the same layers instead of improvising.
+- Build things people enjoy, not only things that pass: [#236](https://github.com/diegoaltoworks/forger/issues/236).
 
-- **First run:** an interview with recommended answers; writes
-  `.claude/manage/config.json` (reporting, intake, approval, budget, sources,
-  identity) and `.claude/manage/playbook.md`.
-- **Commands:** `manage` (orient and report), `manage intake "<request>"`,
-  `manage report`, `manage retro`, `manage refine`.
-- **The refinement loop is first class:** `retro` builds the timeline from a
-  transcript and CI's logs and proposes rules; `refine` lands approved changes
-  in the playbook, the process doc or a ticket for a check, by PR.
-- **Facts before belief:** it reads `status --json`, the terminal-event file and
-  the PR checks, never a completion notice or its own pattern match, and it
-  compares the work order with `backlog --json` before accepting "all done"
-  (backlog ticket `work_supervisor`).
-- **Approval policy enforced:** never clears a HALT or resets counters without
-  the configured approval.
-- **Impact analysis:** before a worker pushes, it lists what a change touches
-  and runs only the affected tests (`retro_and_measures` measures the CI rounds
-  per ticket that show when this is missing).
-- **Evals:** setup, intake of a bug, a feature and a spike, ordering, an anomaly
-  (a dead engine, a misleading ticket label, a ticket completed but unmerged), a
-  report, a retro.
+## 4. Off one machine
 
-## 3. State that does not live on one laptop
-
-The work order, engine state, playbook and logs move to a state branch or to the
-tracker. Needed for every hosting option, and it already makes the local loop
-survive restarts.
-
-## 4. A sample product, then off the laptop
-
-- **First: a sample product repository** that the evals and the CI-native mode
-  run against, with forger installed from outside and a fixed set of owner
-  requests replayed to compare forger versions; see
-  [ADR 0012](adr/0012-a-sample-product-repository-proves-forger-off-itself.md).
-- **State off the laptop** is built behind the `state.home` setting and designed in [ADR 0015](adr/0015-loop-state-lives-on-a-state-branch-and-in-the-tracker.md).
-- **Then: CI-native**, targeting the sample repository first. A scheduled supervisor job runs one `manage` tick; a
-  dispatched worker job builds one ticket, with a concurrency group for one
-  worker at a time. Reports go where the owner reads them on a phone; a HALT
-  waits for an owner action (a comment or a label).
-- **If cold starts are too slow:** a persistent machine per repository running the
-  engine as today. Measure first.
-- **Later:** a hosted app over the same playbook, state and commands: sign in,
-  pick a repository, the first-run interview in the browser, a dashboard with the
-  report and the owner's open questions, approvals as buttons, per-repository
-  spend limits, isolated sandboxes.
+- CI-native mode: a scheduled supervisor job and a dispatched worker job, with the sample repository as the first target: [#300](https://github.com/diegoaltoworks/forger/issues/300). The design for state is [ADR 0015](adr/0015-loop-state-lives-on-a-state-branch-and-in-the-tracker.md), the sample repository [ADR 0012](adr/0012-a-sample-product-repository-proves-forger-off-itself.md).
+- A hosted app over the same playbook, state and commands: [#301](https://github.com/diegoaltoworks/forger/issues/301).
 
 ## 5. Generalise
 
-- Strip what is specific to one project or one account from the commands and
-  templates; everything project-specific lives in the consumer repository.
-- The ticket sections as a configurable set, with the defaults from
-  `docs/03-tickets.md`.
-- **The pipeline as data:** declared stages, an output contract per skill slot,
-  forger's own skills as the built-ins and flavours that pick a skill per stage,
-  designed in [ADR 0016](adr/0016-the-pipeline-is-data-resolved-per-ticket-from-a-flavour.md).
+- Nothing project-specific in commands and templates, and the ticket sections as a configurable set: [#302](https://github.com/diegoaltoworks/forger/issues/302). The pipeline design is [ADR 0016](adr/0016-the-pipeline-is-data-resolved-per-ticket-from-a-flavour.md).
 
 ## Settled
 

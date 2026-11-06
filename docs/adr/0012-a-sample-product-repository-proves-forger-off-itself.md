@@ -63,7 +63,7 @@ A run is evidence when it reports all five for the whole request set on a fixed 
 
 ## 5. The roadmap order
 
-The roadmap lists the sample repository last, under "Generalise", after the hosted app. That order is wrong: the hosted app, the CI-native mode and the evals all need a second repository to be shown working, and a hosted app built before any product has been driven would be designed against forger alone. **Recommendation:** the sample repository moves ahead of the off-the-laptop steps, and the CI-native mode names it as its first target. The roadmap is changed in the same change as this record.
+The roadmap lists the sample repository last, under "Generalise", after the hosted app. That order is wrong: the hosted app, the CI-native mode and the evals all need a second repository to be shown working, and a hosted app built before any product has been driven would be designed against forger alone. **Recommendation:** the sample repository moves ahead of the off-the-machine steps, and the CI-native mode names it as its first target. The roadmap is changed in the same change as this record.
 
 ## Consequences
 

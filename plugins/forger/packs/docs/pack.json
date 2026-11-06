@@ -16,6 +16,7 @@
     {"id": "docs.diagrams-parse", "rung": "check", "summary": "Every mermaid block is a well-formed diagram.", "check": "docs"},
     {"id": "docs.glossary-terms", "rung": "check", "summary": "Terms the glossary says to avoid stay out of prose; code spans and fences are exempt.", "check": "docs"},
     {"id": "docs.catalogue-status", "rung": "check", "summary": "A failure catalogue is an Open table and a Fixed table whose rows agree with the tracker: every Open row links an open issue, and there are no per-entry sections.", "check": "docs"},
+    {"id": "docs.roadmap-issues", "rung": "check", "summary": "Every roadmap item, a list item under a numbered section, links the issue that tracks it.", "check": "docs"},
     {"id": "docs.readme-purpose-first", "rung": "check", "summary": "A README opens with a purpose paragraph of at most two sentences under the H1.", "check": "docs"},
     {"id": "docs.readme-short-sentences", "rung": "check", "summary": "README steps are at most 20 words, descriptive sentences at most 25, paragraphs at most 6 sentences.", "check": "docs"},
     {"id": "docs.readme-active-voice", "rung": "check", "summary": "README prose uses the active voice; a passive construction warns and never fails.", "check": "docs"},
