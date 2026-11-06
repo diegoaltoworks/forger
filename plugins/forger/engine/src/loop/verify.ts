@@ -204,6 +204,8 @@ export async function verifyPr(run: CommandRunner, agent: AgentRunner, opts: Ver
         model: opts.model,
         workerCommand: opts.verifierCommand,
         cwd: dir,
+        readOnly: true,
+        ref: `pull/${opts.pr}/head`,
         timeoutMinutes: opts.timeoutMinutes,
         killGraceSeconds: opts.killGraceSeconds,
       });

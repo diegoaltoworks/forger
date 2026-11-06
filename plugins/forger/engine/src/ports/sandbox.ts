@@ -30,6 +30,10 @@ export interface SandboxStart {
   spentUsd?: (output: string) => number | null;
   /** Ends the worker like a deadline does, without marking the run timed out. */
   abort?: AbortSignal;
+  /** The run only reads: a sandbox that leaves the host gives it a GitHub token that cannot push or write. */
+  readOnly?: boolean;
+  /** A ref of origin to check out instead of the ticket branch. */
+  ref?: string;
 }
 
 export interface RunningWorker {

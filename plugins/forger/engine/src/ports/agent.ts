@@ -36,6 +36,10 @@ export interface AgentRunOptions {
   killGraceSeconds: number;
   /** Ends the worker's process group (SIGTERM, then SIGKILL after the grace) when aborted, as the loop does on HALT. */
   abort?: AbortSignal;
+  /** The run only reads: a sandbox gives it a GitHub token that cannot push or write. */
+  readOnly?: boolean;
+  /** A ref of origin (`pull/<n>/head`) the sandbox checks out instead of the ticket branch. */
+  ref?: string;
 }
 
 /**

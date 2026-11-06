@@ -35,14 +35,18 @@ export interface TokenInput {
   origin: string;
   api: GithubApi;
   nowSeconds: number;
+  /** The run only reads: the token cannot write. */
+  readOnly?: boolean;
 }
+
+const READ_PERMISSIONS = {contents: 'read', pull_requests: 'read', issues: 'read', checks: 'read', statuses: 'read', metadata: 'read'};
 
 const field = (body: unknown, key: string): unknown => (body && typeof body === 'object' ? (body as Record<string, unknown>)[key] : undefined);
 
 /** The run's GitHub token: null when the source is a variable that is not set (the run then cannot push). */
 export async function githubToken(input: TokenInput): Promise<TokenResult> {
-  const {github, env, origin, api, nowSeconds} = input;
-  if (github.source === 'env') return {ok: true, token: env[github.variable] || null};
+  const {github, env, origin, api, nowSeconds, readOnly} = input;
+  if (github.source === 'env') return {ok: true, token: env[readOnly ? github.read_variable : github.variable] || null};
   const slug = repoSlug(origin);
   if (!slug) return {ok: false, error: `a GitHub App token needs a github.com remote, and ${origin || 'no origin'} is not one`};
   const appId = env[github.app_id_variable];
@@ -52,7 +56,7 @@ export async function githubToken(input: TokenInput): Promise<TokenResult> {
   const found = await api.request('GET', `/repos/${slug.owner}/${slug.name}/installation`, jwt);
   const installation = field(found.body, 'id');
   if (found.status !== 200 || typeof installation !== 'number') return {ok: false, error: `the GitHub App is not installed on ${slug.owner}/${slug.name} (HTTP ${found.status})`};
-  const minted = await api.request('POST', `/app/installations/${installation}/access_tokens`, jwt, {repositories: [slug.name]});
+  const minted = await api.request('POST', `/app/installations/${installation}/access_tokens`, jwt, {repositories: [slug.name], ...(readOnly ? {permissions: READ_PERMISSIONS} : {})});
   const token = field(minted.body, 'token');
   if (minted.status !== 201 || typeof token !== 'string') return {ok: false, error: `GitHub refused an installation token for ${slug.owner}/${slug.name} (HTTP ${minted.status})`};
   return {ok: true, token};

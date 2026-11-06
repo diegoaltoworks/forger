@@ -97,20 +97,23 @@ export interface RunInput {
   args: string[];
   /** Names of variables to pass through from the process that starts docker. */
   passthrough: string[];
+  /** A ref of origin to check out detached, instead of the ticket branch. */
+  ref?: string;
 }
 
 const SCRIPT = [
   'set -e',
   'git clone --quiet --branch "$FORGER_BASE" "$FORGER_ORIGIN" ' + WORKDIR,
   'cd ' + WORKDIR,
-  'git checkout -q -B "$FORGER_BRANCH" "origin/$FORGER_BRANCH" 2>/dev/null || git checkout -q -B "$FORGER_BRANCH"',
+  'if [ -n "${FORGER_REF:-}" ]; then git fetch --quiet origin "$FORGER_REF" && git checkout -q --detach FETCH_HEAD;',
+  'else git checkout -q -B "$FORGER_BRANCH" "origin/$FORGER_BRANCH" 2>/dev/null || git checkout -q -B "$FORGER_BRANCH"; fi',
   'if command -v gh >/dev/null 2>&1 && [ -n "${GH_TOKEN:-}${GITHUB_TOKEN:-}" ]; then gh auth setup-git; fi',
   'exec "$@"',
 ].join('\n');
 
 /** The `docker run` arguments: the image, the clone, the caches, and no mount of the host. */
 export function runArgs(input: RunInput): string[] {
-  const env = [...new Set([...input.passthrough, 'FORGER_BASE', 'FORGER_ORIGIN', 'FORGER_BRANCH', ...CACHES.map(c => c.env)])];
+  const env = [...new Set([...input.passthrough, 'FORGER_BASE', 'FORGER_ORIGIN', 'FORGER_BRANCH', ...(input.ref ? ['FORGER_REF'] : []), ...CACHES.map(c => c.env)])];
   return [
     'run',
     '--rm',
@@ -134,12 +137,13 @@ export function runArgs(input: RunInput): string[] {
 }
 
 /** The environment the docker client is started with, so `-e NAME` has a value to pass on. */
-export function runEnv(input: Pick<RunInput, 'origin' | 'baseBranch' | 'branch'>, extra: Record<string, string> | undefined): Record<string, string> {
+export function runEnv(input: Pick<RunInput, 'origin' | 'baseBranch' | 'branch' | 'ref'>, extra: Record<string, string> | undefined): Record<string, string> {
   return {
     ...(extra ?? {}),
     FORGER_BASE: input.baseBranch,
     FORGER_ORIGIN: cloneUrl(input.origin),
     FORGER_BRANCH: input.branch,
+    ...(input.ref ? {FORGER_REF: input.ref} : {}),
     ...Object.fromEntries(CACHES.map(c => [c.env, c.path])),
   };
 }
