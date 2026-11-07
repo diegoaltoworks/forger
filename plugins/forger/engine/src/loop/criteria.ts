@@ -8,6 +8,7 @@
  */
 
 import {checkGuards} from './guards';
+import {checkProbes} from './probe';
 import {parseCriteria} from './verdict';
 
 export type CriterionForm = 'test' | 'command' | 'number' | 'ui';
@@ -98,6 +99,6 @@ export function checkTicketCriteria(body: string, options: CriterionOptions = {}
   const problems = criteria.filter(c => !c.ok).map(c => `"${c.text}" ${c.problem}`);
   if (criteria.length === 0) problems.push('the ticket has no acceptance criteria (checkbox items under an Acceptance heading)');
   const guards = checkGuards(body);
-  problems.push(...guards.problems);
+  problems.push(...guards.problems, ...checkProbes(body));
   return {ok: problems.length === 0, criteria, problems, warnings: guards.warnings};
 }

@@ -11,7 +11,7 @@ import {join} from 'path';
 
 import {forgerPath, resolveModel, type WorkloopConfig} from '../config';
 import {describeBlocked, pick, schedule, startDecision, type Backlog, type FolderMap, type Schedulable} from '../backlog';
-import {capturing, type AgentRunner, type CapturingRunner, type CommandRunner, type StateStore} from '../ports';
+import {capturing, type AgentRunner, type CapturingRunner, type CommandRunner, type ProbeRunner, type StateStore} from '../ports';
 import {type AutomationState, currentTicket, LoopStore} from './state';
 import type {TrackerHalt} from './halt-tracker';
 import {Logger, colors} from './logger';
@@ -45,6 +45,8 @@ export interface RunnerDeps {
   /** Prepares and cleans up each worker's workspace; the git worktree when absent. */
   sandbox?: WorkspaceSandbox;
   gitRunner: CommandRunner;
+  /** Runs a ticket's probes on the host; without one a ticket's probes are not run. */
+  probeRunner?: ProbeRunner;
   /** Where state and events are kept. */
   stateStore: StateStore;
   /** The git runner that reports failures, for worktrees; defaults to the plain runner seen as one that never fails. */
@@ -162,6 +164,7 @@ export class AutomationRunner {
       emit: (kind, iteration, ticket, reason) => this.emit(kind, iteration, ticket, reason),
       halt: (reason, kind) => this.halt(reason, kind),
       resolvePlan: deps.resolvePlan,
+      probeRunner: deps.probeRunner,
       pluginRoot: deps.pluginRoot,
     };
   }

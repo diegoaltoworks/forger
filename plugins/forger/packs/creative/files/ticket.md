@@ -39,6 +39,15 @@
 
 <Each guarantee the change must keep: the file that holds it and the value it holds (a coverage floor, a size budget, an approved baseline, an e2e layout floor), or "none" when the change touches no guarded area. `facts --guards <path>...` lists the guard files and the tests that name the paths the change touches.>
 
+## Probe
+
+<!-- Optional. Commands that measure the assumption this ticket rests on; the engine runs them before a worker starts and hands the ticket back if one fails. One per line, a backticked command then its expected result:
+- `identify -format %w logo.png` prints a number of at least 40
+- `test -f src/entry.ts` exits 0
+Write "none" when nothing needs measuring first. -->
+
+none
+
 ## Merge
 
 <!-- "when green" (the default when this section is missing) or "owner reviews". Taste and an approved style frame are the owner's to judge: say owner reviews and why. -->

@@ -22,6 +22,7 @@ export * from './owner-review';
 export * from './outcome';
 export * from './pr-checks';
 export * from './pr-body';
+export * from './probe';
 export * from './prompt';
 export * from './decision';
 export * from './recovery';

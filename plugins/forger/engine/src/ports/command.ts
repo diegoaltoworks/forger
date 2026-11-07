@@ -13,6 +13,9 @@ export interface CommandResult {
   exitCode: number;
 }
 
+/** Runs a probe command in a directory with a time limit; a command that outlives it comes back as exit 124. */
+export type ProbeRunner = (command: string, cwd: string, timeoutMs: number) => CommandResult;
+
 export type CapturingRunner = (cmd: string) => CommandResult;
 
 /** A plain runner seen as a capturing one: output is stdout, and a throw is a failure with its message as stderr. */

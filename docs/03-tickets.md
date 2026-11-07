@@ -19,6 +19,9 @@ ticket is written to be implemented without guessing and without asking.
   the test output.
 - **Guards named.** The guarantees the change must keep, listed when the ticket
   is written: a rule that contradicts one is a design question, not a CI surprise.
+- **Cheap assumptions measured first.** An assumption that takes minutes to
+  measure (a width, a size, a timing) is a Probe, so a ticket that rests on a
+  false one is handed back before an hour of build.
 - **Knock-on named.** The tests, fixtures, shared screens and documents the
   change reaches, found before coding, not one CI run at a time.
 
@@ -57,6 +60,7 @@ in one line ("Design review: none"), so its absence is a decision, not an oversi
 | What to build | the change, with the defaults chosen |
 | Acceptance | testable checkboxes |
 | Guards | the guarantees (test floors, budgets, baselines, thresholds) the change must keep, each with its file and value, or "none"; `facts --guards <path>...` lists the guard files and the tests naming the paths. A missing section warns in `check ticket`, an empty one is refused |
+| Probe | optional: commands that measure the assumption the ticket rests on, each a backticked command with its expected result in the forms of acceptance criteria (`exits 0`, `prints "text"`, `prints a number of at least N`), or "none". The engine runs them before it starts a worker; a failure hands the ticket back as `needs-human` without spending a run. `check ticket` refuses a probe line with no expected result |
 | Merge | who merges: `when green` (the default when the section is missing) or `owner reviews`. The plan commands choose `owner reviews` when the acceptance includes a judgement only the owner can make, and say why |
 | Knock-on | tests, fixtures, shared regions, stored shapes it reaches |
 | Docs, examples and help | every doc, worked example and help article to update, in every offered language |
