@@ -2,8 +2,7 @@ import {describe, expect, test} from 'bun:test';
 
 import {issueOfTicket, mergeMode, ownerReviewLabelCommands, ownerReviewRefusal, settleOwnerMerges} from './owner-review';
 import {decideOutcome, type RunFacts} from './outcome';
-import {backlogReport} from '../backlog/backlog';
-import {backlogFromIssues} from '../backlog/github-backlog';
+import {backlogFromIssues, backlogReport} from '../backlog';
 import {mergeConfig} from '../config';
 import {mergePr} from './merge';
 import type {PrFact} from './pr-checks';
