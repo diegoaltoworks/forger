@@ -38,6 +38,17 @@ export interface CaptureSpec {
   max_seconds: number;
 }
 
+/** A language the app is captured in, and how the app is switched to it. */
+export interface Locale {
+  /** A language tag such as "en" or "ar"; it is part of the image file names. */
+  code: string;
+  dir: 'ltr' | 'rtl';
+  /** A query parameter the app reads to pick the language: `?<param>=<code>` is added to every url. */
+  param?: string;
+  /** Steps run before a capture's own steps, for an app switched by a control instead. */
+  steps: CaptureStep[];
+}
+
 export interface UiConfig {
   /** Globs of files that count as UI. */
   paths: string[];
@@ -52,6 +63,8 @@ export interface UiConfig {
   states: UiState[];
   viewports: Viewport[];
   themes: Theme[];
+  /** Languages every route and state is captured in; empty means one capture in the app's own language. */
+  locales: Locale[];
   /** Seconds to wait for the app to answer. */
   ready_timeout: number;
   /** How far a capture may drift from its approved baseline before `check ui` fails. */
@@ -120,6 +133,20 @@ function step(v: unknown, where: string): CaptureStep {
     return {fill: {selector: text(f.selector, `${where}.fill.selector`), value: f.value}};
   }
   return {[kind]: text(value, `${where}.${kind}`)} as CaptureStep;
+}
+
+function locale(v: unknown, i: number): Locale {
+  const where = `locales[${i}]`;
+  if (typeof v !== 'object' || v === null || Array.isArray(v)) throw new UiConfigError(`${where} must be an object`);
+  const o = v as Record<string, unknown>;
+  const code = text(o.code, `${where}.code`);
+  if (!/^[A-Za-z]{2,3}(?:-[A-Za-z0-9]+)*$/.test(code)) throw new UiConfigError(`${where}.code must be a language tag such as "en" or "ar-EG"`);
+  if (o.dir !== 'ltr' && o.dir !== 'rtl') throw new UiConfigError(`${where}.dir must be ltr or rtl`);
+  if (o.steps !== undefined && !Array.isArray(o.steps)) throw new UiConfigError(`${where}.steps must be a list`);
+  const steps = ((o.steps as unknown[] | undefined) ?? []).map((s, j) => step(s, `${where}.steps[${j}]`));
+  const param = o.param === undefined ? undefined : text(o.param, `${where}.param`);
+  if (param === undefined && steps.length === 0) throw new UiConfigError(`${where} needs a param or steps to switch the app to "${code}"`);
+  return {code, dir: o.dir, ...(param !== undefined ? {param} : {}), steps};
 }
 
 function tolerance(v: unknown): Tolerance {
@@ -203,6 +230,10 @@ export function parseUiConfig(raw: string): UiConfig {
   const stateNames = states.map(s => s.name);
   if (new Set(stateNames).size !== stateNames.length) throw new UiConfigError('"states" names must be unique');
 
+  if (o.locales !== undefined && !Array.isArray(o.locales)) throw new UiConfigError('"locales" must be a list');
+  const locales = ((o.locales as unknown[] | undefined) ?? []).map(locale);
+  if (new Set(locales.map(l => l.code.toLowerCase())).size !== locales.length) throw new UiConfigError('"locales" codes must be unique');
+
   const captureNames = captures.map(c => c.name);
   if (new Set(captureNames).size !== captureNames.length) throw new UiConfigError('"captures" names must be unique');
 
@@ -215,6 +246,7 @@ export function parseUiConfig(raw: string): UiConfig {
     states,
     viewports,
     themes: themes as Theme[],
+    locales,
     ready_timeout: timeout as number,
     tolerance: tolerance(o.tolerance),
     captures,

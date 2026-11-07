@@ -99,6 +99,27 @@ describe('the Playwright adapter', () => {
     expect(log).toEqual(['goto http://x/list?f=1', 'click #f', 'fill #q=a', 'wait .row', `shot ${file}`]);
   });
 
+  test('a shot with a locale and dir opens the context in that locale and sets dir on the page root', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'forger-pw-'));
+    dirs.push(root);
+    const log: string[] = [];
+    const page = {
+      async goto() { log.push('goto'); },
+      async screenshot() { log.push('shot'); },
+      on() {},
+      async addScriptTag() {},
+      async evaluate(e: string) { log.push(`eval ${e}`); },
+    };
+    const fake = {chromium: {async launch() {
+      return {
+        async newContext(o: {locale?: string}) { log.push(`locale ${o.locale}`); return {async newPage() { return page; }, async close() {}}; },
+        async close() {},
+      };
+    }}};
+    await playwrightScreenshotter(root, () => fake).capture([{url: 'http://x/', width: 1, height: 1, theme: 'light', locale: 'ar', dir: 'rtl', file: join(root, 'a.png')}]);
+    expect(log).toEqual(['locale ar', 'goto', 'eval document.documentElement.dir = "rtl"', 'shot']);
+  });
+
   test('a project without axe-core is told how to add it', () => {
     const root = mkdtempSync(join(tmpdir(), 'forger-pw-'));
     dirs.push(root);

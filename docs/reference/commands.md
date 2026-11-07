@@ -110,6 +110,6 @@ $ bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts status --json
 
 | Command | What it does |
 |---|---|
-| `screenshot` | Starts the app and captures every route and named state at each viewport and theme. |
+| `screenshot` | Starts the app and captures every route and named state at each viewport, theme and locale; `--before` also captures the base branch and writes a side-by-side image per changed screen. |
 | `ui` | Approves the committed captures of a named state as its baseline (`ui approve`). |
 | `brand` | Renders the brand PNGs and favicon from the SVGs in `assets/brand/`. |

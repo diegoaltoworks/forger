@@ -1,5 +1,6 @@
 export * from './assertions';
 export * from './baselines';
+export * from './before';
 export * from './capture';
 export * from './compare';
 export * from './plan';

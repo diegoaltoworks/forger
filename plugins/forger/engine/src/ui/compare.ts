@@ -65,3 +65,14 @@ export function diffImage(baseline: DecodedPng, capture: DecodedPng, tolerance: 
   }
   return {width, height: h, data};
 }
+
+/** Before on the left and after on the right, each at its own size, top aligned. */
+export function sideBySide(before: DecodedPng, after: DecodedPng): DecodedPng {
+  const height = Math.max(before.height, after.height);
+  const width = before.width + GAP + after.width;
+  const data = new Uint8Array(width * height * 4);
+  for (let i = 0; i < width * height; i++) data.set(BACKGROUND, i * 4);
+  for (let y = 0; y < before.height; y++) data.set(before.data.subarray(y * before.width * 4, (y + 1) * before.width * 4), y * width * 4);
+  for (let y = 0; y < after.height; y++) data.set(after.data.subarray(y * after.width * 4, (y + 1) * after.width * 4), (y * width + before.width + GAP) * 4);
+  return {width, height, data};
+}
