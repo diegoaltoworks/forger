@@ -161,7 +161,10 @@
       "ticket": "issue-334",
       "pid": null,
       "session_id": "e3506bd9-0917-4617-a72f-db7a3c17bc77",
-      "snapshot": null,
+      "snapshot": {
+        "baseSha": "",
+        "reflogLength": 1
+      },
       "started_at": "2026-11-07T06:25:23.056Z",
       "plan": {
         "stages": [
