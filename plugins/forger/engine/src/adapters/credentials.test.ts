@@ -166,7 +166,7 @@ describe('the docker sandbox credentials', () => {
     dirs.push(root);
     const bin = join(root, 'bin');
     mkdirSync(bin);
-    writeFileSync(join(bin, 'docker'), '#!/bin/sh\necho "ARGS $*"\necho "TOKEN=$GH_TOKEN KEY=$CLAUDE_CODE_OAUTH_TOKEN"\n', {mode: 0o755});
+    writeFileSync(join(bin, 'docker'), `#!/bin/sh\nif [ "$1" = create ]; then echo "ARGS $*" >> ${join(root, 'created')}; echo "TOKEN=$GH_TOKEN KEY=$CLAUDE_CODE_OAUTH_TOKEN" >> ${join(root, 'created')}; exit 0; fi\ncat ${join(root, 'created')}\n`, {mode: 0o755});
     const cwd = join(root, 'issue-7');
     mkdirSync(cwd);
     const requests: string[] = [];
@@ -181,7 +181,7 @@ describe('the docker sandbox credentials', () => {
     const git = (cmd: string) => ({stdout: cmd.startsWith('git remote get-url') ? 'https://github.com/acme/widgets.git' : cmd.includes('rev-parse') ? 'feat/issue-7' : '', stderr: '', exitCode: 0});
     const known = new Set<string>();
     const env = {FORGER_APP_ID: '9', FORGER_APP_PRIVATE_KEY: privateKey, CLAUDE_CODE_OAUTH_TOKEN: 'oauth-token-value', ANTHROPIC_API_KEY: 'api-key-value-123'};
-    const box = redactingSandbox(dockerSandbox(git, {projectRoot: root, pluginRoot: '/p', baseBranch: 'main', credentials: plan, secrets: known, env, api, nonce: () => 'n'}), known, plan.variables, env);
+    const box = redactingSandbox(dockerSandbox(git, {projectRoot: root, pluginRoot: '/p', baseBranch: 'main', image: 'w:1', credentials: plan, secrets: known, env, api, nonce: () => 'n'}), known, plan.variables, env);
     const path = process.env.PATH;
     process.env.PATH = `${bin}:${path}`;
     const done = await box.start({command: 'claude', args: [], cwd, input: '', timeoutMs: 5000, graceMs: 100, env: {CLAUDE_CODE_OAUTH_TOKEN: 'oauth-token-value'}}).result;
@@ -200,7 +200,7 @@ describe('the docker sandbox credentials', () => {
     const root = mkdtempSync(join(tmpdir(), 'forger-cred-'));
     dirs.push(root);
     const git = (cmd: string) => ({stdout: cmd.startsWith('git remote get-url') ? 'https://github.com/acme/widgets.git' : '', stderr: '', exitCode: 0});
-    const done = await dockerSandbox(git, {projectRoot: root, pluginRoot: '/p', baseBranch: 'main', credentials: plan}).start({command: 'codex', args: [], cwd: root, input: '', timeoutMs: 1000, graceMs: 10}).result;
+    const done = await dockerSandbox(git, {projectRoot: root, pluginRoot: '/p', baseBranch: 'main', image: 'w:1', credentials: plan}).start({command: 'codex', args: [], cwd: root, input: '', timeoutMs: 1000, graceMs: 10}).result;
     expect(done.exitCode).toBe(1);
     expect(done.output).toContain('codex');
   });

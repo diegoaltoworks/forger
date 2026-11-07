@@ -20,7 +20,7 @@ import {
   runUiCheck,
   updateCoverageBaseline,
 } from '../checks';
-import {findHarness, playwrightAuditor, playwrightScreenshotter, shellAppServer} from '../adapters';
+import {checkContract, contractItems, formatContract, resolveSandboxImage, findHarness, playwrightAuditor, playwrightScreenshotter, shellAppServer} from '../adapters';
 import {loadConfig} from '../config';
 import {checkTicketCriteria, criterionOptions} from '../loop';
 import type {Harness} from '../ports';
@@ -49,6 +49,7 @@ export const check: Command = {
   check a11y [--json] Serve the app and fail on serious or critical axe violations on every route, viewport and theme (exit 2 when Playwright, axe-core or the app is unavailable)
   check spec [--json] Fail when a requirement the issue names is unsatisfied or a MUST regresses; the slcr binary is the provider; none is a gap, not a pass
   check ticket N [--json] Fail when an acceptance criterion of issue N is not a named test, a command with its result, a sourced number or a named UI state, or uses a subjective word
+  check sandbox [--json] Start the configured docker image with the image contract probes (git, bun, the harness CLI, a non-root user) and print one line per item; exit 0 only when every item passes, and 0 with nothing to check under the host sandbox
   check arch [--json] Fail on an import that crosses a forbidden edge of .forger/architecture.json
   check docs [--json] Fail on non-ASCII punctuation, emails, home paths, denylist terms and, with the docs pack, README writing rules; passive voice warns on stderr`,
   async run(ctx) {
@@ -110,6 +111,25 @@ export const check: Command = {
       if (!result.ok) process.exitCode = 1;
       return;
     }
+    if (positionals[1] === 'sandbox') {
+      const config = loadConfig(projectRoot);
+      if (config.sandbox !== 'docker') {
+        console.log(values.json ? JSON.stringify({sandbox: config.sandbox, ok: true, items: []}) : `sandbox ${config.sandbox}: nothing to check`);
+        return;
+      }
+      const run = ctx.capture();
+      const found = resolveSandboxImage(run, projectRoot, config.sandbox_image, run('git remote get-url origin').stdout.trim());
+      if ('error' in found) {
+        console.error(values.json ? JSON.stringify({sandbox: 'docker', ok: false, error: found.error}) : found.error);
+        process.exitCode = 1;
+        return;
+      }
+      const results = checkContract(run, found.image, contractItems(config.harness));
+      const ok = results.every(r => r.ok);
+      console.log(values.json ? JSON.stringify({sandbox: 'docker', image: found.image, ok, items: results}) : formatContract(found.image, results).join('\n'));
+      if (!ok) process.exitCode = 1;
+      return;
+    }
     if (positionals[1] === 'spec') {
       const {findings, gaps, summary} = runSpecDecision(ctx.run(), specProvider(ctx));
       console.log(values.json ? JSON.stringify({findings, gaps, summary}) : formatViolations(findings, 'spec') + gaps.map(g => `\ngap (${g.modality}): ${g.opinion}: ${g.detail}`).join(''));
@@ -117,7 +137,7 @@ export const check: Command = {
       return;
     }
     if (!(positionals[1] in SINGLE)) {
-      console.error('Usage: check [--json | --summary] | check docs|arch|decisions|hooks|safety|tests|coverage|ui|spec|a11y [--json] | check coverage --update');
+      console.error('Usage: check [--json | --summary] | check docs|arch|decisions|hooks|safety|tests|coverage|ui|spec|a11y|sandbox [--json] | check coverage --update');
       process.exitCode = 1;
       return;
     }

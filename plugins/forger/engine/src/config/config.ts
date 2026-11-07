@@ -89,6 +89,13 @@ export interface WorkloopConfig {
   /** Where workers run: `host` (default), a worktree on this machine. */
   sandbox: string;
   /**
+   * The image of the `docker` sandbox when the repository has no `.devcontainer/` image. Forger ships none:
+   * the image is the project's own and must meet the image contract (`check sandbox`).
+   */
+  sandbox_image: string | null;
+  /** The image `run --detach` starts the engine in under the `docker` sandbox: the contract plus the `docker` CLI. */
+  sandbox_engine_image: string | null;
+  /**
    * Per-run limits a container sandbox applies: `memory` and `tmp` take a docker size such as `4g`,
    * `cpus` is a number of CPUs, `pids` the most processes.
    */
@@ -181,6 +188,8 @@ export interface WorkloopConfigInput {
   harness?: string;
   allow_unguarded?: boolean;
   sandbox?: string;
+  sandbox_image?: string | null;
+  sandbox_engine_image?: string | null;
   sandbox_limits?: Partial<SandboxLimits>;
   credentials?: {github?: Partial<WorkloopConfig['credentials']['github']>; model?: Record<string, CredentialKind>};
   parallelism?: number;
@@ -208,6 +217,8 @@ export const DEFAULT_CONFIG: WorkloopConfig = {
   harness: 'claude',
   allow_unguarded: false,
   sandbox: 'host',
+  sandbox_image: null,
+  sandbox_engine_image: null,
   sandbox_limits: {memory: '4g', cpus: 2, pids: 512, tmp: '1g'},
   credentials: {
     github: {source: 'env', variable: 'GH_TOKEN', read_variable: 'GH_READ_TOKEN', app_id_variable: 'FORGER_APP_ID', app_key_variable: 'FORGER_APP_PRIVATE_KEY'},

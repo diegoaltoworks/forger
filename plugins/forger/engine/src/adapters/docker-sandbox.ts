@@ -7,20 +7,22 @@
  * container.
  */
 
-import {existsSync, readFileSync} from 'fs';
 import {join} from 'path';
 
 import type {CapturingRunner, Sandbox, SupervisedResult} from '../ports';
 import {ticketBranch, worktreeWorkspace} from '../loop';
 import type {CredentialPlan} from './credentials';
 import {fetchGithubApi, githubToken, type GithubApi} from './github-token';
-import {CREDENTIAL_VARIABLES, DEFAULT_LIMITS, containerName, limitMarker, type ContainerLimits, imagePlan, repoKey, runArgs, runEnv, type DevcontainerFile, type ImagePlan} from './docker-plan';
+import {CREDENTIAL_VARIABLES, DEFAULT_LIMITS, containerName, limitMarker, type ContainerLimits, repoKey, runArgs, runEnv, PLUGIN_COPY} from './docker-plan';
+import {resolveSandboxImage} from './sandbox-image';
 import {runSupervised} from './supervise';
 
 export interface DockerSandboxOptions {
   projectRoot: string;
   pluginRoot: string;
   baseBranch: string;
+  /** The image the config names, used when the repository's devcontainer names none. */
+  image?: string | null;
   /** Names of the variables passed to the container; the harnesses' credentials by default. */
   passthrough?: string[];
   nonce?: () => string;
@@ -36,13 +38,6 @@ export interface DockerSandboxOptions {
 
 function quote(s: string): string {
   return `'${s.replace(/'/g, `'\\''`)}'`;
-}
-
-function readDevcontainer(root: string): {file: DevcontainerFile | null; dockerfile: boolean} {
-  const inDir = join(root, '.devcontainer', 'devcontainer.json');
-  const flat = join(root, '.devcontainer.json');
-  const file = existsSync(inDir) ? {dir: '.devcontainer', text: readFileSync(inDir, 'utf-8')} : existsSync(flat) ? {dir: '', text: readFileSync(flat, 'utf-8')} : null;
-  return {file, dockerfile: existsSync(join(root, '.devcontainer', 'Dockerfile'))};
 }
 
 export function dockerSandbox(git: CapturingRunner, options: DockerSandboxOptions): Sandbox {
@@ -61,20 +56,7 @@ export function dockerSandbox(git: CapturingRunner, options: DockerSandboxOption
     if (prepared) return prepared;
     const url = originUrl();
     if (url === '') return (prepared = {error: 'the repository has no origin remote for the container to clone'});
-    const found = readDevcontainer(projectRoot);
-    const key = repoKey(url);
-    const plan: ImagePlan = imagePlan(
-      found.file,
-      found.dockerfile,
-      {tag: 'forger-sandbox:base', dockerfile: join(pluginRoot, 'sandbox', 'Dockerfile'), context: join(pluginRoot, 'sandbox')},
-      `forger-sandbox:${key}`
-    );
-    if (plan.kind === 'image') return (prepared = {image: plan.image});
-    const context = plan.context.startsWith('/') ? plan.context : join(projectRoot, plan.context);
-    const dockerfile = plan.dockerfile.startsWith('/') ? plan.dockerfile : join(projectRoot, plan.dockerfile);
-    const built = git(`docker build -q -t ${quote(plan.tag)} -f ${quote(dockerfile)} ${quote(context)}`);
-    if (built.exitCode !== 0) return (prepared = {error: `docker build of ${plan.tag} failed: ${built.stderr || built.stdout}`});
-    return (prepared = {image: plan.tag});
+    return (prepared = resolveSandboxImage(git, projectRoot, options.image, url));
   }
 
   return {
@@ -133,7 +115,12 @@ export function dockerSandbox(git: CapturingRunner, options: DockerSandboxOption
         }
         // The host's own write token must not reach a read-only run through the inherited environment.
         if (spec.readOnly) extra = {...extra, GH_TOKEN: token ?? '', GITHUB_TOKEN: token ?? ''};
-        return runSupervised({...spec, command: 'docker', args: runArgs(input), env: runEnv(input, extra), abort});
+        // The container is created, given the engine's own plugin directory, then started: the image carries no forger.
+        const created = await runSupervised({...spec, command: 'docker', args: runArgs(input), env: runEnv(input, extra), input: '', abort});
+        if (created.exitCode !== 0) return {...created, output: `docker create failed: ${created.output}`};
+        const copied = git(`docker cp ${quote(join(pluginRoot, '.'))} ${quote(`${name}:${PLUGIN_COPY}`)}`);
+        if (copied.exitCode !== 0) return {exitCode: 1, signal: null, output: `copying the plugin into the container failed: ${copied.stderr || copied.stdout}`, timedOut: false};
+        return runSupervised({...spec, command: 'docker', args: ['start', '-a', '-i', name], abort});
       };
       const result = run().then(settle, e => {
         remove();

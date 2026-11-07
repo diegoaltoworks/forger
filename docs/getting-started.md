@@ -74,9 +74,12 @@ Run only the line for your harness. It prints every file as `written` or
 engine starts its workers with it. To update later, pull the clone and run the
 same line again: it rewrites the commands that changed.
 
-To run each worker in its own container instead of on this machine, add
-`--sandbox docker`. Setup records it in the config and checks that the Docker
-API is reachable, saying how to fix it when it is not, rootless mode included.
+Workers run on this machine unless you say otherwise. To run each worker in
+its own container instead, add `--sandbox docker`. The image is yours: forger
+ships none, so name one in `.devcontainer/` or as `sandbox_image` in the config,
+and test it with `check sandbox`. Setup records the choice and checks that the
+Docker API is reachable, saying how to fix it when it is not, rootless mode
+included.
 Choose how the worker pays for the model with `--credential api_key` or
 `--credential subscription`; for a subscription, setup says how to make a token
 for headless use. Put the token in the environment that starts the run. A run

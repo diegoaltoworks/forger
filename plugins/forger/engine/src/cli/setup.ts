@@ -129,7 +129,7 @@ export const setup: Command = {
         process.exitCode = 1;
         return;
       }
-      if (box.docker && !box.docker.reachable) process.exitCode = 1;
+      if (box.docker && (!box.docker.reachable || !box.docker.image)) process.exitCode = 1;
     }
     let credential: CredentialSetup | undefined;
     if (values.credential) {

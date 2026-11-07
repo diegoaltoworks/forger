@@ -1,6 +1,4 @@
 import {describe, expect, test} from 'bun:test';
-import {readFileSync} from 'fs';
-import {join} from 'path';
 
 import type {Sandbox, SandboxStart} from '../ports';
 import {agentFor} from './harnesses';
@@ -74,10 +72,5 @@ describe('the verifier in a sandbox', () => {
     expect(runArgs(input).join(' ')).toContain('FORGER_REF');
     expect(runEnv(input, undefined).FORGER_REF).toBe('pull/5/head');
     expect(runEnv({origin: 'https://x/y', baseBranch: 'main', branch: 'b'}, undefined).FORGER_REF).toBeUndefined();
-  });
-
-  test('the base image declares a headless browser for UI evidence', () => {
-    const dockerfile = readFileSync(join(import.meta.dir, '../../../sandbox/Dockerfile'), 'utf-8');
-    expect(dockerfile).toMatch(/\bchromium\b/);
   });
 });
