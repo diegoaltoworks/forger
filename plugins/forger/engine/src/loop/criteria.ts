@@ -7,6 +7,7 @@
  * is filed.
  */
 
+import {checkGuards} from './guards';
 import {parseCriteria} from './verdict';
 
 export type CriterionForm = 'test' | 'command' | 'number' | 'ui';
@@ -88,11 +89,15 @@ export interface TicketCheck {
   criteria: CriterionVerdict[];
   /** A ticket with no criteria cannot be checked either. */
   problems: string[];
+  /** What is worth fixing but does not refuse the ticket. */
+  warnings: string[];
 }
 
 export function checkTicketCriteria(body: string, options: CriterionOptions = {}): TicketCheck {
   const criteria = parseCriteria(body).map(c => classifyCriterion(c.text, options));
   const problems = criteria.filter(c => !c.ok).map(c => `"${c.text}" ${c.problem}`);
   if (criteria.length === 0) problems.push('the ticket has no acceptance criteria (checkbox items under an Acceptance heading)');
-  return {ok: problems.length === 0, criteria, problems};
+  const guards = checkGuards(body);
+  problems.push(...guards.problems);
+  return {ok: problems.length === 0, criteria, problems, warnings: guards.warnings};
 }

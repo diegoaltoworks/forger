@@ -67,6 +67,7 @@ shape. Good tickets:
 - name the **files** they touch and the **patterns** to reuse, as hints for a
   cold worker (read the code to fill these in; do not copy stale paths from
   the source);
+- carry a `## Guards` section: each guarantee the change must keep (a test floor, budget, baseline or threshold) with its file and value, or "none"; start from `work.ts facts --guards <paths the ticket touches>` (an empty section is refused, a missing one warns);
 - have **testable** acceptance criteria, each a named test, a command with its expected result, a sourced number or a named UI state (`work.ts check ticket <n>` on the filed issue must pass; otherwise the engine skips it as `needs-info`);
 - carry `depends_on` so the order is mechanical;
 - name a `repo` if the work belongs to another codebase;

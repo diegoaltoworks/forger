@@ -17,6 +17,7 @@ export const FLAGS = {
   'base-branch': {type: 'string'},
   tracker: {type: 'string'},
   issue: {type: 'string'},
+  guards: {type: 'string'},
   ticket: {type: 'string'},
   stage: {type: 'string'},
   slot: {type: 'string'},

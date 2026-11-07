@@ -1,15 +1,28 @@
+import {readFileSync} from 'fs';
+import {join} from 'path';
+
+import {formatGuardsReport, guardGlobsOf, guardsReport, testGlobsOf} from '../loop';
 import {formatFacts, gatherLoopFacts} from '../supervisor';
 import type {Command} from './command';
 
 export const facts: Command = {
   name: 'facts',
   needs: 'loop',
-  flags: ['json', 'issue', 'pr'],
-  help: `  facts [--json] [--issue N] [--pr N]
+  flags: ['json', 'issue', 'pr', 'guards'],
+  help: `  facts [--json] [--issue N] [--pr N] [--guards PATH...]
                    Read-only: branch, clean, origin base head, issue -> closing PR -> merged,
-                   and a PR's CI conclusion with whether it allows a merge`,
+                   and a PR's CI conclusion with whether it allows a merge;
+                   --guards lists the guard files and the test files that name any PATH`,
   run(ctx) {
     const {values, config} = ctx;
+    if (values.guards !== undefined) {
+      const root = ctx.projectRoot;
+      const paths = [values.guards, ...ctx.positionals.slice(1)].flatMap(p => p.split(',')).filter(p => p !== '');
+      const files = ctx.run()('git ls-files').split('\n').filter(f => f !== '');
+      const report = guardsReport(paths, files, guardGlobsOf(root, config), testGlobsOf(root), f => readFileSync(join(root, f), 'utf-8'));
+      console.log(values.json ? JSON.stringify(report) : formatGuardsReport(report));
+      return;
+    }
     const {state, log, output, halt, lock, events, declined, verdicts} = config.paths;
     const num = (v: string | undefined) => {
       const n = v === undefined ? NaN : parseInt(v, 10);

@@ -77,7 +77,7 @@ $ bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts status --json
 | `slice` | Prints the spec slice of each requirement a ticket's `Satisfies:` line names. |
 | `intent` | Classifies a planning request as product or creative. |
 | `pr-body` | Checks a PR body keeps its closing line and the ticket's review sections. |
-| `facts` | Reads the branch, the issue, its closing PR and a PR's CI conclusion, changing nothing. |
+| `facts` | Reads the branch, the issue, its closing PR and a PR's CI conclusion, changing nothing. `--guards <path>...` lists the guard files and the test files that name any of the paths. |
 | `verify` | Runs a fresh-context verifier on a PR's head and records its verdict per criterion. |
 | `merge` | Waits for every check, then squash-merges only a passing, verified PR. |
 | `handover` | After a failed verify, says the next move or hands the ticket to the owner. |
