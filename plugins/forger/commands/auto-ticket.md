@@ -217,6 +217,11 @@ End your response with exactly one:
 - `<process>complete</process>` - ticket done, gates green, merged (for an `owner reviews` ticket: PR open and verified).
 - `<process>stop</process>` then the reason on the same or next line - blocked /
   needs human input / no actionable ticket.
+- `<process>stop conflict</process>` - a design rule and a guarantee cannot both hold. Follow the tag with
+  `constraint:`, `measured:` (the gap, a number and a unit), two or three `option:` lines each followed by a
+  `tradeoff:` line, and one `recommend:` naming a listed option. The engine rejects an incomplete block and asks
+  once more. Never take an option yourself, and never loosen a guard to pass: the owner answers with
+  `decide <n> "<choice>"`.
 
 ## Rules
 - ONE ticket per iteration. Quality gates must pass. Small, clean commits.

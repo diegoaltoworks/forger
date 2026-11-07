@@ -11,6 +11,7 @@ import type {Decision} from './verdict';
 import type {TerminalEventKind} from './events';
 import type {PrFact} from './pr-checks';
 import type {AutomationStatus} from './state';
+import {conflictHalt, type Conflict} from './conflict';
 
 export interface RunFacts {
   /** The base branch on the remote moved during the run. */
@@ -50,6 +51,8 @@ export interface RunFacts {
   verdict: Decision | null;
   /** The ticket says the owner merges it (see owner-review.ts). */
   ownerReviews?: boolean;
+  /** The worker's complete conflict block, when it stopped on one. */
+  conflictStop?: Conflict | null;
 }
 
 export interface Outcome {
@@ -65,6 +68,8 @@ export interface Outcome {
   ownerReviewPr?: number;
   /** The terminal event the halt is recorded as; the runner's default when absent. */
   haltKind?: TerminalEventKind;
+  /** The conflict the halt reports; the iteration posts it on the issue. */
+  conflictStop?: Conflict;
 }
 
 /**
@@ -218,6 +223,12 @@ export function decideOutcome(f: RunFacts): Outcome {
   if (f.backlogCompleted && f.ticket) {
     const reason = divergence(f);
     return {...failure('failed', reason), halt: reason};
+  }
+
+  if (f.claim === 'stop' && f.conflictStop) {
+    const issue = /^issue-(\d+)$/.exec(f.ticket ?? '');
+    const halt = conflictHalt(issue ? Number(issue[1]) : null, f.conflictStop);
+    return {status: 'halted', result: 'neutral', merged: false, error: halt, warning: null, halt, conflictStop: f.conflictStop};
   }
 
   if (f.claim === 'stop') {

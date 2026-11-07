@@ -44,10 +44,18 @@ export function trackerFacts(run: CommandRunner, numbers: number[]): TicketFacts
   }
 }
 
-/** The ticket the checked-out branch works (`feat/issue-<n>`), or null off a ticket branch or outside git. */
+/**
+ * The ticket the checked-out branch works (`feat/issue-<n>`), or null off a ticket branch or outside git.
+ * A detached head (the verifier checks a PR out that way) is read as the branch of the open PR with that head.
+ */
 export function branchTicket(run: CommandRunner): number | null {
   try {
-    const m = /^feat\/issue-(\d+)$/.exec(run('git branch --show-current').trim());
+    let branch = run('git branch --show-current').trim();
+    if (branch === '') {
+      const sha = run('git rev-parse HEAD').trim();
+      branch = run(`gh pr list --state open --json headRefName,headRefOid --jq '.[] | select(.headRefOid == "${sha}") | .headRefName'`).trim().split('\n')[0] ?? '';
+    }
+    const m = /^feat\/issue-(\d+)$/.exec(branch);
     return m ? Number(m[1]) : null;
   } catch {
     return null;

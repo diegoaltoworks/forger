@@ -137,6 +137,9 @@ describe('branchTicket', () => {
   test('reads the ticket of a feat/issue-<n> branch, else null', () => {
     expect(branchTicket(() => 'feat/issue-42\n')).toBe(42);
     expect(branchTicket(() => 'main')).toBeNull();
+    const detached = (pr: string) => (cmd: string) => (cmd.startsWith('git branch') ? '' : cmd.startsWith('git rev-parse') ? 'abc\n' : pr);
+    expect(branchTicket(detached('feat/issue-7\n'))).toBe(7);
+    expect(branchTicket(detached(''))).toBeNull();
     expect(branchTicket(() => { throw new Error('not a repo'); })).toBeNull();
   });
 });
