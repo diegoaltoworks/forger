@@ -35,6 +35,10 @@
 
 <What the screen shows when empty, loading, failed and full, or "none" when no screen changes.>
 
+## Guards
+
+<Each guarantee the change must keep: the file that holds it and the value it holds (a coverage floor, a size budget, an approved baseline, an e2e layout floor), or "none" when the change touches no guarded area. `facts --guards <path>...` lists the guard files and the tests that name the paths the change touches.>
+
 ## Knock-on
 
 - Tests: <specs and unit tests that assert on what changes>

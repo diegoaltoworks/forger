@@ -5,6 +5,7 @@ export * from './ticket-check';
 export * from './decline';
 export * from './decline-io';
 export * from './events';
+export * from './guards';
 export * from './halt-label';
 export * from './halt-clear';
 export * from './halt-tracker';

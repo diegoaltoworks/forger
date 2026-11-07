@@ -105,8 +105,9 @@ export const check: Command = {
       const result = checkTicketCriteria(body, criterionOptions(projectRoot, loadConfig(projectRoot)));
       console.log(
         values.json
-          ? JSON.stringify({issue: n, ok: result.ok, problems: result.problems, criteria: result.criteria})
-          : result.ok ? `#${n}: every acceptance criterion can be checked` : `#${n}: ${result.problems.length} problem(s)\n${result.problems.map(p => `- ${p}`).join('\n')}`
+          ? JSON.stringify({issue: n, ok: result.ok, problems: result.problems, warnings: result.warnings, criteria: result.criteria})
+          : (result.ok ? `#${n}: every acceptance criterion can be checked` : `#${n}: ${result.problems.length} problem(s)\n${result.problems.map(p => `- ${p}`).join('\n')}`) +
+            result.warnings.map(w => `\nwarning: ${w}`).join('')
       );
       if (!result.ok) process.exitCode = 1;
       return;

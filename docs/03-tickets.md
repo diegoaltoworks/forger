@@ -17,6 +17,8 @@ ticket is written to be implemented without guessing and without asking.
   question it could have answered with a safe bet.
 - **Testable acceptance.** Checkboxes a reviewer can tick from the running app or
   the test output.
+- **Guards named.** The guarantees the change must keep, listed when the ticket
+  is written: a rule that contradicts one is a design question, not a CI surprise.
 - **Knock-on named.** The tests, fixtures, shared screens and documents the
   change reaches, found before coding, not one CI run at a time.
 
@@ -54,6 +56,7 @@ in one line ("Design review: none"), so its absence is a decision, not an oversi
 | What exists / Likely cause | what the supervisor found in the code, logs or data |
 | What to build | the change, with the defaults chosen |
 | Acceptance | testable checkboxes |
+| Guards | the guarantees (test floors, budgets, baselines, thresholds) the change must keep, each with its file and value, or "none"; `facts --guards <path>...` lists the guard files and the tests naming the paths. A missing section warns in `check ticket`, an empty one is refused |
 | Knock-on | tests, fixtures, shared regions, stored shapes it reaches |
 | Docs, examples and help | every doc, worked example and help article to update, in every offered language |
 | Design review | the design boards to redraw and review |

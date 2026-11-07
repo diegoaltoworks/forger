@@ -25,6 +25,7 @@ Every field of `.forger/workloop.config.json`.
 | `effort_multiplier` | Budget multiplier by ticket `effort` (`small`/`medium`/`large`/...). |
 | `limits` | `timeoutMinutes`, `killGraceSeconds` (SIGTERM to SIGKILL on timeout), `maxConsecutiveFailures`, `pauseBetweenIterations`, `pauseAfterFailure`, `maxStallIterations`. |
 | `paths` | Where the backlog, state, log, output dir, HALT file, engine lock, terminal-event file, verdicts directory and `process.md` live. The verdicts stay local, not committed; the dirty-tree check skips them. Default under `.forger/`. |
+| `guards` | Path globs of the files that hold guarantees (thresholds, budgets, baselines, layout floors). `facts --guards` lists them. Unset, it holds the testing pack's coverage baseline and the ui pack's approved-baselines manifest, for the packs that are installed. |
 | `local_only` | Paths that stay modified in a checkout without being the worker's doing (local settings, a work order). The dirty-tree check skips them and the engine's own files (`paths`); a directory covers what is under it. Default none. |
 | `model_names` | Model and vendor names `check docs` flags in prose, as whole words, case-insensitively. Default a list of common ones. |
 | `flavour` | `"<name>"` or `"<name>@<version>"`: the flavour that picks a skill per slot (see [skill slots](skill-slots.md)). Default `default`: every slot uses its built-in step. |

@@ -30,6 +30,10 @@ Words such as "better", "nice", "fast" and "looks right" fail the check; say wha
 
 <What the screen shows when empty, loading, failed and full, or "none" when no screen changes. Name each state; a state that is not its own route needs a `states` entry in `.forger/ui.json` (route plus steps), so `screenshot` can capture it. Put what must hold on the state under that entry's `assert` (no console errors, a region not blank, in the viewport, shown or hidden, a hue), so a defect fails before anyone looks.>
 
+## Guards
+
+<Each guarantee the change must keep: the file that holds it and the value it holds (a coverage floor, a size budget, an approved baseline, an e2e layout floor), or "none" when the change touches no guarded area. `facts --guards <path>...` lists the guard files and the tests that name the paths the change touches. A rule that contradicts a guarantee is a design question: raise it here, not when CI fails.>
+
 ## Knock-on
 
 - Tests: <specs and unit tests that assert on what changes>

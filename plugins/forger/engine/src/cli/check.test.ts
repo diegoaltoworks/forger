@@ -42,11 +42,31 @@ async function capture(c: CommandContext): Promise<{out: string; err: string; co
 }
 
 describe('check ticket', () => {
+  test('check ticket warns and passes when the Guards section is missing', async () => {
+    const r = await capture(ctx(project(), ['ticket', '5'], '## Acceptance\n- [ ] `bun run check` exits 0\n'));
+    expect(r.code).toBe(0);
+    expect(r.out).toContain('warning: has no Guards section');
+    const json = JSON.parse((await capture(ctx(project(), ['ticket', '5'], '## Acceptance\n- [ ] `bun run check` exits 0\n', true))).out) as {warnings: string[]};
+    expect(json.warnings).toHaveLength(1);
+  });
+
+  test('check ticket refuses an empty Guards section', async () => {
+    const r = await capture(ctx(project(), ['ticket', '5'], '## Acceptance\n- [ ] `bun run check` exits 0\n\n## Guards\n\n<!-- fill in -->\n\n## Knock-on\n'));
+    expect(r.code).toBe(1);
+    expect(r.out).toContain('Guards section is empty');
+  });
+
+  test('a filled Guards section passes without a warning', async () => {
+    const r = await capture(ctx(project(), ['ticket', '5'], '## Acceptance\n- [ ] `bun run check` exits 0\n\n## Guards\n\nnone\n'));
+    expect(r.code).toBe(0);
+    expect(r.out).not.toContain('warning');
+  });
+
   test('passes an issue whose every criterion can be checked, reading it from the tracker', async () => {
     const commands: string[] = [];
     const r = await capture(ctx(project(), ['ticket', '42'], '## Acceptance\n- [ ] `bun run check` exits 0\n', false, commands));
     expect(r.code).toBe(0);
-    expect(r.out).toBe('#42: every acceptance criterion can be checked');
+    expect(r.out).toStartWith('#42: every acceptance criterion can be checked');
     expect(commands).toEqual(['gh issue view 42 --json body --jq .body']);
   });
 

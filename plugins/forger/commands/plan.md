@@ -207,7 +207,7 @@ Read `tracker.kind` from `workloop.config.json`.
 **`github`:** one issue per ticket, in dependency order (blockers first) so edges
 can reference real numbers. Then:
 - `gh issue create --title "<ticket title>" --label <tracker.label> --body "<body>"`
-  with a body of: what to build (end-to-end behaviour), acceptance criteria as
+  with a Guards section (each guarantee the change must keep - a test floor, budget, baseline or threshold - with its file and value, or "none"; start from `work.ts facts --guards <paths the ticket touches>`) and a body of: what to build (end-to-end behaviour), acceptance criteria as
   checkboxes, and a `Blocked by` list.
 - Link every issue the body lists under `Blocked by` as a native blocked-by with
   `link-blockers --issue <n>` (the work command's `bin/work.ts`), after the

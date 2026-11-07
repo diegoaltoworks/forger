@@ -140,6 +140,12 @@ export interface WorkloopConfig {
   /** What `check ticket` holds acceptance criteria to; `subjective_words` extends the built-in list. */
   criteria: {subjective_words: string[]};
   /**
+   * Path globs of the files that hold guarantees (thresholds, budgets, baselines, layout floors).
+   * `facts --guards` lists them; null uses the coverage baseline and the approved-baselines
+   * manifest of the packs that are installed.
+   */
+  guards: string[] | null;
+  /**
    * Where the machine-written loop files live (ADR 0015). `local` keeps them
    * beside the engine; `branch` keeps them on the `branch` of the remote and
    * makes the engine hold the lease while it runs.
@@ -197,6 +203,7 @@ export interface WorkloopConfigInput {
   paths?: Partial<WorkloopConfig['paths']>;
   tracker?: Partial<WorkloopConfig['tracker']>;
   criteria?: Partial<WorkloopConfig['criteria']>;
+  guards?: string[] | null;
   state?: Partial<WorkloopConfig['state']>;
   local_only?: string[];
   skills?: Record<string, SkillMapping>;
@@ -271,6 +278,7 @@ export const DEFAULT_CONFIG: WorkloopConfig = {
   },
   tracker: {kind: 'github', label: 'ready-for-agent', ignore: []},
   criteria: {subjective_words: []},
+  guards: null,
   state: {home: 'local', branch: 'forger-state'},
   local_only: [],
   skills: {},
@@ -356,6 +364,7 @@ export function mergeConfig(
     paths: {...base.paths, ...(user.paths ?? {})},
     tracker: {...base.tracker, ...(user.tracker ?? {})},
     criteria: {...base.criteria, ...(user.criteria ?? {})},
+    guards: user.guards ?? base.guards,
     skills: {...base.skills, ...(user.skills ?? {})},
     model_names: user.model_names ?? base.model_names,
   };

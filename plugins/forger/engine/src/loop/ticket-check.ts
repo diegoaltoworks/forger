@@ -10,6 +10,7 @@ import {existsSync, readFileSync} from 'fs';
 import type {WorkloopConfig} from '../config';
 import {forgerPath} from '../config';
 import type {CommandRunner} from '../ports';
+import {defaultGuards, type GuardSources} from './guards';
 import {checkTicketCriteria, type CriterionOptions, type TicketCheck} from './criteria';
 import {leaveQueue, type DeclineTarget} from './decline-io';
 
@@ -67,4 +68,37 @@ export function refuseUncheckable(
     }
   }
   return {refused, errors};
+}
+
+/** What the installed packs say holds guarantees; each file is absent when its pack is not installed. */
+export function guardSourcesOf(projectRoot: string): GuardSources {
+  const read = (rel: string): Record<string, unknown> | null => {
+    const file = forgerPath(projectRoot, rel);
+    if (!existsSync(file)) return null;
+    try {
+      return JSON.parse(readFileSync(file, 'utf-8')) as Record<string, unknown>;
+    } catch {
+      return null;
+    }
+  };
+  const testing = read('.forger/testing.json');
+  const baseline = testing?.coverage_baseline;
+  return {coverageBaseline: typeof baseline === 'string' ? baseline : null, uiInstalled: read('.forger/ui.json') !== null};
+}
+
+/** The guard globs in force: the configured ones, else the installed packs' defaults. */
+export function guardGlobsOf(projectRoot: string, config: WorkloopConfig): string[] {
+  return config.guards ?? defaultGuards(guardSourcesOf(projectRoot));
+}
+
+/** The test globs of the testing pack, else the usual test file names. */
+export function testGlobsOf(projectRoot: string): string[] {
+  const file = forgerPath(projectRoot, '.forger/testing.json');
+  try {
+    const paths = (JSON.parse(readFileSync(file, 'utf-8')) as {test_paths?: unknown}).test_paths;
+    if (Array.isArray(paths) && paths.every(p => typeof p === 'string')) return paths as string[];
+  } catch {
+    /* no testing pack */
+  }
+  return ['**/*.test.*', '**/*.spec.*'];
 }
