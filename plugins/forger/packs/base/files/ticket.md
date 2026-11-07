@@ -34,6 +34,12 @@ Words such as "better", "nice", "fast" and "looks right" fail the check; say wha
 
 <Each guarantee the change must keep: the file that holds it and the value it holds (a coverage floor, a size budget, an approved baseline, an e2e layout floor), or "none" when the change touches no guarded area. `facts --guards <path>...` lists the guard files and the tests that name the paths the change touches. A rule that contradicts a guarantee is a design question: raise it here, not when CI fails.>
 
+## Merge
+
+<!-- "when green" (the default when this section is missing) or "owner reviews". Say why for the latter: the acceptance includes a judgement only the owner can make (taste, an approved baseline). -->
+
+when green
+
 ## Knock-on
 
 - Tests: <specs and unit tests that assert on what changes>

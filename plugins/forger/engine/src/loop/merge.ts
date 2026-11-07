@@ -8,6 +8,7 @@
 import type {CommandRunner} from '../ports';
 import {verdictRefusal, readVerdicts} from './verdict-store';
 import type {VerdictRecord} from './verify-input';
+import {ownerReviewRefusal, type MergeMode} from './owner-review';
 import {ciConfigured, viewPr, type ChecksConclusion, type PrFact} from './pr-checks';
 
 export type MergeStep = {action: 'wait'} | {action: 'merge'} | {action: 'refuse'; reason: string} | {action: 'done'};
@@ -46,6 +47,8 @@ export interface MergeOptions {
   /** Directory holding the verdict records `verify` wrote. */
   verdictsDir: string;
   timeoutMs: number;
+  /** Who merges the ticket; `owner reviews` makes the merge refuse. */
+  mode?: MergeMode;
   pollMs?: number;
   sleep?: (ms: number) => Promise<void>;
 }
@@ -63,6 +66,8 @@ function result(prNumber: number, pr: PrFact | null, reason: string | null): Mer
 export async function mergePr(run: CommandRunner, opts: MergeOptions): Promise<MergeResult> {
   const pollMs = opts.pollMs ?? 10_000;
   const sleep = opts.sleep ?? (ms => new Promise<void>(r => setTimeout(r, ms)));
+  const owned = ownerReviewRefusal(opts.mode ?? 'when green', opts.pr);
+  if (owned) return result(opts.pr, null, owned);
   const ci = ciConfigured(run, opts.baseBranch);
   const read = () => viewPr(run, opts.pr, ci);
 

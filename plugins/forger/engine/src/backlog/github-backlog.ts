@@ -105,6 +105,7 @@ export function issueStatus(issue: IssueNode, tracker: TrackerSettings): string 
   const isWork = labels.includes(tracker.label) && !isIgnored(labels, tracker);
   if (!isWork) return issue.state === 'CLOSED' ? 'completed' : 'untracked';
   if (issue.state === 'CLOSED') return closedByMergedPr(issue) ? 'completed' : 'closed';
+  if (labels.includes('owner-review')) return 'owner_review';
   if (labels.includes('needs-human')) return 'needs_human';
   if (labels.includes('deferred')) return 'deferred';
   return 'not_started';

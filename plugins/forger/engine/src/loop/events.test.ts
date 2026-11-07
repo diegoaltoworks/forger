@@ -66,6 +66,7 @@ describe('recorded events', () => {
     [['halt_cleared', 3, 'issue-9', 'why', at], '{"event":"halt_cleared","at":"2000-01-02T03:04:05.000Z","iteration":3,"ticket":"issue-9","reason":"why"}\n'],
     [['lease_takeover', 2, null, 'took over', at], '{"event":"lease_takeover","at":"2000-01-02T03:04:05.000Z","iteration":2,"ticket":null,"reason":"took over"}\n'],
     [['contract_attempt', 4, 'issue-9', 'review attempt 1: x', at], '{"event":"contract_attempt","at":"2000-01-02T03:04:05.000Z","iteration":4,"ticket":"issue-9","reason":"review attempt 1: x"}\n'],
+    [['owner_review', 5, 'issue-9', 'PR #12', at], '{"event":"owner_review","at":"2000-01-02T03:04:05.000Z","iteration":5,"ticket":"issue-9","reason":"PR #12"}\n'],
   ];
   test.each(cases)('%j is written as one fixed line', (args, line) => {
     expect(eventLine(terminalEvent(...args))).toBe(line);

@@ -1,7 +1,7 @@
 import {describe, expect, test} from 'bun:test';
 
 import {terminalEvent} from '../loop';
-import {mergedInPeriod, proposedAdrs, recommendationFrom, reportPeriod, uncausedClearItems, waitingIssues} from './waiting';
+import {mergedInPeriod, ownerReviewPrs, proposedAdrs, recommendationFrom, reportPeriod, uncausedClearItems, waitingIssues} from './waiting';
 
 describe('recommendationFrom', () => {
   test('the paragraph under a Recommendation heading', () => {
@@ -72,5 +72,19 @@ describe('uncausedClearItems', () => {
     ]);
     expect(items).toHaveLength(1);
     expect(items[0].question).toContain('boom');
+  });
+});
+
+describe('ownerReviewPrs', () => {
+  test('the report lists owner-review PRs under waiting on you', () => {
+    const w = ownerReviewPrs([
+      {number: 20, title: 'second', url: 'https://example.test/pull/20'},
+      {number: 12, title: 'first', url: 'https://example.test/pull/12'},
+    ]);
+    expect(w.map(i => i.question)).toEqual([
+      'PR #12 first is waiting for your review: https://example.test/pull/12',
+      'PR #20 second is waiting for your review: https://example.test/pull/20',
+    ]);
+    expect(w[0].recommendation).toContain('merge it');
   });
 });

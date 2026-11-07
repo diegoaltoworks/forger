@@ -168,6 +168,18 @@ describe('backlogFromIssues', () => {
     });
   });
 
+  test('a ticket blocked by an owner-reviews ticket waits until its PR merges', () => {
+    const waiting = issue(1, {labels: ['ready-for-agent', 'owner-review']});
+    const open = backlogFromIssues([waiting, issue(2, {blockedBy: [waiting]}), issue(3, {labels: ['ready-for-agent', 'P0']})], tracker);
+    expect(open.features['issue-1']).toMatchObject({status: 'owner_review'});
+    expect(backlogReport(open, config).workable.map(w => w.id)).toEqual(['issue-3']);
+
+    const merged = issue(1, {state: 'CLOSED', closer: mergedPr, labels: ['ready-for-agent', 'owner-review']});
+    const after = backlogFromIssues([merged, issue(2, {blockedBy: [merged]})], tracker);
+    expect(after.features['issue-1']).toMatchObject({status: 'completed'});
+    expect(backlogReport(after, config).workable.map(w => w.id)).toEqual(['issue-2']);
+  });
+
   test('a blocker closed without a merged PR still blocks', () => {
     const blocker = issue(1, {state: 'CLOSED', closer: null});
     const data = backlogFromIssues([blocker, issue(2, {blockedBy: [blocker]})], tracker);

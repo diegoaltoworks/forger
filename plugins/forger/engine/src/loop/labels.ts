@@ -22,6 +22,7 @@ export function loopLabels(intakeLabel: string): LabelSpec[] {
     {name: NEEDS_INFO_LABEL, color: 'fbca04', description: 'The loop declined this ticket; the owner must answer'},
     {name: 'needs-human', color: 'd93f0b', description: 'Only a human can supply what this needs'},
     {name: 'halted', color: 'b60205', description: 'Stops the loop; set on the pinned loop issue'},
+    {name: 'owner-review', color: '5319e7', description: 'Built and verified; the owner merges the PR'},
     {name: 'deferred', color: 'c5def5', description: 'Parked on purpose'},
     {name: 'needs-triage', color: 'ededed', description: 'Not yet looked at'},
     {name: 'P0', color: 'b60205', description: 'Priority 0'},

@@ -18,6 +18,7 @@ export * from './lock';
 export * from './logger';
 export * from './merge';
 export * from './merged';
+export * from './owner-review';
 export * from './outcome';
 export * from './pr-checks';
 export * from './pr-body';
