@@ -347,3 +347,42 @@ describe('probing a page for assertions', () => {
     expect(clips).toEqual([{x: 0, y: 0, width: 40, height: 20}]);
   });
 });
+
+describe('the Playwright adapter measuring text', () => {
+  test('a fit shot evaluates the measuring script with the selector, scale and text, and returns its answer as the page model', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'forger-pw-'));
+    dirs.push(root);
+    const expressions: string[] = [];
+    const fake = {
+      chromium: {
+        async launch() {
+          return {
+            async newContext() {
+              return {
+                async newPage() {
+                  return {
+                    async goto() {},
+                    async screenshot() {},
+                    on() {},
+                    async addScriptTag() {},
+                    async evaluate(expression: string) {
+                      expressions.push(expression);
+                      return [{textWidth: 120, availableWidth: 100, wraps: true, clipped: false}];
+                    },
+                  };
+                },
+                async close() {},
+              };
+            },
+            async close() {},
+          };
+        },
+      },
+    };
+    const pages = await playwrightScreenshotter(root, () => fake as never).capture([
+      {url: 'http://x', width: 390, height: 800, theme: 'light', fit: {selector: '.title', scale: 2, text: 'long label'}},
+    ]);
+    expect(expressions[0]).toContain('".title", 2, "long label"');
+    expect(pages?.[0]?.fits).toEqual([{textWidth: 120, availableWidth: 100, wraps: true, clipped: false}]);
+  });
+});

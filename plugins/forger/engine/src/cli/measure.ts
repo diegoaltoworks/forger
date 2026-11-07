@@ -1,3 +1,7 @@
+import {playwrightScreenshotter, shellAppServer} from '../adapters';
+import {UiInfrastructureError} from '../ports';
+import {UI_PATH, UiConfigError, formatFitReport, longestString, parseUiConfig, runFit} from '../ui';
+import {forgerPath} from '../config';
 import {existsSync, readdirSync, readFileSync} from 'fs';
 import {homedir} from 'os';
 import {join} from 'path';
@@ -115,15 +119,20 @@ return {...measures, not_on_this_machine: notHere};
 export const measure: Command = {
   name: 'measure',
   needs: 'config',
-  flags: ['json', 'last', 'report', 'diff', 'window', 'from'],
+  flags: ['json', 'last', 'report', 'diff', 'window', 'from', 'text'],
   help: `  measure [--json] [--last N] [--window N] [--report] [--from local|branch]
   measure --diff A.json B.json
+  measure <route-or-state> <selector> [--text <file>] [--json]
+                   Serves the app and, for each element the selector matches, reports its text width against the width available, and whether it wraps or is clipped,
+                   at each viewport (and each locale of ui.json) at a text scale of 100% and 200%. The worst case is first (exit 1 when any wraps or is clipped; exit 2 when the app cannot be served).
+                   --text fills the element with the longest string of a translation file (JSON of any nesting, else one string per line) first
                    Runs, failures by cause, time, budget cap, cost from the session transcripts (unknown without one; prices in .forger/prices.json override the defaults) and CI rounds per ticket; merges per hour by parallelism, conflicts, rework, redone tickets, owner interventions.
                    Rework and escaped defects per merged PR: a later merge within --window N merges (default 5) that touches its lines or reverts it, bug issues naming it, and picks that differ from the issue the PR closed.
                    --from branch reads the state record and events from the state branch of a clone; iteration logs and transcripts stay on the engine's machine and are reported as not on this machine.
                    --report prints the five-measure comparison report as JSON; --diff prints the per-measure delta between two saved reports (A is the baseline)`,
-  run(ctx) {
+  async run(ctx) {
     const {values, projectRoot, config, positionals} = ctx;
+    if (positionals[1] !== undefined && !values.diff) return measureFit(ctx);
     if (values.diff) {
       const [a, b] = [positionals[1], positionals[2]];
       if (a === undefined || b === undefined) throw new Error('measure --diff needs two report files: measure --diff A.json B.json');
@@ -139,3 +148,28 @@ export const measure: Command = {
     console.log(values.json ? JSON.stringify(measures) : formatMeasures(measures));
   },
 };
+
+/** Exit 1 is a config or target the project must fix, or text that does not fit; exit 2 is an environment that cannot serve the app. */
+async function measureFit(ctx: CommandContext): Promise<void> {
+  const {values, projectRoot, positionals} = ctx;
+  const fail = (message: string, code: number): void => {
+    console.error(values.json ? JSON.stringify({ok: false, error: message}) : message);
+    process.exitCode = code;
+  };
+  const [target, selector] = [positionals[1], positionals[2]];
+  if (target === undefined || selector === undefined) return fail('measure: give a route or state and a selector, as in: measure /settings ".title"', 1);
+  const path = forgerPath(projectRoot, UI_PATH);
+  if (!existsSync(path)) return fail(`${UI_PATH} not found; install the ui pack with setup`, 1);
+  try {
+    const config = parseUiConfig(readFileSync(path, 'utf-8'));
+    if (values.text !== undefined && !existsSync(values.text)) return fail(`measure: ${values.text} not found`, 1);
+    const text = values.text === undefined ? undefined : longestString(readFileSync(values.text, 'utf-8'));
+    const report = await runFit(config, target, selector, shellAppServer(projectRoot), playwrightScreenshotter(projectRoot), text);
+    console.log(values.json ? JSON.stringify(report) : formatFitReport(report));
+    if (!report.fits) process.exitCode = 1;
+  } catch (e) {
+    if (e instanceof UiInfrastructureError) return fail(e.message, 2);
+    if (e instanceof UiConfigError) return fail(e.message, 1);
+    throw e;
+  }
+}

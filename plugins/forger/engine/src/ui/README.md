@@ -17,6 +17,7 @@ turns a served app into screenshots under `docs/screenshots/`.
 - `compare.ts` - whether a capture matches its baseline within a tolerance, and the side-by-side diff image. Pure.
 - `before.ts` - pairs the base branch's captures with the branch's and writes one side-by-side image per changed screen.
 - `baselines.ts` - the approved-baselines manifest, where the approved images live and which images still need judging. Pure.
+- `fit.ts` - plans the shots of a route or state across viewports, locales and text scales. It ranks the answers worst case first and runs them against the `AppServer` and `Screenshotter` ports.
 - `record.ts` - plans and runs one declared capture. It starts the app, records
   the steps as video, encodes a GIF and stops the app. It uses the `AppServer`,
   `Recorder` and `GifEncoder` ports.
