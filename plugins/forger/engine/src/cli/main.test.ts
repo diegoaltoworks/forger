@@ -732,6 +732,18 @@ describe('supervisor commands', () => {
     expect(out.issue).toEqual({number: 4, state: 'OPEN', closing_pr: null});
   });
 
+  test('facts --guards prints the guard files and the tests that name a path, with --json as data', async () => {
+    const root = projectWith({a: {status: 'not_started'}});
+    mkdirSync(join(root, 'src'));
+    writeFileSync(join(root, '.forger/testing.json'), JSON.stringify({coverage_baseline: '.forger/cov.json'}));
+    writeFileSync(join(root, 'src/layout.spec.ts'), "expect(x).toBe('src/app.ts')");
+    process.chdir(root);
+    const run: CommandRunner = cmd => (cmd === 'git ls-files' ? '.forger/cov.json\nsrc/layout.spec.ts\nsrc/app.ts\n' : '');
+    const out = JSON.parse(await capture(['facts', '--json', '--guards', 'src/app.ts'], run));
+    expect(out).toEqual({paths: ['src/app.ts'], guards: ['.forger/cov.json'], tests: ['src/layout.spec.ts']});
+    expect(await capture(['facts', '--guards', 'src/app.ts'], run)).toContain('src/layout.spec.ts');
+  });
+
   test('merge refuses a PR with a failing check and exits 1, without merging', async () => {
     process.chdir(projectWith({a: {status: 'not_started'}}));
     const calls: string[] = [];
