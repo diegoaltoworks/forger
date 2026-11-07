@@ -6,11 +6,13 @@
 
 const DEFAULT_STOP_REASON = 'Agent signaled stop - blocked or no actionable work';
 const MAX_REASON = 300;
-const SIGNAL = /<process>(stop|complete)<\/process>/g;
+const SIGNAL = /<process>(stop conflict|stop|complete)<\/process>/g;
 
 export interface Claim {
   claim: 'complete' | 'stop' | null;
   stopReason: string | null;
+  /** The text after a `stop conflict` tag, for the conflict parser; absent for any other claim. */
+  conflictBlock?: string;
 }
 
 /**
@@ -20,7 +22,7 @@ export interface Claim {
 function reasonAfter(rest: string): string {
   const paragraph = rest.split(/\r?\n[ \t]*\r?\n/)[0] ?? '';
   const text = paragraph
-    .replace(/<process>(?:stop|complete)<\/process>[\s\S]*$/, '')
+    .replace(/<process>(?:stop conflict|stop|complete)<\/process>[\s\S]*$/, '')
     .replace(/\s+/g, ' ')
     .trim()
     .replace(/^(?:blocked|reason|because)\s*[:\-]?\s*/i, '')
@@ -35,5 +37,7 @@ export function parseClaim(output: string): Claim {
   const last = signals.at(-1);
   if (!last) return {claim: null, stopReason: null};
   if (last[1] === 'complete') return {claim: 'complete', stopReason: null};
-  return {claim: 'stop', stopReason: reasonAfter(output.slice((last.index ?? 0) + last[0].length))};
+  const rest = output.slice((last.index ?? 0) + last[0].length);
+  if (last[1] === 'stop conflict') return {claim: 'stop', stopReason: reasonAfter(rest), conflictBlock: rest};
+  return {claim: 'stop', stopReason: reasonAfter(rest)};
 }

@@ -9,6 +9,7 @@ export * from './guards';
 export * from './halt-label';
 export * from './halt-clear';
 export * from './halt-tracker';
+export * from './conflict';
 export * from './handover';
 export * from './handover-io';
 export * from './infra';

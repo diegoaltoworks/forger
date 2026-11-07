@@ -2,7 +2,7 @@ import {describe, expect, test} from 'bun:test';
 
 import type {Measures} from './measure';
 import {APPROVAL_POLICY, approvalFor, buildReport, formatReport, orient} from './supervisor';
-import {buildStatus} from '../loop';
+import {buildStatus, conflictHalt} from '../loop';
 import {defaultState} from '../loop';
 
 function status(over: {alive?: boolean; pid?: number | null; halted?: boolean; remaining?: number; ticket?: string | null; done?: string[]} = {}) {
@@ -119,6 +119,20 @@ describe('report recoveries', () => {
     expect(r.recovered).toEqual(['t1: PR #2 verified after the merge: pass']);
     expect(r.waiting_on_owner[0].recommendation).toContain('pushed a branch');
     expect(formatReport(r)).toContain('**Recovered by the engine**');
+  });
+});
+
+describe('report on a conflict stop', () => {
+  test('the report shows a conflict\'s options and the decide line to answer it', () => {
+    const c = {constraint: 'the footer must fit', measured: '18 px of overflow', options: [{text: 'A - shrink', tradeoff: 'smaller type'}, {text: 'B - wrap', tradeoff: 'taller footer'}], recommend: 'B'};
+    const reason = conflictHalt(344, c);
+    const s = status({halted: true});
+    const r = buildReport({status: s, plan: orient({...base, status: s, haltReason: reason}), branch: 'main', baseBranch: 'main'});
+    const text = formatReport(r);
+    expect(text).toContain('1. A - shrink (trade-off: smaller type)');
+    expect(text).toContain('2. B - wrap (trade-off: taller footer)');
+    expect(text).toContain('Recommendation: B');
+    expect(r.waiting_on_owner[0].recommendation).toBe('decide 344 "<choice>"');
   });
 });
 

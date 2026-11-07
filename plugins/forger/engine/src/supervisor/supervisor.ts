@@ -4,7 +4,7 @@
  * (`commands/work.md`) calls these through the CLI and keeps only judgement.
  */
 
-import {behindBaseAnomaly, type BaseSync, missingVerifyStatusAnomaly, type LeaseView, openLabel, recommendationFor, type HandedOver, type StatusReport} from '../loop';
+import {conflictAnswer, behindBaseAnomaly, type BaseSync, missingVerifyStatusAnomaly, type LeaseView, openLabel, recommendationFor, type HandedOver, type StatusReport} from '../loop';
 import type {Measures} from './measure';
 import {type Period} from './waiting';
 import {buildReportMeasures, formatReportMeasures, type ReportMeasures} from './report-measures';
@@ -176,7 +176,7 @@ export function buildReport(i: ReportInputs): Report {
   if (plan.action === 'surface_halt') {
     waiting.push({
       question: `The loop is halted: ${plan.reason}`,
-      recommendation: recommendationFor(i.haltKind ?? null),
+      recommendation: conflictAnswer(plan.reason) ?? recommendationFor(i.haltKind ?? null),
       because: 'clearing a halt blindly can march the loop past unmerged work',
     });
   }

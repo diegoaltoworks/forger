@@ -1037,3 +1037,52 @@ describe('a ticket Probe', () => {
     expect(state.in_flight).toEqual([]);
   });
 });
+
+describe('AutomationRunner on a conflict stop', () => {
+  const block = (recommend: string) =>
+    `<process>stop conflict</process>\nconstraint: footer fits\nmeasured: 18 px over\noption: A - shrink\ntradeoff: small type\noption: B - wrap\ntradeoff: taller\nrecommend: ${recommend}\n`;
+  const reply = (output: string): AgentResult => ({exitCode: 0, signal: null, output, timedOut: false});
+
+  async function run(outputs: string[]) {
+    const root = mkdtempSync(join(tmpdir(), 'forger-runner-'));
+    dirs.push(root);
+    const config = mergeConfig({tracker: {kind: 'github', label: 'ready-for-agent'}});
+    const data = {features: {'issue-5': {priority: 'P1', status: 'not_started', depends_on: [], body: '## Acceptance\n- [ ] `bun run check` exits 0'}}} as unknown as BacklogData;
+    const commands: string[] = [];
+    const prompts: string[] = [];
+    const runner = new AutomationRunner(root, config, backlogFrom(() => data, config), {
+      stateStore: localStateFor(root, config),
+      agent: {run: async o => (prompts.push(o.prompt), reply(outputs[Math.min(prompts.length, outputs.length) - 1]))},
+      gitRunner: cmd => (commands.push(cmd), ''),
+    });
+    await runner.runIteration(1);
+    return {commands, prompts, state: readState(root)};
+  }
+
+  test('a complete block labels the issue, posts the options and halts without asking again', async () => {
+    const r = await run([block('B')]);
+    expect(r.prompts).toHaveLength(1);
+    expect(r.commands.some(c => c.includes('gh issue edit 5 --add-label needs-human'))).toBe(true);
+    expect(r.commands.some(c => c.startsWith('gh issue comment 5') && c.includes('Answer with: decide 5'))).toBe(true);
+    expect(r.state.status).toBe('halted');
+  });
+
+  test('an incomplete block is asked for once more and the second one is used', async () => {
+    const r = await run([block('C'), block('A')]);
+    expect(r.prompts).toHaveLength(2);
+    expect(r.prompts[1]).toContain('recommend "C" names no listed option');
+    expect(r.commands.some(c => c.includes('--add-label needs-human'))).toBe(true);
+  });
+
+  test('a block incomplete twice is an ordinary stop with no label', async () => {
+    const r = await run([block('C'), block('C')]);
+    expect(r.prompts).toHaveLength(2);
+    expect(r.commands.some(c => c.includes('needs-human'))).toBe(false);
+    expect(r.state.status).toBe('halted');
+  });
+
+  test('a second answer with no block at all is an ordinary stop', async () => {
+    const r = await run([block('C'), 'sorry']);
+    expect(r.commands.some(c => c.includes('needs-human'))).toBe(false);
+  });
+});

@@ -118,7 +118,7 @@ flowchart TD
     DC -- no --> D{backlog says completed?}
     D -- yes --> X[failed: diverged, halt]
     D -- no --> H{worker signalled stop?}
-    H -- yes --> HL[halted: neutral, halt]
+    H -- yes --> HL[halted: neutral, halt; a complete conflict block adds its options]
     H -- no --> T{timed out?}
     T -- yes --> TO[timeout: failure]
     T -- no --> C{claimed complete?}

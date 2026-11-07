@@ -12,7 +12,9 @@ import {writeFileSync} from 'fs';
 import type {Backlog} from '../backlog';
 import {resolveModel, type WorkloopConfig} from '../config';
 import type {AgentRunner, CommandRunner, ProbeRunner} from '../ports';
-import {parseClaim} from './claim';
+import {parseClaim, type Claim} from './claim';
+import {conflictComment, conflictReask, parseConflict, type Conflict} from './conflict';
+import {NEEDS_HUMAN_LABEL} from './handover-io';
 import type {EventKind, TerminalEventKind} from './events';
 import {declineUpdate, type DeclineEntry} from './decline';
 import {clearDeclineRecord, readDeclineRecord} from './decline-io';
@@ -200,6 +202,7 @@ export async function runIteration(
   ctx.logger.log('INFO', `Claude finished in ${duration}s (exit: ${result.exitCode})`);
 
   const claim = parseClaim(result.output);
+  const conflictStop = claim.conflictBlock === undefined ? null : await completeConflict(ctx, claim, {prompt, sessionId, tier, model, root, timeoutMinutes, killGraceSeconds, deadline, attemptedTask, iteration});
   const backlogCompleted = ticket !== null && ctx.backlog.isCompleted(ticket);
   const record = readDeclineRecord(declinedFile);
   clearDeclineRecord(declinedFile);
@@ -223,6 +226,7 @@ export async function runIteration(
     unclean: gitFacts.merged && !placement ? verify(ctx) : null,
     verdict: verdictOf(ctx, gitFacts.pr, root),
     ownerReviews: ticket !== null && mergeMode(ctx.backlog.body(ticket)) === 'owner reviews',
+    conflictStop,
   });
 
   // Rewritten with the decided status so measures can read it back from the file.
@@ -231,6 +235,7 @@ export async function runIteration(
   const declined: DeclineEntry | null =
     outcome.status === 'declined' && record ? {ticket: record.ticket, reason: record.reason, iteration} : null;
   const settled = settle(ctx, sessionId, iteration, ticket, backlogCompleted, outcome, countStall, declined);
+  if (outcome.conflictStop) handToOwnerOnConflict(ctx, ticket, outcome.conflictStop);
   placement?.finish(outcome.status === 'conflict');
   return settled;
 }
@@ -261,6 +266,60 @@ function handBackProbe(ctx: IterationContext, iteration: number, ticket: string 
     probeHandBack(ctx.gitRunner, issue, probeFailureComment(failed), ctx.config.tracker.label);
   } catch (e) {
     ctx.halt(`Infrastructure error (probe): could not hand ${ticket} back: ${e instanceof Error ? e.message : String(e)}`);
+  }
+}
+
+interface ReaskContext {
+  prompt: string;
+  sessionId: string;
+  tier: ReturnType<IterationContext['backlog']['tier']>;
+  model: string;
+  root: string;
+  timeoutMinutes: number;
+  killGraceSeconds: number;
+  deadline: Date;
+  attemptedTask: string | null;
+  iteration: number;
+}
+
+/**
+ * The conflict a stop carries, complete: a block with a gap is rejected and the
+ * worker is asked once more; a second incomplete block is an ordinary stop.
+ */
+async function completeConflict(ctx: IterationContext, claim: Claim, r: ReaskContext): Promise<Conflict | null> {
+  const first = parseConflict(claim.conflictBlock ?? '');
+  if (first.ok) return first.conflict;
+  ctx.logger.log('WARN', `Conflict stop rejected: ${first.problems.join('; ')}; asking once more`);
+  const again = await ctx.agent.run({
+    prompt: `${r.prompt}\n\n${conflictReask(first.problems)}`,
+    sessionId: r.sessionId,
+    tier: r.tier,
+    model: r.model,
+    workerCommand: ctx.config.worker_command,
+    cwd: r.root,
+    env: workerEnv(r.attemptedTask, r.iteration, ctx.pluginRoot, r.deadline),
+    timeoutMinutes: r.timeoutMinutes,
+    killGraceSeconds: r.killGraceSeconds,
+    readOnly: true,
+  });
+  const second = parseClaim(again.output);
+  const parsed = second.conflictBlock === undefined ? null : parseConflict(second.conflictBlock);
+  if (parsed?.ok) return parsed.conflict;
+  ctx.logger.log('WARN', `Conflict stop rejected again: ${parsed ? parsed.problems.join('; ') : 'no conflict block'}; recorded as an ordinary stop`);
+  return null;
+}
+
+/** Labels the issue needs-human and posts the options; a tracker failure is logged, the halt stands either way. */
+function handToOwnerOnConflict(ctx: IterationContext, ticket: string | null, conflict: Conflict): void {
+  const issue = issueOfTicket(ticket);
+  if (issue === null || ctx.config.tracker.kind !== 'github') return;
+  const quoted = `'${conflictComment(issue, conflict).replace(/'/g, `'\\''`)}'`;
+  for (const command of [`gh issue edit ${issue} --add-label ${NEEDS_HUMAN_LABEL}`, `gh issue comment ${issue} --body ${quoted}`]) {
+    try {
+      ctx.gitRunner(command);
+    } catch (e) {
+      ctx.logger.log('WARN', `Could not run \`${command.slice(0, 40)}...\`: ${e instanceof Error ? e.message : String(e)}`);
+    }
   }
 }
 

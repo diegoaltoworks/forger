@@ -204,6 +204,11 @@ improvise them:
   decided and the date, under the issue's Decisions section, which every worker reads and which
   overrides the ticket's earlier text. When the loop is halted on that ticket the halt is cleared
   with `<n>` as the cause. An answer given only in chat is lost on the next run.
+  A worker that finds a design and a guarantee in conflict stops with `stop conflict` and a block: the
+  constraint, the measured gap, two or three options with their trade-offs and one recommendation. A
+  complete block labels the issue `needs-human`, posts the options as a comment and halts; the halt
+  message and `report` show them with the `decide <n> "<choice>"` line to answer with. An incomplete
+  block is sent back once, then recorded as an ordinary stop.
 - `recover [--json]`: the standing halt's recovery, from a table in the engine
   keyed by the halt's event kind. An `unverified` halt runs `verify` on the
   merged head: a pass resumes the loop and writes a `recovered` event (seen in
