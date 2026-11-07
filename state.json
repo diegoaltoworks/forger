@@ -163,7 +163,10 @@
       "ticket": "issue-338",
       "pid": null,
       "session_id": "7e8d8642-7101-4005-a493-2c8f4df1101f",
-      "snapshot": null,
+      "snapshot": {
+        "baseSha": "",
+        "reflogLength": 1
+      },
       "started_at": "2026-11-07T06:35:59.578Z",
       "plan": {
         "stages": [
