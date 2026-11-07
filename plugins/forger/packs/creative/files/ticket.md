@@ -39,6 +39,12 @@
 
 <Each guarantee the change must keep: the file that holds it and the value it holds (a coverage floor, a size budget, an approved baseline, an e2e layout floor), or "none" when the change touches no guarded area. `facts --guards <path>...` lists the guard files and the tests that name the paths the change touches.>
 
+## Merge
+
+<!-- "when green" (the default when this section is missing) or "owner reviews". Taste and an approved style frame are the owner's to judge: say owner reviews and why. -->
+
+when green
+
 ## Knock-on
 
 - Tests: <specs and unit tests that assert on what changes>

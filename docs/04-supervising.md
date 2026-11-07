@@ -150,7 +150,7 @@ In plain words, in the owner's timezone:
 - **In progress**, the real branch.
 - **Next.**
 - **Waiting on you**, each item with a recommendation: every open issue
-  labelled `needs-info`, `needs-human` or `needs-triage`, every Proposed ADR,
+  labelled `needs-info`, `needs-human` or `needs-triage`, every open PR labelled `owner-review` (with its link), every Proposed ADR,
   and a halt or anomaly. The recommendation is the one the text states, else
   the report says the text makes none.
 

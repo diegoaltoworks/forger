@@ -48,6 +48,8 @@ export interface RunFacts {
   pr: PrFact | null;
   /** The decision recorded for the PR's head commit; null when there is no record for it. */
   verdict: Decision | null;
+  /** The ticket says the owner merges it (see owner-review.ts). */
+  ownerReviews?: boolean;
 }
 
 export interface Outcome {
@@ -59,6 +61,8 @@ export interface Outcome {
   error: string | null;
   warning: string | null;
   halt: string | null;
+  /** The PR left open for the owner; set with the `owner-review` status. */
+  ownerReviewPr?: number;
   /** The terminal event the halt is recorded as; the runner's default when absent. */
   haltKind?: TerminalEventKind;
 }
@@ -133,6 +137,20 @@ export function decideOutcome(f: RunFacts): Outcome {
       error: `Built "${f.ticket}" but the engine picked "${f.enginePick}".${declinedNote}`,
       warning: null,
       halt: null,
+    };
+  }
+
+  // The worker did all it could: gates green, verdict passing, PR open. The
+  // merge is the owner's, so the loop goes on to the next ticket.
+  if (!f.merged && f.ownerReviews && f.pr && f.pr.state === 'OPEN' && f.pr.checks_ok && f.verdict === 'pass') {
+    return {
+      status: 'owner-review',
+      result: 'neutral',
+      merged: false,
+      error: null,
+      warning: `PR #${f.pr.number} for "${f.ticket}" is open for the owner to merge`,
+      halt: null,
+      ownerReviewPr: f.pr.number,
     };
   }
 

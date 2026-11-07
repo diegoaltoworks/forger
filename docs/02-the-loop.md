@@ -309,6 +309,17 @@ failure. A criterion judged `cannot_tell` in more than one round is called out i
 the comment as one to reword or make mechanical. `handover --list` reports the
 tickets handed over, with the criteria at fault.
 
+## Who merges a ticket
+
+A ticket's `## Merge` section says `when green` (the default) or `owner reviews`.
+An `owner reviews` ticket is built, gated and verified on the criteria machines
+can check, and its PR is opened but not merged: `merge` refuses it. The engine
+labels the PR and the issue `owner-review`, records an `owner_review` event and
+picks the next ticket, so the loop does not halt on a judgement only the owner
+can make. A ticket blocked by it stays blocked until the PR merges. When the
+owner merges, the issue closes and the engine counts the ticket completed on a
+later iteration.
+
 ## A worktree per worker
 
 For workers that run side by side (ADR 0011) each ticket gets its own git

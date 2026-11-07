@@ -165,6 +165,14 @@ bun "${CLAUDE_PLUGIN_ROOT}/bin/work.ts" verify --pr <pr> --json
 bun "${CLAUDE_PLUGIN_ROOT}/bin/work.ts" merge --pr <pr> --json
 git checkout <base-branch> && git pull
 ```
+**Read the ticket's `## Merge` section first.** Missing, or `when green`, means
+you merge as below. `owner reviews` means the owner merges: build, run the gates,
+open the PR and run `verify` on the criteria a machine can check, then do not run
+`merge` (it refuses for such a ticket). Leave the PR open and signal `complete`.
+The engine labels the PR and the issue `owner-review`, records an `owner_review`
+event and picks the next ticket; tickets blocked by this one wait until the owner
+merges the PR. If `verify` does not pass, `handover` applies as for any ticket.
+
 **Never merge red, and never merge by hand.** `merge` waits for every check to
 finish, squash-merges only when all passed and `verify` recorded a passing
 verdict for the PR's current head (a later push makes it stale; `block` and
@@ -203,7 +211,7 @@ and a stop's reason is the text right after the tag, up to the next blank line.
 
 End your response with exactly one:
 
-- `<process>complete</process>` - ticket done, gates green, merged.
+- `<process>complete</process>` - ticket done, gates green, merged (for an `owner reviews` ticket: PR open and verified).
 - `<process>stop</process>` then the reason on the same or next line - blocked /
   needs human input / no actionable ticket.
 

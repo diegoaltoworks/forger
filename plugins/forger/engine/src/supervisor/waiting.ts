@@ -93,6 +93,23 @@ export function waitingIssues(issues: WaitingIssue[]): OwnerItem[] {
     });
 }
 
+export interface OwnerReviewPr {
+  number: number;
+  title: string;
+  url: string;
+}
+
+/** Open PRs the loop built and verified and left for the owner to merge, oldest first. */
+export function ownerReviewPrs(prs: OwnerReviewPr[]): OwnerItem[] {
+  return [...prs]
+    .sort((a, b) => a.number - b.number)
+    .map(p => ({
+      question: `PR #${p.number} ${p.title} is waiting for your review: ${p.url}`,
+      recommendation: 'review what only you can judge, then merge it; the loop sees the merge and carries on',
+      because: 'its ticket says the owner reviews, so the loop built and verified it and left the merge to you',
+    }));
+}
+
 export function proposedAdrs(adrs: AdrText[]): OwnerItem[] {
   return adrs
     .filter(a => /^status:\s*proposed\b/im.test(a.text))

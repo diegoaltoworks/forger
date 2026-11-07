@@ -17,6 +17,7 @@ export type AutomationStatus =
   | 'ready'
   | 'running'
   | 'completed'
+  | 'owner-review'
   | 'merged-red'
   | 'unverified'
   | 'partial'
@@ -58,6 +59,8 @@ export interface AutomationState {
   declined_tasks: DeclineEntry[];
   /** Declined runs in a row; any other outcome ends the run. */
   consecutive_declines: number;
+  /** Tickets whose PR is open for the owner to merge; absent in a state stored before the owner could review. */
+  owner_review_tasks: string[];
 }
 
 export function defaultState(): AutomationState {
@@ -74,6 +77,7 @@ export function defaultState(): AutomationState {
     stall_count: 0,
     declined_tasks: [],
     consecutive_declines: 0,
+    owner_review_tasks: [],
   };
 }
 

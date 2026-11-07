@@ -5,7 +5,7 @@ import {join} from 'path';
 import {readBaseSync, decideHalt, pidAlive, viewLease, standingHalt, parseAllEvents, GhTrackerHalt, requiresVerifyStatus, handedOver, listRepoLabels, loopLabels, missingLabels, readAllVerdicts, verdictsHome} from '../loop';
 import {describeBlocked} from '../backlog';
 import {engineStartLine, readEngineStart} from './detach';
-import {buildReport, formatReport, mergedInPeriod, orient as orientPlan, proposedAdrs, reportPeriod, uncausedClearItems, waitingIssues, OWNER_LABELS, type AdrText, type MergedPrFact, type OwnerItem, type WaitingIssue} from '../supervisor';
+import {buildReport, formatReport, mergedInPeriod, orient as orientPlan, proposedAdrs, reportPeriod, uncausedClearItems, waitingIssues, ownerReviewPrs, OWNER_LABELS, type AdrText, type OwnerReviewPr, type MergedPrFact, type OwnerItem, type WaitingIssue} from '../supervisor';
 import {hooksGateProblems, hooksGateRefusal} from '../checks';
 import type {Command, CommandContext} from './command';
 import {harnessOfRoot} from './harness-of';
@@ -33,6 +33,7 @@ function ownerWaiting(ctx: CommandContext): OwnerItem[] {
       for (const i of raw) if (!issues.some(x => x.number === i.number)) issues.push({number: i.number, title: i.title, labels: i.labels.map(l => l.name), body: i.body ?? ''});
     }
     out.push(...waitingIssues(issues));
+    out.push(...ownerReviewPrs(JSON.parse(run('gh pr list --state open --label owner-review --limit 100 --json number,title,url')) as OwnerReviewPr[]));
   } catch {
     out.push({question: 'The issues waiting on you could not be read from the tracker', recommendation: 'run `gh issue list --label needs-info` yourself', because: 'gh failed or is offline, so this list may be incomplete'});
   }

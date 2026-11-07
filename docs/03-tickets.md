@@ -57,6 +57,7 @@ in one line ("Design review: none"), so its absence is a decision, not an oversi
 | What to build | the change, with the defaults chosen |
 | Acceptance | testable checkboxes |
 | Guards | the guarantees (test floors, budgets, baselines, thresholds) the change must keep, each with its file and value, or "none"; `facts --guards <path>...` lists the guard files and the tests naming the paths. A missing section warns in `check ticket`, an empty one is refused |
+| Merge | who merges: `when green` (the default when the section is missing) or `owner reviews`. The plan commands choose `owner reviews` when the acceptance includes a judgement only the owner can make, and say why |
 | Knock-on | tests, fixtures, shared regions, stored shapes it reaches |
 | Docs, examples and help | every doc, worked example and help article to update, in every offered language |
 | Design review | the design boards to redraw and review |

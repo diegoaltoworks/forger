@@ -16,11 +16,13 @@ import {parseClaim} from './claim';
 import type {EventKind, TerminalEventKind} from './events';
 import {declineUpdate, type DeclineEntry} from './decline';
 import {clearDeclineRecord, readDeclineRecord} from './decline-io';
+import type {AutomationState} from './state';
 import {classifyExit} from './infra';
 import type {StoredPlan} from '../pipeline';
 import {formatIterationLog} from './iteration-log';
 import type {Logger} from './logger';
 import {verifyMerged} from './merged';
+import {issueOfTicket, mergeMode, ownerReviewLabelCommands, settleOwnerMerges} from './owner-review';
 import {decideOutcome, type Outcome} from './outcome';
 import type {PrFact} from './pr-checks';
 import type {Decision} from './verdict';
@@ -86,6 +88,7 @@ export async function runIteration(
   placement?: Placement
 ): Promise<boolean> {
   const state = ctx.store.load();
+  recordOwnerMerges(ctx, state);
   const git = placement?.gitRunner ?? ctx.gitRunner;
   const root = placement?.cwd ?? ctx.projectRoot;
   const outputFile = join(ctx.outputDir, `iteration-${iteration}.log`);
@@ -202,6 +205,7 @@ export async function runIteration(
     backlogCompleted,
     unclean: gitFacts.merged && !placement ? verify(ctx) : null,
     verdict: verdictOf(ctx, gitFacts.pr, root),
+    ownerReviews: ticket !== null && mergeMode(ctx.backlog.body(ticket)) === 'owner reviews',
   });
 
   // Rewritten with the decided status so measures can read it back from the file.
@@ -212,6 +216,34 @@ export async function runIteration(
   const settled = settle(ctx, sessionId, iteration, ticket, backlogCompleted, outcome, countStall, declined);
   placement?.finish(outcome.status === 'conflict');
   return settled;
+}
+
+/**
+ * Tickets left for the owner whose PR the owner has since merged read
+ * completed in the tracker; they count as completed now.
+ */
+function recordOwnerMerges(ctx: IterationContext, state: AutomationState): void {
+  if (state.owner_review_tasks.length === 0) return;
+  const settled = settleOwnerMerges(state.owner_review_tasks, state.completed_tasks, t => ctx.backlog.isCompleted(t));
+  if (settled.completed.length === 0) return;
+  state.owner_review_tasks = settled.pending;
+  state.completed_tasks = settled.completed_tasks;
+  state.completed_iterations += settled.completed.length;
+  state.last_completed_at = new Date().toISOString();
+  for (const t of settled.completed) ctx.logger.log('SUCCESS', `The owner merged ${t}`);
+  ctx.store.save(state);
+}
+
+/** Marks the PR and its issue, records the event and remembers the ticket; label failures are logged, not fatal. */
+function handToOwner(ctx: IterationContext, iteration: number, ticket: string | null, pr: number): void {
+  for (const command of ownerReviewLabelCommands(pr, issueOfTicket(ticket))) {
+    try {
+      ctx.gitRunner(command);
+    } catch (e) {
+      ctx.logger.log('WARN', `Could not run \`${command}\`: ${e instanceof Error ? e.message : String(e)}`);
+    }
+  }
+  ctx.emit('owner_review', iteration, ticket, `PR #${pr}`);
 }
 
 /**
@@ -250,6 +282,8 @@ function settle(
     state.failed_iterations++;
     state.consecutive_failures++;
     state.last_error = outcome.error;
+  } else if (outcome.status === 'owner-review') {
+    if (ticket && !state.owner_review_tasks.includes(ticket)) state.owner_review_tasks.push(ticket);
   } else {
     ctx.logger.log('WARN', `Iteration ${iteration} signaled STOP`);
   }
@@ -258,13 +292,15 @@ function settle(
   // The first iteration after a start has no earlier run in this session to
   // have stalled behind, so it is never counted.
   const stall = countStall
-    ? stallUpdate(state.stall_count, outcome.merged, maxStallIterations)
+    ? stallUpdate(state.stall_count, outcome.merged || outcome.status === 'owner-review', maxStallIterations)
     : {stall_count: state.stall_count, stalled: false};
   state.stall_count = stall.stall_count;
   const declines = declineUpdate(state.declined_tasks, state.consecutive_declines, declined, maxConsecutiveDeclines);
   state.declined_tasks = declines.declined_tasks;
   state.consecutive_declines = declines.consecutive_declines;
   ctx.store.save(state);
+
+  if (outcome.ownerReviewPr !== undefined) handToOwner(ctx, iteration, ticket, outcome.ownerReviewPr);
 
   if (outcome.status === 'timeout') {
     ctx.emit('timed_out', iteration, ticket, outcome.error);
@@ -279,7 +315,7 @@ function settle(
     const reason = `Stalled: nothing merged in ${maxStallIterations} iterations`;
     ctx.logger.log('ERROR', reason);
     ctx.halt(reason, 'stalled');
-  } else if (!outcome.merged && countStall) {
+  } else if (!outcome.merged && outcome.status !== 'owner-review' && countStall) {
     ctx.logger.log('WARN', `Nothing merged (stall ${stall.stall_count}/${maxStallIterations})`);
   }
 
