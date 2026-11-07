@@ -2,6 +2,8 @@
 
 Status: Proposed
 
+Amended: the image is the repository's, not forger's. Forger ships samples and a contract check, and publishes no images.
+
 The owner asked for the sandbox seam, and that it "support both api key and subscription".
 
 ## Context
@@ -22,7 +24,7 @@ A `Sandbox` adapter sits beside `Harness` in `adapters/`. It owns how a worker's
 
 ### The image
 
-The image comes from the repository's `.devcontainer/` when it has one, following the Development Container specification (https://containers.dev/implementors/spec/). Otherwise it is a forger base image for the repository's stack. Either way the harness CLI and a pinned forger version are in the image, so two machines run the same tools.
+The repository provides the image. It comes from the repository's `.devcontainer/` (the Development Container specification, https://containers.dev/implementors/spec/) or from `sandbox_image` in the config. Forger provides samples to copy under `examples/sandbox/` and a contract check, `check sandbox`: `git`, `bun`, the harness CLI on the `PATH` and a non-root user. Forger publishes no images. CI builds the samples to keep them working and pushes them nowhere. The engine copies its own plugin into each container, so the image carries no forger.
 
 ### The repository inside
 
@@ -68,6 +70,6 @@ Docker rootless mode (https://docs.docker.com/engine/security/rootless/) is supp
 1. The `Sandbox` seam with a `host` backend that runs workers as today. The engine and the verifier start workers only through it.
 2. The `docker` backend: image from `.devcontainer/` or the base image, clone and push inside, limits, timeout and removal.
 3. Credentials: one repository-scoped GitHub token per run, the per-harness model credential for an API key or a subscription, and redaction.
-4. Forger base images per stack, with the harness CLI and a pinned forger version.
+4. Samples under `examples/sandbox/`, the `check sandbox` contract check, and the plugin copied into each container. No published images.
 5. The engine as a container with a restart policy, and the rootless check.
 6. The `remote` backend, with the CI-native plan.

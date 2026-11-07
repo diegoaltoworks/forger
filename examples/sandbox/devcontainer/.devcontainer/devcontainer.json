@@ -1,0 +1,10 @@
+{
+  "name": "forger worker",
+  "build": {
+    "dockerfile": "Dockerfile",
+    "args": {
+      "HARNESS_PACKAGE": "@anthropic-ai/claude-code"
+    }
+  },
+  "remoteUser": "worker"
+}

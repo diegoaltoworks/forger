@@ -47,3 +47,31 @@ jobs:
         run: bun test test/fixtures/assertions.test.ts
       - name: Setup on each fixture
         run: bun test/fixtures/run.integration.ts
+
+  # The samples under examples/sandbox are built and tested here and never pushed.
+  sandbox-samples:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        sample:
+          - {name: devcontainer, dockerfile: examples/sandbox/devcontainer/.devcontainer/Dockerfile, context: examples/sandbox/devcontainer/.devcontainer}
+          - {name: node, dockerfile: examples/sandbox/node/Dockerfile, context: examples/sandbox/node}
+          - {name: python, dockerfile: examples/sandbox/python/Dockerfile, context: examples/sandbox/python}
+          - {name: engine, dockerfile: examples/sandbox/engine/Dockerfile, context: examples/sandbox/engine}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.14
+      - name: Build
+        run: docker build -t "sample-${{ matrix.sample.name }}" -f "${{ matrix.sample.dockerfile }}" "${{ matrix.sample.context }}"
+      - name: Check sandbox
+        run: |
+          work="$PWD/plugins/forger/bin/work.ts"
+          proj="$RUNNER_TEMP/proj"
+          mkdir -p "$proj/.forger" && cd "$proj"
+          git init -q && git remote add origin https://github.com/example/example.git
+          echo '{"features":{}}' > .forger/backlog.json
+          echo '{"tracker":{"kind":"local"},"allow_unguarded":true,"harness":"claude","sandbox":"docker","sandbox_image":"sample-${{ matrix.sample.name }}"}' > .forger/workloop.config.json
+          bun "$work" check sandbox

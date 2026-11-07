@@ -79,7 +79,7 @@ its own container instead, add `--sandbox docker`. The image is yours: forger
 ships none, so name one in `.devcontainer/` or as `sandbox_image` in the config,
 and test it with `check sandbox`. Setup records the choice and checks that the
 Docker API is reachable, saying how to fix it when it is not, rootless mode
-included.
+included. The [Run sandboxed](run-sandboxed.md) guide walks through it.
 Choose how the worker pays for the model with `--credential api_key` or
 `--credential subscription`; for a subscription, setup says how to make a token
 for headless use. Put the token in the environment that starts the run. A run
