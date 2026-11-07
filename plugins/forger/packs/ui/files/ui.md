@@ -188,6 +188,18 @@ to add it and exits 2, an environment problem rather than a failure of the
 change. It needs a browser, so it runs on its own and not inside the umbrella
 `check`; run it in CI where a browser is available.
 
+## An absolute rule is measured first (tool: ui.measure)
+
+A design rule such as "never shrinks", "always one line" or "same size
+everywhere" is a claim about space. Before work starts, run
+`measure <route-or-state> <selector>`: for each element the selector matches it
+reports the text width against the width available, and whether the text wraps
+or is clipped, at every viewport and locale of `ui.json` at a text scale of 100%
+and 200% (the page's root font size, so sizes in `rem` follow). The worst case
+is printed first. `--text <file>` fills the element with the longest string of a
+translation file, so the worst case is the longest real value. Put the output in
+the ticket; `check ticket` warns on an absolute with no measured number.
+
 ## Rules a reviewer holds the screen to
 
 - Every interactive element is reachable and operable by keyboard (ui.keyboard).

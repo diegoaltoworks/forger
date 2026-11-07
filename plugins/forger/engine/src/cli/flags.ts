@@ -68,6 +68,7 @@ export const FLAGS = {
   state: {type: 'boolean', default: false},
   wireframe: {type: 'string'},
   capture: {type: 'string'},
+  text: {type: 'string'},
   before: {type: 'boolean', default: false},
   lesson: {type: 'string'},
   request: {type: 'string'},

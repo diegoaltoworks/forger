@@ -1,5 +1,6 @@
 export * from './base-sync';
 export * from './claim';
+export * from './absolute-rule';
 export * from './criteria';
 export * from './ticket-check';
 export * from './decline';

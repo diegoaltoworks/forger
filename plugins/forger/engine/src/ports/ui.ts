@@ -21,6 +21,26 @@ export interface ShotRequest {
   file?: string;
   /** What to measure on the page after the steps; the answer comes back as a `PageModel`. */
   probe?: Probe;
+  /** Measure how much room the text of every element matching `selector` has, at a text scale; the answer is `PageModel.fits`. */
+  fit?: FitRequest;
+}
+
+export interface FitRequest {
+  selector: string;
+  /** Multiplies the page's root font size: 1 is 100%, 2 is 200%. */
+  scale: number;
+  /** Replaces the text of each matched element before measuring. */
+  text?: string;
+}
+
+/** One matched element: the width its text wants on one line against the width it has. */
+export interface ElementFit {
+  textWidth: number;
+  availableWidth: number;
+  /** The text breaks onto more than one line. */
+  wraps: boolean;
+  /** Some of the text is cut off or spills out of the element. */
+  clipped: boolean;
 }
 
 /** The selectors a page model must describe. */
@@ -53,6 +73,8 @@ export interface PageModel {
   /** Console error and uncaught exception lines. */
   console: string[];
   elements: Record<string, ElementModel>;
+  /** Set for a shot that asked for a `fit`: one entry per matched element. */
+  fits?: ElementFit[];
 }
 
 export interface Screenshotter {

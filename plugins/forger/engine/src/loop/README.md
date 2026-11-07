@@ -11,6 +11,7 @@ Pure:
   the run built the engine's pick, declined it, or took another ticket.
 - `decline.ts` - what a decline record must hold, and how a run of declines
   becomes a halt.
+- `absolute-rule.ts` - warns when a ticket with UI states states an absolute design rule and carries no measured number.
 - `criteria.ts` - what makes an acceptance criterion checkable. It may be a
   named test, a command with its result, a sourced number or a named UI state.
   It also finds the subjective words that fail a criterion.

@@ -175,6 +175,7 @@ from the plan, not restated in it; a decision lives in one place.
 
 Turn the agreed plan into tickets in the `process.md` shape, for
 `.forger/backlog.json` `features`. Each ticket:
+- states any UI rule written as an absolute ("never", "always", "same everywhere") with the worst case from `measure <route-or-state> <selector>` in the ticket; an absolute with no measured number gets a warning from `check ticket`
 - is a **vertical slice**: one iteration of work, a complete path through every
   layer it touches, demoable or verifiable on its own (split anything larger; a
   wide mechanical refactor is sequenced expand, migrate in batches, contract);

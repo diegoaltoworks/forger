@@ -11,7 +11,7 @@ import {tmpdir} from 'os';
 import {dirname, join} from 'path';
 
 import {decodePng, samplePixels} from '../ui';
-import {UiInfrastructureError, type AccessibilityAuditor, type AuditRequest, type AuditedPage, type AxeResults, type Box, type CaptureStep, type ElementModel, type GifEncoder, type PageModel, type Probe, type Recorder, type RecordRequest, type Screenshotter, type ShotRequest} from '../ports';
+import {UiInfrastructureError, type AccessibilityAuditor, type AuditRequest, type AuditedPage, type AxeResults, type Box, type CaptureStep, type ElementFit, type ElementModel, type FitRequest, type GifEncoder, type PageModel, type Probe, type Recorder, type RecordRequest, type Screenshotter, type ShotRequest} from '../ports';
 
 export const PLAYWRIGHT_HINT = 'Playwright is not installed in this project; add it with `bun add -d playwright && bunx playwright install chromium`';
 
@@ -126,6 +126,37 @@ export function visibleClip(box: Box, width: number, height: number): Box | null
   return right > x && bottom > y ? {x, y, width: right - x, height: bottom - y} : null;
 }
 
+/**
+ * Evaluated in the page: the width each matched element's text wants on one
+ * line (measured with wrapping off, then restored) against its content width.
+ * Wrapping is read from the line boxes of the text as laid out.
+ */
+const READ_FITS = `(selector, scale, text) => {
+  document.documentElement.style.fontSize = (scale * 100) + '%';
+  let nodes = [];
+  try { nodes = Array.from(document.querySelectorAll(selector)); } catch (err) { return []; }
+  return nodes.map(el => {
+    if (text !== null) el.textContent = text;
+    const range = document.createRange();
+    range.selectNodeContents(el);
+    const tops = new Set(Array.from(range.getClientRects()).map(r => Math.round(r.top)));
+    const cs = getComputedStyle(el);
+    const content = el.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+    const before = el.style.whiteSpace;
+    el.style.whiteSpace = 'nowrap';
+    const textWidth = range.getBoundingClientRect().width;
+    el.style.whiteSpace = before;
+    const wraps = tops.size > 1;
+    const hidden = cs.overflowX !== 'visible' || cs.textOverflow === 'ellipsis';
+    const clipped = (!wraps && textWidth > content + 0.5 && hidden) || (el.scrollWidth > el.clientWidth + 0.5 && hidden);
+    return {textWidth: Math.round(textWidth * 10) / 10, availableWidth: Math.round(content * 10) / 10, wraps, clipped};
+  });
+}`;
+
+async function fitPage(page: PlaywrightPage, fit: FitRequest): Promise<ElementFit[]> {
+  return (await page.evaluate(`(${READ_FITS})(${JSON.stringify(fit.selector)}, ${fit.scale}, ${JSON.stringify(fit.text ?? null)})`)) as ElementFit[];
+}
+
 async function probePage(page: PlaywrightPage, probe: Probe, width: number, height: number, lines: string[]): Promise<PageModel> {
   const read = (await page.evaluate(`(${READ_BOXES})(${JSON.stringify(probe.boxes)})`)) as Array<{box: Box; visible: boolean} | null>;
   const elements: Record<string, ElementModel> = {};
@@ -159,7 +190,8 @@ export function playwrightScreenshotter(projectRoot: string, load: (root: string
             await page.goto(shot.url, {waitUntil: 'networkidle'});
             if (shot.dir !== undefined) await page.evaluate(`document.documentElement.dir = ${JSON.stringify(shot.dir)}`);
             for (const step of shot.steps ?? []) await perform(page as RecordingPage, step);
-            if (shot.probe !== undefined) pages.push(await probePage(page, shot.probe, shot.width, shot.height, lines));
+            if (shot.fit !== undefined) pages.push({viewport: {width: shot.width, height: shot.height}, console: lines, elements: {}, fits: await fitPage(page, shot.fit)});
+            else if (shot.probe !== undefined) pages.push(await probePage(page, shot.probe, shot.width, shot.height, lines));
             else pages.push(undefined);
             if (shot.file !== undefined) await page.screenshot({path: shot.file, fullPage: true});
           } finally {

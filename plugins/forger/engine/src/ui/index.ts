@@ -3,6 +3,7 @@ export * from './baselines';
 export * from './before';
 export * from './capture';
 export * from './compare';
+export * from './fit';
 export * from './plan';
 export * from './png';
 export * from './record';
