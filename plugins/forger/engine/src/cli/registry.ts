@@ -9,6 +9,7 @@ import {brand} from './brand';
 import {catalogue} from './catalogue';
 import {check} from './check';
 import {contract} from './contract';
+import {decide} from './decide';
 import {decline} from './decline';
 import type {Command} from './command';
 import {awaitEventCommand, events} from './events';
@@ -68,6 +69,7 @@ export const COMMANDS: Command[] = [
   replay,
   runLogged,
   decline,
+  decide,
   prBody,
   worktree,
   rebase,

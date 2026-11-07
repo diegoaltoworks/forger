@@ -207,7 +207,7 @@ export class AutomationRunner {
     if (refused.length > 0) await this.refreshBacklog();
   }
 
-  private emit(kind: EventKind, iteration: number, ticket: string | null, reason: string | null, extra: Pick<TerminalEvent, 'cause' | 'not_a_defect'> = {}): void {
+  private emit(kind: EventKind, iteration: number, ticket: string | null, reason: string | null, extra: Pick<TerminalEvent, 'cause' | 'not_a_defect' | 'decision'> = {}): void {
     const now = new Date();
     this.stateStore.appendEvent(eventLine(terminalEvent(kind, iteration, ticket, reason, now, extra)), now);
   }
@@ -228,7 +228,7 @@ export class AutomationRunner {
     this.clearHalt('recovered', detail);
   }
 
-  clearHalt(kind: 'halt_cleared' | 'recovered' = 'halt_cleared', detail: string | null = null, why: HaltClearWhy = UNCAUSED): void {
+  clearHalt(kind: 'halt_cleared' | 'recovered' = 'halt_cleared', detail: string | null = null, why: HaltClearWhy = UNCAUSED, decision: string | null = null): void {
     const before = this.store.load();
     const wasHalted = this.store.isHalted() || before.status === 'halted';
     if (this.store.isHalted()) {
@@ -236,7 +236,7 @@ export class AutomationRunner {
       this.logger.log('INFO', 'Cleared HALT file');
     }
     if (wasHalted) {
-      const extra = kind === 'halt_cleared' ? {cause: why.cause, not_a_defect: why.notADefect} : {};
+      const extra = kind === 'halt_cleared' ? {cause: why.cause, not_a_defect: why.notADefect, ...(decision === null ? {} : {decision})} : {};
       this.emit(kind, before.iteration, currentTicket(before), detail ?? before.last_error, extra);
     }
     // The counters that tripped the halt would trip it again on the first

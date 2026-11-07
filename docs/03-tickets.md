@@ -58,6 +58,7 @@ in one line ("Design review: none"), so its absence is a decision, not an oversi
 | Docs, examples and help | every doc, worked example and help article to update, in every offered language |
 | Design review | the design boards to redraw and review |
 | Languages | the wording added or changed, and that every offered language needs it |
+| Decisions | "none" until the owner answers a question about the ticket; `decide <n> "<text>"` appends each answer with who and when, and an entry overrides the earlier text where they disagree |
 
 The sections a project needs grow with the project. Each one above was added
 after a gap cost something; see `05-refining-the-process.md`.

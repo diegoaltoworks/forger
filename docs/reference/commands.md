@@ -48,6 +48,7 @@ $ bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts status --json
 | `status` | Shows the engine's pid and liveness, any halt, the counters, the current ticket and the next pick. |
 | `halt` | Halts the loop by hand, with an optional reason. |
 | `resume` | Clears a halt and carries on. Needs `--cause <issue>` or `--not-a-defect "<why>"`, recorded with the failure. |
+| `decide` | `decide <n> "<text>"` records the owner's answer under the Decisions section of an issue, with who and when; clears the halt when the loop is halted on that ticket. |
 | `reset` | Resets the state to start fresh. |
 | `recover` | Recovers the standing halt when its recovery is known and checkable, and says the one action otherwise. |
 | `worktree` | Creates a ticket's own worktree and branch from the remote base branch. |

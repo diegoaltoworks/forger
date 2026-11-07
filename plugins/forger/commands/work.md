@@ -38,7 +38,11 @@ Act on the action, never on your own reading of a label:
 - `surface_halt`: read the reason and stop. Do not clear a HALT. Tell the owner
   to look for a pushed branch with no merged PR first, then
   `work resume --cause <issue>` (the issue that fixes or tracks it) or
-  `work resume --not-a-defect "<why>"`. `resume` refuses without one.
+  `work resume --not-a-defect "<why>"`. `resume` refuses without one. When the
+  halt is a design question the owner answers, record the answer with
+  `work decide <issue> "<answer>"`, never in chat only: it lands under the
+  ticket's Decisions section, where the next worker reads it, and clears the halt
+  when it is on that ticket.
 - `attach`: an engine is alive. Do not start a second one; go to step 3.
 - `nothing_to_do`: say so and suggest `/forger:plan`. When tickets remain, the
   plan lists `blockers`: none is workable and each waits on the owner. Name

@@ -200,6 +200,10 @@ improvise them:
   merged change the audience sees (a ui path or a capture in the diff), run the
   critique below. A change that is not visual, a plan with no verbatim brief and
   a PR with no capture are skipped with the reason.
+- `decide <n> "<text>"`: answer a design question on ticket `<n>`. The answer is appended, with who
+  decided and the date, under the issue's Decisions section, which every worker reads and which
+  overrides the ticket's earlier text. When the loop is halted on that ticket the halt is cleared
+  with `<n>` as the cause. An answer given only in chat is lost on the next run.
 - `recover [--json]`: the standing halt's recovery, from a table in the engine
   keyed by the halt's event kind. An `unverified` halt runs `verify` on the
   merged head: a pass resumes the loop and writes a `recovered` event (seen in
