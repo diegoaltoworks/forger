@@ -170,7 +170,10 @@
       "ticket": "issue-345",
       "pid": null,
       "session_id": "bcfa54b1-bcd4-4a35-add3-08d1714a3660",
-      "snapshot": null,
+      "snapshot": {
+        "baseSha": "",
+        "reflogLength": 1
+      },
       "started_at": "2026-11-07T07:29:45.280Z",
       "plan": {
         "stages": [
