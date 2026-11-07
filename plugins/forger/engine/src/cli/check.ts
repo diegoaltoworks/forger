@@ -8,6 +8,7 @@ import {
   loadWaivers,
   runCoverageCheck,
   runDecisionsCheck,
+  runGuardsCheck,
   runDocsCheck,
   runDocsWarnings,
   runHooksCheck,
@@ -29,7 +30,7 @@ import {harnessOfRoot} from './harness-of';
 import type {Command} from './command';
 import {specProvider} from './spec-provider';
 
-const SINGLE = {hooks: (root: string) => runHooksCheck(root, harnessOfRoot(root)), docs: runDocsCheck, arch: runArchCheck, decisions: runDecisionsCheck, safety: runSafetyCheck, tests: runTestsCheck, coverage: runCoverageCheck, ui: runUiCheck};
+const SINGLE = {hooks: (root: string) => runHooksCheck(root, harnessOfRoot(root)), docs: runDocsCheck, arch: runArchCheck, decisions: runDecisionsCheck, guards: runGuardsCheck, safety: runSafetyCheck, tests: runTestsCheck, coverage: runCoverageCheck, ui: runUiCheck};
 
 export const check: Command = {
   name: 'check',
@@ -40,6 +41,7 @@ export const check: Command = {
                    exit non-zero on any unwaived violation; --summary prints the CI job
                    summary in markdown
   check decisions [--json] Fail on a new dependency or layer-map change with no ADR in the diff
+  check guards [--json]    Fail when the diff loosens a guard, skips or deletes a test and the ticket's Decisions do not name it
   check hooks [--json] Fail when the hook policy is missing or drops a default rule without a waiver, or the harness's settings do not run the hook
   check safety [--json] Fail on an added secret or a stored-shape change with no test
   check tests [--json] Fail on a fix with no test, or a unit test that imports a network or process module
@@ -138,7 +140,7 @@ export const check: Command = {
       return;
     }
     if (!(positionals[1] in SINGLE)) {
-      console.error('Usage: check [--json | --summary] | check docs|arch|decisions|hooks|safety|tests|coverage|ui|spec|a11y|sandbox [--json] | check coverage --update');
+      console.error('Usage: check [--json | --summary] | check docs|arch|decisions|guards|hooks|safety|tests|coverage|ui|spec|a11y|sandbox [--json] | check coverage --update');
       process.exitCode = 1;
       return;
     }
