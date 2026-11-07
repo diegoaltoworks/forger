@@ -1,14 +1,14 @@
 import {existsSync, readFileSync, writeFileSync} from 'fs';
 import {join} from 'path';
 
-import {SANDBOX_IDS, dockerCheck, modelCredential} from '../adapters';
-import {CONFIG_FILE, detectLayout, type CredentialKind} from '../config';
+import {NO_IMAGE, SANDBOX_IDS, dockerCheck, planSandboxImage, modelCredential} from '../adapters';
+import {CONFIG_FILE, detectLayout, loadConfig, type CredentialKind} from '../config';
 import type {CapturingRunner, Harness} from '../ports';
 
 export interface SandboxSetup {
   sandbox: string;
   /** Set for `docker`: whether the Docker API answered, and what to do when it did not. */
-  docker?: {reachable: boolean; fix: string[]};
+  docker?: {reachable: boolean; fix: string[]; image: boolean};
 }
 
 /** Records the sandbox in the config and, for docker, checks the API. Throws on an id that is not shipped. */
@@ -22,12 +22,15 @@ export function setupSandbox(projectRoot: string, id: string, run: CapturingRunn
   }
   if (id !== 'docker') return {sandbox: id};
   const check = dockerCheck(run('docker info --format {{.ServerVersion}}'));
-  return {sandbox: id, docker: {reachable: check.ok, fix: check.fix}};
+  const origin = run('git remote get-url origin').stdout.trim();
+  const image = planSandboxImage(projectRoot, loadConfig(projectRoot).sandbox_image, origin).kind !== 'none';
+  return {sandbox: id, docker: {reachable: check.ok, fix: check.fix, image}};
 }
 
 export function formatSandboxSetup(s: SandboxSetup): string[] {
   const lines = [`sandbox ${s.sandbox}`];
   if (s.docker && !s.docker.reachable) lines.push(...s.docker.fix.map(f => `! ${f}`));
+  if (s.docker && !s.docker.image) lines.push(`! ${NO_IMAGE}`);
   return lines;
 }
 

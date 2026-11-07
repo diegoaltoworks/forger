@@ -424,8 +424,14 @@ describe('setup --sandbox', () => {
     const root = realpathSync(mkdtempSync(join(tmpdir(), 'forger-cli-setup-')));
     dirs.push(root);
     process.chdir(root);
+    const none = JSON.parse(await capture(['setup', '--json', '--gates', 'make test', '--tracker', 'local', '--sandbox', 'docker'], () => '27.0'));
+    expect(none.sandbox.docker.image).toBe(false);
+    expect(process.exitCode).toBe(1);
+    process.exitCode = 0;
+    mkdirSync(join(root, '.devcontainer'));
+    writeFileSync(join(root, '.devcontainer', 'devcontainer.json'), '{"image": "mine:1"}');
     const out = JSON.parse(await capture(['setup', '--json', '--gates', 'make test', '--tracker', 'local', '--sandbox', 'docker'], () => '27.0'));
-    expect(out.sandbox).toEqual({sandbox: 'docker', docker: {reachable: true, fix: []}});
+    expect(out.sandbox).toEqual({sandbox: 'docker', docker: {reachable: true, fix: [], image: true}});
     expect(process.exitCode ?? 0).toBe(0);
     await capture(['setup', '--json', '--sandbox', 'nope']);
     expect(process.exitCode).toBe(1);

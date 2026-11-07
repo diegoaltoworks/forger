@@ -88,7 +88,7 @@ $ bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts status --json
 
 | Command | What it does |
 |---|---|
-| `check` | Runs every check the installed packs declare with waivers applied; name one (`arch`, `decisions`, `docs`, `safety`, `tests`, `coverage`, `ui`, `a11y`, `spec`, `ticket`, `hooks`) to run it alone. |
+| `check` | Runs every check the installed packs declare with waivers applied; name one (`arch`, `decisions`, `docs`, `safety`, `tests`, `coverage`, `ui`, `a11y`, `spec`, `ticket`, `hooks`, `sandbox`) to run it alone. `check sandbox` tests the docker sandbox image against the image contract, one line per item, and exits 0 only when all pass. |
 | `contract` | Checks the result a slot's skill wrote against the slot's output contract. |
 | `eval` | Runs a slot's skill on the slot's cases and scores each result. |
 | `run-logged` | Runs a command, passes its output through and appends it to a log the verifier checks. |

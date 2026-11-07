@@ -14,12 +14,12 @@ afterEach(() => {
   for (const d of dirs.splice(0)) rmSync(d, {recursive: true, force: true});
 });
 
-function project(sandbox: string): string {
+function project(sandbox: string | null, extra: Record<string, unknown> = {}): string {
   const root = realpathSync(mkdtempSync(join(tmpdir(), 'forger-detach-')));
   dirs.push(root);
   mkdirSync(join(root, '.forger'));
   writeFileSync(join(root, '.forger', 'backlog.json'), JSON.stringify({features: {a: {status: 'not_started', priority: 'P0'}}}));
-  writeFileSync(join(root, '.forger', 'workloop.config.json'), JSON.stringify({tracker: {kind: 'local'}, sandbox, allow_unguarded: true}));
+  writeFileSync(join(root, '.forger', 'workloop.config.json'), JSON.stringify({tracker: {kind: 'local'}, ...(sandbox ? {sandbox} : {}), allow_unguarded: true, ...extra}));
   return root;
 }
 
@@ -52,12 +52,17 @@ function fakeDocker(docker: boolean, calls: string[]): CommandRunner {
 
 describe('run --detach', () => {
   test('run --detach starts the engine container with a restart policy and the repository\'s name', async () => {
-    const root = project('docker');
+    const root = project('docker', {sandbox_image: 'w:1', sandbox_engine_image: 'registry.example/engine:1'});
     process.chdir(root);
     const calls: string[] = [];
     await runCli(['run', '--continuous', '--detach'], fakeDocker(true, calls));
-    const started = calls.find(c => c.startsWith("docker 'run'"));
+    const started = calls.find(c => c.startsWith("docker 'create'"));
     expect(started).toBeDefined();
+    expect(started).toContain("'registry.example/engine:1'");
+    expect(started).toContain("'FORGER_PLUGIN_ROOT=/opt/forger'");
+    expect(calls.some(c => c.startsWith('docker cp ') && c.includes(':/opt/forger'))).toBe(true);
+    expect(calls.some(c => c.startsWith("docker start 'forger-engine-github-com-acme-widgets'"))).toBe(true);
+    expect(calls.some(c => c.startsWith('docker build'))).toBe(false);
     expect(started).toContain("'--restart' 'unless-stopped'");
     expect(started).toContain("'--name' 'forger-engine-github-com-acme-widgets'");
     expect(started).not.toContain('/home');
@@ -77,13 +82,31 @@ describe('run --detach', () => {
     await runCli(['run', '--continuous', '--detach'], fakeDocker(false, calls), argv => (spawned.push(argv), 4242));
     expect(spawned).toHaveLength(1);
     expect(spawned[0].join(' ')).toContain('run --continuous');
-    expect(calls.some(c => c.startsWith("docker 'run'"))).toBe(false);
+    expect(calls.some(c => c.startsWith("docker 'create'"))).toBe(false);
     const status = JSON.parse(await runCli(['status', '--json'], fakeDocker(false, [])));
     expect(status.engine_start).toEqual({mode: 'session', pid: 4242});
   });
 
+  test('run --detach with Docker reachable and no sandbox field starts a host session', async () => {
+    process.chdir(project(null));
+    const calls: string[] = [];
+    const spawned: string[][] = [];
+    await runCli(['run', '--continuous', '--detach'], fakeDocker(true, calls), argv => (spawned.push(argv), 77));
+    expect(spawned).toHaveLength(1);
+    expect(calls.some(c => c.startsWith("docker 'create'"))).toBe(false);
+  });
+
+  test('run --detach with the docker sandbox and no sandbox_engine_image refuses', async () => {
+    process.chdir(project('docker', {sandbox_image: 'w:1'}));
+    const calls: string[] = [];
+    const out = await runCli(['run', '--continuous', '--detach'], fakeDocker(true, calls));
+    expect(out).toContain('sandbox_engine_image');
+    expect(process.exitCode).toBe(1);
+    expect(calls.some(c => c.startsWith("docker 'create'"))).toBe(false);
+  });
+
   test('the docker sandbox without a reachable Docker API refuses to detach', async () => {
-    process.chdir(project('docker'));
+    process.chdir(project('docker', {sandbox_image: 'w:1'}));
     const out = await runCli(['run', '--continuous', '--detach'], fakeDocker(false, []));
     expect(out).toContain('Not starting');
     expect(process.exitCode).toBe(1);

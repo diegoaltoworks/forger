@@ -26,4 +26,6 @@ export * from './docker-plan';
 export * from './docker-sandbox';
 export * from './host-sandbox';
 export * from './sandboxes';
+export * from './sandbox-image';
+export * from './sandbox-contract';
 export * from './detach-plan';

@@ -6,18 +6,13 @@
 
 export type ImagePlan =
   | {kind: 'image'; image: string}
-  | {kind: 'build'; tag: string; dockerfile: string; context: string};
+  | {kind: 'build'; tag: string; dockerfile: string; context: string}
+  | {kind: 'none'};
 
 export interface DevcontainerFile {
   /** The folder holding the file, relative to the repository root ('' for `.devcontainer.json`). */
   dir: string;
   text: string;
-}
-
-export interface BaseImage {
-  tag: string;
-  dockerfile: string;
-  context: string;
 }
 
 /** Strips JSONC comments and trailing commas; string contents are left alone. */
@@ -39,9 +34,10 @@ function joinPath(dir: string, rel: string): string {
 
 /**
  * The repository's own image when `.devcontainer/` describes one (an `image`, or
- * a `build` with a Dockerfile), else forger's base image for the stack.
+ * a `build` with a Dockerfile), else the image the config names, else none:
+ * forger ships no image.
  */
-export function imagePlan(devcontainer: DevcontainerFile | null, dockerfileInDevcontainerDir: boolean, base: BaseImage, ownTag: string): ImagePlan {
+export function imagePlan(devcontainer: DevcontainerFile | null, dockerfileInDevcontainerDir: boolean, configured: string | null, ownTag: string): ImagePlan {
   if (devcontainer) {
     try {
       const parsed = parseJsonc(devcontainer.text) as {image?: unknown; build?: {dockerfile?: unknown; context?: unknown}; dockerFile?: unknown; context?: unknown};
@@ -52,11 +48,12 @@ export function imagePlan(devcontainer: DevcontainerFile | null, dockerfileInDev
         return {kind: 'build', tag: ownTag, dockerfile: joinPath(devcontainer.dir, dockerfile), context: joinPath(devcontainer.dir, typeof context === 'string' ? context : '.')};
       }
     } catch {
-      // An unreadable file falls through to the Dockerfile beside it, then to the base image.
+      // An unreadable file falls through to the Dockerfile beside it, then to the configured image.
     }
   }
   if (dockerfileInDevcontainerDir) return {kind: 'build', tag: ownTag, dockerfile: '.devcontainer/Dockerfile', context: '.devcontainer'};
-  return {kind: 'build', ...base};
+  if (configured) return {kind: 'image', image: configured};
+  return {kind: 'none'};
 }
 
 /** An ssh remote has no key in the container, so it is cloned over https. */
@@ -95,7 +92,7 @@ export interface ContainerLimits {
 
 export const DEFAULT_LIMITS: ContainerLimits = {memory: '4g', cpus: 2, pids: 512, tmp: '1g'};
 
-/** The `docker run` flags for the limits. Swap is capped with memory, so the memory limit is a real one. */
+/** The `docker create` flags for the limits. Swap is capped with memory, so the memory limit is a real one. */
 export function limitArgs(l: ContainerLimits): string[] {
   return ['--memory', l.memory, '--memory-swap', l.memory, '--cpus', String(l.cpus), '--pids-limit', String(l.pids), '--tmpfs', `/tmp:rw,size=${l.tmp}`];
 }
@@ -126,11 +123,14 @@ const SCRIPT = [
   'exec "$@"',
 ].join('\n');
 
-/** The `docker run` arguments: the image, the limits, the clone, the caches, and no mount of the host. */
+/** Where the engine's own plugin directory is copied to in a container. */
+export const PLUGIN_COPY = '/opt/forger';
+
+/** The `docker create` arguments: the image, the limits, the clone, the caches, and no mount of the host. The plugin is copied in before the start. */
 export function runArgs(input: RunInput): string[] {
   const env = [...new Set([...input.passthrough, 'FORGER_BASE', 'FORGER_ORIGIN', 'FORGER_BRANCH', ...(input.ref ? ['FORGER_REF'] : []), ...CACHES.map(c => c.env)])];
   return [
-    'run',
+    'create',
     '-i',
     '--name',
     input.name,
@@ -141,6 +141,8 @@ export function runArgs(input: RunInput): string[] {
     WORKDIR,
     ...CACHES.flatMap(c => ['--mount', `type=volume,source=${cacheVolume(input.repoKey, c.name)},target=${c.path}`]),
     ...env.flatMap(v => ['-e', v]),
+    '-e',
+    `FORGER_PLUGIN_ROOT=${PLUGIN_COPY}`,
     input.image,
     'sh',
     '-c',

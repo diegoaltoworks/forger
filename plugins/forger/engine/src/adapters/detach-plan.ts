@@ -4,7 +4,8 @@
  * otherwise. The command runs the plan and records how the engine was started.
  */
 
-import {CACHES, cacheVolume, cloneUrl, repoKey} from './docker-plan';
+import {CACHES, PLUGIN_COPY, cacheVolume, cloneUrl, repoKey} from './docker-plan';
+import {NO_ENGINE_IMAGE} from './sandbox-image';
 
 export type EngineStart = {mode: 'container'; name: string; image: string} | {mode: 'session'; pid: number};
 
@@ -13,7 +14,8 @@ export interface DetachInputs {
   dockerUp: boolean;
   origin: string;
   baseBranch: string;
-  image: string;
+  /** The config's `sandbox_engine_image`; the docker sandbox needs one to detach. */
+  image: string | null;
   /** Names of variables passed to the container by name only, so no secret lands in a command line. */
   passthrough: string[];
   /** Where the docker API is reachable from a container. */
@@ -50,13 +52,13 @@ export function planDetach(i: DetachInputs): DetachPlan {
     return {kind: 'session', reason: i.dockerUp ? 'the sandbox is host' : 'the sandbox is host and Docker is not reachable'};
   }
   if (!i.dockerUp) return {kind: 'refused', reason: 'the sandbox is docker but the Docker API is not reachable, so no worker could start; start Docker or set the sandbox to host'};
+  if (!i.image) return {kind: 'refused', reason: NO_ENGINE_IMAGE};
   if (i.origin.trim() === '') return {kind: 'refused', reason: 'the repository has no origin remote for the engine container to clone'};
   const name = engineName(i.origin);
   const socket = i.socket ?? '/var/run/docker.sock';
   const literal = [`FORGER_BASE=${i.baseBranch}`, `FORGER_ORIGIN=${cloneUrl(i.origin)}`, ...CACHES.map(c => `${c.env}=${c.path}`)];
   const args = [
-    'run',
-    '-d',
+    'create',
     '--name',
     name,
     '--restart',
@@ -66,7 +68,7 @@ export function planDetach(i: DetachInputs): DetachPlan {
     '--mount',
     `type=bind,source=${socket},target=/var/run/docker.sock`,
     ...CACHES.flatMap(c => ['--mount', `type=volume,source=${cacheVolume(repoKey(i.origin), c.name)},target=${c.path}`]),
-    ...[...i.passthrough, ...literal].flatMap(v => ['-e', v]),
+    ...[...i.passthrough, ...literal, `FORGER_PLUGIN_ROOT=${PLUGIN_COPY}`].flatMap(v => ['-e', v]),
     '-w',
     ENGINE_WORKDIR,
     i.image,

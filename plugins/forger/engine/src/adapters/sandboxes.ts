@@ -7,6 +7,7 @@ import {CREDENTIAL_VARIABLES, type ContainerLimits} from './docker-plan';
 import {dockerSandbox} from './docker-sandbox';
 import {findHarness} from './harnesses';
 import {hostSandbox} from './host-sandbox';
+import {NO_IMAGE, planSandboxImage} from './sandbox-image';
 import {redactingSandbox} from './redacting-sandbox';
 
 export const SANDBOX_IDS = ['host', 'docker'];
@@ -16,13 +17,14 @@ export interface SandboxSite {
   projectRoot: string;
   pluginRoot: string;
   baseBranch: string;
+  image?: string | null;
   credentials?: CredentialPlan;
   limits?: ContainerLimits;
 }
 
 /** The site for the configured harness and credentials. */
-export function sandboxSite(config: Pick<WorkloopConfig, 'base_branch' | 'harness' | 'credentials' | 'sandbox_limits'>, projectRoot: string, pluginRoot: string): SandboxSite {
-  return {projectRoot, pluginRoot, baseBranch: config.base_branch, credentials: credentialPlan(config, findHarness(config.harness)), limits: config.sandbox_limits};
+export function sandboxSite(config: Pick<WorkloopConfig, 'base_branch' | 'sandbox_image' | 'harness' | 'credentials' | 'sandbox_limits'>, projectRoot: string, pluginRoot: string): SandboxSite {
+  return {projectRoot, pluginRoot, baseBranch: config.base_branch, image: config.sandbox_image, credentials: credentialPlan(config, findHarness(config.harness)), limits: config.sandbox_limits};
 }
 
 /** A backend whose output has every credential value redacted. */
@@ -32,6 +34,7 @@ export function sandboxFor(id: string, git: CapturingRunner, site?: SandboxSite)
   if (id === 'host') return redactingSandbox(hostSandbox(git), known, names);
   if (id === 'docker') {
     if (!site) throw new Error('The docker sandbox needs the project root, the plugin root and the base branch');
+    if (planSandboxImage(site.projectRoot, site.image, git('git remote get-url origin').stdout).kind === 'none') throw new Error(NO_IMAGE);
     return redactingSandbox(dockerSandbox(git, {...site, secrets: known}), known, names);
   }
   throw new Error(`Unknown sandbox "${id}"; available: ${SANDBOX_IDS.join(', ')}`);
