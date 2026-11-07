@@ -76,7 +76,7 @@ describe('uncausedClearItems', () => {
 });
 
 describe('ownerReviewPrs', () => {
-  test('the report lists owner-review PRs under waiting on you, with the PR link', () => {
+  test('the report lists owner-review PRs under waiting on you', () => {
     const w = ownerReviewPrs([
       {number: 20, title: 'second', url: 'https://example.test/pull/20'},
       {number: 12, title: 'first', url: 'https://example.test/pull/12'},

@@ -2,6 +2,9 @@ import {describe, expect, test} from 'bun:test';
 
 import {issueOfTicket, mergeMode, ownerReviewLabelCommands, ownerReviewRefusal, settleOwnerMerges} from './owner-review';
 import {decideOutcome, type RunFacts} from './outcome';
+import {backlogReport} from '../backlog/backlog';
+import {backlogFromIssues} from '../backlog/github-backlog';
+import {mergeConfig} from '../config';
 import {mergePr} from './merge';
 import type {PrFact} from './pr-checks';
 
@@ -43,10 +46,14 @@ describe('the owner-review outcome', () => {
     conflict: null, pr: open, verdict: 'pass', ownerReviews: true,
   };
 
-  test('an owner-reviews ticket opens a PR, is not merged, and the loop goes on without a halt', () => {
+  test('an owner-reviews ticket opens a PR, is not merged, and the loop picks the next ticket', () => {
     const o = decideOutcome(facts);
     expect(o).toMatchObject({status: 'owner-review', merged: false, halt: null, ownerReviewPr: 9});
     expect(o.result).not.toBe('failure');
+    const labelled = {number: 5, state: 'OPEN' as const, labels: {nodes: [{name: 'ready-for-agent'}, {name: 'owner-review'}]}};
+    const next = {number: 6, state: 'OPEN' as const, labels: {nodes: [{name: 'ready-for-agent'}]}};
+    const cfg = mergeConfig({tracker: {kind: 'github', label: 'ready-for-agent'}});
+    expect(backlogReport(backlogFromIssues([labelled, next], cfg.tracker), cfg).next).toBe('issue-6');
   });
   test('without a passing verdict or green checks it is not handed over', () => {
     expect(decideOutcome({...facts, verdict: 'block'}).status).not.toBe('owner-review');
