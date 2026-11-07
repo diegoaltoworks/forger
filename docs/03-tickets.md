@@ -63,6 +63,7 @@ in one line ("Design review: none"), so its absence is a decision, not an oversi
 | Probe | optional: commands that measure the assumption the ticket rests on, each a backticked command with its expected result in the forms of acceptance criteria (`exits 0`, `prints "text"`, `prints a number of at least N`), or "none". The engine runs them before it starts a worker; a failure hands the ticket back as `needs-human` without spending a run. `check ticket` refuses a probe line with no expected result |
 | Merge | who merges: `when green` (the default when the section is missing) or `owner reviews`. The plan commands choose `owner reviews` when the acceptance includes a judgement only the owner can make, and say why |
 | Knock-on | tests, fixtures, shared regions, stored shapes it reaches |
+| Sequencing | optional: a line naming another open ticket that shares ground with this one and which of the two re-measures if the order changes. `check ticket` fails two open tickets whose Knock-on paths or modules overlap unless one blocks the other, natively or under Blocked by, or a Sequencing section names the other; a ticket with no footprint is not compared |
 | Docs, examples and help | every doc, worked example and help article to update, in every offered language |
 | Design review | the design boards to redraw and review |
 | Languages | the wording added or changed, and that every offered language needs it |

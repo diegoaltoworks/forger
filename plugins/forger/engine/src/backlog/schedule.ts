@@ -156,7 +156,7 @@ export function dependsOn(
   return false;
 }
 
-function pathsOverlap(a: string[], b: string[]): boolean {
+export function pathsOverlap(a: string[], b: string[]): boolean {
   return a.some(x => b.some(y => within(trimPath(x), trimPath(y)) || within(trimPath(y), trimPath(x))));
 }
 

@@ -6,3 +6,4 @@ export * from './graphql-cost';
 export * from './schedule';
 export * from './blocked-by';
 export * from './link-blockers';
+export * from './sequencing';
