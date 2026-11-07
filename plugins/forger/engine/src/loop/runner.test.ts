@@ -4,7 +4,7 @@ import {tmpdir} from 'os';
 import {join} from 'path';
 
 import {type BacklogData, backlogFrom} from '../backlog';
-import type {AgentResult, AgentRunOptions} from '../ports';
+import type {AgentResult, AgentRunOptions, ProbeRunner} from '../ports';
 import {localStateFor, memoryStateStore} from '../adapters';
 import {mergeConfig} from '../config';
 import type {StoredPlan} from '../pipeline';
@@ -977,5 +977,63 @@ describe('AutomationRunner pre-pick refusal', () => {
     });
     await runner.refuseUncheckable();
     expect(commands).toEqual([]);
+  });
+});
+
+describe('a ticket Probe', () => {
+  const probeBacklog = (probe: string): BacklogData => ({
+    features: {'issue-5': {priority: 'P1', status: 'not_started', depends_on: [], body: `## Acceptance\n\n- [ ] \`bun test\` exits 0\n\n## Probe\n\n${probe}\n`}},
+  });
+
+  function probed(probe: string, probeRunner: ProbeRunner) {
+    const root = mkdtempSync(join(tmpdir(), 'forger-runner-'));
+    dirs.push(root);
+    const calls: AgentRunOptions[] = [];
+    const tracker: string[] = [];
+    const config = mergeConfig({tracker: {kind: 'github', label: 'ready-for-agent', ignore: []}});
+    const runner = new AutomationRunner(root, config, backlogFrom(() => probeBacklog(probe), config), {
+      stateStore: localStateFor(root, config),
+      agent: {run: async opts => (calls.push(opts), {exitCode: 0, signal: null, output: '', timedOut: false})},
+      gitRunner: cmd => {
+        tracker.push(cmd);
+        return cmd.startsWith('gh issue view') ? 'needs-human' : '';
+      },
+      probeRunner,
+      uuid: () => '00000000-0000-0000-0000-000000000000',
+    });
+    return {runner, root, calls, tracker};
+  }
+
+  test('a ticket whose probes hold starts its worker with the probe output in the prompt', async () => {
+    const {runner, calls} = probed('- `measure` prints a number of at least 40', () => ({stdout: '48', stderr: '', exitCode: 0}));
+    await runner.runIteration(1);
+    expect(calls).toHaveLength(1);
+    expect(calls[0].prompt).toContain('## Probe output');
+    expect(calls[0].prompt).toContain('exit 0, output: 48');
+  });
+
+  test('a failed probe starts no worker, comments the expected and actual result, and labels needs-human', async () => {
+    const {runner, root, calls, tracker} = probed('- `measure` prints a number of at least 40', () => ({stdout: '32', stderr: '', exitCode: 0}));
+    await runner.runIteration(1);
+    expect(calls).toHaveLength(0);
+    expect(tracker).toContain('gh issue edit 5 --add-label needs-human');
+    const comment = tracker.find(c => c.startsWith('gh issue comment 5'))!;
+    expect(comment).toContain('`measure`');
+    expect(comment).toContain('prints a number of at least 40');
+    expect(comment).toContain('exit 0, output: 32');
+    expect(tracker).toContain("gh issue edit 5 --remove-label 'ready-for-agent'");
+    expect(allEventsOf(root).map(e => e.event)).toContain('probe_failed');
+  });
+
+  test('a failed probe does not count as a worker failure', async () => {
+    const {runner, root} = probed('- `measure` exits 0', () => ({stdout: '', stderr: '', exitCode: 1}));
+    await runner.runIteration(1);
+    const state = readState(root);
+    expect(state.failed_iterations).toBe(0);
+    expect(state.consecutive_failures).toBe(0);
+    expect(state.stall_count).toBe(0);
+    expect(state.status).toBe('ready');
+    expect(existsSync(join(root, '.forger', 'HALT'))).toBe(false);
+    expect(state.in_flight).toEqual([]);
   });
 });

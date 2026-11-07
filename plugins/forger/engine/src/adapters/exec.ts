@@ -6,7 +6,7 @@
 
 import {execSync} from 'child_process';
 
-import type {CapturingRunner, CommandResult, CommandRunner} from '../ports';
+import type {CapturingRunner, CommandResult, CommandRunner, ProbeRunner} from '../ports';
 
 /** A CommandRunner backed by real git in the given working directory. */
 export function execRunner(cwd: string): CommandRunner {
@@ -40,3 +40,19 @@ export function execCapture(cwd: string, env?: Record<string, string>): Capturin
     }
   };
 }
+
+/** Probes run on the host with the run's time limit; the command is ended when it passes. */
+export const execProbe: ProbeRunner = (command, cwd, timeoutMs) => {
+  try {
+    const stdout = execSync(command, {cwd, encoding: 'utf-8', maxBuffer: 64 * 1024 * 1024, stdio: ['ignore', 'pipe', 'pipe'], timeout: timeoutMs, killSignal: 'SIGKILL'});
+    return {stdout: stdout.trim(), stderr: '', exitCode: 0};
+  } catch (e) {
+    const err = e as {stdout?: string | Buffer; stderr?: string | Buffer; status?: number | null; code?: string};
+    const timedOut = err.code === 'ETIMEDOUT';
+    return {
+      stdout: String(err.stdout ?? '').trim(),
+      stderr: timedOut ? `timed out after ${Math.round(timeoutMs / 1000)}s` : String(err.stderr ?? '').trim(),
+      exitCode: timedOut ? 124 : typeof err.status === 'number' ? err.status : 1,
+    };
+  }
+};

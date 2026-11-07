@@ -11,7 +11,7 @@ import {writeFileSync} from 'fs';
 
 import type {Backlog} from '../backlog';
 import {resolveModel, type WorkloopConfig} from '../config';
-import type {AgentRunner, CommandRunner} from '../ports';
+import type {AgentRunner, CommandRunner, ProbeRunner} from '../ports';
 import {parseClaim} from './claim';
 import type {EventKind, TerminalEventKind} from './events';
 import {declineUpdate, type DeclineEntry} from './decline';
@@ -27,6 +27,8 @@ import {decideOutcome, type Outcome} from './outcome';
 import type {PrFact} from './pr-checks';
 import type {Decision} from './verdict';
 import {readVerdicts, recordedDecision} from './verdict-store';
+import {actualOf, failedProbe, parseProbes, probeFailureComment, probePromptSection, runProbes, type ProbeRun} from './probe';
+import {probeHandBack} from './probe-io';
 import {buildPrompt} from './prompt';
 import {workerEnv} from './worker-env';
 import {gatherFacts, takeSnapshot, ticketFromBranch} from './run-facts';
@@ -48,6 +50,8 @@ export interface IterationContext {
   halt(reason: string, kind?: TerminalEventKind): void;
   /** The pipeline plan for a ticket; absent or null leaves the run without one. */
   resolvePlan?(ticket: string | null): StoredPlan | null;
+  /** Runs a probe command on the host; absent, probes are not run. */
+  probeRunner?: ProbeRunner;
   /** Exported to the worker, whose gates name it. */
   pluginRoot?: string;
 }
@@ -111,8 +115,21 @@ export async function runIteration(
   if (attemptedTask) ctx.emit('picked', iteration, attemptedTask, null);
 
   const {timeoutMinutes, killGraceSeconds} = ctx.config.limits;
+  const probes = attemptedTask && ctx.probeRunner ? runProbes(parseProbes(ctx.backlog.body(attemptedTask)), c => ctx.probeRunner!(c, root, timeoutMinutes * 60 * 1000)) : [];
+  const failed = failedProbe(probes);
+  if (failed) {
+    // Not a worker's failure: no count, no stall, no halt; the ticket leaves the queue and the next pick is another.
+    handBackProbe(ctx, iteration, attemptedTask, failed);
+    const after = ctx.store.load();
+    endRun(after, sessionId);
+    after.status = ctx.store.isHalted() ? 'halted' : after.in_flight.length > 0 ? 'running' : 'ready';
+    ctx.store.save(after);
+    await ctx.refreshBacklog();
+    placement?.finish(false);
+    return false;
+  }
   const deadline = new Date(Date.now() + timeoutMinutes * 60 * 1000);
-  const prompt = buildPrompt(ctx.config, iteration, state.completed_tasks, attemptedTask, placement !== undefined, deadline);
+  const prompt = buildPrompt(ctx.config, iteration, state.completed_tasks, attemptedTask, placement !== undefined, deadline, probePromptSection(probes));
   const tier = ctx.backlog.tier(attemptedTask);
   ctx.logger.log('INFO', `Running the agent (session: ${sessionId.slice(0, 8)}...)`);
   if (attemptedTask) {
@@ -232,6 +249,19 @@ function recordOwnerMerges(ctx: IterationContext, state: AutomationState): void 
   state.last_completed_at = new Date().toISOString();
   for (const t of settled.completed) ctx.logger.log('SUCCESS', `The owner merged ${t}`);
   ctx.store.save(state);
+}
+
+/** Labels the issue, comments the failed probe and records the event; a tracker failure halts, since the ticket would be picked again. */
+function handBackProbe(ctx: IterationContext, iteration: number, ticket: string | null, failed: ProbeRun): void {
+  const issue = issueOfTicket(ticket);
+  ctx.logger.log('WARN', `Probe \`${failed.probe.command}\` failed for ${ticket}: ${actualOf(failed.result)}`);
+  ctx.emit('probe_failed', iteration, ticket, `\`${failed.probe.command}\` expected ${failed.probe.expected}; got ${actualOf(failed.result)}`);
+  if (issue === null || ctx.config.tracker.kind !== 'github') return;
+  try {
+    probeHandBack(ctx.gitRunner, issue, probeFailureComment(failed), ctx.config.tracker.label);
+  } catch (e) {
+    ctx.halt(`Infrastructure error (probe): could not hand ${ticket} back: ${e instanceof Error ? e.message : String(e)}`);
+  }
 }
 
 /** Marks the PR and its issue, records the event and remembers the ticket; label failures are logged, not fatal. */

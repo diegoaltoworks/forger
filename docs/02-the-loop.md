@@ -309,6 +309,13 @@ failure. A criterion judged `cannot_tell` in more than one round is called out i
 the comment as one to reword or make mechanical. `handover --list` reports the
 tickets handed over, with the criteria at fault.
 
+## Probes before a worker
+
+A ticket may carry a `## Probe` section (see `docs/03-tickets.md`). The engine
+runs its commands before it spends a worker; a failed probe labels the issue
+`needs-human`, comments the expected and actual result and moves to the next
+ticket, without counting as a failure. `docs/reference/engine.md` has the detail.
+
 ## Who merges a ticket
 
 A ticket's `## Merge` section says `when green` (the default) or `owner reviews`.

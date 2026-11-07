@@ -22,14 +22,14 @@ export type TerminalEventKind = (typeof TERMINAL_EVENTS)[number];
 
 /**
  * Facts about the run that are not terminal: the pick, an approval asked, a
- * halt a person cleared and each attempt at a slot's output contract, and a PR left open for the owner (`reason` carries the PR). They
+ * halt a person cleared and each attempt at a slot's output contract, a PR left open for the owner (`reason` carries the PR) and a ticket handed back by a failed probe (`reason` carries the command and its result). They
  * share the file, but the terminal readers (`readEvents`, `awaitEvent`) skip
  * them, so a watcher never wakes on one.
  * `reason` carries the detail: the action and its authority for an approval,
  * the cleared halt's reason for a clear, the previous holder for a lease
  * takeover, the slot, attempt and problems for a contract attempt.
  */
-export const RECORDED_EVENTS = ['picked', 'approval_asked', 'halt_cleared', 'lease_takeover', 'contract_attempt', 'owner_review'] as const;
+export const RECORDED_EVENTS = ['picked', 'approval_asked', 'halt_cleared', 'lease_takeover', 'contract_attempt', 'owner_review', 'probe_failed'] as const;
 
 export type RecordedEventKind = (typeof RECORDED_EVENTS)[number];
 

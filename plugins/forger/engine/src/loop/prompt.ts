@@ -69,7 +69,8 @@ export function buildPrompt(
   completedTasks: string[],
   pick: string | null,
   inWorktree = false,
-  deadline?: Date
+  deadline?: Date,
+  probeSection = ''
 ): string {
   const completed = completedTasks.join(', ') || 'none';
   const gatesClause = config.gates ? ` (\`${config.gates}\`)` : '';
@@ -91,7 +92,7 @@ export function buildPrompt(
 5. Squash merge onto ${config.base_branch}
 
 ${backlogSection(config)}
-${inWorktree && pick ? `\n${worktreeSection(config, pick)}\n` : ''}
+${inWorktree && pick ? `\n${worktreeSection(config, pick)}\n` : ''}${probeSection ? `\n${probeSection}\n` : ''}
 ## IMPORTANT: Commit Rules
 - Bundle EVERYTHING in one feat: PR (code + tests + docs + state updates)
 - Do NOT create separate chore: or docs: commits

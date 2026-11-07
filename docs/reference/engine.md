@@ -40,6 +40,16 @@ one JSON line to the event file, and `status --json` reports the engine, halt,
 counters, current ticket and next pick, so a supervisor reads files and commands
 rather than human text.
 
+A ticket's `## Probe` section lists commands, each with its expected result in
+the forms of acceptance criteria. Before a worker starts, the engine runs each
+on the host in the directory the worker would start in, with the run's timeout
+and no model, and stops at the first that fails. When all hold, their output
+goes into the worker's prompt. When one fails, no worker starts: the engine
+labels the issue `needs-human`, comments the command with the expected and the
+actual result, takes it off the Backlog, records a `probe_failed` event and
+picks the next ticket. A failed probe is neither a worker failure nor a stall,
+and it halts nothing.
+
 The loop stops when the backlog empties, a HALT file appears, it stalls (nothing
 merged for `maxStallIterations` runs in a row), or it hits
 `maxConsecutiveFailures`.
