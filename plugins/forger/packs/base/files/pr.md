@@ -10,7 +10,7 @@ Closes #<n>
 
 ## Screenshots
 
-<Links to the files under docs/screenshots/ updated at the head commit, or "none".>
+<Links to the files under docs/screenshots/ updated at the head commit, the side-by-side images under docs/screenshots/compare/ first, or "none".>
 
 ## Captures
 

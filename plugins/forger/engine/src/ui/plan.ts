@@ -5,7 +5,7 @@
 
 import type {CaptureStep} from '../ports';
 import type {StateAssertions} from './assertions';
-import {SCREENSHOT_DIR, UiConfigError, type Theme, type UiConfig} from './ui-config';
+import {SCREENSHOT_DIR, UiConfigError, type Locale, type Theme, type UiConfig, type UiState} from './ui-config';
 
 export interface Capture {
   /** The route's path, or the state's name. */
@@ -19,6 +19,9 @@ export interface Capture {
   width: number;
   height: number;
   theme: Theme;
+  /** Set when the config declares locales: the language tag, and the writing direction the page runs with. */
+  locale?: string;
+  dir?: 'ltr' | 'rtl';
   url: string;
   /** Repo-relative path of the image. */
   file: string;
@@ -30,42 +33,40 @@ export function routeSlug(route: string): string {
   return slug === '' ? 'index' : slug;
 }
 
-export function captureFile(route: string, viewport: string, theme: Theme, dir: string = SCREENSHOT_DIR): string {
-  return `${dir}${routeSlug(route)}-${viewport}-${theme}.png`;
+export function captureFile(route: string, viewport: string, theme: Theme, dir: string = SCREENSHOT_DIR, locale?: string): string {
+  return `${dir}${routeSlug(route)}${locale === undefined ? '' : `-${locale.toLowerCase()}`}-${viewport}-${theme}.png`;
+}
+
+function localeUrl(url: string, locale: Locale | undefined): string {
+  if (locale?.param === undefined) return url;
+  return `${url}${url.includes('?') ? '&' : '?'}${encodeURIComponent(locale.param)}=${encodeURIComponent(locale.code)}`;
 }
 
 export function planCaptures(config: UiConfig, dir: string = SCREENSHOT_DIR): Capture[] {
   const plan: Capture[] = [];
-  for (const route of config.routes) {
-    for (const v of config.viewports) {
-      for (const theme of config.themes) {
-        plan.push({
-          route,
-          viewport: v.name,
-          width: v.width,
-          height: v.height,
-          theme,
-          url: `${config.url}${route}`,
-          file: captureFile(route, v.name, theme, dir),
-        });
-      }
-    }
-  }
-  for (const state of config.states) {
-    for (const v of config.viewports) {
-      for (const theme of config.themes) {
-        plan.push({
-          route: state.route,
-          state: state.name,
-          steps: state.steps,
-          assert: state.assert,
-          viewport: v.name,
-          width: v.width,
-          height: v.height,
-          theme,
-          url: `${config.url}${state.route}`,
-          file: captureFile(state.name, v.name, theme, dir),
-        });
+  const locales: Array<Locale | undefined> = config.locales.length === 0 ? [undefined] : config.locales;
+  const targets = [
+    ...config.routes.map(route => ({route, name: route, state: undefined as UiState | undefined})),
+    ...config.states.map(state => ({route: state.route, name: state.name, state})),
+  ];
+  for (const target of targets) {
+    for (const locale of locales) {
+      for (const v of config.viewports) {
+        for (const theme of config.themes) {
+          const steps = [...(locale?.steps ?? []), ...(target.state?.steps ?? [])];
+          plan.push({
+            route: target.route,
+            ...(target.state !== undefined ? {state: target.state.name, assert: target.state.assert} : {}),
+            ...(steps.length > 0 ? {steps} : {}),
+            viewport: v.name,
+            width: v.width,
+            height: v.height,
+            theme,
+            ...(locale !== undefined ? {locale: locale.code, dir: locale.dir} : {}),
+            url: localeUrl(`${config.url}${target.route}`, locale),
+            file: captureFile(target.name, v.name, theme, dir, locale?.code),
+          });
+        }
       }
     }
   }

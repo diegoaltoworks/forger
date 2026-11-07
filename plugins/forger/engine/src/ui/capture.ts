@@ -34,6 +34,7 @@ function request(c: Capture, projectRoot: string, withFile: boolean): ShotReques
     width: c.width,
     height: c.height,
     theme: c.theme,
+    ...(c.locale !== undefined ? {locale: c.locale, dir: c.dir} : {}),
     ...(c.steps !== undefined && c.steps.length > 0 ? {steps: c.steps} : {}),
     ...(withFile ? {file: join(projectRoot, c.file)} : {}),
     ...(c.assert !== undefined ? {probe: probeFor(c.assert)} : {}),

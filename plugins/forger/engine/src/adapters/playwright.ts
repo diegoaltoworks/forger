@@ -37,7 +37,7 @@ interface PlaywrightContext {
   close(): Promise<void>;
 }
 interface PlaywrightBrowser {
-  newContext(opts: {viewport: {width: number; height: number}; colorScheme: 'light' | 'dark'; hasTouch?: boolean; recordVideo?: {dir: string; size: {width: number; height: number}}}): Promise<PlaywrightContext>;
+  newContext(opts: {viewport: {width: number; height: number}; colorScheme: 'light' | 'dark'; locale?: string; hasTouch?: boolean; recordVideo?: {dir: string; size: {width: number; height: number}}}): Promise<PlaywrightContext>;
   close(): Promise<void>;
 }
 interface PlaywrightModule {
@@ -148,7 +148,7 @@ export function playwrightScreenshotter(projectRoot: string, load: (root: string
       try {
         for (const shot of shots) {
           if (shot.file !== undefined) mkdirSync(dirname(shot.file), {recursive: true});
-          const context = await browser.newContext({viewport: {width: shot.width, height: shot.height}, colorScheme: shot.theme});
+          const context = await browser.newContext({viewport: {width: shot.width, height: shot.height}, colorScheme: shot.theme, ...(shot.locale !== undefined ? {locale: shot.locale} : {})});
           try {
             const page = await context.newPage();
             const lines: string[] = [];
@@ -157,6 +157,7 @@ export function playwrightScreenshotter(projectRoot: string, load: (root: string
             });
             page.on('pageerror', (e: Error) => lines.push(e.message));
             await page.goto(shot.url, {waitUntil: 'networkidle'});
+            if (shot.dir !== undefined) await page.evaluate(`document.documentElement.dir = ${JSON.stringify(shot.dir)}`);
             for (const step of shot.steps ?? []) await perform(page as RecordingPage, step);
             if (shot.probe !== undefined) pages.push(await probePage(page, shot.probe, shot.width, shot.height, lines));
             else pages.push(undefined);

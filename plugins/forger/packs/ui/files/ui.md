@@ -23,6 +23,35 @@ says how to add it and exits 2, which is an environment problem, not a failure
 of the change. The PR body's Screenshots section links the updated files at the
 head commit.
 
+## Every locale is captured, right-to-left included (ui.locales)
+
+Text that fits in one language breaks in another, and a right-to-left layout
+mirrors in ways a left-to-right review never sees. Declare `locales` in
+`.forger/ui.json`: each has a `code`, a `dir` (`ltr` or `rtl`) and a way to
+switch the app to it, either a `param` (the query parameter the app reads, so
+`?lang=ar` is added to every url) or `steps` (run before the capture's own, for
+an app switched by a control). The sample file declares one of each direction.
+
+When `locales` is set, `screenshot` captures every route and state in every
+locale and names the files `<route>-<locale>-<viewport>-<theme>.png`. The page
+runs in the locale and with `dir` set on its root, so the layout is the
+mirrored one. Without `locales` the names and behaviour are unchanged.
+
+## Before and after, side by side (ui.before-after)
+
+`screenshot --before` also captures the base branch, from a worktree of its own
+that the command creates and removes, then writes one image per changed screen
+under `docs/screenshots/compare/`, the before on the left and the after on the
+right. Screens whose two captures match within the tolerance get no image, and
+a screen the base does not have has nothing to set beside. The base checkout
+serves the app with the same `start` command, so it needs what the app needs to
+start; install dependencies in the way your `start` expects.
+
+The PR body's Screenshots section links these files at the head commit. Link
+the files in the repository, not external URLs: images in a private repository
+may not render in every place the owner reviews in, and a file link at a
+commit always resolves.
+
 ## A state is captured by name (ui.named-states)
 
 A filtered list, an error or an open dialog is not its own route, so `routes`

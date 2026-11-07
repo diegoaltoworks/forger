@@ -75,3 +75,40 @@ describe('planCaptures into another folder', () => {
     expect(() => planCaptures(c)).toThrow('both write');
   });
 });
+
+describe('planCaptures with locales', () => {
+  const config = parseUiConfig(JSON.stringify({
+    paths: ['a'], start: 's', routes: ['/about'], viewports: [{name: 'phone', width: 1, height: 2}], themes: ['light'],
+    locales: [{code: 'en', dir: 'ltr', param: 'lang'}, {code: 'ar', dir: 'rtl', param: 'lang'}],
+  }));
+
+  test('a ui.json with two locales captures each screen in both and names the files by locale', () => {
+    const plan = planCaptures(config);
+    expect(plan.map(c => c.file)).toEqual(['docs/screenshots/about-en-phone-light.png', 'docs/screenshots/about-ar-phone-light.png']);
+    expect(plan.map(c => c.url)).toEqual(['http://localhost:3000/about?lang=en', 'http://localhost:3000/about?lang=ar']);
+  });
+
+  test('an rtl locale capture runs the page with dir rtl', () => {
+    const plan = planCaptures(config);
+    expect(plan.map(c => [c.locale, c.dir])).toEqual([['en', 'ltr'], ['ar', 'rtl']]);
+  });
+
+  test('a locale switched by steps runs them before the state steps and appends the param with &', () => {
+    const c = parseUiConfig(JSON.stringify({
+      paths: ['a'], start: 's', routes: ['/'], viewports: [{name: 'phone', width: 1, height: 2}], themes: ['light'],
+      locales: [{code: 'ar', dir: 'rtl', steps: [{click: '#ar'}]}],
+      states: [{name: 'open', route: '/l?x=1', steps: [{click: '#o'}]}],
+    }));
+    const open = planCaptures(c).find(p => p.state === 'open');
+    expect(open?.steps).toEqual([{click: '#ar'}, {click: '#o'}]);
+    const withParam = parseUiConfig(JSON.stringify({paths: ['a'], start: 's', routes: ['/l?x=1'], locales: [{code: 'ar', dir: 'rtl', param: 'lang'}]}));
+    expect(planCaptures(withParam)[0].url).toBe('http://localhost:3000/l?x=1&lang=ar');
+  });
+
+  test('a locale with no way to switch the app, a bad dir or a repeated code is refused', () => {
+    const bad = (locales: unknown) => () => parseUiConfig(JSON.stringify({paths: ['a'], start: 's', locales}));
+    expect(bad([{code: 'ar', dir: 'rtl'}])).toThrow('needs a param or steps');
+    expect(bad([{code: 'ar', dir: 'up', param: 'l'}])).toThrow('ltr or rtl');
+    expect(bad([{code: 'ar', dir: 'rtl', param: 'l'}, {code: 'AR', dir: 'rtl', param: 'l'}])).toThrow('unique');
+  });
+});

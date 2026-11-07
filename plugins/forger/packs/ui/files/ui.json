@@ -9,5 +9,9 @@
     {"name": "desktop", "width": 1280, "height": 800}
   ],
   "themes": ["light", "dark"],
+  "locales": [
+    {"code": "en", "dir": "ltr", "param": "lang"},
+    {"code": "ar", "dir": "rtl", "param": "lang"}
+  ],
   "ready_timeout": 60
 }

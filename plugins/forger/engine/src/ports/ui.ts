@@ -12,6 +12,9 @@ export interface ShotRequest {
   width: number;
   height: number;
   theme: 'light' | 'dark';
+  /** The language the page is captured in, and its writing direction; the page runs with `dir` set on its root. */
+  locale?: string;
+  dir?: 'ltr' | 'rtl';
   /** Run in order after the page loads and before the capture; a named UI state's setup. */
   steps?: CaptureStep[];
   /** Absolute path of the image to write; none means the page is only probed. */
