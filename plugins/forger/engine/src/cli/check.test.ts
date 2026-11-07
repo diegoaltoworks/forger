@@ -20,10 +20,13 @@ function project(): string {
 }
 
 /** A tracker that answers `gh issue view` with the given body, or throws when given an error. */
-function ctx(root: string, positionals: string[], body: string | Error, json = false, commands: string[] = []): CommandContext {
+function ctx(root: string, positionals: string[], body: string | Error, json = false, commands: string[] = [], others: Array<{number: number; body: string}> = []): CommandContext {
   const run = (cmd: string): string => {
     commands.push(cmd);
     if (body instanceof Error) throw body;
+    if (cmd.startsWith('gh api graphql')) {
+      return JSON.stringify({data: {repository: {issues: {nodes: others.map(o => ({...o, blockedBy: {nodes: []}}))}}}});
+    }
     return body;
   };
   return {values: {json}, positionals: ['check', ...positionals], projectRoot: root, pluginRoot: root, run: () => run} as unknown as CommandContext;
@@ -67,7 +70,14 @@ describe('check ticket', () => {
     const r = await capture(ctx(project(), ['ticket', '42'], '## Acceptance\n- [ ] `bun run check` exits 0\n', false, commands));
     expect(r.code).toBe(0);
     expect(r.out).toStartWith('#42: every acceptance criterion can be checked');
-    expect(commands).toEqual(['gh issue view 42 --json body --jq .body']);
+    expect(commands[0]).toBe('gh issue view 42 --json body --jq .body');
+  });
+
+  test('fails a ticket that shares a Knock-on path with another open ticket and names both', async () => {
+    const body = '## Acceptance\n- [ ] `bun run check` exits 0\n\n## Guards\n\nnone\n\n## Knock-on\n\n`src/a.ts`\n';
+    const r = await capture(ctx(project(), ['ticket', '5'], body, false, [], [{number: 9, body}]));
+    expect(r.code).toBe(1);
+    expect(r.out).toContain('#5 and #9 share `src/a.ts`');
   });
 
   test('fails an issue with an uncheckable criterion and names it', async () => {

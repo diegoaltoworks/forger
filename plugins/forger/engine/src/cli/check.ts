@@ -23,6 +23,8 @@ import {
 } from '../checks';
 import {checkContract, contractItems, formatContract, resolveSandboxImage, findHarness, playwrightAuditor, playwrightScreenshotter, shellAppServer} from '../adapters';
 import {loadConfig} from '../config';
+import {checkSequencing} from '../backlog';
+import {readOpenTickets} from './open-tickets';
 import {checkTicketCriteria, criterionOptions} from '../loop';
 import type {Harness} from '../ports';
 import {UiInfrastructureError} from '../ports';
@@ -50,7 +52,7 @@ export const check: Command = {
   check ui --states [--json] Serve the app, load every named state at every viewport and theme, and fail on a state assertion in ui.json (console errors, not_blank, in_viewport, visible, hidden, colour); exit 2 when Playwright or the app is unavailable
   check a11y [--json] Serve the app and fail on serious or critical axe violations on every route, viewport and theme (exit 2 when Playwright, axe-core or the app is unavailable)
   check spec [--json] Fail when a requirement the issue names is unsatisfied or a MUST regresses; the slcr binary is the provider; none is a gap, not a pass
-  check ticket N [--json] Fail when an acceptance criterion of issue N is not a named test, a command with its result, a sourced number or a named UI state, or uses a subjective word
+  check ticket N [--json] Fail when an acceptance criterion of issue N is not a named test, a command with its result, a sourced number or a named UI state, or uses a subjective word, or when it shares a footprint with another open ticket and neither is ordered against the other
   check sandbox [--json] Start the configured docker image with the image contract probes (git, bun, the harness CLI, a non-root user) and print one line per item; exit 0 only when every item passes, and 0 with nothing to check under the host sandbox
   check arch [--json] Fail on an import that crosses a forbidden edge of .forger/architecture.json
   check docs [--json] Fail on non-ASCII punctuation, emails, home paths, denylist terms and, with the docs pack, README writing rules; passive voice warns on stderr`,
@@ -104,7 +106,16 @@ export const check: Command = {
         process.exitCode = 1;
         return;
       }
-      const result = checkTicketCriteria(body, criterionOptions(projectRoot, loadConfig(projectRoot)));
+      const config = loadConfig(projectRoot);
+      const result = checkTicketCriteria(body, criterionOptions(projectRoot, config));
+      try {
+        const open = readOpenTickets(ctx.run(), config.tracker.label);
+        const subject = open.find(t => t.number === n) ?? {number: n, body, native: []};
+        result.problems.push(...checkSequencing({...subject, body}, open));
+        result.ok = result.problems.length === 0;
+      } catch (e) {
+        result.warnings.push(`could not compare with the other open tickets: ${(e as Error).message}`);
+      }
       console.log(
         values.json
           ? JSON.stringify({issue: n, ok: result.ok, problems: result.problems, warnings: result.warnings, criteria: result.criteria})
