@@ -7,3 +7,4 @@
 {"event":"picked","at":"2026-11-07T06:56:43.253Z","iteration":173,"ticket":"issue-340","reason":null}
 {"event":"picked","at":"2026-11-07T06:56:52.267Z","iteration":174,"ticket":"issue-343","reason":null}
 {"event":"picked","at":"2026-11-07T07:02:32.420Z","iteration":175,"ticket":"issue-341","reason":null}
+{"event":"worker_denied","at":"2026-11-07T07:07:35.012Z","iteration":175,"ticket":"issue-341","reason":"push-base: (cd plugins/forger/engine && bun run check >/dev/null 2>&1; echo engine $?) && bun plugins/forger/bin/work.ts check >/dev/null 2>&1; echo $?; git push -qf origin feat/issue-341 2>&1 | tail -1; bun plugins/forger/bin/work.ts verify --pr 352 --json | head -c 150; bun plugins/forger/bin/work.ts merge --pr 352 --json | tail -c 300"}
