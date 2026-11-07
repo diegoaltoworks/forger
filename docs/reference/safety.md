@@ -7,3 +7,12 @@ What keeps an unattended worker within bounds.
 The worker runs headless with `--dangerously-skip-permissions`. Keep the repo's
 data-safety and write-scope rules in `.forger/process.md` explicit and enforced
 by tests, not convention - the loop will do exactly what the backlog tells it to.
+
+## Guards hold
+
+A guarantee (a coverage floor, a budget, a threshold, a test) is the owner's to
+change, not the worker's. `check guards` runs with the other gates and fails a
+diff that lowers a minimum, raises a maximum, changes a number whose direction
+the key name does not give, deletes a guard or test file, or adds a skip to a
+test. The owner records the change with `decide <n>`; naming the file in the
+ticket's Decisions section lets that file through.

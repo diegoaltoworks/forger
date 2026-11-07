@@ -292,6 +292,9 @@ describe('check arch', () => {
   });
 });
 
+/** A repo whose files are all `a.md` and whose branch changes nothing against its merge-base. */
+const cleanGit: CommandRunner = cmd => (cmd.startsWith('git merge-base') ? 'abc123' : /^git (diff|rev-parse)/.test(cmd) ? '' : 'a.md');
+
 describe('check', () => {
   function installed(): string {
     const root = projectWith({});
@@ -306,13 +309,14 @@ describe('check', () => {
 
   test('all clean: every check passed, exit 0', async () => {
     installed();
-    const report = JSON.parse(await capture(['check', '--json'], () => 'a.md'));
+    const report = JSON.parse(await capture(['check', '--json'], cleanGit));
     expect(report).toEqual({
       ok: true,
       gaps: [],
       results: [
         {check: 'docs', opinions: ['base.ascii-punctuation', 'base.nothing-personal', 'base.no-hard-coded-skills', 'base.model-agnostic', 'base.merge-through-tool'], status: 'passed', violations: [], waived: [], gaps: []},
         {check: 'hooks', opinions: ['base.worker-hooks'], status: 'passed', violations: [], waived: [], gaps: []},
+        {check: 'guards', opinions: ['base.guards-hold'], status: 'passed', violations: [], waived: [], gaps: []},
       ],
       waivers: [],
       staleWaivers: [],
@@ -322,7 +326,7 @@ describe('check', () => {
 
   test('--summary prints the CI job summary in markdown', async () => {
     installed();
-    const out = await capture(['check', '--summary'], () => 'a.md');
+    const out = await capture(['check', '--summary'], cleanGit);
     expect(out).toContain('## forger check: passed');
     expect(out).toContain('| docs | `base.ascii-punctuation`, `base.nothing-personal`, `base.no-hard-coded-skills`, `base.model-agnostic`, `base.merge-through-tool` | passed | 0 | 0 |');
   });
@@ -330,7 +334,7 @@ describe('check', () => {
   test('one violation: failed, carries the opinion id, exit 1', async () => {
     const root = installed();
     writeFileSync(join(root, 'a.md'), 'bad \u2014');
-    const report = JSON.parse(await capture(['check', '--json'], () => 'a.md'));
+    const report = JSON.parse(await capture(['check', '--json'], cleanGit));
     expect(report.ok).toBe(false);
     expect(report.results[0].status).toBe('failed');
     expect(report.results[0].violations[0]).toMatchObject({file: 'a.md', opinion: 'base.ascii-punctuation'});
@@ -343,7 +347,7 @@ describe('check', () => {
     writeFileSync(join(root, 'a.md'), 'bad \u2014');
     const waiver = {opinion: 'base.ascii-punctuation', path: 'a.md', reason: 'quoted source', approved_by: 'the owner'};
     writeFileSync(join(root, '.forger', 'waivers.json'), JSON.stringify({waivers: [waiver]}));
-    const report = JSON.parse(await capture(['check', '--json'], () => 'a.md'));
+    const report = JSON.parse(await capture(['check', '--json'], cleanGit));
     expect(report.ok).toBe(true);
     expect(report.results[0].status).toBe('waived');
     expect(report.results[0].waived[0].waiver).toEqual(waiver);
@@ -354,7 +358,7 @@ describe('check', () => {
     const root = installed();
     writeFileSync(join(root, '.forger', 'waivers.json'), JSON.stringify({waivers: [{opinion: 'x.y', path: 'a.md'}]}));
     const err = spyOn(console, 'error').mockImplementation(() => {});
-    await capture(['check', '--json'], () => 'a.md');
+    await capture(['check', '--json'], cleanGit);
     expect(err.mock.calls.join(' ')).toContain('reason');
     err.mockRestore();
     expect(process.exitCode).toBe(1);

@@ -101,6 +101,9 @@ proceed on red. If a gate is red for a reason you cannot see, make one honest
 diagnosis attempt in the `diagnose` slot. Built-in: reproduce it, read the
 failing output, form one hypothesis and test it. If it is still red, signal `stop`.
 
+`check guards` is among the gates. Never lower a guard, skip a test or delete one to get
+green; when the change needs it, ask the owner, who records it with `decide`.
+
 Read the gate's exit status, not its last lines: a gate piped into `tail` or
 chained with `;` reports success whatever happened. A failing gate stops the
 push. Any edit after a gate run - a test, an import, a doc - makes that run
