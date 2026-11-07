@@ -56,3 +56,7 @@
 ## Languages
 
 <The wording added or changed, and that every offered language needs it, or "none".>
+
+## Decisions
+
+none

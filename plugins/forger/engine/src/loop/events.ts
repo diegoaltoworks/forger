@@ -54,6 +54,8 @@ export interface TerminalEvent {
   cause?: number | null;
   /** On `halt_cleared`: why the halt was not a defect, when that was given. Both null marks an uncaused clear. */
   not_a_defect?: string | null;
+  /** On `halt_cleared` by `decide`: the owner's answer, which cleared the halt. */
+  decision?: string | null;
 }
 
 export function terminalEvent(
@@ -62,7 +64,7 @@ export function terminalEvent(
   ticket: string | null,
   reason: string | null,
   now: Date = new Date(),
-  extra: Pick<TerminalEvent, 'cause' | 'not_a_defect'> = {}
+  extra: Pick<TerminalEvent, 'cause' | 'not_a_defect' | 'decision'> = {}
 ): TerminalEvent {
   return {event, at: now.toISOString(), iteration, ticket, reason, ...extra};
 }

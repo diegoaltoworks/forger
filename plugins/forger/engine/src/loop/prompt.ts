@@ -18,6 +18,7 @@ function backlogSection(config: WorkloopConfig): string {
       `- Tracker is GITHUB. Open issues labelled \`${label}\` are the tickets; ticket \`issue-<n>\` is issue #<n>. Branch as \`feat/issue-<n>\`.`,
       '- Priority and effort are labels (`P0`-`P3`, `effort:small|medium|large`); `depends_on` is the issue\'s native blocked-by; `needs-human` and `deferred` labels carry those statuses.',
       '- Claim the issue by assigning yourself; put `Closes #<issue>` in the PR body. Completed means closed by a merged PR, so do not edit backlog.json.',
+      '- The issue\'s `## Decisions` entries are the owner\'s answers and override the ticket\'s earlier text where the two disagree.',
     ];
     if (ignore.length > 0) {
       const labels = ignore.map(p => `\`${p}\``).join(', ');

@@ -4,6 +4,12 @@ import {mergeConfig} from '../config';
 import {buildPrompt} from './prompt';
 
 describe('buildPrompt', () => {
+  test('the worker prompt says Decisions entries override earlier ticket text', () => {
+    const out = buildPrompt(mergeConfig({tracker: {kind: 'github'}}), 1, [], 'issue-1');
+    expect(out).toContain('`## Decisions` entries');
+    expect(out).toContain('override the ticket\'s earlier text');
+  });
+
   test('names the configured worker command and base branch', () => {
     const cfg = mergeConfig({worker_command: 'do-ticket', base_branch: 'develop'});
     const out = buildPrompt(cfg, 3, [], 'issue-1');
