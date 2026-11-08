@@ -109,7 +109,7 @@ export const check: Command = {
       const config = loadConfig(projectRoot);
       const result = checkTicketCriteria(body, criterionOptions(projectRoot, config));
       try {
-        const open = readOpenTickets(ctx.run(), config.tracker.label);
+        const open = readOpenTickets(ctx.capture(), config.tracker.label);
         const subject = open.find(t => t.number === n) ?? {number: n, body, native: []};
         result.problems.push(...checkSequencing({...subject, body}, open));
         result.ok = result.problems.length === 0;

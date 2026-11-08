@@ -3,7 +3,9 @@ import {mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync} from 'node:
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 
+import {capturing} from '../ports';
 import {check} from './check';
+import {openTicketsCommand, readOpenTickets} from './open-tickets';
 import type {CommandContext} from './command';
 
 const dirs: string[] = [];
@@ -29,7 +31,7 @@ function ctx(root: string, positionals: string[], body: string | Error, json = f
     }
     return body;
   };
-  return {values: {json}, positionals: ['check', ...positionals], projectRoot: root, pluginRoot: root, run: () => run} as unknown as CommandContext;
+  return {values: {json}, positionals: ['check', ...positionals], projectRoot: root, pluginRoot: root, run: () => run, capture: () => capturing(run)} as unknown as CommandContext;
 }
 
 async function capture(c: CommandContext): Promise<{out: string; err: string; code: number}> {
@@ -110,6 +112,35 @@ describe('check ticket', () => {
     expect(r.code).toBe(1);
     expect(r.err).toContain('give the issue number');
     expect(commands).toEqual([]);
+  });
+
+  test('readOpenTickets passes owner and repo as gh fields, not inside the query text', () => {
+    const commands: string[] = [];
+    readOpenTickets(cmd => {
+      commands.push(cmd);
+      return {stdout: JSON.stringify({data: {repository: {issues: {nodes: []}}}}), stderr: '', exitCode: 0};
+    }, 'ready-for-agent');
+    expect(commands).toEqual([openTicketsCommand('ready-for-agent')]);
+    expect(commands[0]).toContain("-F owner='{owner}'");
+    expect(commands[0]).toContain("-F repo='{repo}'");
+    const query = commands[0].slice(commands[0].indexOf('-f query='));
+    expect(query).not.toContain('{owner}');
+    expect(query).not.toContain('{repo}');
+    expect(query).toContain('repository(owner:$owner,name:$repo)');
+  });
+
+  test('a failed comparison prints the gh error once, on its warning line', async () => {
+    const run = (cmd: string): string => {
+      if (cmd.startsWith('gh api graphql')) throw new Error('gh: Could not resolve to a Repository');
+      return '## Acceptance\n- [ ] `bun run check` exits 0\n\n## Guards\n\nnone\n';
+    };
+    const c = {values: {json: false}, positionals: ['check', 'ticket', '5'], projectRoot: project(), run: () => run, capture: () => capturing(run)} as unknown as CommandContext;
+    c.pluginRoot = c.projectRoot;
+    const r = await capture(c);
+    expect(r.code).toBe(0);
+    expect(r.out).toContain('warning: could not compare with the other open tickets: gh: Could not resolve to a Repository');
+    expect(r.out.split('Could not resolve').length).toBe(2);
+    expect(r.err).not.toContain('Could not resolve');
   });
 
   test('an unreadable issue fails with the tracker error', async () => {
