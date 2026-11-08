@@ -197,5 +197,6 @@
     }
   ],
   "consecutive_declines": 0,
+  "owner_review_tasks": [],
   "last_remaining_count": 12
 }
