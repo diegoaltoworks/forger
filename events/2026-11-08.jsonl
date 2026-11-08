@@ -1,2 +1,3 @@
 {"event":"picked","at":"2026-11-08T21:55:28.282Z","iteration":178,"ticket":"issue-355","reason":null}
 {"event":"picked","at":"2026-11-08T21:55:37.672Z","iteration":179,"ticket":"issue-332","reason":null}
+{"event":"worker_denied","at":"2026-11-08T22:01:35.039Z","iteration":179,"ticket":"issue-332","reason":"merge: cd /home/diego/work/forger/.forger/worktrees/issue-332; gh pr merge 358 --squash 2>&1 | head -5; gh api repos/diegoaltoworks/forger/branches/main/protection/required_status_checks --jq .contexts; gh api repos/diegoaltoworks/forger/commits/$(git rev-parse HEAD)/status --jq '[.statuses[]|.context+\":\"+.state]'"}
