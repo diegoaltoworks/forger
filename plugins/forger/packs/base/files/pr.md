@@ -10,7 +10,7 @@ Closes #<n>
 
 ## Screenshots
 
-<Links to the files under docs/screenshots/ updated at the head commit, the side-by-side images under docs/screenshots/compare/ first, or "none".>
+<Links to the files under docs/screenshots/ updated at the head commit, the side-by-side images under docs/screenshots/compare/ first, or "none". In a private repository give a link that renders on a phone: a blob/...?raw=true link does not, so link a page that shows the images or use uploaded attachments.>
 
 ## Captures
 

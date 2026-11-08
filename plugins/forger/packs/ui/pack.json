@@ -1,6 +1,6 @@
 {
   "id": "ui",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "description": "A UI change is reviewable only when it can be seen: screenshots come from a command, a branch that changes UI files updates them, and accessibility and design tokens are checked.",
   "detect": ["dep:react", "dep:vue", "dep:svelte", "dep:next", "dep:@angular/core", "file:index.html"],
   "files": [
@@ -22,6 +22,10 @@
     {"id": "ui.captures-in-pr", "rung": "template", "summary": "Interactive or animated work is recorded with screenshot --capture, and the PR body links the updated videos at the head commit.", "check": null},
     {"id": "ui.named-states", "rung": "template", "summary": "A screen state that is not its own route is declared under states in ui.json, and screenshot captures it after its steps.", "check": null},
     {"id": "ui.states", "rung": "template", "summary": "A UI ticket says what the screen shows when empty, loading, failed and full.", "check": null},
+    {"id": "ui.narrowest-viewport", "rung": "check", "summary": "The capture matrix includes the narrowest supported width; check ui warns when no viewport in ui.json is 360 px wide or less.", "check": "ui"},
+    {"id": "ui.screenshots-branch", "rung": "check", "summary": "With screenshots_branch set in ui.json, check ui accepts a PR body that links images on that branch as evidence, as well as files under docs/screenshots/.", "check": "ui"},
+    {"id": "ui.renders-for-reviewer", "rung": "rule", "summary": "Screenshot links render in the client the owner reviews in: a blob/...?raw=true link loads only in a signed-in browser, so a private repository also links a page that shows the images or uses uploaded attachments.", "check": null},
+    {"id": "ui.type-floors", "rung": "rule", "summary": "Text inputs stay at 16 px or larger, and a locale whose script reads worse small keeps the larger sizes when the type scale shrinks.", "check": null},
     {"id": "ui.wireframe", "rung": "template", "summary": "A ticket that changes a screen gets a wireframe under docs/design/<ticket>/ first, captured with screenshot --wireframe and approved by the owner before the build ticket starts.", "check": null}
   ],
   "checks": ["ui"],

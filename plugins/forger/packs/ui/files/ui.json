@@ -5,6 +5,7 @@
   "url": "http://localhost:3000",
   "routes": ["/"],
   "viewports": [
+    {"name": "narrow", "width": 320, "height": 640},
     {"name": "phone", "width": 390, "height": 844},
     {"name": "desktop", "width": 1280, "height": 800}
   ],

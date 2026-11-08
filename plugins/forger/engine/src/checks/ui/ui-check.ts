@@ -10,11 +10,20 @@ import {join} from 'path';
 import {loadConfig} from '../../config';
 import type {CommandRunner} from '../../ports';
 import {mergeBase, parseNameStatus} from '../decisions';
+import type {Gap} from '../gaps';
 import type {Finding} from '../waivers';
 import {loadUiConfig} from './a11y-check';
 import {runBaselineCheck} from './baseline-check';
 import {checkTokens, tokenScanTargets} from './tokens';
-import {checkUiEvidence} from './ui';
+import {checkUiEvidence, narrowestViewportGaps} from './ui';
+
+function prBody(run: CommandRunner): string {
+  try {
+    return run('gh pr view --json body --jq .body');
+  } catch {
+    return '';
+  }
+}
 
 export function runUiCheck(projectRoot: string, run: CommandRunner): Finding[] {
   const config = loadUiConfig(projectRoot);
@@ -31,5 +40,10 @@ export function runUiCheck(projectRoot: string, run: CommandRunner): Finding[] {
       return [];
     }
   });
-  return [...checkUiEvidence(changes, config), ...checkTokens(sources), ...runBaselineCheck(projectRoot, config)];
+  return [...checkUiEvidence(changes, config, config.screenshots_branch === undefined ? '' : prBody(run)), ...checkTokens(sources), ...runBaselineCheck(projectRoot, config)];
+}
+
+/** `runUiCheck` with what it could not measure: the gaps are warnings, not failures. */
+export function runUiCheckOutput(projectRoot: string, run: CommandRunner): {findings: Finding[]; gaps: Gap[]} {
+  return {findings: runUiCheck(projectRoot, run), gaps: narrowestViewportGaps(loadUiConfig(projectRoot))};
 }

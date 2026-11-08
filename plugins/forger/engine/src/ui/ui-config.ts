@@ -65,6 +65,8 @@ export interface UiConfig {
   themes: Theme[];
   /** Languages every route and state is captured in; empty means one capture in the app's own language. */
   locales: Locale[];
+  /** A branch that holds the screenshots; a PR body linking images on it is evidence, as files under docs/screenshots/ are. */
+  screenshots_branch?: string;
   /** Seconds to wait for the app to answer. */
   ready_timeout: number;
   /** How far a capture may drift from its approved baseline before `check ui` fails. */
@@ -247,6 +249,7 @@ export function parseUiConfig(raw: string): UiConfig {
     viewports,
     themes: themes as Theme[],
     locales,
+    ...(o.screenshots_branch === undefined ? {} : {screenshots_branch: text(o.screenshots_branch, 'screenshots_branch')}),
     ready_timeout: timeout as number,
     tolerance: tolerance(o.tolerance),
     captures,
