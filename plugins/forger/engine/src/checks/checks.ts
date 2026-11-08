@@ -16,7 +16,7 @@ import type {CommandRunner, Harness, SpecProvider} from '../ports';
 import {runSafetyCheck} from './safety';
 import {runSpecDecision} from './spec';
 import {runCoverageCheck, runTestsCheck} from './testing';
-import {runUiCheck} from './ui';
+import {runUiCheckOutput} from './ui';
 import {listOpinions, LOCK_PATH, loadPacks, parseLock, type Lock, type LoadedPack, type Opinion} from '../packs';
 import {applyWaivers, parseWaivers, staleWaivers, WAIVERS_PATH, type Finding, type WaivedFinding, type Waiver} from './waivers';
 import {forgerPath} from '../config';
@@ -76,7 +76,7 @@ export const CHECKS: Record<string, (ctx: CheckContext) => Finding[] | CheckOutp
   safety: ctx => runSafetyCheck(ctx.projectRoot, ctx.run),
   tests: ctx => runTestsCheck(ctx.projectRoot, ctx.run),
   coverage: ctx => runCoverageCheck(ctx.projectRoot, ctx.run),
-  ui: ctx => runUiCheck(ctx.projectRoot, ctx.run),
+  ui: ctx => runUiCheckOutput(ctx.projectRoot, ctx.run),
   hooks: ctx => runHooksCheck(ctx.projectRoot, ctx.harness),
   spec: ctx => {
     const {findings, gaps} = runSpecDecision(ctx.run, ctx.spec);

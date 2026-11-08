@@ -37,6 +37,11 @@ work. Each acceptance criterion takes one of four forms:
 | A number with a unit and a source | "slope error within the `slope` row of the spike's thresholds table" |
 | A named UI state from `ui.json`, with its assertions or a screenshot | "the `empty` state shows the prompt" |
 
+"The screenshots match the boards" and "matches the boards" cannot be judged by
+the verifier, which cannot compare two pictures. Use a named UI state with
+assertions instead, or `Merge: owner reviews` with captioned screenshots for the
+owner to compare.
+
 A source is a spike's thresholds row, an ADR or a cited reference. A spike
 records its numbers in the thresholds table of its template (quantity, value,
 unit, tolerance, source), and build tickets cite its rows.

@@ -47,10 +47,33 @@ a screen the base does not have has nothing to set beside. The base checkout
 serves the app with the same `start` command, so it needs what the app needs to
 start; install dependencies in the way your `start` expects.
 
-The PR body's Screenshots section links these files at the head commit. Link
-the files in the repository, not external URLs: images in a private repository
-may not render in every place the owner reviews in, and a file link at a
-commit always resolves.
+The PR body's Screenshots section links these files where the owner reviews
+them (ui.renders-for-reviewer). In a public repository, link the files at the
+head commit. In a private repository a `blob/...?raw=true` link loads only in a
+browser signed in to github.com, and the GitHub mobile app shows it as a broken
+image. So also link a page that shows the images, or use uploaded attachments,
+and name the app the owner reviews in. Check that the link opens there
+before asking for review.
+
+## Screenshots on their own branch (ui.screenshots-branch)
+
+Set `screenshots_branch` in `.forger/ui.json` to keep screenshots on a branch
+of their own, which keeps PR diffs small. `check ui` then accepts a UI change
+whose PR body links an image or video on that branch, as well as files changed
+under `docs/screenshots/`. With neither, it fails.
+
+## The narrowest viewport is captured (ui.narrowest-viewport)
+
+The capture matrix includes the narrowest width the project supports, often
+320 px, as well as a typical phone. `check ui` warns, without failing, when no
+viewport in `ui.json` is 360 px wide or less.
+
+## Type floors (ui.type-floors)
+
+Text inputs stay at 16 px or larger: below that, iOS Safari zooms the page when
+one takes focus. A locale whose script reads worse small (Arabic, the Indic
+scripts) keeps its larger sizes when the type scale shrinks for a narrow
+viewport.
 
 ## A state is captured by name (ui.named-states)
 

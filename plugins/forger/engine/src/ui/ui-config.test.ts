@@ -128,3 +128,14 @@ describe('parseUiConfig', () => {
     for (const [name, value, message] of bad) test(`rejects ${name}`, () => expect(() => parse(value)).toThrow(message));
   });
 });
+
+describe('screenshots_branch', () => {
+  test('is parsed when set and absent otherwise', () => {
+    expect(parseUiConfig(JSON.stringify({paths: ['a'], start: 's', screenshots_branch: ' shots '})).screenshots_branch).toBe('shots');
+    expect(parseUiConfig(JSON.stringify({paths: ['a'], start: 's'})).screenshots_branch).toBeUndefined();
+  });
+
+  test('rejects an empty value', () => {
+    expect(() => parseUiConfig(JSON.stringify({paths: ['a'], start: 's', screenshots_branch: ''}))).toThrow(/screenshots_branch/);
+  });
+});
