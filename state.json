@@ -296,7 +296,10 @@
       "ticket": "issue-332",
       "pid": null,
       "session_id": "2d5d6eda-9ab1-49af-b970-8562a9df7a7f",
-      "snapshot": null,
+      "snapshot": {
+        "baseSha": "",
+        "reflogLength": 1
+      },
       "started_at": "2026-11-08T21:55:33.442Z",
       "plan": {
         "stages": [
