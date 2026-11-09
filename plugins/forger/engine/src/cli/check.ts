@@ -28,7 +28,8 @@ import {checkContract, contractItems, formatContract, resolveSandboxImage, findH
 import {loadConfig} from '../config';
 import {checkSequencing} from '../backlog';
 import {readOpenTickets} from './open-tickets';
-import {checkTicketCriteria, criterionOptions} from '../loop';
+import {checkTicketCriteria, criterionOptions, placementProblems} from '../loop';
+import {placementContext} from './placement-context';
 import type {Harness} from '../ports';
 import {UiInfrastructureError} from '../ports';
 import {harnessOfRoot} from './harness-of';
@@ -112,14 +113,21 @@ export const check: Command = {
       }
       const config = loadConfig(projectRoot);
       const result = checkTicketCriteria(body, criterionOptions(projectRoot, config));
+      let native: number[] = [];
       try {
         const open = readOpenTickets(ctx.capture(), config.tracker.label);
         const subject = open.find(t => t.number === n) ?? {number: n, body, native: []};
+        native = subject.native;
         result.problems.push(...checkSequencing({...subject, body}, open));
-        result.ok = result.problems.length === 0;
       } catch (e) {
         result.warnings.push(`could not compare with the other open tickets: ${(e as Error).message}`);
       }
+      try {
+        result.problems.push(...placementProblems(body, placementContext(projectRoot, ctx.run(), native)));
+      } catch (e) {
+        result.warnings.push(`could not check the Placement against the structure: ${(e as Error).message}`);
+      }
+      result.ok = result.problems.length === 0;
       console.log(
         values.json
           ? JSON.stringify({issue: n, ok: result.ok, problems: result.problems, warnings: result.warnings, criteria: result.criteria})

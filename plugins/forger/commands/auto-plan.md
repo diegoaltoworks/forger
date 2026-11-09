@@ -68,6 +68,7 @@ shape. Good tickets:
   cold worker (read the code to fill these in; do not copy stale paths from
   the source);
 - carry a `## Merge` section: `when green`, or `owner reviews` when the acceptance includes a judgement only the owner can make (taste, an approved baseline), with the reason stated in the ticket;
+- carry a `## Placement` section: the folder each piece of new code goes in, as backticked paths, or "none", taken from `## Structure` in process.md and `.forger/structure.json`. When a planned change has nowhere to go (its folder is frozen or recorded over its limit), file a ticket labelled `structure` that makes the folder, and list it under `## Blocked by` of the ticket that needs it (a missing section warns, a flagged folder with neither the move nor the blocker is refused);
 - carry a `## Guards` section: each guarantee the change must keep (a test floor, budget, baseline or threshold) with its file and value, or "none"; start from `work.ts facts --guards <paths the ticket touches>` (an empty section is refused, a missing one warns);
 - have **testable** acceptance criteria, each a named test, a command with its expected result, a sourced number or a named UI state (`work.ts check ticket <n>` on the filed issue must pass; otherwise the engine skips it as `needs-info`);
 - carry `depends_on` so the order is mechanical;

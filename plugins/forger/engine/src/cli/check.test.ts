@@ -52,7 +52,7 @@ describe('check ticket', () => {
     expect(r.code).toBe(0);
     expect(r.out).toContain('warning: has no Guards section');
     const json = JSON.parse((await capture(ctx(project(), ['ticket', '5'], '## Acceptance\n- [ ] `bun run check` exits 0\n', true))).out) as {warnings: string[]};
-    expect(json.warnings).toHaveLength(1);
+    expect(json.warnings.filter(w => w.includes('Guards'))).toHaveLength(1);
   });
 
   test('check ticket refuses an empty Guards section', async () => {
@@ -62,7 +62,7 @@ describe('check ticket', () => {
   });
 
   test('a filled Guards section passes without a warning', async () => {
-    const r = await capture(ctx(project(), ['ticket', '5'], '## Acceptance\n- [ ] `bun run check` exits 0\n\n## Guards\n\nnone\n'));
+    const r = await capture(ctx(project(), ['ticket', '5'], '## Acceptance\n- [ ] `bun run check` exits 0\n\n## Guards\n\nnone\n\n## Placement\n\nnone\n'));
     expect(r.code).toBe(0);
     expect(r.out).not.toContain('warning');
   });
@@ -183,5 +183,62 @@ describe('a single check', () => {
     const after = await capture(ctx(root, ['docs'], 'notes.md', true));
     expect(after.code).toBe(0);
     expect(JSON.parse(after.out)).toEqual([]);
+  });
+});
+
+describe('check ticket placement', () => {
+  const head = '## Acceptance\n- [ ] `bun run check` exits 0\n\n## Guards\n\nnone\n\n';
+
+  function structured(frozen: string[] = [], baseline: Array<{rule: string; path: string; count: number}> = []): string {
+    const root = project();
+    writeFileSync(join(root, '.forger', 'structure.json'), JSON.stringify({frozen}));
+    if (baseline.length) writeFileSync(join(root, '.forger', 'structure-baseline.json'), JSON.stringify({entries: baseline}));
+    return root;
+  }
+
+  /** The tracker answers the issue body, an open `structure` ticket list, and the other open tickets. */
+  function placed(root: string, body: string, native: number[] = []): CommandContext {
+    const run = (cmd: string): string => {
+      if (cmd.startsWith('gh issue list')) return '77\n';
+      if (cmd.startsWith('gh api graphql')) {
+        return JSON.stringify({data: {repository: {issues: {nodes: [{number: 5, body, blockedBy: {nodes: native.map(number => ({number}))}}]}}}});
+      }
+      return body;
+    };
+    return {values: {}, positionals: ['check', 'ticket', '5'], projectRoot: root, pluginRoot: root, run: () => run, capture: () => capturing(run)} as unknown as CommandContext;
+  }
+
+  const over = [{rule: 'structure.folder-size', path: 'src/big', count: 30}];
+
+  test('check ticket warns and passes when Placement is missing', async () => {
+    const r = await capture(placed(structured(), `${head}## Knock-on\n\n`));
+    expect(r.code).toBe(0);
+    expect(r.out).toContain('warning: has no Placement section');
+  });
+
+  test('check ticket refuses a Placement folder recorded over its limit', async () => {
+    const r = await capture(placed(structured([], over), `${head}## Placement\n\n\`src/big/new-thing.ts\`\n`));
+    expect(r.code).toBe(1);
+    expect(r.out).toContain('src/big');
+    expect(r.out).toContain('structure.folder-size');
+    expect(r.out).toContain('labelled structure');
+  });
+
+  test('check ticket refuses a frozen Placement folder', async () => {
+    const r = await capture(placed(structured(['src/old']), `${head}## Placement\n\n\`src/old/\`\n`));
+    expect(r.code).toBe(1);
+    expect(r.out).toContain('structure.frozen-folder');
+  });
+
+  test('check ticket accepts a flagged Placement folder when the ticket is blocked by a structure ticket', async () => {
+    const body = `${head}## Placement\n\n\`src/big/new-thing.ts\`\n\n## Blocked by\n\n#77\n`;
+    expect((await capture(placed(structured([], over), body))).code).toBe(0);
+    expect((await capture(placed(structured([], over), `${head}## Placement\n\n\`src/big/x.ts\`\n`, [77]))).code).toBe(0);
+  });
+
+  test('check ticket accepts a flagged Placement folder when the ticket moves files out of it', async () => {
+    const body = `${head}## What to build\n\nMove the parser files out of src/big into src/parse.\n\n## Placement\n\n\`src/big/\`\n`;
+    const r = await capture(placed(structured([], over), body));
+    expect(r.code).toBe(0);
   });
 });
