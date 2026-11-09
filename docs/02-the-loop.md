@@ -204,6 +204,16 @@ changes the PR from the verifier, and the copy is removed afterwards. That tier
 defaults to one other than the default worker tier where `model_by_priority`
 has one, so the verifier does not share the worker's blind spots.
 
+The criterion "Gates green" is not put to the model. The engine decides it from
+the CI checks on the head, leaving out `forger/verify`, the verdict's own
+status: every check successful is `met` with `ci` evidence naming the checks, a
+failure is `not_met` naming the failing checks, and checks still running are
+waited for up to `--timeout` before the criterion is `cannot_tell` with
+`missing: pending`. Trailing words such as "including the e2e job" name checks
+that must be among the successes. A repository with no CI runs the configured
+`gates` command in the verifier's copy and decides from its exit code. The
+verifier's input lists the criterion as decided by the engine.
+
 When the PR changes images under `docs/screenshots/`, the verifier opens each
 one and checks it against the ticket's "UI states" section and any criterion
 about what is visible. Each state is an entry in the verdict, judged from the
@@ -225,7 +235,7 @@ log with exit 0, a `screenshot` exists under `docs/screenshots/`. A `met` with a
 citation that does not check out becomes `cannot_tell`, and the verifier is asked
 once more about those criteria with the failed citations named. Every
 `cannot_tell` carries `missing`, one of `no_state`, `no_test`, `no_data`,
-`infra`, `ambiguous_criterion`; an answer without it is rejected. The handover
+`infra`, `ambiguous_criterion` (the engine itself also uses `pending`); an answer without it is rejected. The handover
 comment and the supervisor report name it, so the owner sees what to supply.
 
 The output is validated by the verdict validator. Valid output is recorded as

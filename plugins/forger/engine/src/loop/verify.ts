@@ -12,7 +12,8 @@ import type {Tier} from '../config';
 import type {AgentRunner, CapturingRunner, CommandRunner, SpecReport} from '../ports';
 import {BASELINE_MANIFEST, parseBaselines, withoutBaseline, type BaselineManifest} from '../ui';
 import {issueNumber} from './decline';
-import {PR_FIELDS, parsePr} from './pr-checks';
+import {ciConfigured, PR_FIELDS, parsePr} from './pr-checks';
+import {decideGatesGreen, fromGatesCommand, isGatesGreen, stillPending} from './gates-green';
 import {mergeEntries, partitionCriteria} from './mechanical';
 import {evidenceHolds, failedCitations, SCREENSHOTS_DIR, type CommandRun, type CopyRecord} from './evidence-check';
 import {parseCommandLog} from './run-logged';
@@ -45,6 +46,12 @@ export interface VerifyOptions {
   capture?: CapturingRunner;
   /** The command prefix that records a command in the copy's log (`run-logged --file <log>` is appended); absent when no log is kept. */
   runLogged?: string;
+  /** The configured gates command; run in the copy to decide "Gates green" on a repository without CI. */
+  gates?: string;
+  /** How long "Gates green" waits for unfinished checks before it is cannot_tell; 0 or absent does not wait. */
+  checksTimeoutMs?: number;
+  pollMs?: number;
+  sleep?: (ms: number) => Promise<void>;
   now?: () => Date;
 }
 
@@ -141,6 +148,38 @@ export function copyRecord(root: string, commands: CommandRun[]): CopyRecord {
   };
 }
 
+/** Decides each "Gates green" criterion from the head's CI checks, waiting for unfinished ones; the verifier model never sees it. */
+async function decideGates(run: CommandRunner, opts: VerifyOptions, criteria: Criterion[], rollup: unknown, base: string | undefined, dir: string): Promise<CheckedEntry[]> {
+  const ci = base ? ciConfigured(run, base) : false;
+  const pollMs = opts.pollMs ?? 10_000;
+  const sleep = opts.sleep ?? (ms => new Promise<void>(r => setTimeout(r, ms)));
+  const entries: CheckedEntry[] = [];
+  for (const c of criteria) {
+    let current = rollup;
+    let result = decideGatesGreen(c, current, ci);
+    for (let waited = 0; result.state === 'pending' && waited < (opts.checksTimeoutMs ?? 0); waited += pollMs) {
+      await sleep(pollMs);
+      const fresh = JSON.parse(run(`gh pr view ${opts.pr} --json statusCheckRollup`)) as {statusCheckRollup?: unknown};
+      current = withoutVerifyStatus(fresh.statusCheckRollup);
+      result = decideGatesGreen(c, current, ci);
+    }
+    if (result.state === 'decided') entries.push(result.entry);
+    else if (result.state === 'pending') entries.push(stillPending(c));
+    else {
+      let passed = true;
+      if (opts.gates) {
+        try {
+          run(`cd ${shellQuote(dir)} && ${opts.gates}`);
+        } catch {
+          passed = false;
+        }
+      }
+      entries.push(opts.gates ? fromGatesCommand(c, opts.gates, passed) : stillPending(c));
+    }
+  }
+  return entries;
+}
+
 export async function verifyPr(run: CommandRunner, agent: AgentRunner, opts: VerifyOptions): Promise<VerifyResult> {
   const view = JSON.parse(run(`gh pr view ${opts.pr} --json ${PR_FIELDS},headRefName,baseRefName,body`)) as {headRefOid?: string; headRefName?: string; baseRefName?: string; body?: string; statusCheckRollup?: unknown};
   const pr = parsePr(JSON.stringify({...view, statusCheckRollup: withoutVerifyStatus(view.statusCheckRollup)}));
@@ -187,8 +226,10 @@ export async function verifyPr(run: CommandRunner, agent: AgentRunner, opts: Ver
     const screenshots = withoutBaseline(changed, manifest);
     const approved = changed.filter(c => !screenshots.includes(c));
     const unseen = changed.length === 0 ? uiStates : [];
-    const {mechanical: specDecided, remaining: toJudge} = partitionCriteria(criteria, report);
-    const mechanical = [...specDecided, ...unseenStates(unseen)];
+    const gateCriteria = criteria.filter(isGatesGreen);
+    const gatesDecided = gateCriteria.length > 0 ? await decideGates(run, opts, gateCriteria, withoutVerifyStatus(view.statusCheckRollup), view.baseRefName, dir) : [];
+    const {mechanical: specDecided, remaining: toJudge} = partitionCriteria(criteria.filter(c => !gateCriteria.includes(c)), report);
+    const mechanical = [...gatesDecided, ...specDecided, ...unseenStates(unseen)];
     const remaining = toJudge.filter(c => !unseen.includes(c));
     const subject = {pr: opts.pr, head, ticket, verifier: opts.model, at: (opts.now?.() ?? new Date()).toISOString()};
     if (remaining.length === 0) {
@@ -198,7 +239,7 @@ export async function verifyPr(run: CommandRunner, agent: AgentRunner, opts: Ver
     const gate = {checks: pr.checks, failing_checks: pr.failing_checks};
     const ask = async (criteriaAsked: Criterion[], failed?: {criterion: string; citations: string[]}[]) => {
       const result = await agent.run({
-        prompt: buildVerifierInput({criteria: criteriaAsked, diff, gate, screenshots, approved, runLogged, failedCitations: failed}),
+        prompt: buildVerifierInput({criteria: criteriaAsked, decided: gateCriteria, diff, gate, screenshots, approved, runLogged, failedCitations: failed}),
         sessionId: opts.sessionId,
         tier: opts.tier,
         model: opts.model,

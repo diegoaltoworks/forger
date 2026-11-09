@@ -7,10 +7,10 @@
 
 export type Judgement = 'met' | 'not_met' | 'cannot_tell';
 export type Decision = 'pass' | 'block' | 'unclear';
-export type EvidenceKind = 'file' | 'command' | 'test' | 'check' | 'screenshot';
+export type EvidenceKind = 'file' | 'command' | 'test' | 'check' | 'ci' | 'screenshot';
 
 /** What a `cannot_tell` lacked: the owner acts on this, so it is a fixed list and not prose. */
-export const MISSING = ['no_state', 'no_test', 'no_data', 'infra', 'ambiguous_criterion'] as const;
+export const MISSING = ['no_state', 'no_test', 'no_data', 'infra', 'ambiguous_criterion', 'pending'] as const;
 export type Missing = (typeof MISSING)[number];
 
 export interface Evidence {

@@ -22,6 +22,8 @@ export function verifyOne(ctx: CommandContext, pr: number): Promise<VerifyResult
     verifierCommand: 'forger:verify',
     timeoutMinutes: config.limits.timeoutMinutes,
     killGraceSeconds: config.limits.killGraceSeconds,
+    gates: config.gates,
+    checksTimeoutMs: parseInt(ctx.values.timeout as string, 10) * 1000,
     sessionId: randomUUID(),
     runLogged: `bun ${join(ctx.pluginRoot, 'bin', 'work.ts')} run-logged`,
     capture: ctx.capture(),
@@ -32,17 +34,18 @@ export function verifyOne(ctx: CommandContext, pr: number): Promise<VerifyResult
 export const verify: Command = {
   name: 'verify',
   needs: 'config',
-  flags: ['json', 'pr'],
-  help: `  verify --pr N [--json]
+  flags: ['json', 'pr', 'timeout'],
+  help: `  verify --pr N [--json] [--timeout S]
                    Run a fresh-context verifier on the PR's head (the ticket's criteria, the diff and
                    the gate result, never the worker's claims) and record its verdict per criterion
                    (exit 1 unless every criterion is met); on GitHub it also sets the forger/verify
-                   status on the head: success for a pass, failure otherwise`,
+                   status on the head: success for a pass, failure otherwise. "Gates green" is decided
+                   from the head's CI checks, waiting up to the timeout for unfinished ones`,
   async run(ctx) {
     const {values} = ctx;
     const pr = parseInt((values.pr as string | undefined) ?? '', 10);
     if (Number.isNaN(pr)) {
-      console.error('Usage: verify --pr N [--json]');
+      console.error('Usage: verify --pr N [--json] [--timeout S]');
       process.exitCode = 1;
       return;
     }
