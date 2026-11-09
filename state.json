@@ -174,7 +174,10 @@
       "ticket": "issue-360",
       "pid": null,
       "session_id": "c60470f5-a900-462f-b4a3-8795d6bb4b3d",
-      "snapshot": null,
+      "snapshot": {
+        "baseSha": "",
+        "reflogLength": 1
+      },
       "started_at": "2026-11-09T01:15:28.204Z",
       "plan": {
         "stages": [
