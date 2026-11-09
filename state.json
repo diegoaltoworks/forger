@@ -176,7 +176,7 @@
     "issue-369"
   ],
   "in_flight": [],
-  "last_error": null,
+  "last_error": "verify could not decide the \"Gates green\" criterion (`cannot_tell`) after two rounds, so the issue is `needs-human`. The owner should merge PR #374 or make the criterion decidable. The other seven criteria are met and CI is green.",
   "stall_count": 1,
   "declined_tasks": [
     {
