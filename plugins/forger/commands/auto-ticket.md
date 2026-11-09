@@ -171,6 +171,10 @@ work but *before* the branch leaves the machine, stranding a completed ticket
 locally while the backlog claims it is done. Pushing first costs seconds and
 makes the worst case an unmerged branch on the remote rather than lost work.
 
+After `work rebase` rewrites a branch that is already pushed, update it with
+`git push --force-with-lease origin <branch>` (the rebase output names it as `next`),
+never `-f` or `--force`: the hook refuses those.
+
 ```
 git push -u origin feat/<ticket-id>     # FIRST - do not defer this
 gh pr create --title "feat: <summary>" --body "<what + how + gate results>
