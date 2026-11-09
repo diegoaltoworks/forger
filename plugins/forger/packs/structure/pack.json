@@ -1,0 +1,20 @@
+{
+  "id": "structure",
+  "version": "1.0.0",
+  "description": "The shape of the source tree: folders that stay small, prefixes that become folders, names that do not repeat their folder, and a ratchet baseline so an existing repository is not red on day one.",
+  "detect": [],
+  "files": [
+    {"source": "files/structure.md", "target": ".forger/opinions/structure.md"},
+    {"source": "files/structure.json", "target": ".forger/structure.json"}
+  ],
+  "opinions": [
+    {"id": "structure.folder-size", "rung": "check", "summary": "A folder holds no more source files at its top level than folder_limit; group by feature.", "check": "structure"},
+    {"id": "structure.prefix-cluster", "rung": "check", "summary": "Files in one folder that share a first word, prefix_cluster or more, become a folder.", "check": "structure"},
+    {"id": "structure.name-repeats-folder", "rung": "check", "summary": "A file name does not start with the name of the folder it is in.", "check": "structure"},
+    {"id": "structure.frozen-folder", "rung": "check", "summary": "A folder listed as frozen gains no new top-level file.", "check": "structure"},
+    {"id": "structure.shim", "rung": "check", "summary": "A file that only re-exports from another module is deleted unless it is an entry file.", "check": "structure"},
+    {"id": "structure.baseline-ratchet", "rung": "check", "summary": "The structure baseline only shrinks; a branch that grows it needs the owner's decision.", "check": "structure"}
+  ],
+  "checks": ["structure"],
+  "slots": []
+}

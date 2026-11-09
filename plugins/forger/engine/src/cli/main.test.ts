@@ -263,6 +263,51 @@ describe('check tests', () => {
   });
 });
 
+describe('check structure', () => {
+  const tree = (root: string) => {
+    writeFileSync(join(root, '.forger', 'structure.json'), '{"folder_limit": 1}');
+    mkdirSync(join(root, 'src'));
+    for (const f of ['a.ts', 'b.ts']) writeFileSync(join(root, 'src', f), 'export const x = 1;');
+  };
+  const lister = (list: string) => (cmd: string) => {
+    if (cmd === 'git ls-files') return list;
+    if (cmd.startsWith('git merge-base')) return 'abc';
+    if (cmd.startsWith('git show')) throw new Error('not in the base');
+    return '';
+  };
+  const files = lister('src/a.ts\nsrc/b.ts');
+
+  test('prints findings and warnings as data, fails on a new finding and passes once recorded', async () => {
+    const root = projectWith({});
+    process.chdir(root);
+    tree(root);
+    const bad = JSON.parse(await capture(['check', 'structure', '--json'], files));
+    expect(bad.findings.map((f: {rule: string; path: string}) => [f.rule, f.path])).toEqual([['structure.folder-size', 'src']]);
+    expect(bad.warnings).toEqual([]);
+    expect(process.exitCode).toBe(1);
+    process.exitCode = 0;
+    expect(JSON.parse(await capture(['check', 'structure', '--baseline', '--json'], files))).toEqual({baseline: 'written', entries: 1});
+    const ok = JSON.parse(await capture(['check', 'structure', '--json'], files));
+    expect(ok.findings).toEqual([]);
+    expect(ok.warnings).toHaveLength(1);
+    expect(process.exitCode).toBe(0);
+    expect(await capture(['check', 'structure', '--update'], lister('src/a.ts'))).toBe('structure baseline: 1 entries removed');
+    const text = await capture(['check', 'structure'], files);
+    expect(text).toContain('structure.folder-size');
+    process.exitCode = 0;
+  });
+
+  test('a missing config fails loudly', async () => {
+    process.chdir(projectWith({}));
+    const err = spyOn(console, 'error').mockImplementation(() => {});
+    await capture(['check', 'structure'], () => '');
+    expect(err.mock.calls[0][0]).toContain('structure.json not found');
+    err.mockRestore();
+    expect(process.exitCode).toBe(1);
+    process.exitCode = 0;
+  });
+});
+
 describe('check arch', () => {
   const map = JSON.stringify({layers: [{name: 'core', paths: ['core/**']}, {name: 'shell', paths: ['shell/**']}], allow: {shell: ['core']}});
 
