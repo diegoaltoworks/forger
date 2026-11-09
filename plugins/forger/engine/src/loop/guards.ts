@@ -8,6 +8,7 @@
 
 import {globToRegExp} from '../checks';
 import {BASELINE_MANIFEST} from '../ui';
+import {STRUCTURE_BASELINE_PATH} from '../checks';
 
 const HEADING = /^#{1,6}\s+(.*?)\s*$/;
 
@@ -53,6 +54,8 @@ export interface GuardSources {
   coverageBaseline: string | null;
   /** True when `ui.json` exists, so the approved-baselines manifest is a guard. */
   uiInstalled: boolean;
+  /** True when `structure.json` exists, so the structure baseline is a guard. */
+  structureInstalled: boolean;
 }
 
 /** The guard globs a project has when it configures none; pure. */
@@ -60,6 +63,7 @@ export function defaultGuards(sources: GuardSources): string[] {
   const out: string[] = [];
   if (sources.coverageBaseline) out.push(sources.coverageBaseline);
   if (sources.uiInstalled) out.push(BASELINE_MANIFEST);
+  if (sources.structureInstalled) out.push(STRUCTURE_BASELINE_PATH);
   return out;
 }
 

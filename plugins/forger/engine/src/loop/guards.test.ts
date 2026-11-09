@@ -58,7 +58,7 @@ describe('default guards', () => {
     const r = root({'.forger/ui.json': '{}'});
     expect(guardGlobsOf(r, mergeConfig({}))).toEqual(['.forger/ui-baselines/approved.json']);
     expect(guardGlobsOf(root({}), mergeConfig({}))).toEqual([]);
-    expect(defaultGuards({coverageBaseline: null, uiInstalled: false})).toEqual([]);
+    expect(defaultGuards({coverageBaseline: null, uiInstalled: false, structureInstalled: false})).toEqual([]);
   });
   test('a configured list replaces the defaults', () => {
     expect(guardGlobsOf(root({'.forger/ui.json': '{}'}), mergeConfig({guards: ['perf/*.json']}))).toEqual(['perf/*.json']);

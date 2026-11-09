@@ -121,8 +121,8 @@ describe('loadPacks', () => {
 });
 
 describe('pack selection', () => {
-  test('defaults to base and drops duplicates', () => {
-    expect(parsePackList(undefined)).toEqual(['base']);
+  test('defaults to base and structure and drops duplicates', () => {
+    expect(parsePackList(undefined)).toEqual(['base', 'structure']);
     expect(parsePackList(' a, b ,a')).toEqual(['a', 'b']);
   });
   test('reports unknown ids', () => {

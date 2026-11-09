@@ -83,7 +83,7 @@ export function guardSourcesOf(projectRoot: string): GuardSources {
   };
   const testing = read('.forger/testing.json');
   const baseline = testing?.coverage_baseline;
-  return {coverageBaseline: typeof baseline === 'string' ? baseline : null, uiInstalled: read('.forger/ui.json') !== null};
+  return {coverageBaseline: typeof baseline === 'string' ? baseline : null, uiInstalled: read('.forger/ui.json') !== null, structureInstalled: read('.forger/structure.json') !== null};
 }
 
 /** The guard globs in force: the configured ones, else the installed packs' defaults. */

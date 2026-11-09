@@ -6,8 +6,9 @@
 import {existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync} from 'fs';
 import {dirname, join} from 'path';
 
-import {LOCK_PATH, loadPacks, mergeLock, parseLock, renderLock, selectPacks, sha256, type Lock, type LockedFile} from './packs';
-import type {Harness} from '../ports';
+import {DEFAULT_PACKS, LOCK_PATH, loadPacks, mergeLock, parseLock, renderLock, selectPacks, sha256, type Lock, type LockedFile} from './packs';
+import type {CommandRunner, Harness} from '../ports';
+import {finishStructure, formatStructureSetup, type StructureSetup} from './structure-defaults';
 import {CONFIG_FILE, FORGER_DIR, detectLayout, forgerPath} from '../config';
 
 export interface SetupOptions {
@@ -16,12 +17,14 @@ export interface SetupOptions {
   trackerKind?: string;
   /** The flavour to record in the config, as `<name>@<version>`. */
   flavour?: string;
-  /** Pack ids to install; defaults to `base`. */
+  /** Pack ids to install; defaults to DEFAULT_PACKS. */
   packs?: string[];
   /** The harness the worker runs in; its commands are installed where it reads them. */
   harness?: Harness;
   /** The harness whose settings get forger's tool-call hook, for workers and the supervisor alike. */
   hookHarness?: Harness;
+  /** Lists the project's files; with it, installing the structure pack records its baseline. */
+  run?: CommandRunner;
 }
 
 export interface SetupEntry {
@@ -32,6 +35,7 @@ export interface SetupEntry {
 export interface SetupResult {
   files: SetupEntry[];
   gitignore: {added: string[]; kept: string[]};
+  structure?: StructureSetup;
 }
 
 const CHECK_MARKER = /\bwork\.ts\s+check\b|\bcheck docs\b/;
@@ -125,7 +129,7 @@ export function runSetup(projectRoot: string, pluginRoot: string, opts: SetupOpt
   const templates = join(pluginRoot, 'templates');
   const read = (name: string) => readFileSync(join(templates, name), 'utf-8');
 
-  const {packs, unknown} = selectPacks(loadPacks(pluginRoot), opts.packs ?? ['base']);
+  const {packs, unknown} = selectPacks(loadPacks(pluginRoot), opts.packs ?? DEFAULT_PACKS);
   if (unknown.length > 0) throw new Error(`Unknown pack: ${unknown.join(', ')}`);
 
   const files: SetupEntry[] = [
@@ -158,6 +162,10 @@ export function runSetup(projectRoot: string, pluginRoot: string, opts: SetupOpt
   }
   files.push({path: LOCK_PATH, action: lockChanged ? 'written' : 'kept'});
 
+  const structure = packs.some(p => p.manifest.id === 'structure')
+    ? finishStructure(projectRoot, files.some(f => f.path === '.forger/structure.json' && f.action === 'written'), opts.run)
+    : undefined;
+
   if (opts.harness) files.push(...installCommands(projectRoot, pluginRoot, opts.harness));
   const hookHarness = opts.hookHarness ?? opts.harness;
   if (hookHarness) files.push(...installHook(projectRoot, hookHarness));
@@ -165,12 +173,13 @@ export function runSetup(projectRoot: string, pluginRoot: string, opts: SetupOpt
   const ignorePath = join(projectRoot, '.gitignore');
   const merged = mergeGitignore(existsSync(ignorePath) ? readFileSync(ignorePath, 'utf-8') : '', gitignoreLines(detectLayout(projectRoot).dir));
   if (merged.added.length > 0) writeFileSync(ignorePath, merged.text);
-  return {files, gitignore: {added: merged.added, kept: merged.kept}};
+  return {files, gitignore: {added: merged.added, kept: merged.kept}, ...(structure ? {structure} : {})};
 }
 
 export function formatSetup(result: SetupResult, offeredPresets: string[] = []): string {
   const lines = result.files.map(f => `${f.action.padEnd(7)} ${f.path}`);
   lines.push(...result.gitignore.added.map(l => `ignored ${l}`));
+  if (result.structure) lines.push(...formatStructureSetup(result.structure));
   lines.push(...offeredPresets.map(p => `flavour available: ${p} (setup --flavour ${p})`));
   return lines.join('\n');
 }
