@@ -57,6 +57,7 @@ What each step prints, and what to do on a halt: [Getting started](docs/getting-
 | [Configuration reference](docs/reference/configuration.md) | Every config field |
 | [Commands reference](docs/reference/commands.md) | Every command |
 | [Reference index](docs/reference/README.md) | The tracker, skill slots, pipeline, adapters and engine |
+| [Structure decays between tickets](docs/09-structure.md) | Why gates per ticket miss structure, and what prevents it |
 | [Failure catalogue](docs/06-failure-catalogue.md) | Failures seen in real runs, and their fixes |
 | [Roadmap](docs/07-roadmap.md) | What comes next |
 | [Glossary](GLOSSARY.md) | The vocabulary |
