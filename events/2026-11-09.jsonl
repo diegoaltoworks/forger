@@ -6,3 +6,4 @@
 {"event":"picked","at":"2026-11-09T01:25:54.987Z","iteration":184,"ticket":"issue-362","reason":null}
 {"event":"worker_denied","at":"2026-11-09T01:29:38.345Z","iteration":183,"ticket":"issue-361","reason":"push-base: cd /home/diego/work/forger/.forger/worktrees/issue-361; git push -f origin feat/issue-361 2>&1 | tail -1; timeout 100 bun plugins/forger/bin/work.ts verify --pr 370 --json | tail -c 150"}
 {"event":"picked","at":"2026-11-09T01:29:51.734Z","iteration":185,"ticket":"issue-369","reason":null}
+{"event":"picked","at":"2026-11-09T01:37:43.722Z","iteration":186,"ticket":"issue-364","reason":null}
