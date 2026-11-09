@@ -300,7 +300,10 @@
       "ticket": "issue-361",
       "pid": null,
       "session_id": "9b9b0c62-b337-44f8-ad85-611c954a7336",
-      "snapshot": null,
+      "snapshot": {
+        "baseSha": "",
+        "reflogLength": 1
+      },
       "started_at": "2026-11-09T01:20:16.443Z",
       "plan": {
         "stages": [
