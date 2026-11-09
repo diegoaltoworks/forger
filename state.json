@@ -299,7 +299,10 @@
       "ticket": "issue-363",
       "pid": null,
       "session_id": "18940384-792e-49ae-ae65-2ba8205f10fc",
-      "snapshot": null,
+      "snapshot": {
+        "baseSha": "",
+        "reflogLength": 1
+      },
       "started_at": "2026-11-09T01:15:37.507Z",
       "plan": {
         "stages": [
