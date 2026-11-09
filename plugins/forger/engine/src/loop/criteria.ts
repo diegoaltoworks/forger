@@ -12,6 +12,7 @@ import {checkProbes} from './probe';
 import {parseCriteria} from './verdict';
 
 import {absoluteRuleWarnings} from './absolute-rule';
+import {placementWarnings} from './placement';
 
 export type CriterionForm = 'test' | 'command' | 'number' | 'ui';
 
@@ -102,5 +103,5 @@ export function checkTicketCriteria(body: string, options: CriterionOptions = {}
   if (criteria.length === 0) problems.push('the ticket has no acceptance criteria (checkbox items under an Acceptance heading)');
   const guards = checkGuards(body);
   problems.push(...guards.problems, ...checkProbes(body));
-  return {ok: problems.length === 0, criteria, problems, warnings: [...guards.warnings, ...absoluteRuleWarnings(body, options.uiStates ?? [])]};
+  return {ok: problems.length === 0, criteria, problems, warnings: [...guards.warnings, ...placementWarnings(body), ...absoluteRuleWarnings(body, options.uiStates ?? [])]};
 }

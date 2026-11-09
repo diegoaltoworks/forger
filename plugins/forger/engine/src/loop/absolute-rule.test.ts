@@ -2,7 +2,7 @@ import {describe, expect, test} from 'bun:test';
 
 import {checkTicketCriteria} from './criteria';
 
-const base = '## Acceptance\n- [ ] `bun run check` exits 0\n\n## Guards\n\nnone\n';
+const base = '## Acceptance\n- [ ] `bun run check` exits 0\n\n## Guards\n\nnone\n\n## Placement\n\nnone\n';
 
 describe('absolute UI rules', () => {
   test('check ticket warns on an absolute UI rule with no measured number', () => {

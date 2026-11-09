@@ -39,6 +39,10 @@
 
 <Each guarantee the change must keep: the file that holds it and the value it holds (a coverage floor, a size budget, an approved baseline, an e2e layout floor), or "none" when the change touches no guarded area. `facts --guards <path>...` lists the guard files and the tests that name the paths the change touches.>
 
+## Placement
+
+<The folder each piece of new code goes in, as backticked paths, or "none" when the ticket adds no file. A folder that is frozen or recorded over its limit takes no new file: move files out of it in this ticket, or file a ticket labelled `structure` that makes the folder and list it under "Blocked by".>
+
 ## Probe
 
 <!-- Optional. Commands that measure the assumption this ticket rests on; the engine runs them before a worker starts and hands the ticket back if one fails. One per line, a backticked command then its expected result:
