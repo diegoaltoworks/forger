@@ -18,6 +18,8 @@ export interface GateResult {
 export interface VerifierInput {
   criteria: Criterion[];
   diff: string;
+  /** Criteria the engine decided itself; listed so the verifier does not judge them. */
+  decided?: Criterion[];
   gate: GateResult;
   /** Images the PR changed under docs/screenshots/; empty when it changed none. */
   screenshots?: string[];
@@ -61,6 +63,9 @@ export function buildVerifierInput(input: VerifierInput): string {
     '',
     '## Acceptance criteria',
     criteria,
+    ...((input.decided ?? []).length > 0
+      ? ['', '## Decided by the engine (do not judge these)', ...(input.decided ?? []).map(c => `- ${c.text}`)]
+      : []),
     '',
     `## Gate result for the head commit: ${gate}`,
     '',

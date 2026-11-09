@@ -68,6 +68,11 @@ export function checksConclusion(rollup: unknown, ciConfigured: boolean): Checks
   return results.includes('pending') ? 'pending' : 'success';
 }
 
+/** Every check on the rollup with its outcome, by name. */
+export function namedChecks(rollup: unknown): {name: string; result: EntryResult}[] {
+  return entries(rollup).map(e => ({name: e.name ?? e.context ?? 'unnamed check', result: entryResult(e)}));
+}
+
 export function failingChecks(rollup: unknown): string[] {
   return entries(rollup)
     .filter(e => entryResult(e) === 'failed')

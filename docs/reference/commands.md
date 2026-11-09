@@ -78,7 +78,7 @@ $ bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts status --json
 | `intent` | Classifies a planning request as product or creative. |
 | `pr-body` | Checks a PR body keeps its closing line and the ticket's review sections. |
 | `facts` | Reads the branch, the issue, its closing PR and a PR's CI conclusion, changing nothing. `--guards <path>...` lists the guard files and the test files that name any of the paths. |
-| `verify` | Runs a fresh-context verifier on a PR's head and records its verdict per criterion. |
+| `verify` | Runs a fresh-context verifier on a PR's head and records its verdict per criterion; "Gates green" is decided from the head's CI checks, not by the model. |
 | `merge` | Waits for every check, then squash-merges only a passing, verified PR. |
 | `handover` | After a failed verify, says the next move or hands the ticket to the owner. |
 | `critique` | Runs a critic on a change the audience sees and files its findings as tickets. |
