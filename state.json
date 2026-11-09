@@ -1,6 +1,6 @@
 {
   "iteration": 187,
-  "status": "halted",
+  "status": "ready",
   "last_completed_at": "2026-11-09T01:50:24.716Z",
   "completed_iterations": 170,
   "failed_iterations": 7,
@@ -177,7 +177,7 @@
   ],
   "in_flight": [],
   "last_error": "verify could not decide the \"Gates green\" criterion (`cannot_tell`) after two rounds, so the issue is `needs-human`. The owner should merge PR #374 or make the criterion decidable. The other seven criteria are met and CI is green.",
-  "stall_count": 1,
+  "stall_count": 0,
   "declined_tasks": [
     {
       "ticket": "issue-81",
