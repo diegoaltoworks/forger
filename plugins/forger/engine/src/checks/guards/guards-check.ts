@@ -41,7 +41,7 @@ function testGlobs(projectRoot: string): string[] {
   return Array.isArray(paths) && paths.every(p => typeof p === 'string') ? (paths as string[]) : ['**/*.test.*', '**/*.spec.*'];
 }
 
-function decisionsOfBranch(run: CommandRunner): string {
+export function decisionsOfBranch(run: CommandRunner): string {
   const issue = /^feat\/issue-(\d+)/.exec(run('git rev-parse --abbrev-ref HEAD').trim())?.[1];
   if (!issue) return '';
   try {

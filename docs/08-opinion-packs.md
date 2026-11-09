@@ -101,6 +101,10 @@ A layer may always import itself, and files outside every layer, packages and bu
 
 The decision to use packs is [ADR 0003](adr/0003-opinion-packs.md).
 
+## The structure pack
+
+The `structure` pack keeps the shape of the source tree: small folders, prefixes that become folders, names that do not repeat their folder, frozen folders and no re-export shims. `check structure` enforces all of it from `.forger/structure.json`. A baseline, `.forger/structure-baseline.json`, records what a repository already has so it warns and only new findings fail; it is written once with `check structure --baseline` and only shrinks with `--update`. A branch that grows it fails unless the ticket's Decisions name the file. Each rule is waivable by path in `.forger/waivers.json`.
+
 ## The safety pack
 
 The `safety` pack holds principle 9 (data in production is sacred) and the never-commit-a-secret rule. Two of its opinions are enforced by `check safety`, each under its own opinion id so a waiver can target one:
