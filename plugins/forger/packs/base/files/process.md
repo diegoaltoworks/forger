@@ -59,6 +59,19 @@ as enforced, not advisory.
 The retro refines this file over time: a lesson that holds for this project
 lands here by PR, and one that holds for every project goes upstream to forger.
 
+## Structure
+
+Where a file goes is part of the work. State this repo's convention here, or point at the ADR that holds it. Defaults:
+
+- Folders are features, named with the glossary's terms.
+- Files are roles inside a feature: a form, a view, actions, a server loader.
+- A file name never repeats its folder's name.
+- The server suffix always comes with its guard.
+- Tests are named for the file or the behaviour they cover.
+- Shared test doubles live in one test folder per package.
+
+`check structure` enforces what it can; a new finding is fixed by moving the file, never by waiving it.
+
 ## The ticket shape
 
 Each entry in `backlog.json` `features` looks like:

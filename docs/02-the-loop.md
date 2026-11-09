@@ -309,6 +309,10 @@ failure. A criterion judged `cannot_tell` in more than one round is called out i
 the comment as one to reword or make mechanical. `handover --list` reports the
 tickets handed over, with the criteria at fault.
 
+## Where a worker puts code
+
+A worker reads `## Structure` in the project's process file before it adds a file: it finds the feature folder, creates one when there is none, never grows a folder `check structure` reports over its limit or frozen, and runs `check structure` before it commits. A new finding is fixed by moving the file, not by waiving it; only the owner waives. The plan command writes the section on a repo that has none.
+
 ## Probes before a worker
 
 A ticket may carry a `## Probe` section (see `docs/03-tickets.md`). The engine

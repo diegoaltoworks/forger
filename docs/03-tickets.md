@@ -162,3 +162,5 @@ chain.
 `depends_on` is what stops a worker building on a base that lacks its
 prerequisite. Set it whenever order matters; prose in the work order alone is
 not enough for the engine.
+
+The Placement section is what the worker follows when it adds a file; `## Structure` in the project's process file holds the convention behind it.
