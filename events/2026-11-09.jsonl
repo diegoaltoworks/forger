@@ -3,3 +3,4 @@
 {"event":"picked","at":"2026-11-09T01:15:41.777Z","iteration":182,"ticket":"issue-363","reason":null}
 {"event":"picked","at":"2026-11-09T01:20:20.698Z","iteration":183,"ticket":"issue-361","reason":null}
 {"event":"worker_denied","at":"2026-11-09T01:21:54.021Z","iteration":182,"ticket":"issue-363","reason":"push-base: bun plugins/forger/bin/work.ts rebase --ticket issue-363 --json 2>&1 | tail -2; git log --oneline -3 | cat; git push -qf origin feat/issue-363 2>&1 | tail -1; bun plugins/forger/bin/work.ts verify --pr 368 --json 2>&1 | grep -o '\"decision\":\"[a-z]*\"'; bun plugins/forger/bin/work.ts merge --pr 368 --json 2>&1 | tail -c 300"}
+{"event":"picked","at":"2026-11-09T01:25:54.987Z","iteration":184,"ticket":"issue-362","reason":null}
