@@ -20,7 +20,7 @@ export interface WorktreeResult {
 }
 
 export type RebaseResult =
-  | {status: 'clean'; ticket: string; branch: string; path: string; onto: string}
+  | {status: 'clean'; ticket: string; branch: string; path: string; onto: string; next: string | null}
   | {status: 'conflict'; ticket: string; branch: string; path: string; onto: string; files: string[]}
   | {status: 'error'; ticket: string; branch: string; path: string; onto: string; error: string};
 
@@ -103,8 +103,13 @@ export function rebaseOnBase(run: CapturingRunner, o: WorktreeOptions): RebaseRe
   const git = `git -C ${quote(path)}`;
   const fetched = run(`${git} fetch origin ${quote(o.baseBranch)}`);
   if (fetched.exitCode !== 0) return {...base, status: 'error', error: `fetch failed: ${failure(fetched)}`};
+  const before = run(`${git} rev-parse HEAD`).stdout.trim();
   const rebased = run(`${git} rebase ${quote(onto)}`);
-  if (rebased.exitCode === 0) return {...base, status: 'clean'};
+  if (rebased.exitCode === 0) {
+    // A rewritten branch no longer fast-forwards its remote; the hook refuses -f, so name the push that works.
+    const rewritten = run(`${git} rev-parse HEAD`).stdout.trim() !== before;
+    return {...base, status: 'clean', next: rewritten ? `git push --force-with-lease origin ${branch}` : null};
+  }
   const unmerged = run(`${git} diff --name-only --diff-filter=U`);
   const files = unmerged.exitCode === 0 ? unmerged.stdout.split('\n').map(f => f.trim()).filter(Boolean) : [];
   if (files.length === 0) return {...base, status: 'error', error: failure(rebased)};

@@ -39,13 +39,14 @@ export const rebase: Command = {
   help: `  rebase --ticket ID [--json]
                    Rebase the ticket's branch on the current remote base branch, in its worktree,
                    and report clean, conflict (with the files; the rebase is left in progress there
-                   to resolve) or error (exit 1 unless clean)`,
+                   to resolve) or error (exit 1 unless clean). A clean rebase that rewrote the branch
+                   carries next: the git push --force-with-lease to run`,
   run(ctx) {
     const r = rebaseOnBase(runner(ctx), options(ctx.values.ticket as string | undefined, ctx));
     if (r.status !== 'clean') process.exitCode = 1;
     const text =
       r.status === 'clean'
-        ? `${r.branch} is on ${r.onto}`
+        ? `${r.branch} is on ${r.onto}${r.next ? `\nnext: ${r.next}` : ''}`
         : r.status === 'conflict'
           ? `${r.branch} conflicts with ${r.onto}: ${r.files.join(', ')}`
           : `rebase: ${r.error}`;

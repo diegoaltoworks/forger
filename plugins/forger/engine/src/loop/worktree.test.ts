@@ -97,8 +97,18 @@ describe('removeWorktree', () => {
 describe('rebaseOnBase', () => {
   test('clean: fetch then rebase inside the worktree', () => {
     const {run, calls} = fake({});
-    expect(rebaseOnBase(run, O)).toEqual({status: 'clean', ticket: 'issue-9', branch: 'feat/issue-9', path: PATH, onto: 'origin/main'});
-    expect(calls).toEqual([`git -C '${PATH}' fetch origin 'main'`, `git -C '${PATH}' rebase 'origin/main'`]);
+    expect(rebaseOnBase(run, O)).toEqual({status: 'clean', ticket: 'issue-9', branch: 'feat/issue-9', path: PATH, onto: 'origin/main', next: null});
+    expect(calls).toEqual([
+      `git -C '${PATH}' fetch origin 'main'`,
+      `git -C '${PATH}' rev-parse HEAD`,
+      `git -C '${PATH}' rebase 'origin/main'`,
+      `git -C '${PATH}' rev-parse HEAD`,
+    ]);
+  });
+  test('rebase that rewrites the branch reports the force-with-lease push as next', () => {
+    const heads = ['aaa', 'bbb'];
+    const run: CapturingRunner = cmd => (cmd.includes('rev-parse') ? ok(heads.shift() ?? '') : ok());
+    expect(rebaseOnBase(run, O)).toMatchObject({status: 'clean', next: 'git push --force-with-lease origin feat/issue-9'});
   });
   test('conflict lists the unmerged files', () => {
     const {run, calls} = fake({
