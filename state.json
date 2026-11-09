@@ -304,7 +304,10 @@
       "ticket": "issue-365",
       "pid": null,
       "session_id": "e1a602fc-4b76-496e-8704-3de0e18a8f2c",
-      "snapshot": null,
+      "snapshot": {
+        "baseSha": "",
+        "reflogLength": 1
+      },
       "started_at": "2026-11-09T01:44:32.352Z",
       "plan": {
         "stages": [
