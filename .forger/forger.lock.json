@@ -2,7 +2,7 @@
   "packs": [
     {
       "id": "base",
-      "version": "1.1.0",
+      "version": "1.6.0",
       "files": [
         {
           "path": ".forger/templates/pr.md",
@@ -21,6 +21,10 @@
           "sha256": "e48e7d307f70e900dda85a2a0d8a9c0ef189d5d6e53b8bd0f1c1a401d3e78abf"
         },
         {
+          "path": ".forger/templates/spike.md",
+          "sha256": "308819702e497fc628847868940ef615e643bc194ae56599bed85ff5f76133d1"
+        },
+        {
           "path": ".forger/templates/ticket.md",
           "sha256": "b3073b3bb6cfe2a18caa217702fd245082e743da6f823af31cc0932e71c7f7db"
         },
@@ -32,7 +36,7 @@
     },
     {
       "id": "docs",
-      "version": "1.0.0",
+      "version": "1.2.0",
       "files": [
         {
           "path": ".forger/opinions/docs.md",
@@ -42,7 +46,7 @@
     },
     {
       "id": "architecture",
-      "version": "1.1.0",
+      "version": "1.2.0",
       "files": [
         {
           "path": ".forger/opinions/architecture.md",
@@ -56,11 +60,11 @@
     },
     {
       "id": "safety",
-      "version": "1.0.1",
+      "version": "1.0.2",
       "files": [
         {
           "path": ".forger/opinions/safety.md",
-          "sha256": "a15654faf8593762468c89b637385ae8deaf95dfa64c4d3abc56c5655687671b"
+          "sha256": "6dca90d11c581111d1ce6d009d2a22d58a7927427f27292716e48cdd231cc3aa"
         },
         {
           "path": ".forger/safety.json",
@@ -70,7 +74,7 @@
     },
     {
       "id": "testing",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "files": [
         {
           "path": ".forger/opinions/testing.md",
@@ -79,6 +83,24 @@
         {
           "path": ".forger/testing.json",
           "sha256": "c80ecd63e389ec0d08908b3a91c1bd100237a21dbb067cc31b389b160f5a8d37"
+        }
+      ]
+    },
+    {
+      "id": "structure",
+      "version": "1.0.0",
+      "files": [
+        {
+          "path": ".forger/opinions/structure.md",
+          "sha256": "b12d09b684dd78c079dfbd3b88a4a1cab272ba94c745fc92ac872614f1fd8601"
+        },
+        {
+          "path": ".forger/structure.json",
+          "sha256": "2e313db9caebb8573aab252a35a71a06577815e4bfa9359349d0c4655da91a90"
+        },
+        {
+          "path": ".forger/templates/structure-review.md",
+          "sha256": "41d1fa1dd0c0e1b6b7ffc6d027478d03586b8e179938f07c8f450d968ede370d"
         }
       ]
     }

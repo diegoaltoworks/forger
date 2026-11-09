@@ -1,0 +1,117 @@
+{
+  "entries": [
+    {
+      "rule": "structure.cycle",
+      "path": "plugins/forger/engine/src/backlog/github-backlog.ts",
+      "key": "plugins/forger/engine/src/backlog/github-backlog.ts -> plugins/forger/engine/src/backlog/index.ts -> plugins/forger/engine/src/loop/criteria.ts -> plugins/forger/engine/src/loop/index.ts -> plugins/forger/engine/src/loop/parallel.ts -> plugins/forger/engine/src/loop/placement.ts -> plugins/forger/engine/src/loop/runner.ts -> plugins/forger/engine/src/loop/ticket-check.ts -> plugins/forger/engine/src/loop/worktree-workspace.ts"
+    },
+    {
+      "rule": "structure.cycle",
+      "path": "plugins/forger/engine/src/checks/checks.ts",
+      "key": "plugins/forger/engine/src/checks/checks.ts -> plugins/forger/engine/src/checks/docs/docs-check.ts -> plugins/forger/engine/src/checks/docs/index.ts -> plugins/forger/engine/src/checks/index.ts -> plugins/forger/engine/src/packs/index.ts -> plugins/forger/engine/src/packs/setup.ts -> plugins/forger/engine/src/packs/structure-defaults.ts -> plugins/forger/engine/src/packs/upgrade.ts -> plugins/forger/engine/src/pipeline/flavour.ts -> plugins/forger/engine/src/pipeline/index.ts -> plugins/forger/engine/src/pipeline/load.ts -> plugins/forger/engine/src/pipeline/resolve.ts"
+    },
+    {
+      "rule": "structure.folder-size",
+      "path": "plugins/forger/engine/src/adapters",
+      "count": 33
+    },
+    {
+      "rule": "structure.folder-size",
+      "path": "plugins/forger/engine/src/cli",
+      "count": 48
+    },
+    {
+      "rule": "structure.folder-size",
+      "path": "plugins/forger/engine/src/loop",
+      "count": 57
+    },
+    {
+      "rule": "structure.name-repeats-folder",
+      "path": "plugins/forger/engine/src/checks/arch/arch-check.ts"
+    },
+    {
+      "rule": "structure.name-repeats-folder",
+      "path": "plugins/forger/engine/src/checks/decisions/decisions-check.ts"
+    },
+    {
+      "rule": "structure.name-repeats-folder",
+      "path": "plugins/forger/engine/src/checks/docs/docs-check.ts"
+    },
+    {
+      "rule": "structure.name-repeats-folder",
+      "path": "plugins/forger/engine/src/checks/docs/docs-content.ts"
+    },
+    {
+      "rule": "structure.name-repeats-folder",
+      "path": "plugins/forger/engine/src/checks/docs/docs-readme.ts"
+    },
+    {
+      "rule": "structure.name-repeats-folder",
+      "path": "plugins/forger/engine/src/checks/docs/docs-roadmap.ts"
+    },
+    {
+      "rule": "structure.name-repeats-folder",
+      "path": "plugins/forger/engine/src/checks/docs/docs-rules.ts"
+    },
+    {
+      "rule": "structure.name-repeats-folder",
+      "path": "plugins/forger/engine/src/checks/docs/docs-slots.ts"
+    },
+    {
+      "rule": "structure.name-repeats-folder",
+      "path": "plugins/forger/engine/src/checks/guards/guards-check.ts"
+    },
+    {
+      "rule": "structure.name-repeats-folder",
+      "path": "plugins/forger/engine/src/checks/hooks/hooks-check.ts"
+    },
+    {
+      "rule": "structure.name-repeats-folder",
+      "path": "plugins/forger/engine/src/checks/safety/safety-check.ts"
+    },
+    {
+      "rule": "structure.name-repeats-folder",
+      "path": "plugins/forger/engine/src/checks/spec/spec-check.ts"
+    },
+    {
+      "rule": "structure.name-repeats-folder",
+      "path": "plugins/forger/engine/src/checks/structure/structure-check.ts"
+    },
+    {
+      "rule": "structure.name-repeats-folder",
+      "path": "plugins/forger/engine/src/checks/testing/testing-check.ts"
+    },
+    {
+      "rule": "structure.name-repeats-folder",
+      "path": "plugins/forger/engine/src/checks/ui/ui-check.ts"
+    },
+    {
+      "rule": "structure.name-repeats-folder",
+      "path": "plugins/forger/engine/src/ui/ui-config.ts"
+    },
+    {
+      "rule": "structure.prefix-cluster",
+      "path": "plugins/forger/engine/src/checks/docs",
+      "prefix": "docs",
+      "files": [
+        "plugins/forger/engine/src/checks/docs/docs-check.ts",
+        "plugins/forger/engine/src/checks/docs/docs-content.ts",
+        "plugins/forger/engine/src/checks/docs/docs-readme.ts",
+        "plugins/forger/engine/src/checks/docs/docs-roadmap.ts",
+        "plugins/forger/engine/src/checks/docs/docs-rules.ts",
+        "plugins/forger/engine/src/checks/docs/docs-slots.ts"
+      ]
+    },
+    {
+      "rule": "structure.prefix-cluster",
+      "path": "plugins/forger/engine/src/loop",
+      "prefix": "verify",
+      "files": [
+        "plugins/forger/engine/src/loop/verify-input.ts",
+        "plugins/forger/engine/src/loop/verify-status.ts",
+        "plugins/forger/engine/src/loop/verify-subject.ts",
+        "plugins/forger/engine/src/loop/verify.ts"
+      ]
+    }
+  ]
+}
