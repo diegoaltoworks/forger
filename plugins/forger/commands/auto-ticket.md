@@ -90,6 +90,18 @@ takes the ticket out of the backlog; do not relabel the issue by hand.
   enforced, not advisory.
 - Separate files per concern where the codebase is organised that way - a new
   responsibility gets a new file, not a section bolted onto an existing one.
+- **Place code by feature.** Read `## Structure` in `process.md` (and the
+  structure opinions among the installed ones) before adding a file.
+  - Find the feature folder the file belongs in. If there is none, create one
+    following `## Structure`, named with the glossary's terms.
+  - Never add a sibling to a folder that `check structure` reports over its
+    limit or frozen; the ticket's Placement section names where it goes.
+  - Never name a file with its folder's name as a prefix.
+  - When the ticket touches a catch-all file (one that holds many features'
+    code), move the touched part to its feature's home instead of growing the file.
+  - When logic moves, update its imports. Leave no re-export shim behind.
+  - Run `check structure` before committing. A new finding is fixed by moving
+    the file, not by waiving it. Only the owner waives.
 - Work test-first from the ticket's acceptance criteria, at the highest existing
   seam, in the `test_first` slot. Built-in: write the failing test, make it pass,
   then refactor.

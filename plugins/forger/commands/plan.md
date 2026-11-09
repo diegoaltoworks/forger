@@ -171,6 +171,11 @@ sections "Brief, verbatim" and "Interpretation of references" and carries
 "Prototype pick"; drop them otherwise. Decisions recorded as ADRs are linked
 from the plan, not restated in it; a decision lives in one place.
 
+When `process.md` has no `## Structure` section, add one from the base template
+as part of the plan: the repo's folder convention, or the ADR that holds it.
+Ground it in the tree as it is and the glossary's terms, and ask the owner only
+where the tree does not settle it.
+
 ## 5. Draft the tickets
 
 Turn the agreed plan into tickets in the `process.md` shape, for

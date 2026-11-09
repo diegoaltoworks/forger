@@ -62,3 +62,14 @@ A recorded finding warns; a new one fails.
 `check structure --update` removes entries that no longer hold and adds none.
 A branch that grows the baseline fails unless the ticket's Decisions name the file.
 Vendored and generated code goes under `ignore`, and any rule can be waived for a path in `.forger/waivers.json`.
+
+## Where a worker puts a file
+
+The rules above are what the check enforces; these are what a worker does before it runs.
+
+- Find the feature folder a new file belongs in. If there is none, create one following `## Structure` in `process.md`.
+- Never add a sibling to a folder that is over its limit or frozen.
+- Never name a file with its folder's name as a prefix.
+- When a ticket touches a catch-all file, move the touched part to its feature's home instead of growing the file.
+- When logic moves, update its imports and leave no re-export shim.
+- Run `check structure` before committing. A new finding is fixed by moving the file; only the owner waives.
