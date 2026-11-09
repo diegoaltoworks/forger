@@ -55,6 +55,13 @@ An import into a group it may not import, or a package outside the list, is a fi
 With `cycles` set to true, each cycle among the project's own files is one finding at the first file of the cycle, listing the cycle.
 Type-only imports are erased at runtime and do not count.
 
+## A periodic review (review)
+
+`review.every_merged` merged tickets since the last review, or more than `review.warnings_over` baseline entries, make the loop file one whole-repo structure review.
+The review is a spike: a document at `docs/review-code-structure.md`, an ADR, and drafted tickets for the owner to file.
+Set either number to 0 to turn that trigger off.
+No second review is filed while one labelled `structure-review` is open.
+
 ## The baseline only shrinks (structure.baseline-ratchet)
 
 A repository that already breaks these rules records the findings once with `check structure --baseline`.

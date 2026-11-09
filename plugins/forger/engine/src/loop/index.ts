@@ -33,6 +33,8 @@ export * from './run-facts';
 export * from './runner';
 export * from './schedule-log';
 export * from './state';
+export * from './structure-review';
+export * from './structure-review-io';
 export * from './status-report';
 export * from './mechanical';
 export * from './evidence-check';

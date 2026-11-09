@@ -50,6 +50,8 @@ export interface IterationContext {
   refreshBacklog(): Promise<void>;
   emit(kind: EventKind, iteration: number, ticket: string | null, reason: string | null): void;
   halt(reason: string, kind?: TerminalEventKind): void;
+  /** Runs after a merged ticket is recorded; the structure review trigger. */
+  afterMerge?(iteration: number): void;
   /** The pipeline plan for a ticket; absent or null leaves the run without one. */
   resolvePlan?(ticket: string | null): StoredPlan | null;
   /** Runs a probe command on the host; absent, probes are not run. */
@@ -366,6 +368,7 @@ function settle(
     if (ticket && backlogCompleted && !state.completed_tasks.includes(ticket)) {
       state.completed_tasks.push(ticket);
     }
+    if (outcome.merged && outcome.result === 'success') ctx.emit('merged', iteration, ticket, null);
   } else if (outcome.result === 'failure') {
     ctx.logger.log('ERROR', `Iteration ${iteration}: ${outcome.error}`);
     state.failed_iterations++;
@@ -388,6 +391,8 @@ function settle(
   state.declined_tasks = declines.declined_tasks;
   state.consecutive_declines = declines.consecutive_declines;
   ctx.store.save(state);
+
+  if (outcome.merged && outcome.result === 'success') ctx.afterMerge?.(iteration);
 
   if (outcome.ownerReviewPr !== undefined) handToOwner(ctx, iteration, ticket, outcome.ownerReviewPr);
 

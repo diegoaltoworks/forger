@@ -7,6 +7,7 @@
   "server_guards": [],
   "boundaries": [],
   "cycles": true,
+  "review": {"every_merged": 25, "warnings_over": 40},
   "entry_files": ["index.*"],
   "ignore": ["**/node_modules/**", "**/dist/**", "**/build/**", "**/vendor/**", "**/generated/**", "**/*.d.ts"]
 }
