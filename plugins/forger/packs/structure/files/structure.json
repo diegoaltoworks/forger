@@ -4,6 +4,9 @@
   "folder_limit": 15,
   "prefix_cluster": 4,
   "frozen": [],
+  "server_guards": [],
+  "boundaries": [],
+  "cycles": true,
   "entry_files": ["index.*"],
   "ignore": ["**/node_modules/**", "**/dist/**", "**/build/**", "**/vendor/**", "**/generated/**", "**/*.d.ts"]
 }

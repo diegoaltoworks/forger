@@ -57,7 +57,7 @@ export const check: Command = {
   check spec [--json] Fail when a requirement the issue names is unsatisfied or a MUST regresses; the slcr binary is the provider; none is a gap, not a pass
   check ticket N [--json] Fail when an acceptance criterion of issue N is not a named test, a command with its result, a sourced number or a named UI state, or uses a subjective word, or when it shares a footprint with another open ticket and neither is ordered against the other
   check sandbox [--json] Start the configured docker image with the image contract probes (git, bun, the harness CLI, a non-root user) and print one line per item; exit 0 only when every item passes, and 0 with nothing to check under the host sandbox
-  check structure [--json] [--baseline | --update] Fail on a new folder over the size limit, prefix cluster, name that repeats its folder, file in a frozen folder or re-export shim; recorded ones in .forger/structure-baseline.json warn; --baseline writes the record once, --update drops entries that no longer hold
+  check structure [--json] [--baseline | --update] Fail on a new folder over the size limit, prefix cluster, name that repeats its folder, file in a frozen folder, re-export shim, server file without its guard import, client file importing a server module, import across a declared boundary or import cycle; recorded ones in .forger/structure-baseline.json warn; --baseline writes the record once, --update drops entries that no longer hold
   check arch [--json] Fail on an import that crosses a forbidden edge of .forger/architecture.json
   check docs [--json] Fail on non-ASCII punctuation, emails, home paths, denylist terms and, with the docs pack, README writing rules; passive voice warns on stderr`,
   async run(ctx) {

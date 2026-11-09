@@ -6,6 +6,7 @@
  */
 
 import {globToRegExp, type Finding} from '../waivers';
+import {observeImports} from './imports';
 
 export const STRUCTURE_PATH = '.forger/structure.json';
 
@@ -14,7 +15,24 @@ export type StructureRule =
   | 'structure.prefix-cluster'
   | 'structure.name-repeats-folder'
   | 'structure.frozen-folder'
-  | 'structure.shim';
+  | 'structure.shim'
+  | 'structure.server-guard'
+  | 'structure.client-imports-server'
+  | 'structure.boundary'
+  | 'structure.cycle';
+
+export interface ServerGuard {
+  files: string;
+  must_import: string;
+}
+
+export interface Boundary {
+  name: string;
+  paths: string[];
+  may_import: string[];
+  /** Bare package specifiers the group may import; absent means any. */
+  external?: string[];
+}
 
 export interface StructureConfig {
   source_extensions: string[];
@@ -24,6 +42,10 @@ export interface StructureConfig {
   frozen: string[];
   entry_files: string[];
   ignore: string[];
+  server_guards: ServerGuard[];
+  client_markers: string[];
+  boundaries: Boundary[];
+  cycles: boolean;
 }
 
 export class StructureConfigError extends Error {
@@ -40,9 +62,13 @@ const DEFAULTS: StructureConfig = {
   frozen: [],
   entry_files: ['index.*'],
   ignore: ['**/node_modules/**', '**/dist/**', '**/build/**', '**/vendor/**', '**/generated/**', '**/*.d.ts'],
+  server_guards: [],
+  client_markers: ['"use client"', "'use client'"],
+  boundaries: [],
+  cycles: false,
 };
 
-const LISTS = ['source_extensions', 'test_patterns', 'frozen', 'entry_files', 'ignore'] as const;
+const LISTS = ['source_extensions', 'test_patterns', 'frozen', 'entry_files', 'ignore', 'client_markers'] as const;
 const NUMBERS = ['folder_limit', 'prefix_cluster'] as const;
 
 /** Parsed once at the boundary: an unknown key or a wrong type is an error naming the key. */
@@ -55,7 +81,7 @@ export function parseStructureConfig(text: string): StructureConfig {
   }
   if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) throw new StructureConfigError('must be an object');
   const obj = raw as Record<string, unknown>;
-  const known: string[] = [...LISTS, ...NUMBERS];
+  const known: string[] = [...LISTS, ...NUMBERS, 'server_guards', 'boundaries', 'cycles'];
   for (const key of Object.keys(obj)) if (!known.includes(key)) throw new StructureConfigError(`unknown key "${key}"`);
   const out: StructureConfig = {...DEFAULTS};
   for (const key of LISTS) {
@@ -70,6 +96,56 @@ export function parseStructureConfig(text: string): StructureConfig {
     if (typeof v !== 'number' || !Number.isInteger(v) || v < 1) throw new StructureConfigError(`"${key}" must be a whole number of at least 1`);
     out[key] = v;
   }
+  out.server_guards = parseServerGuards(obj.server_guards);
+  out.boundaries = parseBoundaries(obj.boundaries);
+  if (obj.cycles !== undefined) {
+    if (typeof obj.cycles !== 'boolean') throw new StructureConfigError('"cycles" must be true or false');
+    out.cycles = obj.cycles;
+  }
+  return out;
+}
+
+function objectAt(v: unknown, where: string): Record<string, unknown> {
+  if (typeof v !== 'object' || v === null || Array.isArray(v)) throw new StructureConfigError(`${where} must be an object`);
+  return v as Record<string, unknown>;
+}
+
+function nonEmpty(v: unknown, where: string): string {
+  if (typeof v !== 'string' || v.trim() === '') throw new StructureConfigError(`${where} must be a non-empty string`);
+  return v.trim();
+}
+
+function stringList(v: unknown, where: string): string[] {
+  if (!Array.isArray(v) || v.some(s => typeof s !== 'string' || s.trim() === '')) throw new StructureConfigError(`${where} must be a list of non-empty strings`);
+  return (v as string[]).map(s => s.trim());
+}
+
+function parseServerGuards(v: unknown): ServerGuard[] {
+  if (v === undefined) return [];
+  if (!Array.isArray(v)) throw new StructureConfigError('"server_guards" must be a list');
+  return v.map((g, i) => {
+    const o = objectAt(g, `server_guards[${i}]`);
+    return {files: nonEmpty(o.files, `server_guards[${i}].files`), must_import: nonEmpty(o.must_import, `server_guards[${i}].must_import`)};
+  });
+}
+
+function parseBoundaries(v: unknown): Boundary[] {
+  if (v === undefined) return [];
+  if (!Array.isArray(v)) throw new StructureConfigError('"boundaries" must be a list');
+  const out = v.map((b, i): Boundary => {
+    const where = `boundaries[${i}]`;
+    const o = objectAt(b, where);
+    const boundary: Boundary = {
+      name: nonEmpty(o.name, `${where}.name`),
+      paths: stringList(o.paths, `${where}.paths`),
+      may_import: o.may_import === undefined ? [] : stringList(o.may_import, `${where}.may_import`),
+    };
+    if (o.external !== undefined) boundary.external = stringList(o.external, `${where}.external`);
+    return boundary;
+  });
+  const names = out.map(b => b.name);
+  if (new Set(names).size !== names.length) throw new StructureConfigError('boundary names must be unique');
+  for (const b of out) for (const n of b.may_import) if (!names.includes(n)) throw new StructureConfigError(`boundary ${b.name} may_import names unknown boundary ${n}`);
   return out;
 }
 
@@ -83,10 +159,14 @@ export interface Observation {
   /** structure.prefix-cluster: the shared first word and the files that share it. */
   prefix?: string;
   files?: string[];
+  /** Import rules: the line of the import, 1 for a whole-file finding. Not recorded in the baseline. */
+  line?: number;
+  /** Import rules: what distinguishes two findings in one file (the specifier, or the cycle). */
+  key?: string;
 }
 
 export function toFinding(o: Observation): Finding {
-  return {file: o.path, line: 1, rule: o.rule, opinion: o.rule, detail: o.message};
+  return {file: o.path, line: o.line ?? 1, rule: o.rule, opinion: o.rule, detail: o.message};
 }
 
 const dirOf = (p: string): string => (p.includes('/') ? p.slice(0, p.lastIndexOf('/')) : '');
@@ -194,5 +274,6 @@ export function observe(paths: string[], config: StructureConfig, read: (path: s
       out.push({rule: 'structure.shim', path: f, message: `${baseOf(f)} only re-exports from other files; import from the source module and delete it`});
     }
   }
+  out.push(...observeImports(sources, config, read));
   return out;
 }
