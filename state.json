@@ -301,7 +301,10 @@
       "ticket": "issue-362",
       "pid": null,
       "session_id": "cf249d4e-2c1f-4c76-8fec-3e3286e790f0",
-      "snapshot": null,
+      "snapshot": {
+        "baseSha": "",
+        "reflogLength": 1
+      },
       "started_at": "2026-11-09T01:25:50.863Z",
       "plan": {
         "stages": [
