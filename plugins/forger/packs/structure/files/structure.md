@@ -32,6 +32,29 @@ A file whose every statement re-exports from another file only hides where the c
 Import from the source file and delete the shim.
 Entry files, `index.*` by default, are exempt.
 
+## Server code carries its guard (structure.server-guard)
+
+`server_guards` is a list of `{files, must_import}` pairs, such as `{"files": "**/*.server.*", "must_import": "server-only"}`.
+A matching file that does not import `must_import` is a finding at line 1: the suffix promises what the file does not deliver.
+
+## Browser files do not import server files (structure.client-imports-server)
+
+A file whose first statement is one of `client_markers` (`"use client"` and `'use client'` by default) must not import a file that matches a `server_guards` glob.
+The finding sits at the import's line.
+
+## Boundaries hold (structure.boundary)
+
+`boundaries` names path groups.
+Each has `paths` (globs), `may_import` (the names of the groups it may import; its own group is always allowed) and an optional `external`, the bare packages it may import.
+No `external` means any package.
+Node built-ins, written `node:fs` or `fs`, are packages like any other and must be listed when `external` is set.
+An import into a group it may not import, or a package outside the list, is a finding at the import's line.
+
+## No import cycles (structure.cycle)
+
+With `cycles` set to true, each cycle among the project's own files is one finding at the first file of the cycle, listing the cycle.
+Type-only imports are erased at runtime and do not count.
+
 ## The baseline only shrinks (structure.baseline-ratchet)
 
 A repository that already breaks these rules records the findings once with `check structure --baseline`.

@@ -120,3 +120,75 @@ describe('structure baseline', () => {
     expect(() => parseStructureBaseline('{"entries":[{"rule":"nope","path":"a"}]}')).toThrow('rule');
   });
 });
+
+describe('structure import rules', () => {
+  const tree = (t: Record<string, string>, extra: Record<string, unknown>) => observe(Object.keys(t), config(extra), p => t[p]);
+  const guard = {server_guards: [{files: '**/*.server.*', must_import: 'server-only'}]};
+
+  test('a server file without its guard import is a structure.server-guard finding', () => {
+    const obs = tree({'src/db.server.ts': 'export const db = 1;'}, guard);
+    expect(obs.map(o => [o.rule, o.path, o.line])).toEqual([['structure.server-guard', 'src/db.server.ts', 1]]);
+  });
+
+  test('a server file with its guard import passes', () => {
+    expect(tree({'src/db.server.ts': "import 'server-only';\nexport const db = 1;"}, guard)).toEqual([]);
+  });
+
+  test('a use client file importing a server module is a structure.client-imports-server finding at the import line', () => {
+    const obs = tree(
+      {
+        'src/db.server.ts': "import 'server-only';\n",
+        'src/ui.tsx': "'use client';\n\nimport {db} from './db.server';\n",
+      },
+      guard,
+    );
+    expect(obs.map(o => [o.rule, o.path, o.line])).toEqual([['structure.client-imports-server', 'src/ui.tsx', 3]]);
+    expect(toFinding(obs[0]).line).toBe(3);
+  });
+
+  const groups = {
+    boundaries: [
+      {name: 'shared', paths: ['packages/shared/**'], may_import: [], external: ['zod']},
+      {name: 'web', paths: ['apps/web/**'], may_import: ['shared']},
+      {name: 'api', paths: ['apps/api/**'], may_import: ['shared']},
+    ],
+  };
+
+  test('a group importing a group it may not is a structure.boundary finding', () => {
+    const obs = tree({'apps/web/a.ts': "import {x} from '../api/b';", 'apps/api/b.ts': 'export const x = 1;', 'apps/web/c.ts': "import {y} from '../../packages/shared/y';", 'packages/shared/y.ts': 'export const y = 1;'}, groups);
+    expect(obs.map(o => [o.rule, o.path, o.line])).toEqual([['structure.boundary', 'apps/web/a.ts', 1]]);
+  });
+
+  test('a bare package missing from a group\'s external list is a structure.boundary finding', () => {
+    const obs = tree({'packages/shared/a.ts': "import {z} from 'zod';\nimport fs from 'node:fs';\nimport x from 'lodash/get';"}, groups);
+    expect(obs.map(o => [o.line, o.key])).toEqual([[2, 'node:fs'], [3, 'lodash']]);
+  });
+
+  test('a group with no external list may import any package', () => {
+    expect(tree({'apps/web/a.ts': "import React from 'react';\nimport fs from 'node:fs';"}, groups)).toEqual([]);
+  });
+
+  test('an import cycle is one structure.cycle finding listing the cycle', () => {
+    const obs = tree({'a.ts': "import './b';", 'b.ts': "import './c';", 'c.ts': "import './a';", 'd.ts': "import './a';"}, {cycles: true});
+    expect(obs).toHaveLength(1);
+    expect(obs[0]).toMatchObject({rule: 'structure.cycle', path: 'a.ts', key: 'a.ts -> b.ts -> c.ts'});
+    expect(obs[0].message).toContain('a.ts -> b.ts -> c.ts -> a.ts');
+    expect(tree({'a.ts': "import type {T} from './b';", 'b.ts': "import './a';"}, {cycles: true})).toEqual([]);
+    expect(tree({'a.ts': "import './b';", 'b.ts': "import './a';"}, {})).toEqual([]);
+  });
+
+  test('a recorded boundary finding warns and a new one fails', () => {
+    const one = {'apps/web/a.ts': "import {x} from '../api/b';", 'apps/api/b.ts': 'export const x = 1;'};
+    const baseline = parseStructureBaseline(renderStructureBaseline(tree(one, groups)));
+    const same = classify(tree({...one, 'apps/web/a.ts': "// moved down\nimport {x} from '../api/b';"}, groups), baseline);
+    expect(same.fresh).toEqual([]);
+    expect(same.recorded).toHaveLength(1);
+    const more = classify(tree({...one, 'apps/web/z.ts': "import {x} from '../api/b';"}, groups), baseline);
+    expect(more.fresh.map(o => o.path)).toEqual(['apps/web/z.ts']);
+  });
+
+  test('a boundary naming an unknown group is a config error', () => {
+    expect(() => config({boundaries: [{name: 'a', paths: ['a/**'], may_import: ['b']}]})).toThrow('unknown boundary b');
+    expect(() => config({cycles: 'yes'})).toThrow('cycles');
+  });
+});

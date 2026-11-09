@@ -12,7 +12,7 @@ import type {Finding} from '../waivers';
 export const STRUCTURE_BASELINE_PATH = '.forger/structure-baseline.json';
 export const STRUCTURE_BASELINE_OPINION = 'structure.baseline-ratchet';
 
-export type Entry = Omit<Observation, 'message'>;
+export type Entry = Omit<Observation, 'message' | 'line'>;
 
 export interface StructureBaseline {
   entries: Entry[];
@@ -24,7 +24,7 @@ export class StructureBaselineError extends Error {
   }
 }
 
-const RULES: StructureRule[] = ['structure.folder-size', 'structure.prefix-cluster', 'structure.name-repeats-folder', 'structure.frozen-folder', 'structure.shim'];
+const RULES: StructureRule[] = ['structure.folder-size', 'structure.prefix-cluster', 'structure.name-repeats-folder', 'structure.frozen-folder', 'structure.shim', 'structure.server-guard', 'structure.client-imports-server', 'structure.boundary', 'structure.cycle'];
 
 export function parseStructureBaseline(text: string): StructureBaseline {
   let raw: unknown;
@@ -50,6 +50,10 @@ export function parseStructureBaseline(text: string): StructureBaseline {
       if (typeof o.prefix !== 'string') throw new StructureBaselineError(`${where}.prefix must be a string`);
       entry.prefix = o.prefix;
     }
+    if (o.key !== undefined) {
+      if (typeof o.key !== 'string') throw new StructureBaselineError(`${where}.key must be a string`);
+      entry.key = o.key;
+    }
     if (o.files !== undefined) {
       if (!Array.isArray(o.files) || o.files.some(f => typeof f !== 'string')) throw new StructureBaselineError(`${where}.files must be a list of strings`);
       entry.files = o.files as string[];
@@ -59,15 +63,17 @@ export function parseStructureBaseline(text: string): StructureBaseline {
   return {entries};
 }
 
-const strip = ({message: _message, ...entry}: Observation): Entry => entry;
+const strip = ({message: _message, line: _line, ...entry}: Observation): Entry => entry;
+
+const identity = (o: Entry | Observation): string => `${o.rule}|${o.path}|${o.prefix ?? ''}|${o.key ?? ''}`;
 
 export function renderStructureBaseline(observations: Observation[]): string {
-  const entries = observations.map(strip).sort((a, b) => `${a.rule}|${a.path}|${a.prefix ?? ''}`.localeCompare(`${b.rule}|${b.path}|${b.prefix ?? ''}`));
+  const entries = observations.map(strip).sort((a, b) => identity(a).localeCompare(identity(b)));
   return `${JSON.stringify({entries}, null, 2)}\n`;
 }
 
 function recorded(o: Observation, baseline: StructureBaseline): Entry | undefined {
-  return baseline.entries.find(e => e.rule === o.rule && e.path === o.path && (e.prefix ?? '') === (o.prefix ?? ''));
+  return baseline.entries.find(e => identity(e) === identity(o));
 }
 
 /** Whether an observation stays inside what the baseline recorded for it. */
@@ -92,7 +98,7 @@ export function classify(observations: Observation[], baseline: StructureBaselin
 export function shrink(observations: Observation[], baseline: StructureBaseline): StructureBaseline {
   const entries: Entry[] = [];
   for (const e of baseline.entries) {
-    const o = observations.find(x => x.rule === e.rule && x.path === e.path && (x.prefix ?? '') === (e.prefix ?? ''));
+    const o = observations.find(x => identity(x) === identity(e));
     if (!o) continue;
     const next = {...e};
     if (e.count !== undefined) next.count = Math.min(e.count, o.count ?? e.count);
@@ -106,7 +112,7 @@ export function shrink(observations: Observation[], baseline: StructureBaseline)
 export function baselineGrew(before: StructureBaseline, after: StructureBaseline): Finding[] {
   const out: Finding[] = [];
   for (const e of after.entries) {
-    const old = before.entries.find(b => b.rule === e.rule && b.path === e.path && (b.prefix ?? '') === (e.prefix ?? ''));
+    const old = before.entries.find(b => identity(b) === identity(e));
     const grew = !old || (e.count ?? 0) > (old.count ?? 0) || (e.files ?? []).some(f => !(old.files ?? []).includes(f));
     if (grew) {
       out.push({
