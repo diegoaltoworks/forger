@@ -46,6 +46,13 @@ export interface StructureConfig {
   client_markers: string[];
   boundaries: Boundary[];
   cycles: boolean;
+  review: StructureReviewConfig;
+}
+
+/** When the loop files a whole-repo structure review; 0 turns a trigger off. */
+export interface StructureReviewConfig {
+  every_merged: number;
+  warnings_over: number;
 }
 
 export class StructureConfigError extends Error {
@@ -66,6 +73,7 @@ const DEFAULTS: StructureConfig = {
   client_markers: ['"use client"', "'use client'"],
   boundaries: [],
   cycles: false,
+  review: {every_merged: 25, warnings_over: 40},
 };
 
 const LISTS = ['source_extensions', 'test_patterns', 'frozen', 'entry_files', 'ignore', 'client_markers'] as const;
@@ -81,7 +89,7 @@ export function parseStructureConfig(text: string): StructureConfig {
   }
   if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) throw new StructureConfigError('must be an object');
   const obj = raw as Record<string, unknown>;
-  const known: string[] = [...LISTS, ...NUMBERS, 'server_guards', 'boundaries', 'cycles'];
+  const known: string[] = [...LISTS, ...NUMBERS, 'server_guards', 'boundaries', 'cycles', 'review'];
   for (const key of Object.keys(obj)) if (!known.includes(key)) throw new StructureConfigError(`unknown key "${key}"`);
   const out: StructureConfig = {...DEFAULTS};
   for (const key of LISTS) {
@@ -101,6 +109,21 @@ export function parseStructureConfig(text: string): StructureConfig {
   if (obj.cycles !== undefined) {
     if (typeof obj.cycles !== 'boolean') throw new StructureConfigError('"cycles" must be true or false');
     out.cycles = obj.cycles;
+  }
+  out.review = parseReview(obj.review);
+  return out;
+}
+
+function parseReview(v: unknown): StructureReviewConfig {
+  if (v === undefined) return {...DEFAULTS.review};
+  const o = objectAt(v, '"review"');
+  for (const key of Object.keys(o)) if (key !== 'every_merged' && key !== 'warnings_over') throw new StructureConfigError(`unknown key "review.${key}"`);
+  const out = {...DEFAULTS.review};
+  for (const key of ['every_merged', 'warnings_over'] as const) {
+    const n = o[key];
+    if (n === undefined) continue;
+    if (typeof n !== 'number' || !Number.isInteger(n) || n < 0) throw new StructureConfigError(`"review.${key}" must be a whole number, 0 to turn it off`);
+    out[key] = n;
   }
   return out;
 }

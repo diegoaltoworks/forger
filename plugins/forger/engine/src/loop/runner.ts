@@ -15,6 +15,7 @@ import {capturing, type AgentRunner, type CapturingRunner, type CommandRunner, t
 import {type AutomationState, currentTicket, LoopStore} from './state';
 import type {TrackerHalt} from './halt-tracker';
 import {Logger, colors} from './logger';
+import {fileStructureReview, readReviewTemplate} from './structure-review-io';
 import {RateLimitError, rateLimitWaitMs} from './infra';
 import type {StoredPlan} from '../pipeline';
 import {type IterationContext, type Placement, closeOrphan, runIteration} from './iteration';
@@ -163,6 +164,7 @@ export class AutomationRunner {
       refreshBacklog: () => this.refreshBacklog(),
       emit: (kind, iteration, ticket, reason) => this.emit(kind, iteration, ticket, reason),
       halt: (reason, kind) => this.halt(reason, kind),
+      afterMerge: iteration => this.reviewStructure(iteration),
       resolvePlan: deps.resolvePlan,
       probeRunner: deps.probeRunner,
       pluginRoot: deps.pluginRoot,
@@ -213,6 +215,19 @@ export class AutomationRunner {
   private emit(kind: EventKind, iteration: number, ticket: string | null, reason: string | null, extra: Pick<TerminalEvent, 'cause' | 'not_a_defect' | 'decision'> = {}): void {
     const now = new Date();
     this.stateStore.appendEvent(eventLine(terminalEvent(kind, iteration, ticket, reason, now, extra)), now);
+  }
+
+  /** Files the structure review when one is due. Best effort: a tracker or config failure never fails the iteration. */
+  private reviewStructure(iteration: number): void {
+    if (this.config.tracker.kind !== 'github') return;
+    try {
+      const template = readReviewTemplate(this.projectRoot);
+      if (template === null) return;
+      const reason = fileStructureReview(this.projectRoot, this.gitRunner, this.config.tracker.label, this.stateStore.readEvents(), template);
+      if (reason !== null) this.emit('structure_review_filed', iteration, null, reason);
+    } catch (e) {
+      this.logger.log('WARN', `Could not check whether a structure review is due: ${(e as Error).message}`);
+    }
   }
 
   halt(reason: string, kind: TerminalEventKind = 'halted'): void {

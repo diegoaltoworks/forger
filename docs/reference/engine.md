@@ -40,6 +40,17 @@ one JSON line to the event file, and `status --json` reports the engine, halt,
 counters, current ticket and next pick, so a supervisor reads files and commands
 rather than human text.
 
+Each merged ticket appends a `merged` event. When a project has the structure
+pack, the engine then counts the merges since the last `structure_review_filed`
+event and the entries in the structure baseline. Reaching `review.every_merged`
+merges, or having more than `review.warnings_over` entries, files one
+whole-repo structure review from `.forger/templates/structure-review.md`, labelled
+`structure-review` and with the intake label, and appends a
+`structure_review_filed` event whose reason says which trigger fired. While an
+issue labelled `structure-review` is open no second one is filed, and a
+threshold of `0` turns its trigger off. Filing is the `file_tickets` action,
+which needs no approval.
+
 A ticket's `## Probe` section lists commands, each with its expected result in
 the forms of acceptance criteria. Before a worker starts, the engine runs each
 on the host in the directory the worker would start in, with the run's timeout

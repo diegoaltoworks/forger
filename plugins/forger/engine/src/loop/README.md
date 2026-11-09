@@ -26,6 +26,7 @@ Pure:
   `viewLease` is what `orient` reports.
 - `runner.ts` takes, renews and releases the lease when the config puts the
   state on the branch. It also releases on SIGTERM and SIGINT.
+- `structure-review.ts` - decides when a structure review is due, from merges, baseline size and open reviews. `structure-review-io.ts` files it.
 - `state.ts` - the loop state record and `LoopStore`, which persists it
   through the `StateStore` port.
 - `halt-label.ts` - decides HALT from the `halted` label and the local HALT

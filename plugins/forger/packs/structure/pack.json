@@ -5,7 +5,8 @@
   "detect": [],
   "files": [
     {"source": "files/structure.md", "target": ".forger/opinions/structure.md"},
-    {"source": "files/structure.json", "target": ".forger/structure.json"}
+    {"source": "files/structure.json", "target": ".forger/structure.json"},
+    {"source": "files/structure-review.md", "target": ".forger/templates/structure-review.md"}
   ],
   "opinions": [
     {"id": "structure.folder-size", "rung": "check", "summary": "A folder holds no more source files at its top level than folder_limit; group by feature.", "check": "structure"},
