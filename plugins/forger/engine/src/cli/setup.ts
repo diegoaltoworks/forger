@@ -67,7 +67,7 @@ export const setup: Command = {
   needs: 'none',
   flags: ['json', 'gates', 'base-branch', 'tracker', 'flavour', 'preset', 'packs', 'upgrade', 'harness', 'sandbox', 'credential'],
   help: `  setup [--json] [--gates CMD] [--base-branch B] [--tracker KIND] [--flavour NAME] [--packs A,B] [--harness H] [--sandbox S] [--credential KIND] [--upgrade]
-                   Install the chosen opinion packs (default base) into .forger/, never overwriting,
+                   Install the chosen opinion packs (default base and structure) into .forger/, never overwriting,
                    and record them in .forger/forger.lock.json. On a GitHub tracker it creates the loop
                    labels and makes the base branch require the forger/verify check, when the token can.
                    It installs forger's tool-call hook into the harness's project settings, keeping
@@ -78,13 +78,13 @@ export const setup: Command = {
                    --sandbox S sets where workers run (host or docker); docker also checks that the Docker API is reachable
                    --credential KIND sets whether the harness's model credential is an api_key or a subscription token,
                    and says how to make a subscription token for headless use
-                   --upgrade brings installed packs to this plugin's version: untouched files take the
+                   --upgrade installs the default packs the project lacks, then brings installed packs to this plugin's version: untouched files take the
                    new version, refined files are kept, files both sides changed get <file>.upstream`,
   run(ctx) {
     const {values, pluginRoot, installedSkills} = ctx;
     if (values.upgrade) {
       try {
-        const upgrade = runUpgrade(setupRoot(ctx), pluginRoot);
+        const upgrade = runUpgrade(setupRoot(ctx), pluginRoot, c => ctx.run()(c));
         console.log(values.json ? JSON.stringify(upgrade) : formatUpgrade(upgrade));
       } catch (e) {
         console.error((e as Error).message);
@@ -109,6 +109,7 @@ export const setup: Command = {
       result = runSetup(setupRoot(ctx), pluginRoot, {
         packs: parsePackList(values.packs),
         gates: values.gates,
+        run: c => ctx.run()(c),
         baseBranch: values['base-branch'],
         trackerKind: values.tracker,
         flavour,

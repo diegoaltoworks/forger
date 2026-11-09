@@ -105,6 +105,11 @@ skill flavours and opinion packs. It then prints every file under `.forger/`
 as `written` or `kept`, and the tracker it chose and why. It never overwrites
 a file, so a second run prints only `kept`.
 
+By default it installs the `base` and `structure` packs. The structure pack keeps
+the source tree's shape under a check; setup records the structure that already
+exists as a baseline so the repository starts green and only improves, and it
+prints any boundary groups it derived from your workspaces so you can widen them.
+
 With a GitHub tracker it also creates the intake label. To create it by hand:
 
 ```

@@ -1036,7 +1036,7 @@ describe('packs and opinions', () => {
     const packs = JSON.parse(await capture(['packs', '--json']));
     expect(packs.find((p: {id: string}) => p.id === 'base').installed).toBe(true);
     const opinions = JSON.parse(await capture(['opinions', '--json']));
-    expect(opinions.every((o: {pack: string}) => o.pack === 'base')).toBe(true);
+    expect(opinions.some((o: {pack: string}) => o.pack === 'base')).toBe(true);
     expect(opinions.find((o: {id: string}) => o.id === 'base.ascii-punctuation')).toMatchObject({rung: 'check', check: 'docs'});
     expect(opinions.find((o: {id: string}) => o.id === 'base.determinism-first').check).toBeNull();
   });

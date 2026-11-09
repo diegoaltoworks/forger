@@ -62,7 +62,7 @@ first tickets, and `/forger:work` to start.
 
 The copy is a tested command: `bun "$CLAUDE_PLUGIN_ROOT/bin/work.ts" setup --json
 [--gates CMD] [--base-branch B] [--tracker KIND] [--flavour NAME] [--packs A,B] [--harness H]`. It installs the
-chosen opinion packs (default `base`), records them in `.forger/forger.lock.json`, and writes `.forger/` files
+chosen opinion packs (default `base` and `structure`; the structure pack's baseline is recorded when it is installed, and `setup --upgrade` adds the default packs an install lacks), records them in `.forger/forger.lock.json`, and writes `.forger/` files
 only where they are absent, installs the default `process.md`, the ticket, PR,
 work order, report, retro and rule templates and the hook policy
 (`.forger/hooks.json`), adds the docs check to the gates, installs the harness's

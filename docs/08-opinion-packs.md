@@ -32,7 +32,7 @@ Read it left to right: `setup` reads each chosen pack's manifest, writes its fil
 
 ## Commands
 
-- `setup --packs base[,<name>...]` installs by pack; the default is `base`.
+- `setup --packs base[,<name>...]` installs by pack; the default is `base` and `structure`. `setup --upgrade` installs a default pack the lock does not hold, names it in its output, and leaves a pack the install already has as it is, apart from the version update. Installing `structure` fills `.forger/structure.json` from the repository (a `next` dependency adds the `server-only` guard; workspaces add one boundary group per package with no cross-imports, printed so the owner can widen them; nothing is frozen) and runs the baseline (`check structure --baseline`) when `.forger/structure-baseline.json` is missing, so the repository starts green.
 - `packs --json` lists the available packs and which are installed.
 - `packs --detect --json` suggests packs not yet installed, each with the rules that matched. The facts come from one thin reader (files, directories, the root `package.json` dependencies and the table headers of the root `pyproject.toml`); a pack with no `detect` rules is never suggested, only listed. A `glob` rule matches a file name with `*` as a wildcard (the testing pack finds `*.test.ts` and `test_*.py`); a `table` rule matches a header such as `tool.pytest.ini_options`; the docs pack is detected by a `README.md` or a `docs` folder. `setup` offers the suggestions and the owner chooses.
 - `opinions --json` lists every installed opinion with its pack, rung and enforcing check, or none.

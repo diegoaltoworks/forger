@@ -131,9 +131,9 @@ describe('runSetup', () => {
     runSetup(root, PLUGIN_ROOT, {});
     const lockPath = join(root, '.forger/forger.lock.json');
     const lock = JSON.parse(readFileSync(lockPath, 'utf-8'));
-    expect(lock.packs.map((p: {id: string}) => p.id)).toEqual(['base']);
+    expect(lock.packs.map((p: {id: string}) => p.id)).toEqual(['base', 'structure']);
     expect(lock.packs[0].files.length).toBeGreaterThan(0);
-    for (const f of lock.packs[0].files) {
+    for (const f of lock.packs.flatMap((p: {files: Array<{path: string; sha256: string}>}) => p.files)) {
       expect(sha256(readFileSync(join(root, f.path)))).toBe(f.sha256);
     }
     const before = readFileSync(lockPath, 'utf-8');

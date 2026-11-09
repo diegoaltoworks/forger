@@ -153,9 +153,12 @@ export function loadPacks(pluginRoot: string): LoadedPack[] {
 }
 
 /** Turns `--packs a,b` into ids; empty means the default. */
+/** The packs `setup` installs when none are named. */
+export const DEFAULT_PACKS = ['base', 'structure'];
+
 export function parsePackList(arg: string | undefined): string[] {
   const ids = (arg ?? '').split(',').map(s => s.trim()).filter(Boolean);
-  return ids.length === 0 ? ['base'] : [...new Set(ids)];
+  return ids.length === 0 ? [...DEFAULT_PACKS] : [...new Set(ids)];
 }
 
 /** The packs to install, in order, or the unknown ids. */

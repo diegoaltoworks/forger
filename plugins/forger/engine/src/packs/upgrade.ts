@@ -8,9 +8,11 @@
 import {existsSync, mkdirSync, readFileSync, writeFileSync} from 'fs';
 import {dirname, join} from 'path';
 
-import {LOCK_PATH, loadPacks, parseLock, renderLock, sha256, type Lock, type LockedFile, type LockedPack} from './packs';
+import {DEFAULT_PACKS, LOCK_PATH, loadPacks, parseLock, renderLock, sha256, type Lock, type LockedFile, type LockedPack} from './packs';
 import {forgerPath, loadConfig} from '../config';
 import {relocatableGates} from './setup';
+import {finishStructure, formatStructureSetup, type StructureSetup} from './structure-defaults';
+import type {CommandRunner} from '../ports';
 import {newerFlavour, parseFlavourRef, shippedFlavour} from '../pipeline';
 
 export type UpgradeAction =
@@ -61,6 +63,9 @@ export interface UpgradeResult {
   flavour?: FlavourUpgrade;
   /** Set when the config's gates named the plugin by absolute path and now name it by variable. */
   gates?: 'rewritten';
+  /** Default packs the lock did not hold and this run installed. */
+  added: string[];
+  structure?: StructureSetup;
   /** Files the owner has to decide about. */
   review: string[];
 }
@@ -101,14 +106,15 @@ function relocateGates(projectRoot: string): boolean {
   return true;
 }
 
-export function runUpgrade(projectRoot: string, pluginRoot: string): UpgradeResult {
+export function runUpgrade(projectRoot: string, pluginRoot: string, run?: CommandRunner): UpgradeResult {
   const lockPath = forgerPath(projectRoot, LOCK_PATH);
   if (!existsSync(lockPath)) throw new Error(`${LOCK_PATH} not found: run setup before upgrading`);
   const lock = parseLock(readFileSync(lockPath, 'utf-8'));
   const available = loadPacks(pluginRoot);
 
+  const missing = DEFAULT_PACKS.filter(id => !lock.packs.some(p => p.id === id) && available.some(p => p.manifest.id === id));
   const files: UpgradeEntry[] = [];
-  const packs: LockedPack[] = lock.packs.map(locked => {
+  const packs: LockedPack[] = [...lock.packs, ...missing.map((id): LockedPack => ({id, version: '', files: []}))].map(locked => {
     const pack = available.find(p => p.manifest.id === locked.id);
     if (!pack) throw new Error(`Pack ${locked.id} is in ${LOCK_PATH} but not in this plugin`);
     const next: LockedFile[] = [];
@@ -154,12 +160,18 @@ export function runUpgrade(projectRoot: string, pluginRoot: string): UpgradeResu
   const flavour = newerFlavourPin(projectRoot, pluginRoot);
   const relocated = relocateGates(projectRoot);
 
+  const structure = missing.includes('structure')
+    ? finishStructure(projectRoot, files.some(f => f.path === '.forger/structure.json' && f.action === 'install'), run)
+    : undefined;
+
   const review = files.filter(f => f.action === 'conflict' || f.action === 'removed' || f.action === 'deleted').map(f => f.path);
-  return {files, review, ...(flavour ? {flavour} : {}), ...(relocated ? {gates: 'rewritten' as const} : {})};
+  return {files, review, added: missing, ...(structure ? {structure} : {}), ...(flavour ? {flavour} : {}), ...(relocated ? {gates: 'rewritten' as const} : {})};
 }
 
 export function formatUpgrade(result: UpgradeResult): string {
   const lines = result.files.filter(f => f.action !== 'unchanged').map(f => `${f.action.padEnd(14)} ${f.path}${f.upstreamFile ? ` (pack version in ${f.upstreamFile})` : ''}`);
+  lines.unshift(...result.added.map(id => `added          pack ${id}`));
+  if (result.structure) lines.push(...formatStructureSetup(result.structure));
   if (result.gates) lines.push('rewritten      gates in the config now name the plugin by variable');
   if (result.flavour) lines.push(`flavour        ${result.flavour.name}@${result.flavour.available} is available (config pins @${result.flavour.pinned}); change "flavour" in the config to take it`);
   return lines.length === 0 ? 'already up to date' : lines.join('\n');
