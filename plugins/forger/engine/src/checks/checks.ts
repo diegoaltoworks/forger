@@ -13,7 +13,7 @@ import {runDocsCheck} from './docs';
 import {runGuardsCheck} from './guards';
 import {runHooksCheck} from './hooks';
 import type {CommandRunner, Harness, SpecProvider} from '../ports';
-import {runSafetyCheck} from './safety';
+import {runSafetyCheckOutput} from './safety';
 import {runSpecDecision} from './spec';
 import {runStructureCheck} from './structure';
 import {runCoverageCheck, runTestsCheck} from './testing';
@@ -74,7 +74,7 @@ export const CHECKS: Record<string, (ctx: CheckContext) => Finding[] | CheckOutp
   arch: ctx => runArchCheck(ctx.projectRoot, ctx.run),
   decisions: ctx => runDecisionsCheck(ctx.projectRoot, ctx.run),
   guards: ctx => runGuardsCheck(ctx.projectRoot, ctx.run),
-  safety: ctx => runSafetyCheck(ctx.projectRoot, ctx.run),
+  safety: ctx => runSafetyCheckOutput(ctx.projectRoot, ctx.run),
   tests: ctx => runTestsCheck(ctx.projectRoot, ctx.run),
   coverage: ctx => runCoverageCheck(ctx.projectRoot, ctx.run),
   structure: ctx => runStructureCheck(ctx.projectRoot, ctx.run).findings,

@@ -12,7 +12,8 @@ import {join} from 'path';
 import {loadConfig} from '../../config';
 import {parseNameStatus} from '../decisions';
 import type {CommandRunner} from '../../ports';
-import {SAFETY_PATH, checkDataForward, checkSecrets, isEnvFile, parseAddedLines, parseSafetyConfig, type AddedLine} from './safety';
+import {SAFETY_PATH, auditGaps, auditShellCommand, checkDataForward, checkSecrets, isEnvFile, parseAddedLines, judgeAudit, parseSafetyConfig, type AddedLine, type SafetyConfig} from './safety';
+import type {Gap} from '../gaps';
 import type {Finding} from '../waivers';
 import {forgerPath} from '../../config';
 
@@ -24,10 +25,14 @@ function mergeBase(run: CommandRunner, base: string): string {
   throw new Error(`Cannot find a merge-base with ${base}; fetch the base branch first`);
 }
 
-export function runSafetyCheck(projectRoot: string, run: CommandRunner): Finding[] {
+function loadSafetyConfig(projectRoot: string): SafetyConfig {
   const configPath = forgerPath(projectRoot, SAFETY_PATH);
   if (!existsSync(configPath)) throw new Error(`${SAFETY_PATH} not found; the safety pack's config is required`);
-  const config = parseSafetyConfig(readFileSync(configPath, 'utf-8'));
+  return parseSafetyConfig(readFileSync(configPath, 'utf-8'));
+}
+
+export function runSafetyCheck(projectRoot: string, run: CommandRunner): Finding[] {
+  const config = loadSafetyConfig(projectRoot);
   const mb = mergeBase(run, loadConfig(projectRoot).base_branch);
 
   const changes = parseNameStatus(run(`git diff --name-status --no-renames ${mb}`)).filter(c => c.status !== 'deleted');
@@ -39,5 +44,11 @@ export function runSafetyCheck(projectRoot: string, run: CommandRunner): Finding
     const text = readFileSync(join(projectRoot, path), 'utf-8');
     text.split('\n').forEach((line, i) => added.push({file: path, line: i + 1, text: line}));
   }
-  return [...checkSecrets(added, paths.filter(isEnvFile)), ...checkDataForward(paths, config)];
+  const audit = config.audit_command === undefined ? [] : judgeAudit(run(auditShellCommand(config.audit_command)), config.audit_command);
+  return [...checkSecrets(added, paths.filter(isEnvFile)), ...checkDataForward(paths, config), ...audit];
+}
+
+/** `runSafetyCheck` with what it could not measure: no audit command is a gap, not a pass. */
+export function runSafetyCheckOutput(projectRoot: string, run: CommandRunner): {findings: Finding[]; gaps: Gap[]} {
+  return {findings: runSafetyCheck(projectRoot, run), gaps: auditGaps(loadSafetyConfig(projectRoot))};
 }

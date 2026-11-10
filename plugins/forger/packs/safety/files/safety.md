@@ -23,6 +23,19 @@ proof lives; a diff that touches the first without touching the second fails.
 Rewrite both lists to match your tree. Prefer expand, migrate, contract over one
 step that changes a shape in place.
 
+## Dependencies are audited (check: safety.dependency-audit)
+
+A dependency with a known vulnerability is a risk the project inherits.
+`.forger/safety.json` may name an `audit_command`, the project's own audit; the
+flags on that command choose the severity it fails at. `check safety` runs it
+and a non-zero exit is one finding carrying the end of the output. A command
+that cannot start is a finding too, never a pass. With no `audit_command` the
+check reads `unmeasured`: it informs, it does not fail. The audit needs the
+network, so it runs in `check`, not in unit tests. Examples:
+
+- npm: `"audit_command": "npm audit --audit-level=high"`
+- Python: `"audit_command": "pip-audit"`
+
 ## Lockfiles are frozen in the gates
 
 The gates install with the frozen-lockfile flag of your dependency installer, so a

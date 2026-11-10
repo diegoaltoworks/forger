@@ -107,14 +107,15 @@ The `structure` pack keeps the shape of the source tree: small folders, prefixes
 
 ## The safety pack
 
-The `safety` pack holds principle 9 (data in production is sacred) and the never-commit-a-secret rule. Two of its opinions are enforced by `check safety`, each under its own opinion id so a waiver can target one:
+The `safety` pack holds principle 9 (data in production is sacred) and the never-commit-a-secret rule. Three of its opinions are enforced by `check safety`, each under its own opinion id so a waiver can target one:
 
 | Opinion | What the check flags |
 |---|---|
 | `safety.secrets` | an added line, in the diff or an untracked file, that matches a known credential pattern, or an added `.env` file |
 | `safety.data-forward` | a diff that touches `migration_paths` without adding or changing a test under `data_test_paths` |
+| `safety.dependency-audit` | the project's `audit_command` exits non-zero or cannot start; with none configured the check reads `unmeasured` (a MAY gap) |
 
-Both lists live in `.forger/safety.json`. A finding names the file, line and pattern and never prints the match, so a report does not spread the secret it found. The other two opinions, frozen lockfiles in the gates and destructive commands listed in the process gotchas, are rules kept by judgement. Like `check decisions`, the check reads the working tree and branch against the merge-base with the configured base branch, and an unresolvable base is an error, never a pass.
+The two path lists, and the optional `audit_command` (the project's own audit, whose flags choose the severity it fails at), live in `.forger/safety.json`. The audit needs the network, so it runs in `check` and unit tests use recorded output. A finding names the file, line and pattern and never prints the match, so a report does not spread the secret it found. The other two opinions, frozen lockfiles in the gates and destructive commands listed in the process gotchas, are rules kept by judgement. Like `check decisions`, the check reads the working tree and branch against the merge-base with the configured base branch, and an unresolvable base is an error, never a pass.
 
 ## The testing pack
 
