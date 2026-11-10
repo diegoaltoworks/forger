@@ -789,7 +789,7 @@ describe('supervisor commands', () => {
     process.chdir(root);
     const run: CommandRunner = cmd => (cmd === 'git ls-files' ? '.forger/cov.json\nsrc/layout.spec.ts\nsrc/app.ts\n' : '');
     const out = JSON.parse(await capture(['facts', '--json', '--guards', 'src/app.ts'], run));
-    expect(out).toEqual({paths: ['src/app.ts'], guards: ['.forger/cov.json'], tests: ['src/layout.spec.ts']});
+    expect(out).toEqual({paths: ['src/app.ts'], guards: ['.forger/cov.json'], tests: ['src/layout.spec.ts'], journeys: []});
     expect(await capture(['facts', '--guards', 'src/app.ts'], run)).toContain('src/layout.spec.ts');
   });
 

@@ -20,6 +20,7 @@ export const HOMES: Readonly<Record<string, Home>> = {
   'testing.json': 'main',
   'safety.json': 'main',
   'ui.json': 'main',
+  'journeys.json': 'main',
   'waivers.json': 'main',
   'coverage-baseline.json': 'main',
   'forger.lock.json': 'main',

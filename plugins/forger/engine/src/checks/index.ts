@@ -5,6 +5,7 @@ export * from './waivers';
 export * from './arch';
 export * from './decisions';
 export * from './docs';
+export * from './journeys';
 export * from './safety';
 export * from './guards';
 export * from './testing';
