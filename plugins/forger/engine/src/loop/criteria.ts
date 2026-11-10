@@ -12,7 +12,7 @@ import {checkProbes} from './probe';
 import {parseCriteria} from './verdict';
 
 import {absoluteRuleWarnings} from './absolute-rule';
-import {placementWarnings} from './placement';
+import {placementWarnings, sectionText} from './placement';
 
 export type CriterionForm = 'test' | 'command' | 'number' | 'ui';
 
@@ -88,6 +88,34 @@ export function classifyCriterion(text: string, options: CriterionOptions = {}):
   return {text, form, subjective, ok: true, problem: ''};
 }
 
+const TEXT_COMMAND = /^(?:grep|egrep|fgrep|ls|test\s+-[fe]|\[\s+-[fe]|cat\b.*\|\s*wc)\b/;
+
+/** Whether a criterion (whatever form the classifier gave a `test -f`) proves only that words or a file exist: a grep, a listing, a file test or a `cat | wc`. */
+export function isTextCheck(verdict: CriterionVerdict): boolean {
+  if (!verdict.ok) return false;
+  const commands = [...verdict.text.matchAll(/`([^`]+)`/g)].map(m => m[1].trim());
+  return commands.length > 0 && commands.every(c => TEXT_COMMAND.test(c));
+}
+
+/** `Gates green` and a `check docs` command say nothing about behaviour either way. */
+function isNeutral(verdict: CriterionVerdict): boolean {
+  return GATES.test(verdict.text) || /`[^`]*\bcheck\s+docs\b[^`]*`/.test(verdict.text);
+}
+
+/** Whether the Knock-on and Placement sections name Markdown files and nothing else. */
+function touchesOnlyMarkdown(body: string): boolean {
+  const paths = ['knock-on', 'placement'].flatMap(name => [...(sectionText(body, name) ?? '').matchAll(/`([^`\n]+)`/g)].map(m => m[1].trim()));
+  return paths.length > 0 && paths.every(p => /\.md$/i.test(p));
+}
+
+export const TEXT_ONLY_WARNING = 'every criterion checks text; name a test or a journey that shows the behaviour';
+
+function textOnlyWarnings(body: string, criteria: CriterionVerdict[]): string[] {
+  const counted = criteria.filter(c => c.ok && !isNeutral(c));
+  if (counted.length === 0 || !counted.every(isTextCheck) || touchesOnlyMarkdown(body)) return [];
+  return [TEXT_ONLY_WARNING];
+}
+
 export interface TicketCheck {
   ok: boolean;
   criteria: CriterionVerdict[];
@@ -103,5 +131,5 @@ export function checkTicketCriteria(body: string, options: CriterionOptions = {}
   if (criteria.length === 0) problems.push('the ticket has no acceptance criteria (checkbox items under an Acceptance heading)');
   const guards = checkGuards(body);
   problems.push(...guards.problems, ...checkProbes(body));
-  return {ok: problems.length === 0, criteria, problems, warnings: [...guards.warnings, ...placementWarnings(body), ...absoluteRuleWarnings(body, options.uiStates ?? [])]};
+  return {ok: problems.length === 0, criteria, problems, warnings: [...guards.warnings, ...placementWarnings(body), ...absoluteRuleWarnings(body, options.uiStates ?? []), ...textOnlyWarnings(body, criteria)]};
 }
