@@ -188,7 +188,10 @@
       "ticket": "issue-386",
       "pid": null,
       "session_id": "3b7cd9f0-d63b-45bb-98b1-4c79063f623c",
-      "snapshot": null,
+      "snapshot": {
+        "baseSha": "",
+        "reflogLength": 1
+      },
       "started_at": "2026-11-10T17:47:29.120Z",
       "plan": {
         "stages": [
