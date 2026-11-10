@@ -2,6 +2,7 @@ import {playwrightScreenshotter, shellAppServer} from '../adapters';
 import {UiInfrastructureError} from '../ports';
 import {UI_PATH, UiConfigError, formatFitReport, longestString, parseUiConfig, runFit} from '../ui';
 import {forgerPath} from '../config';
+import {JOURNEYS_PATH, loadJourneysConfig} from '../checks';
 import {existsSync, readdirSync, readFileSync} from 'fs';
 import {homedir} from 'os';
 import {join} from 'path';
@@ -101,7 +102,9 @@ export function gatherMeasures(ctx: CommandContext): Measures {
     ...(iterations.length === 0 ? ['iteration logs'] : []),
     ...(Object.values(sessionCosts).some(c => c === null) ? ['session transcripts'] : []),
   ];
+  const journeysFile = forgerPath(projectRoot, JOURNEYS_PATH);
   const measures = computeMeasures({
+    ...(existsSync(journeysFile) ? {journeys: loadJourneysConfig(projectRoot).journeys} : {}),
     ...(changes === null ? {} : {changes}),
     iterations,
     budgets,

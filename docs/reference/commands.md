@@ -63,7 +63,7 @@ $ bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts status --json
 | `events` | Lists the terminal and mid-run events so far. |
 | `await-event` | Blocks until an event past the first N arrives. |
 | `report` | Reports across loops: merged, in progress, next, waiting on the owner, and the measures. |
-| `measure` | Reports runs, failures by cause, time, cost, rework and escaped defects. Given a route or state and a selector, reports the text's width against the room it has at each viewport, locale and text scale, worst case first. |
+| `measure` | Reports runs, failures by cause, time, cost, rework and escaped defects, and with a journeys file the share of merged PRs that changed a journey against upkeep. Given a route or state and a selector, reports the text's width against the room it has at each viewport, locale and text scale, worst case first. |
 | `retro` | Writes a rule record or an upstream issue draft from a captured signal. |
 | `catalogue` | Lists the failure catalogue's rows and, with `--update`, syncs them with the tracker. |
 
