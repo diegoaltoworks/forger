@@ -38,7 +38,7 @@ function nearestRoot(start: string): string | null {
 }
 
 /** The main checkout of the repository `cwd` is in: a worktree's shares its git directory with it. */
-function loopRootOf(io: HookIo, cwd: string, fallback: string): string {
+export function loopRootOf(io: HookIo, cwd: string, fallback: string): string {
   const common = io.git(cwd, 'rev-parse --path-format=absolute --git-common-dir');
   const root = common ? dirname(common.trim()) : null;
   return root && isProjectRoot(root) ? root : fallback;
@@ -55,9 +55,9 @@ function policyAt(io: HookIo, loopRoot: string): HookPolicy {
   }
 }
 
-function statePaths(config: WorkloopConfig): string[] {
-  const {state, events, halt, lock, verdicts} = config.paths;
-  return [state, events, halt, lock, verdicts, join(dirname(state), 'lease.json'), join(dirname(state), 'events')];
+export function statePaths(config: WorkloopConfig): string[] {
+  const {state, events, halt, lock, verdicts, checks} = config.paths;
+  return [state, events, halt, lock, verdicts, checks, join(dirname(state), 'lease.json'), join(dirname(state), 'events')];
 }
 
 /** One hook call: the role from the environment, the facts from the checkout, the decision, and a refusal recorded. */

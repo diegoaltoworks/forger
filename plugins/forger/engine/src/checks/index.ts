@@ -12,3 +12,4 @@ export * from './ui';
 export * from './spec';
 export * from './hooks';
 export * from './structure';
+export * from './record';

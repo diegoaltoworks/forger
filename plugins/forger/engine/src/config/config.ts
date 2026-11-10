@@ -126,6 +126,8 @@ export interface WorkloopConfig {
     process: string;
     /** One verdict record per verified PR head commit. */
     verdicts: string;
+    /** One JSON line per opinion per `check` run inside a worker; local, never committed. */
+    checks: string;
     /** The disposable checkouts `verify` and `critique` make; removed when each finishes. */
     tmp: string;
   };
@@ -274,6 +276,7 @@ export const DEFAULT_CONFIG: WorkloopConfig = {
     declined: `${FORGER_DIR}/declined.json`,
     process: `${FORGER_DIR}/process.md`,
     verdicts: `${FORGER_DIR}/verdicts`,
+    checks: `${FORGER_DIR}/checks.jsonl`,
     tmp: `${FORGER_DIR}/tmp`,
   },
   tracker: {kind: 'github', label: 'ready-for-agent', ignore: []},

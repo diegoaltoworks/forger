@@ -58,7 +58,7 @@ export function relocatableGates(gates: string): string {
 
 /** Per-run files a project never commits. */
 export function gitignoreLines(dir: string): string[] {
-  return ['state.json', 'work.log', 'output/', 'HALT', 'runner.lock', 'events.jsonl', 'declined.json', 'verdicts/', 'tmp/'].map(f => `${dir}/${f}`);
+  return ['state.json', 'work.log', 'output/', 'HALT', 'runner.lock', 'events.jsonl', 'declined.json', 'verdicts/', 'tmp/', 'checks.jsonl'].map(f => `${dir}/${f}`);
 }
 
 /** The gates always end with the check command, run from the plugin that is installed now. */

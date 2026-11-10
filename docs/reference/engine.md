@@ -65,3 +65,11 @@ The loop stops when the backlog empties, a HALT file appears, it stalls (nothing
 merged for `maxStallIterations` runs in a row), or it hits
 `maxConsecutiveFailures`.
 
+
+## Check records
+
+Inside a worker (`FORGER_TICKET` set), the umbrella `check` appends one JSON line
+per opinion that had a finding to `paths.checks`, under the loop's own root:
+`{at, ticket, iteration, opinion, check, failed, waived}`. A run with no finding
+appends one line with `clean: true` and no opinion. A failed write prints one
+warning and never changes the exit code. A worker may not write the file itself.

@@ -4,6 +4,7 @@ import {
   formatViolations,
   runArchCheck,
   runChecks,
+  appendCheckRecords,
   applyWaivers,
   loadWaivers,
   runCoverageCheck,
@@ -28,13 +29,21 @@ import {checkContract, contractItems, formatContract, resolveSandboxImage, findH
 import {loadConfig} from '../config';
 import {checkSequencing} from '../backlog';
 import {readOpenTickets} from './open-tickets';
-import {checkTicketCriteria, criterionOptions, placementProblems} from '../loop';
+import {WORKER_ITERATION_VAR, WORKER_TICKET_VAR, checkTicketCriteria, criterionOptions, placementProblems} from '../loop';
 import {placementContext} from './placement-context';
 import type {Harness} from '../ports';
 import {UiInfrastructureError} from '../ports';
 import {harnessOfRoot} from './harness-of';
+import {loopRootOf, realHookIo} from './hook';
 import type {Command} from './command';
 import {specProvider} from './spec-provider';
+
+/** The ticket and iteration of the worker running this command; null outside one. */
+function checkWorker(env: Record<string, string | undefined>): {ticket: string; iteration: number} | null {
+  const ticket = env[WORKER_TICKET_VAR];
+  const n = Number(env[WORKER_ITERATION_VAR]);
+  return ticket ? {ticket, iteration: Number.isInteger(n) && n >= 0 ? n : 0} : null;
+}
 
 const SINGLE = {hooks: (root: string) => runHooksCheck(root, harnessOfRoot(root)), docs: runDocsCheck, arch: runArchCheck, decisions: runDecisionsCheck, guards: runGuardsCheck, safety: runSafetyCheck, tests: runTestsCheck, coverage: runCoverageCheck, ui: runUiCheck};
 
@@ -90,6 +99,8 @@ export const check: Command = {
         const report = runChecks(projectRoot, pluginRoot, ctx.run(), specProvider(ctx), harnessOfRoot(projectRoot));
         console.log(values.json ? JSON.stringify(report) : values.summary ? formatSummary(report) : formatCheckReport(report));
         if (!report.ok) process.exitCode = 1;
+        const warning = appendCheckRecords(report, checkWorker(process.env), loopRootOf(realHookIo, projectRoot, projectRoot), loadConfig(projectRoot).paths.checks);
+        if (warning) console.error(warning);
       } catch (e) {
         console.error((e as Error).message);
         process.exitCode = 1;
