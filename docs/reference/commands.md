@@ -64,7 +64,7 @@ $ bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts status --json
 | `await-event` | Blocks until an event past the first N arrives. |
 | `report` | Reports across loops: merged, in progress, next, waiting on the owner, and the measures. |
 | `measure` | Reports runs, failures by cause, time, cost, rework and escaped defects, and with a journeys file the share of merged PRs that changed a journey against upkeep. With `--opinions`, reports per installed opinion with a check how many runs and tickets failed and how they ended (fixed, waived, open), and per ticket-template section how many merged tickets answered none. Given a route or state and a selector, reports the text's width against the room it has at each viewport, locale and text scale, worst case first. |
-| `retro` | Writes a rule record or an upstream issue draft from a captured signal. |
+| `retro` | Writes a rule record or an upstream issue draft from a captured signal; `retro demote` lists opinions that do not earn their place and drafts the demotion, filing nothing. |
 | `catalogue` | Lists the failure catalogue's rows and, with `--update`, syncs them with the tracker. |
 
 ### Tickets and pull requests

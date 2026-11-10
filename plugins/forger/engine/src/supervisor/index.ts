@@ -10,5 +10,6 @@ export * from './waiting';
 export * from './multi';
 export * from './follow';
 export * from './journey-share';
+export * from './opinions/demotion';
 export * from './opinions/failures';
 export * from './opinions/none-sections';

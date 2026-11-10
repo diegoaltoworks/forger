@@ -10,7 +10,8 @@ import {join} from 'path';
 import {parseAllEvents, parseEvents, loopRootOf, readAllVerdicts, readSchedule, verdictsHome} from '../loop';
 import {LOCK_PATH, listOpinions, loadPacks, parseLock} from '../packs';
 import {computeNoneSections, computeOpinionFailures, formatNoneSections, formatOpinionFailures, sectionNames, type FailureRecord} from '../supervisor';
-import {buildComparisonReport, DEFAULT_PRICES, mergePrices, sessionCostUsd, type PriceTable, type Measures, computeMeasures, diffReports, parseDiffRanges, parseReplacedRanges, picksToPrs, DEFAULT_REWORK_WINDOW, type MergedPr, type TrackerIssue, type ReworkInputs, type ComparisonReport, formatMeasures, parseBudgets, parseIterationLog, type CiRun, type IterationRecord} from '../supervisor';
+import {buildComparisonReport, DEFAULT_PRICES, mergePrices, sessionCostUsd, type PriceTable, type Measures, computeMeasures, diffReports, parseDiffRanges, parseReplacedRanges, picksToPrs, DEFAULT_REWORK_WINDOW, type MergedPr, type TrackerIssue, type ReworkInputs, type ComparisonReport, formatMeasures, parseBudgets, parseIterationLog, type CiRun, type IterationRecord, type OpinionFailures} from '../supervisor';
+import type {Rung} from '../packs';
 import type {Command, CommandContext} from './command';
 
 /** The transcript a session left, searched under every project folder of the harness's config dir; null when there is none. */
@@ -209,19 +210,32 @@ function mergedTickets(run: (cmd: string) => string): {tickets: Set<string>; bod
   }
 }
 
-function measureOpinions(ctx: CommandContext): void {
-  const {values, projectRoot, config, pluginRoot} = ctx;
+/** Per-opinion failure rows with each opinion's rung and the merged-ticket count; null when no check has written records. */
+export function loadOpinionFailures(ctx: CommandContext): {rows: OpinionFailures[]; rungs: Map<string, Rung>; merged: number; sections: ReturnType<typeof computeNoneSections>} | null {
+  const {projectRoot, config, pluginRoot} = ctx;
   const records = readCheckRecords(join(loopRootOf(ctx.run(), projectRoot), config.paths.checks));
-  if (records === null) {
-    console.log(values.json ? JSON.stringify({recorded: false}) : 'nothing is recorded yet: no check run inside a worker has written records');
-    return;
-  }
+  if (records === null) return null;
   const lockFile = join(projectRoot, LOCK_PATH);
   const installed = existsSync(lockFile) ? listOpinions(loadPacks(pluginRoot), parseLock(readFileSync(lockFile, 'utf-8'))) : [];
   const {tickets, bodies} = mergedTickets(ctx.run());
   const installedTemplate = join(projectRoot, '.forger/templates/ticket.md');
   const template = [installedTemplate, join(pluginRoot, 'packs/base/files/ticket.md')].find(f => existsSync(f));
-  const rows = computeOpinionFailures(records, installed.filter(o => o.check !== null), tickets);
-  const sections = computeNoneSections(template === undefined ? [] : sectionNames(readFileSync(template, 'utf-8')), bodies);
+  const checked = installed.filter(o => o.check !== null);
+  return {
+    rows: computeOpinionFailures(records, checked, tickets),
+    rungs: new Map(checked.map(o => [o.id, o.rung])),
+    merged: tickets.size,
+    sections: computeNoneSections(template === undefined ? [] : sectionNames(readFileSync(template, 'utf-8')), bodies),
+  };
+}
+
+function measureOpinions(ctx: CommandContext): void {
+  const {values} = ctx;
+  const loaded = loadOpinionFailures(ctx);
+  if (loaded === null) {
+    console.log(values.json ? JSON.stringify({recorded: false}) : 'nothing is recorded yet: no check run inside a worker has written records');
+    return;
+  }
+  const {rows, sections} = loaded;
   console.log(values.json ? JSON.stringify({recorded: true, opinions: rows, sections}) : [formatOpinionFailures(rows), formatNoneSections(sections)].filter(Boolean).join('\n\n'));
 }
