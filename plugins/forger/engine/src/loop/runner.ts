@@ -15,6 +15,7 @@ import {capturing, type AgentRunner, type CapturingRunner, type CommandRunner, t
 import {type AutomationState, currentTicket, LoopStore} from './state';
 import type {TrackerHalt} from './halt-tracker';
 import {Logger, colors} from './logger';
+import {runDelivery} from './delivery';
 import {fileStructureReview, readReviewTemplate} from './structure-review-io';
 import {RateLimitError, rateLimitWaitMs} from './infra';
 import type {StoredPlan} from '../pipeline';
@@ -164,7 +165,10 @@ export class AutomationRunner {
       refreshBacklog: () => this.refreshBacklog(),
       emit: (kind, iteration, ticket, reason) => this.emit(kind, iteration, ticket, reason),
       halt: (reason, kind) => this.halt(reason, kind),
-      afterMerge: iteration => this.reviewStructure(iteration),
+      afterMerge: (iteration, ticket) => {
+        this.reviewStructure(iteration);
+        this.deliver(iteration, ticket);
+      },
       resolvePlan: deps.resolvePlan,
       probeRunner: deps.probeRunner,
       pluginRoot: deps.pluginRoot,
@@ -227,6 +231,28 @@ export class AutomationRunner {
       if (reason !== null) this.emit('structure_review_filed', iteration, null, reason);
     } catch (e) {
       this.logger.log('WARN', `Could not check whether a structure review is due: ${(e as Error).message}`);
+    }
+  }
+
+  /** Runs the delivery pack's plan for the ticket that just merged. Best effort: a delivery that cannot run never fails the iteration. */
+  private deliver(iteration: number, ticket: string | null): void {
+    const probe = this.iteration.probeRunner;
+    if (probe === undefined) return;
+    try {
+      runDelivery({
+        projectRoot: this.projectRoot,
+        base: this.config.base_branch,
+        intakeLabel: this.config.tracker.label,
+        run: this.gitRunner,
+        probe,
+        iteration,
+        ticket,
+        emit: (kind, it, t, reason) => this.emit(kind, it, t, reason),
+        halt: reason => this.halt(reason),
+        warn: message => this.logger.log('WARN', message),
+      });
+    } catch (e) {
+      this.logger.log('WARN', `Delivery could not run: ${(e as Error).message}`);
     }
   }
 

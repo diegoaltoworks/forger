@@ -5,7 +5,7 @@
  * injectable CommandRunner, so nothing here can move HEAD or touch files.
  */
 
-import {ciConfigured as hasCi, dirtyEntries, viewPr as readPr, type PrFact} from '../loop';
+import {ciConfigured as hasCi, deliveryOutcome, dirtyEntries, viewPr as readPr, type DeliveryOutcome, type PrFact, type TerminalEvent} from '../loop';
 import type {CommandRunner} from '../ports';
 
 export {checksConclusion, parsePr, type ChecksConclusion, type PrFact} from '../loop';
@@ -14,6 +14,8 @@ export interface IssueFact {
   number: number;
   state: string;
   closing_pr: PrFact | null;
+  /** What the delivery after the closing PR's merge ended in; null when it had none. */
+  delivery: DeliveryOutcome | null;
 }
 
 export interface LoopFacts {
@@ -46,7 +48,7 @@ export function closingPrNumber(issueJson: string): number | null {
 
 export function gatherLoopFacts(
   run: CommandRunner,
-  opts: {baseBranch: string; ignore: string[]; issue?: number; pr?: number}
+  opts: {baseBranch: string; ignore: string[]; issue?: number; pr?: number; events?: TerminalEvent[]}
 ): LoopFacts {
   const branch = run('git branch --show-current');
   run(`git fetch --quiet origin ${opts.baseBranch}`);
@@ -64,7 +66,7 @@ export function gatherLoopFacts(
     const issueJson = run(`gh issue view ${opts.issue} --json state,closedByPullRequestsReferences`);
     const state = (parseJson(issueJson) as {state?: string} | null)?.state ?? 'UNKNOWN';
     const prNumber = closingPrNumber(issueJson);
-    facts.issue = {number: opts.issue, state, closing_pr: prNumber === null ? null : viewPr(prNumber)};
+    facts.issue = {number: opts.issue, state, closing_pr: prNumber === null ? null : viewPr(prNumber), delivery: prNumber === null ? null : deliveryOutcome(opts.events ?? [], prNumber)};
   }
   if (opts.pr !== undefined) facts.pr = viewPr(opts.pr) ?? undefined;
   return facts;
@@ -79,7 +81,7 @@ export function formatFacts(f: LoopFacts): string {
   const describePr = (pr: PrFact) => `PR #${pr.number} ${pr.merged ? 'merged' : pr.state.toLowerCase()}, checks ${pr.checks}`;
   if (f.issue) {
     const pr = f.issue.closing_pr;
-    lines.push(`issue #${f.issue.number}: ${f.issue.state}, ${pr ? describePr(pr) : 'no PR'}`);
+    lines.push(`issue #${f.issue.number}: ${f.issue.state}, ${pr ? describePr(pr) : 'no PR'}${f.issue.delivery ? `, delivery ${f.issue.delivery}` : ''}`);
   }
   if (f.pr) lines.push(describePr(f.pr));
   return lines.join('\n');

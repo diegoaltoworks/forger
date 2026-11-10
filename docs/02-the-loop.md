@@ -129,6 +129,8 @@ flowchart TD
     P -- no --> FN[failed: nothing happened]
 ```
 
+After a merge, a project with the delivery pack gets its own commands run before the next pick (ADR 0021): `deploy` when configured, then `check`, in the main checkout at the merged commit. A pass records `delivered`. A failure records `delivery_failed`, files one `P0` issue with the intake label that links the merged PR and ends with the failing command's output (an open one is commented on instead), and then runs `rollback` when configured, recording `rolled_back` or `rollback_failed`. A failed delivery does not halt and the new issue is a normal pick; a failed rollback halts, since the build is broken with no way back. Delivery never changes whether a merge happens, and without the pack nothing runs.
+
 The engine's pick is the contract, and the worker's prompt names it: the worker builds that ticket or declines it, and is never asked to choose. A run with no workable ticket gets a prompt that says so. A branch for any other ticket is `off-pick`,
 a failure, even when its own PR merged: the work is real but is never counted as
 the pick's completion. A decline record for the pick, with nothing built, is

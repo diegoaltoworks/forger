@@ -191,8 +191,9 @@ improvise them:
   is clean, the base head on `origin`, and an issue's closing PR (or a PR on its
   own): whether it merged and its CI conclusion, `success`, `failure`,
   `pending` or `none` when the repo has no CI, read without touching the
-  working tree.
-- `report [--since DATE]`: the report sections from the same facts, including the tickets the
+  working tree. With the delivery pack, an issue also carries `delivery` for the PR that closed it:
+  `delivered`, `failed`, `rolled_back` or `null`.
+- `report [--since DATE]`: the report sections from the same facts, including a failed delivery under "waiting on you" until a later delivery passes, and including the tickets the
   worker declined, and the owner measures from `measure` (cost, rework, escaped
   defects, interventions).
 - `approval <action>`: who may do an action, from the table below.

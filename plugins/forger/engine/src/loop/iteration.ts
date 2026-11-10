@@ -51,7 +51,7 @@ export interface IterationContext {
   emit(kind: EventKind, iteration: number, ticket: string | null, reason: string | null): void;
   halt(reason: string, kind?: TerminalEventKind): void;
   /** Runs after a merged ticket is recorded; the structure review trigger. */
-  afterMerge?(iteration: number): void;
+  afterMerge?(iteration: number, ticket: string | null): void;
   /** The pipeline plan for a ticket; absent or null leaves the run without one. */
   resolvePlan?(ticket: string | null): StoredPlan | null;
   /** Runs a probe command on the host; absent, probes are not run. */
@@ -394,7 +394,7 @@ function settle(
   ctx.store.save(state);
   ctx.backlog.avoid(avoidedFootprints(state.set_aside_tasks));
 
-  if (outcome.merged && outcome.result === 'success') ctx.afterMerge?.(iteration);
+  if (outcome.merged && outcome.result === 'success') ctx.afterMerge?.(iteration, ticket);
 
   if (aside) {
     ctx.logger.log('WARN', `Iteration ${iteration} set ${aside.ticket} aside: ${aside.reason.split('\n')[0]}`);

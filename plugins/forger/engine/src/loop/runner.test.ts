@@ -302,6 +302,27 @@ describe('AutomationRunner outcome from facts', () => {
     expect(state.completed_tasks).toEqual(['the_ticket']);
   });
 
+  test('a merge runs the delivery pack through the runner and records delivered', async () => {
+    const probed: string[] = [];
+    const {runner, root, calls} = runnerWith(timedOut, {merge: true, branch: 'feat/the_ticket'}, done);
+    void calls;
+    mkdirSync(join(root, '.forger'), {recursive: true});
+    writeFileSync(join(root, '.forger', 'deliver.json'), JSON.stringify({check: 'smoke'}));
+    (runner as unknown as {iteration: {probeRunner: ProbeRunner}}).iteration.probeRunner = command => (probed.push(command), {stdout: '', stderr: '', exitCode: 0});
+    expect(await runner.runIteration(2)).toBe(true);
+    expect(probed).toEqual(['smoke']);
+    expect(readFileSync(join(root, '.forger', 'events.jsonl'), 'utf-8')).toContain('"event":"delivered"');
+  });
+
+  test('a merge without the delivery pack runs no command', async () => {
+    const probed: string[] = [];
+    const {runner, root} = runnerWith(timedOut, {merge: true, branch: 'feat/the_ticket'}, done);
+    (runner as unknown as {iteration: {probeRunner: ProbeRunner}}).iteration.probeRunner = command => (probed.push(command), {stdout: '', stderr: '', exitCode: 0});
+    expect(await runner.runIteration(2)).toBe(true);
+    expect(probed).toEqual([]);
+    expect(readFileSync(join(root, '.forger', 'events.jsonl'), 'utf-8')).not.toContain('deliver');
+  });
+
   test('a completion claim with nothing merged is a failure', async () => {
     const {runner, root} = runnerWith({
       exitCode: 0,

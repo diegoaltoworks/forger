@@ -15,5 +15,8 @@ validates the file and runs none of the commands.
 ## The commands are the project's own (rule: delivery.project-commands)
 
 Credentials and deploy logic stay in the project's scripts and its secret
-store. When a check fails after a merge, the plan runs the rollback only when
+store. After each merge the engine runs deploy and check in the main checkout,
+records `delivered` or `delivery_failed`, and on a failure files a `P0` issue
+(or comments on the open one) and runs the rollback when one is configured. A
+failed delivery does not halt the loop; a failed rollback does. When a check fails after a merge, the plan runs the rollback only when
 one is configured; with none, nothing is reverted.

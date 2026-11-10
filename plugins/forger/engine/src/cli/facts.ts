@@ -3,7 +3,7 @@ import {join} from 'path';
 
 import {journeysOf} from '../checks';
 import {PRODUCT_BRIEF_PATH, parseProductBrief} from '../intent';
-import {formatGuardsReport, guardGlobsOf, guardsReport, testGlobsOf} from '../loop';
+import {parseAllEvents, formatGuardsReport, guardGlobsOf, guardsReport, testGlobsOf} from '../loop';
 import {formatFacts, gatherLoopFacts} from '../supervisor';
 import type {Command} from './command';
 
@@ -42,6 +42,7 @@ export const facts: Command = {
       ignore: [state, log, output, halt, lock, events, declined, verdicts, ...config.local_only],
       issue: num(values.issue),
       pr: num(values.pr),
+      events: parseAllEvents(ctx.stateStore.readEvents()),
     });
     console.log(values.json ? JSON.stringify(facts) : formatFacts(facts));
   },
