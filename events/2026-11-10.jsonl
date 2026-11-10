@@ -20,3 +20,4 @@
 {"event":"picked","at":"2026-11-10T18:06:29.493Z","iteration":199,"ticket":"issue-390","reason":null}
 {"event":"merged","at":"2026-11-10T18:17:46.641Z","iteration":199,"ticket":"issue-390","reason":null}
 {"event":"picked","at":"2026-11-10T18:18:01.397Z","iteration":200,"ticket":"issue-391","reason":null}
+{"event":"worker_denied","at":"2026-11-10T18:21:20.238Z","iteration":200,"ticket":"issue-391","reason":"merge: cd /home/diego/work/forger/.forger/worktrees/issue-391; gh pr checks 407 --watch --fail-fast 2>&1 | grep -c fail; gh pr merge 407 --squash --delete-branch 2>&1 | tail -2"}
