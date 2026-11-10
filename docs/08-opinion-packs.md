@@ -132,15 +132,16 @@ An entry missing its name, command or paths is a config error that names the ent
 
 ## The testing pack
 
-The `testing` pack holds the testing habits the engine itself relies on. Three of its opinions are enforced, each under its own opinion id so a waiver can target one:
+The `testing` pack holds the testing habits the engine itself relies on. Four of its opinions are enforced, each under its own opinion id so a waiver can target one:
 
 | Opinion | Check | What it flags |
 |---|---|---|
 | `testing.fix-with-test` | `check tests` | a branch with a `fix:` commit that adds or changes no file matching `test_paths` |
 | `testing.no-network` | `check tests` | a unit test file that imports a library named in `network_modules`; files under `integration_paths` are exempt |
 | `testing.coverage-ratchet` | `check coverage` | line coverage below the generated baseline, or no baseline yet |
+| `testing.budget-ratchet` | `check budgets` | a number printed by a budget command worse than its recorded one, output that is not a number, or a failing command; a budget with no recorded number is a gap |
 
-The globs and library list live in `.forger/testing.json`, with the path of the lcov report the project's test command writes and the path of the baseline. The baseline is a generated file: `check coverage --update` creates it or raises it, and never lowers it, so the number lives only there and a deliberate drop is a recorded waiver. A missing or empty coverage report is an error, never a pass. The other opinions (tables for the pure core, fixtures for adapters, tests named for behaviour) are rules kept by judgement. Like `check decisions`, `check tests` reads commits and the working tree against the merge-base with the configured base branch.
+The globs and library list live in `.forger/testing.json`, with the path of the lcov report the project's test command writes and the path of the baseline. The baseline is a generated file: `check coverage --update` creates it or raises it, and never lowers it, so the number lives only there and a deliberate drop is a recorded waiver. A missing or empty coverage report is an error, never a pass. `.forger/budgets.json` lists `{name, command, direction}` for any other number a project wants held (`direction` is `down` when smaller is better, `up` otherwise); the sample is an empty list. `check budgets --update` records new and better numbers in `.forger/budgets-baseline.json` and refuses a worse one, and the baseline is a guard file, so `check guards` fails a diff that loosens it. The other opinions (tables for the pure core, fixtures for adapters, tests named for behaviour) are rules kept by judgement. Like `check decisions`, `check tests` reads commits and the working tree against the merge-base with the configured base branch.
 
 Setup, detection and this pack's coverage advice are tested against the sample projects in `test/fixtures/`, which CI runs through `setup`, the gates and `check` (see its README).
 
