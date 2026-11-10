@@ -13,6 +13,8 @@ reads the tree and hands it to them.
 - `files.ts` - the files a check scans: tracked, and untracked but not ignored.
   The local gates see an unstaged file before it is committed.
 - `ci.ts` - the CI job summary and the workflow the loop's CI runs. Pure.
+- `record/` - the per-opinion records of a `check` run inside a worker, appended
+  to `paths.checks`. The records are pure; the append is the only I/O.
 - `docs/`, `arch/`, `decisions/`, `guards/`, `hooks/`, `safety/`, `spec/`, `structure/`, `testing/`, `ui/` - one check each; see
   their READMEs.
 

@@ -34,6 +34,7 @@ chosen by the `harness` config key (ADR 0009).
 | `runner.lock` | no | engine | the pid of the one live engine; a second `run` refuses, a dead pid is taken over |
 | `declined.json` | no | worker (`decline`), engine | the worker's decline of the pick; the next run of that iteration reads it once and deletes it |
 | `worktrees/` | no | `worktree` | one git worktree per ticket, created from the remote base branch and removed after the run |
+| `checks.jsonl` | no | `check` | one record per opinion per `check` run inside a worker: ticket, iteration, check, and the count of failed and waived findings; a clean run is one record with no opinion |
 | `verdicts/` | no | `verify` | one verdict record per verified PR head commit: a judgement and evidence for each acceptance criterion; a push after it makes it stale |
 | `tmp/` | no | `verify`, `critique` | the disposable checkout of a PR's head each makes, removed when it finishes; kept out of the system temp folder, which may be small and shared |
 | `events.jsonl` | no | engine | append-only terminal events (completed, halted, stalled, timed out, too many failures, engine gone), one JSON line each, for watchers |
@@ -172,7 +173,7 @@ policy and the call, and it reads through chains (`&&`, `;`, pipes), wrappers
 - `status-write`: writing commit statuses or check runs, so only the engine sets
   `forger/verify`.
 - `state-edit`: editing or removing the engine's state under `.forger/` (state,
-  events, verdicts, HALT, lock, lease), by an editor tool or a shell write.
+  events, verdicts, checks, HALT, lock, lease), by an editor tool or a shell write.
 
 A refusal tells the worker what to do instead, and is appended to the event
 file as `worker_denied`, with the ticket, the rule and the refused command. A

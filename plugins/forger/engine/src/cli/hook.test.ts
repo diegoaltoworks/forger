@@ -105,3 +105,12 @@ describe('the hook for the supervisor', () => {
     expect(runHook(bash(dir, 'gh pr merge 1'), workerEnv('t', 1), io('main', true))).toEqual({decision: {allow: true}, role: 'none'});
   });
 });
+
+describe('the checks file', () => {
+  test('the checks file is among the state paths a worker may not write', async () => {
+    const {statePaths} = await import('./hook');
+    const {loadConfig} = await import('../config');
+    const root = project();
+    expect(statePaths(loadConfig(root))).toContain('.forger/checks.jsonl');
+  });
+});

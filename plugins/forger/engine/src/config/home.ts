@@ -36,6 +36,7 @@ export const HOMES: Readonly<Record<string, Home>> = {
   output: 'local',
   'work.log': 'local',
   'runner.lock': 'local',
+  'checks.jsonl': 'local',
 };
 
 /**

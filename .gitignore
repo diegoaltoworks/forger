@@ -12,3 +12,4 @@ node_modules/
 coverage/
 .forger/verdicts/
 .forger/tmp/
+.forger/checks.jsonl
