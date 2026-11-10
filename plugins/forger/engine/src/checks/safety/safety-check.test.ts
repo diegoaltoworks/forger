@@ -4,7 +4,7 @@ import {tmpdir} from 'os';
 import {join} from 'path';
 
 import type {CommandRunner} from '../../ports';
-import {runSafetyCheck} from './safety-check';
+import {runSafetyCheck, runSafetyCheckOutput} from './safety-check';
 
 const dirs: string[] = [];
 afterEach(() => {
@@ -79,5 +79,49 @@ describe('runSafetyCheck', () => {
 
   test('an unresolvable base is an error, not a pass', () => {
     expect(() => runSafetyCheck(repo({}), git({mergeBase: ''}))).toThrow('merge-base');
+  });
+});
+
+describe('the dependency audit', () => {
+  const withAudit = JSON.stringify({migration_paths: [], data_test_paths: [], audit_command: 'npm audit --audit-level=high'});
+  const auditRun = (reply: string, seen: string[] = []): CommandRunner => cmd => {
+    if (cmd.includes('npm audit')) {
+      seen.push(cmd);
+      return reply;
+    }
+    return git({})(cmd);
+  };
+
+  test('an audit command that exits non-zero is a finding with the end of its output', () => {
+    const root = repo({}, withAudit);
+    const lines = Array.from({length: 40}, (_, i) => `line ${i}`).join('\n');
+    const out = runSafetyCheck(root, auditRun(`${lines}\n\nforger-audit-exit:1\n`));
+    expect(out).toHaveLength(1);
+    expect(out[0].opinion).toBe('safety.dependency-audit');
+    expect(out[0].detail).toContain('line 39');
+    expect(out[0].detail).not.toContain('line 0\n');
+  });
+
+  test('an audit command that exits zero is no finding', () => {
+    const root = repo({}, withAudit);
+    expect(runSafetyCheck(root, auditRun('found 0 vulnerabilities\n\nforger-audit-exit:0\n'))).toEqual([]);
+  });
+
+  test('an audit command that cannot start is a finding', () => {
+    const root = repo({}, withAudit);
+    expect(runSafetyCheck(root, auditRun('sh: npm: not found\n\nforger-audit-exit:127\n')).map(f => f.rule)).toEqual(['audit-cannot-start']);
+    expect(runSafetyCheck(root, auditRun('')).map(f => f.rule)).toEqual(['audit-cannot-start']);
+  });
+
+  test('no audit command configured is a gap, not a pass', () => {
+    const root = repo({});
+    const out = runSafetyCheckOutput(root, git({}));
+    expect(out.findings).toEqual([]);
+    expect(out.gaps).toEqual([{file: '.forger/safety.json', opinion: 'safety.dependency-audit', modality: 'MAY', detail: 'no audit command configured'}]);
+  });
+
+  test('a configured audit command leaves no gap', () => {
+    const root = repo({}, withAudit);
+    expect(runSafetyCheckOutput(root, auditRun('\nforger-audit-exit:0\n')).gaps).toEqual([]);
   });
 });

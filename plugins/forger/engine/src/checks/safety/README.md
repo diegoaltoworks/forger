@@ -1,7 +1,7 @@
 # checks/safety
 
-`check safety`: an added secret, or a stored-shape change with no test, is a
-finding.
+`check safety`: an added secret, a stored-shape change with no test, or a
+failing dependency audit is a finding; no audit command is a gap.
 
 ## Files
 

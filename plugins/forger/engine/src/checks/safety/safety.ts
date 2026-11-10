@@ -6,17 +6,21 @@
  * paths must also touch a test under the data-test paths.
  */
 
+import type {Gap} from '../gaps';
 import {globToRegExp, type Finding} from '../waivers';
 
 export const SAFETY_PATH = '.forger/safety.json';
 export const SECRETS_OPINION = 'safety.secrets';
 export const DATA_FORWARD_OPINION = 'safety.data-forward';
+export const AUDIT_OPINION = 'safety.dependency-audit';
 
 export interface SafetyConfig {
   /** Globs of migrations and stored-shape definitions. */
   migration_paths: string[];
   /** Globs of the tests that prove stored records carry forward. */
   data_test_paths: string[];
+  /** The project's own dependency audit; the flags it carries choose the severity it fails at. */
+  audit_command?: string;
 }
 
 export class SafetyConfigError extends Error {
@@ -42,9 +46,14 @@ export function parseSafetyConfig(text: string): SafetyConfig {
   }
   if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) throw new SafetyConfigError('must be an object');
   const obj = raw as Record<string, unknown>;
+  const audit = obj.audit_command;
+  if (audit !== undefined && (typeof audit !== 'string' || audit.trim() === '')) {
+    throw new SafetyConfigError('"audit_command" must be a non-empty command');
+  }
   return {
     migration_paths: globs(obj.migration_paths, 'migration_paths'),
     data_test_paths: globs(obj.data_test_paths, 'data_test_paths'),
+    ...(audit === undefined ? {} : {audit_command: audit.trim()}),
   };
 }
 
@@ -128,4 +137,36 @@ export function checkDataForward(changedPaths: string[], config: SafetyConfig): 
       opinion: DATA_FORWARD_OPINION,
       detail: `a stored shape changed with no new or changed test under ${config.data_test_paths.join(', ')}`,
     }));
+}
+
+const EXIT_MARK = 'forger-audit-exit:';
+const AUDIT_TAIL_LINES = 15;
+
+/** The audit run through a shell that reports its exit status in the output, since a plain runner cannot tell a failure from silence. */
+export function auditShellCommand(command: string): string {
+  return `(
+${command}
+) 2>&1; printf '\\n${EXIT_MARK}%s\\n' "$?"`;
+}
+
+/** Exit statuses a shell gives when the command was found but not run (126) or not found (127). */
+const NOT_STARTED = new Set([126, 127]);
+
+/** The verdict on the audit's output: a non-zero exit is one finding carrying the end of the output. */
+export function judgeAudit(output: string, command: string): Finding[] {
+  const finding = (rule: string, detail: string): Finding[] => [{file: SAFETY_PATH, line: 1, rule, opinion: AUDIT_OPINION, detail}];
+  const at = output.lastIndexOf(EXIT_MARK);
+  if (at < 0) return finding('audit-cannot-start', `the audit command could not be run: ${command}`);
+  const code = Number(output.slice(at + EXIT_MARK.length).trim());
+  const body = output.slice(0, at).trim();
+  const tail = body.split('\n').slice(-AUDIT_TAIL_LINES).join('\n');
+  if (NOT_STARTED.has(code)) return finding('audit-cannot-start', `the audit command could not be started (exit ${code}): ${command}${tail ? `\n${tail}` : ''}`);
+  if (code === 0) return [];
+  return finding('audit-vulnerabilities', `the audit command exited ${code}: ${command}${tail ? `\n${tail}` : ''}`);
+}
+
+/** With no audit command the opinion cannot be measured; MAY, so it informs and does not fail. */
+export function auditGaps(config: SafetyConfig): Gap[] {
+  if (config.audit_command !== undefined) return [];
+  return [{file: SAFETY_PATH, opinion: AUDIT_OPINION, modality: 'MAY', detail: 'no audit command configured'}];
 }

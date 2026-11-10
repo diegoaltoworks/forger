@@ -1,6 +1,6 @@
 {
   "id": "safety",
-  "version": "1.0.2",
+  "version": "1.1.0",
   "description": "Nothing secret in the repo, and stored data carried forward: secrets and migrations checked by check safety.",
   "detect": ["dir:migrations", "dir:migrate", "file:schema.prisma", "file:alembic.ini"],
   "files": [
@@ -10,6 +10,7 @@
   "opinions": [
     {"id": "safety.secrets", "rung": "check", "summary": "Added lines are matched against known credential patterns and env files; a match fails without printing the secret.", "check": "safety"},
     {"id": "safety.data-forward", "rung": "check", "summary": "A diff that touches migration or schema paths also adds or changes a test under the data-test paths.", "check": "safety"},
+    {"id": "safety.dependency-audit", "rung": "check", "summary": "The project's own dependency audit command exits zero; with none configured the check reads unmeasured.", "check": "safety"},
     {"id": "safety.frozen-lockfiles", "rung": "rule", "summary": "Gates install from the lockfile and fail if it would change.", "check": null},
     {"id": "safety.destructive-commands-listed", "rung": "rule", "summary": "Commands that destroy data are listed in the process gotchas, with the rule for using them.", "check": null}
   ],
