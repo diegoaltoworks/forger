@@ -1,0 +1,3 @@
+{
+  "check": "echo replace-with-the-command-that-exits-0-when-the-delivered-build-works && false"
+}

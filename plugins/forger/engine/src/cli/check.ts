@@ -14,6 +14,7 @@ import {
   runDocsWarnings,
   runHooksCheck,
   runBudgetsCheck,
+  runDeliveryCheck,
   runJourneysCheck,
   updateBudgetsBaseline,
   runSafetyCheck,
@@ -48,7 +49,7 @@ function checkWorker(env: Record<string, string | undefined>): {ticket: string; 
   return ticket ? {ticket, iteration: Number.isInteger(n) && n >= 0 ? n : 0} : null;
 }
 
-const SINGLE = {hooks: (root: string) => runHooksCheck(root, harnessOfRoot(root)), docs: runDocsCheck, arch: runArchCheck, decisions: runDecisionsCheck, guards: runGuardsCheck, safety: runSafetyCheck, journeys: (root: string, run: CommandRunner) => runJourneysCheck(root, run).findings, budgets: (root: string, run: CommandRunner) => runBudgetsCheck(root, run).findings, tests: runTestsCheck, coverage: runCoverageCheck, ui: runUiCheck};
+const SINGLE = {hooks: (root: string) => runHooksCheck(root, harnessOfRoot(root)), docs: runDocsCheck, arch: runArchCheck, decisions: runDecisionsCheck, guards: runGuardsCheck, safety: runSafetyCheck, delivery: (root: string) => runDeliveryCheck(root), journeys: (root: string, run: CommandRunner) => runJourneysCheck(root, run).findings, budgets: (root: string, run: CommandRunner) => runBudgetsCheck(root, run).findings, tests: runTestsCheck, coverage: runCoverageCheck, ui: runUiCheck};
 
 export const check: Command = {
   name: 'check',
@@ -62,6 +63,7 @@ export const check: Command = {
   check guards [--json]    Fail when the diff loosens a guard, skips or deletes a test and the ticket's Decisions do not name it
   check hooks [--json] Fail when the hook policy is missing or drops a default rule without a waiver, or the harness's settings do not run the hook
   check safety [--json] Fail on an added secret or a stored-shape change with no test
+  check delivery [--json] Validate .forger/deliver.json (check required, commands non-empty, timeouts positive); runs none of the commands
   check journeys [--json] Start the app, run each journey in .forger/journeys.json and fail on one that exits non-zero; no journey named is a gap, not a pass
   check budgets [--json] [--update] Run each command in .forger/budgets.json and fail on a number worse than its recorded one, an output that is not a number or a failing command; a budget with no record is a gap; --update records new and better numbers and refuses a worse one
   check tests [--json] Fail on a fix with no test, or a unit test that imports a network or process module
@@ -203,7 +205,7 @@ export const check: Command = {
       return;
     }
     if (!(positionals[1] in SINGLE)) {
-      console.error('Usage: check [--json | --summary] | check docs|arch|structure|decisions|guards|hooks|safety|journeys|budgets|tests|coverage|ui|spec|a11y|sandbox [--json] | check coverage --update');
+      console.error('Usage: check [--json | --summary] | check docs|arch|structure|decisions|guards|hooks|safety|delivery|journeys|budgets|tests|coverage|ui|spec|a11y|sandbox [--json] | check coverage --update');
       process.exitCode = 1;
       return;
     }
