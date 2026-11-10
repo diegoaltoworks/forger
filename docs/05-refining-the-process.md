@@ -195,6 +195,15 @@ names a merged PR. A pick-versus-built mismatch is a `picked` event whose ticket
 differs from the issue the iteration's PR closed. When the tracker cannot be
 read the section reports unknown rather than zero.
 
+`measure --opinions` reads the records `check` leaves in a worker and reports,
+for each installed opinion that has a check, the runs that failed, the tickets
+that failed and how each ended: fixed (the ticket's last run was clean and it
+merged), waived (the opinion's last record is a waiver) or still open. Opinions
+that never failed come last, which is where a rule that costs more than it
+catches shows up. It also counts, per section of the ticket template, the merged
+tickets that answered "none", so a section nobody uses is visible. With no
+records yet it says so and exits 0.
+
 `measure --report` folds these into the five-measure comparison report of
 ADR 0012, and `measure --diff A.json B.json` gives the per-measure delta between
 two saved reports.

@@ -51,6 +51,7 @@ export const FLAGS = {
   repos: {type: 'string'},
   last: {type: 'string'},
   window: {type: 'string'},
+  opinions: {type: 'boolean', default: false},
   from: {type: 'string'},
   since: {type: 'string'},
   report: {type: 'boolean', default: false},
