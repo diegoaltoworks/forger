@@ -1,3 +1,4 @@
+import {unreadGaps, unreadSources} from './gaps';
 import {describe, expect, test} from 'bun:test';
 
 import {buildReport, checksToRun, formatReport} from './checks';
@@ -107,5 +108,15 @@ describe('buildReport with a spec gap', () => {
     const must = {file: 'spec', opinion: 'spec.named-requirements-satisfied', modality: 'MUST' as const, detail: 'x'};
     expect(buildReport([{check: 'spec', findings: [], gaps: [must]}], []).results[0].status).toBe('failed');
     expect(buildReport([{check: 'spec', findings: [], gaps: [{...must, modality: 'SHOULD'}]}], []).results[0].status).toBe('unmeasured');
+  });
+});
+
+describe('unread-language gaps in the report', () => {
+  test('a result with only unread-language gaps is unmeasured, not passed', () => {
+    const gaps = unreadGaps(unreadSources(['src/a.py'], () => false), 'architecture.dependency-rule');
+    const r = buildReport([{check: 'arch', findings: [], gaps}], []);
+    expect(r.ok).toBe(true);
+    expect(r.results[0].status).toBe('unmeasured');
+    expect(r.results[0].gaps.map(g => g.severity)).toEqual(['warn']);
   });
 });

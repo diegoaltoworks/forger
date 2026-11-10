@@ -7,7 +7,7 @@
 import {existsSync, readFileSync} from 'fs';
 import {join} from 'path';
 
-import {runArchCheck} from './arch';
+import {runArchCheckOutput} from './arch';
 import {runDecisionsCheck} from './decisions';
 import {runDocsCheck} from './docs';
 import {runGuardsCheck} from './guards';
@@ -71,13 +71,16 @@ export function loadWaivers(projectRoot: string): Waiver[] {
 /** Every check forger can run; a pack's manifest names these by id. */
 export const CHECKS: Record<string, (ctx: CheckContext) => Finding[] | CheckOutput> = {
   docs: ctx => runDocsCheck(ctx.projectRoot, ctx.run),
-  arch: ctx => runArchCheck(ctx.projectRoot, ctx.run),
+  arch: ctx => runArchCheckOutput(ctx.projectRoot, ctx.run),
   decisions: ctx => runDecisionsCheck(ctx.projectRoot, ctx.run),
   guards: ctx => runGuardsCheck(ctx.projectRoot, ctx.run),
   safety: ctx => runSafetyCheckOutput(ctx.projectRoot, ctx.run),
   tests: ctx => runTestsCheck(ctx.projectRoot, ctx.run),
   coverage: ctx => runCoverageCheck(ctx.projectRoot, ctx.run),
-  structure: ctx => runStructureCheck(ctx.projectRoot, ctx.run).findings,
+  structure: ctx => {
+    const {findings, gaps} = runStructureCheck(ctx.projectRoot, ctx.run);
+    return {findings, gaps};
+  },
   ui: ctx => runUiCheckOutput(ctx.projectRoot, ctx.run),
   hooks: ctx => runHooksCheck(ctx.projectRoot, ctx.harness),
   spec: ctx => {

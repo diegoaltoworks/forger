@@ -5,7 +5,7 @@ import {join} from 'path';
 
 import {ARCH_OPINION} from './arch';
 import {MODULE_README_OPINION, PUBLIC_ENTRY_OPINION} from './modules';
-import {runArchCheck} from './arch-check';
+import {runArchCheck, runArchCheckOutput} from './arch-check';
 import {loadPacks} from '../../packs';
 
 const dirs: string[] = [];
@@ -98,5 +98,21 @@ describe('the shipped architecture pack', () => {
   test('the starter layer map parses and passes', () => {
     const starter = readFileSync(join(pack.dir, 'files/architecture.json'), 'utf-8');
     expect(runArchCheck(repo({'.forger/architecture.json': starter}), () => '')).toEqual([]);
+  });
+});
+
+describe('runArchCheckOutput gaps', () => {
+  const py = () => repo({'.forger/architecture.json': MAP, 'src/core/a.py': 'import b', 'src/core/b.py': '', 'src/shell/c.py': '', 'scripts/free.py': '', 'src/core/ok.ts': ''});
+  const list = 'src/core/a.py\nsrc/core/b.py\nsrc/shell/c.py\nscripts/free.py\nsrc/core/ok.ts';
+
+  test('check arch reports a gap for a layer whose files are in an unread language', () => {
+    const out = runArchCheckOutput(py(), () => list);
+    expect(out.findings).toEqual([]);
+    expect(out.gaps).toEqual([{file: 'src/core/a.py', opinion: ARCH_OPINION, modality: 'SHOULD', detail: '3 files .py: imports in .py files are not read'}]);
+  });
+
+  test('check arch reports no gap when every file in the layers is read', () => {
+    const root = repo({'.forger/architecture.json': MAP, 'src/core/a.ts': '', 'scripts/free.py': ''});
+    expect(runArchCheckOutput(root, () => 'src/core/a.ts\nscripts/free.py').gaps).toEqual([]);
   });
 });

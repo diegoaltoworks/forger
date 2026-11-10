@@ -75,3 +75,17 @@ describe('runStructureCheck', () => {
     expect(() => runStructureCheck(root, runner(SRC))).toThrow('structure.json');
   });
 });
+
+describe('runStructureCheck gaps', () => {
+  test('check structure reports a gap for its import rules on unread source files', () => {
+    const paths = ['src/a.py', 'src/b.py', 'lib/c.ts'];
+    const root = repo(Object.fromEntries(paths.map(p => [p, 'x'])));
+    const out = runStructureCheck(root, runner(paths));
+    expect(out.gaps).toEqual([{file: 'src/a.py', opinion: 'structure.import-rules', modality: 'SHOULD', detail: '2 files .py: imports in .py files are not read'}]);
+    expect(out.findings).toEqual([]);
+  });
+
+  test('no gap when every source file is read', () => {
+    expect(runStructureCheck(tree(), runner(SRC)).gaps).toEqual([]);
+  });
+});
