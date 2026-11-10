@@ -52,42 +52,36 @@ builder of apps.
 5. **The process only grows.** Each lesson adds a ticket section, a rule or a
    check. `measure` reports cost and rework per ticket, but nothing reports what
    an opinion costs or how often it catches anything, and nothing retires one.
-6. **The defaults carry house style.** The base pack, installed in every
-   project, enforces ASCII punctuation, role names in place of model names, and
-   skills reached only through slots. Those are forger's own writing rules. A
-   product repository inherits them as failing gates.
-7. **Agnostic where an opinion would help most.** Forger takes no position on
-   the stack, and an empty repository gets no starting point. Yet its checks
-   quietly do take one: the import rules of the architecture pack and the shim
-   rule of the structure pack read one family of languages, and a repository in
-   another passes them with nothing checked. That breaks forger's own rule that
-   an unreadable source is an error, never an empty result.
-8. **One ticket in doubt can stop everything.** Some stops already set the
+6. **No stated stack.** Forger takes no position on the stack, and an empty
+   repository gets no starting point. Yet its checks quietly do take one: the
+   import rules of the architecture pack and the shim rule of the structure
+   pack read one family of languages, and a repository in another passes them
+   with nothing checked. That breaks forger's own rule that an unreadable
+   source is an error, never an empty result.
+7. **One ticket in doubt can stop everything.** Some stops already set the
    ticket aside and move on (a declined ticket, a failed probe). Others halt the
    whole loop, including a verifier that cannot tell on one criterion of one
    ticket while unrelated tickets wait.
-9. **Whole classes of risk have no opinion.** The safety pack looks for secrets
+8. **Whole classes of risk have no opinion.** The safety pack looks for secrets
    and unsafe data changes. Nothing looks at vulnerable dependencies, at who may
    read or change whose data, or at size and speed budgets.
 
 ## In scope
 
-Each unit says whether a planner can ticket it now (**Ready**) or whether the
-owner must decide something first (**Owner decides**; see the last section).
+Each unit says whether a planner can ticket it now (**Ready**) or what it
+waits for. The owner's decisions are recorded in the last section.
 
 ### A. Evidence before more rules
 
 - **A1. Run the first replay.** Already tracked:
-  [#109](https://github.com/diegoaltoworks/forger/issues/109). **Owner decides**
-  (it creates a repository).
-- **A2. Compare two replays.** `replay compare <run> <run> --json` prints the
-  difference between two recorded replay runs: requests merged, rounds of
-  rework, cost, halts and escaped defects, per request and in total. Proved on
-  fixture runs. **Ready.**
+  [#109](https://github.com/diegoaltoworks/forger/issues/109). The owner has
+  given the go-ahead to create the fresh copy of the sample repository.
+- **A2. Compare two replays.** Exists: `measure --report` writes the comparison
+  report of a run and `measure --diff` compares two. Nothing to build.
 - **A3. A process change carries its replay.** A PR that changes a default
-  pack, a ticket template or a command's instructions names the replay
-  comparison in its body; `check` warns when it does not. **Ready** once A1 and
-  A2 have merged.
+  pack, a ticket template or a command's instructions names the comparison of
+  two replays in its body; `check` warns when it does not. **Ready** once A1
+  has run.
 
 ### B. Opinions that earn their place
 
@@ -100,11 +94,6 @@ owner must decide something first (**Owner decides**; see the last section).
 - **B3. A way down the ladder.** `retro` can draft the demotion or removal of
   an opinion that never fires or is mostly waived, as it drafts a new rule
   today. The refinement doc says when. **Ready** after B2.
-- **B4. House rules leave the base pack.** The opinions that are forger's own
-  writing rules move to a pack that forger installs on itself and a product
-  repository does not get by default. Part of
-  [#302](https://github.com/diegoaltoworks/forger/issues/302). **Owner
-  decides** (it changes a blocking check).
 
 ### C. Done means running
 
@@ -120,11 +109,11 @@ owner must decide something first (**Owner decides**; see the last section).
   deployed address) and to roll it back. After a merge the engine runs the
   check; a failure files a top-priority ticket that links the merge, and runs
   the rollback when one is configured. Forger calls the project's commands and
-  holds no deploy logic or credentials of its own. Needs an ADR. **Owner
-  decides.**
+  holds no deploy logic or credentials of its own. The first ticket records
+  the design as an ADR. **Ready.**
 - **C4. Failures in use come back as tickets.** A port for a source of runtime
   errors, with one adapter, that files a deduplicated ticket per new error.
-  **Owner decides**, after C3.
+  Waits for C3, and for the owner to name the first source.
 
 ### D. What the app is for
 
@@ -143,10 +132,12 @@ owner must decide something first (**Owner decides**; see the last section).
   with the reason and never a pass, and `setup` lists the installed checks that
   will not apply to the repository. The unit starts with a test that shows
   today's behaviour on a repository in an unread language. **Ready.**
-- **E2. One starter.** `setup --starter <name>` turns an empty repository into
-  a running skeleton for one stack: one journey end to end, gates, CI, and the
-  packs configured for that stack. Other stacks bring their own. Proved by
-  building the sample repository from empty. **Owner decides** (which stack).
+- **E2. The default stack is Bun and TypeScript.** Forger says so in its
+  principles and its getting-started guide. `setup` in an empty repository
+  builds a running skeleton on that stack unless told otherwise: one journey
+  end to end, gates, CI, and the packs configured for it. A repository that
+  already has code keeps its stack. Other stacks bring their own skeleton.
+  Proved by building a copy of the sample repository from empty. **Ready.**
 
 ### F. Keep the line moving
 
@@ -155,8 +146,7 @@ owner must decide something first (**Owner decides**; see the last section).
   the engine hands that ticket and the tickets blocked by it to the owner and
   picks the next ticket that shares no footprint with it. The loop halts only
   when the cause is not a ticket: a failing base branch, an infrastructure
-  error, a tampered hook, the budget. **Owner decides** (it changes when the
-  loop halts).
+  error, a tampered hook, the budget. **Ready.**
 
 ### G. Risks with no opinion
 
@@ -177,38 +167,36 @@ owner must decide something first (**Owner decides**; see the last section).
   [#301](https://github.com/diegoaltoworks/forger/issues/301) and
   [#300](https://github.com/diegoaltoworks/forger/issues/300).
 - More harnesses
-  ([#275](https://github.com/diegoaltoworks/forger/issues/275)). This plan
-  recommends it wait until forger has built one app that people use; reach
-  matters less than proof.
+  ([#275](https://github.com/diegoaltoworks/forger/issues/275)). It waits until
+  forger has built one app that people use; reach matters less than proof.
+- The base pack's opinions. Its writing rules are forger's own, and forger
+  enforces them in every project it sets up. That is intended.
 - Forger deploying anything itself. The delivery pack calls the project's
   commands.
 - New ticket sections. Every unit here uses a file, a check or a measure.
 
 ## Build order
 
-1. A2, B1, C2, E1, G1: small, independent, and each makes a later step
+1. B1, C2, E1, G1: small, independent, and each makes a later step
    measurable or honest.
 2. A1, then A3. From here a process change is compared, not assumed.
 3. C1, D1, then D2 and G2.
-4. B2, then B3.
-5. The owner's decisions, each as its own plan once made: F1, B4, C3, E2, C4.
-6. G3.
+4. F1 and E2.
+5. B2, then B3.
+6. C3, then G3.
+7. C4, once its source is named.
 
-## Open questions and owner steps
+## Owner decisions
 
-Each has a recommendation; none is ticketed until the owner answers.
+- **The base pack keeps its writing rules.** They are forger's opinions and it
+  enforces them; a new project starts with them.
+- **The default stack is Bun and TypeScript** (E2).
+- **The loop may set a ticket aside and continue** when the cause belongs to
+  that ticket (F1).
+- **Forger acts after the merge**, opt-in, through the project's own commands,
+  with rollback only when one is configured (C3).
+- **The first replay may create its copy of the sample repository** (A1).
+- **More harnesses wait** for one app that people use
+  ([#275](https://github.com/diegoaltoworks/forger/issues/275)).
 
-- **B4. Do the house rules leave the base pack?** Recommended: yes. A product
-  repository should fail gates for its own reasons, not for forger's style.
-- **F1. May the loop set a ticket aside and continue?** Recommended: yes, for
-  causes that belong to one ticket. A halt that needs the owner for every
-  doubtful criterion spends the owner's attention on the cheapest problems.
-- **C3. Does forger act after the merge?** Recommended: yes, opt-in, through
-  the project's own commands, with rollback only when configured.
-- **E2. Which stack is the starter?** Recommended: the one the sample
-  repository uses, so the proof and the paved road are the same work.
-- **A1. Go-ahead for the first replay.** Recommended first of all: it is what
-  turns every other item here from opinion into measurement.
-- **Order against the roadmap.** Recommended: this plan's first two steps
-  before any further pack, and before
-  [#275](https://github.com/diegoaltoworks/forger/issues/275).
+Still open: which source of runtime errors C4 reads first.
