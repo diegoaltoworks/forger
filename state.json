@@ -193,7 +193,10 @@
       "ticket": "issue-392",
       "pid": null,
       "session_id": "40ced3b3-b37c-4355-a8eb-e23b5c8909cd",
-      "snapshot": null,
+      "snapshot": {
+        "baseSha": "",
+        "reflogLength": 1
+      },
       "started_at": "2026-11-10T18:24:22.627Z",
       "plan": {
         "stages": [
