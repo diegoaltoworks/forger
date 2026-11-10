@@ -1008,6 +1008,29 @@ describe('measure and retro', () => {
     expect(out.opinions).toEqual([]);
   });
 
+  test('retro demote --list names a check that never failed over enough merged tickets, and refuses one that is not a candidate', async () => {
+    const root = projectWith({});
+    mkdirSync(join(root, '.forger'), {recursive: true});
+    writeFileSync(join(root, '.forger/forger.lock.json'), JSON.stringify({packs: [{id: 'safety', version: '1', files: []}]}));
+    writeFileSync(join(root, '.forger/checks.jsonl'), JSON.stringify({at: 't', ticket: 'issue-9', iteration: 1, opinion: 'safety.secrets', check: 'safety', failed: 1, waived: 0}) + '\n');
+    process.chdir(root);
+    const run: CommandRunner = cmd => (cmd.includes('gh pr list') ? JSON.stringify([{closingIssuesReferences: [{number: 1}, {number: 2}]}]) : '[]');
+    const list = JSON.parse(await capture(['retro', 'demote', '--list', '--json', '--min-merged', '2'], run));
+    expect(list.candidates.map((c: {opinion: string}) => c.opinion)).toContain('safety.data-forward');
+    expect(list.candidates.map((c: {opinion: string}) => c.opinion)).not.toContain('safety.secrets');
+    const draft = JSON.parse(await capture(['retro', 'demote', '--opinion', 'safety.data-forward', '--json', '--min-merged', '2'], run));
+    expect(draft.body).toContain('safety.data-forward');
+    process.exitCode = 0;
+    const errors: string[] = [];
+    const orig = console.error;
+    console.error = (m: string) => errors.push(m);
+    await capture(['retro', 'demote', '--opinion', 'safety.secrets', '--min-merged', '2'], run);
+    console.error = orig;
+    expect(errors.join('')).toContain('safety.secrets (rung check): failed on 1 ticket(s)');
+    expect(process.exitCode).toBe(1);
+    process.exitCode = 0;
+  });
+
   test('measure --json carries the session cost beside the cap, unknown without a transcript', async () => {
     const root = projectWith({});
     mkdirSync(join(root, '.forger/output'));

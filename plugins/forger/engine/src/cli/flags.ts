@@ -51,6 +51,8 @@ export const FLAGS = {
   repos: {type: 'string'},
   last: {type: 'string'},
   window: {type: 'string'},
+  'min-merged': {type: 'string'},
+  opinion: {type: 'string'},
   opinions: {type: 'boolean', default: false},
   from: {type: 'string'},
   since: {type: 'string'},
