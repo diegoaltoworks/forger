@@ -235,6 +235,21 @@ low; otherwise set it back to 1 in the config. `/forger:retro` runs it to find a
 rule record with `retro rule`, and drafts an upstream issue with the evidence
 using `retro upstream`.
 
+## The way down
+
+The ladder only climbs unless something takes a rung away. An opinion is a
+candidate for demotion when its check never failed over at least `--min-merged`
+merged tickets (a clean record that long means it catches nothing the work does
+not already do), or when its failures ended waived more often than fixed (the
+check is being overruled more than it is obeyed). `retro demote --list` prints
+the candidates from the `measure --opinions` numbers.
+
+`retro demote --opinion <id>` prints an issue draft with those numbers as
+evidence and one proposal: one rung down, or removal for an opinion already on
+the lowest rung. It files nothing and changes no pack, waiver or baseline. The
+supervisor files the draft for the owner, and the owner decides each one.
+`/forger:retro` runs the list and reports the candidates.
+
 ## Cadence
 
 - **Immediately:** after any halt, timeout, misbuilt ticket or owner correction.
