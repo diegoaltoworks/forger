@@ -76,14 +76,12 @@ waits for. The owner's decisions are recorded in the last section.
 - **A1. Run the first replay.** Already tracked:
   [#109](https://github.com/diegoaltoworks/forger/issues/109). The owner has
   given the go-ahead to create the fresh copy of the sample repository.
-- **A2. Compare two replays.** `replay compare <run> <run> --json` prints the
-  difference between two recorded replay runs: requests merged, rounds of
-  rework, cost, halts and escaped defects, per request and in total. Proved on
-  fixture runs. **Ready.**
+- **A2. Compare two replays.** Exists: `measure --report` writes the comparison
+  report of a run and `measure --diff` compares two. Nothing to build.
 - **A3. A process change carries its replay.** A PR that changes a default
-  pack, a ticket template or a command's instructions names the replay
-  comparison in its body; `check` warns when it does not. **Ready** once A1 and
-  A2 have merged.
+  pack, a ticket template or a command's instructions names the comparison of
+  two replays in its body; `check` warns when it does not. **Ready** once A1
+  has run.
 
 ### B. Opinions that earn their place
 
@@ -179,7 +177,7 @@ waits for. The owner's decisions are recorded in the last section.
 
 ## Build order
 
-1. A2, B1, C2, E1, G1: small, independent, and each makes a later step
+1. B1, C2, E1, G1: small, independent, and each makes a later step
    measurable or honest.
 2. A1, then A3. From here a process change is compared, not assumed.
 3. C1, D1, then D2 and G2.
