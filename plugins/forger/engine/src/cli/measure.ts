@@ -7,7 +7,9 @@ import {existsSync, readdirSync, readFileSync} from 'fs';
 import {homedir} from 'os';
 import {join} from 'path';
 
-import {parseAllEvents, parseEvents, readAllVerdicts, readSchedule, verdictsHome} from '../loop';
+import {parseAllEvents, parseEvents, loopRootOf, readAllVerdicts, readSchedule, verdictsHome} from '../loop';
+import {LOCK_PATH, listOpinions, loadPacks, parseLock} from '../packs';
+import {computeNoneSections, computeOpinionFailures, formatNoneSections, formatOpinionFailures, sectionNames, type FailureRecord} from '../supervisor';
 import {buildComparisonReport, DEFAULT_PRICES, mergePrices, sessionCostUsd, type PriceTable, type Measures, computeMeasures, diffReports, parseDiffRanges, parseReplacedRanges, picksToPrs, DEFAULT_REWORK_WINDOW, type MergedPr, type TrackerIssue, type ReworkInputs, type ComparisonReport, formatMeasures, parseBudgets, parseIterationLog, type CiRun, type IterationRecord} from '../supervisor';
 import type {Command, CommandContext} from './command';
 
@@ -122,9 +124,11 @@ return {...measures, not_on_this_machine: notHere};
 export const measure: Command = {
   name: 'measure',
   needs: 'config',
-  flags: ['json', 'last', 'report', 'diff', 'window', 'from', 'text'],
+  flags: ['json', 'last', 'report', 'diff', 'window', 'from', 'text', 'opinions'],
   help: `  measure [--json] [--last N] [--window N] [--report] [--from local|branch]
   measure --diff A.json B.json
+  measure --opinions [--json]
+                   Per installed opinion with a check: failed runs, tickets that failed, and how they ended (fixed, waived, open), most failures first, those that never failed last; and per section of the ticket template, how many merged tickets answered none
   measure <route-or-state> <selector> [--text <file>] [--json]
                    Serves the app and, for each element the selector matches, reports its text width against the width available, and whether it wraps or is clipped,
                    at each viewport (and each locale of ui.json) at a text scale of 100% and 200%. The worst case is first (exit 1 when any wraps or is clipped; exit 2 when the app cannot be served).
@@ -135,6 +139,7 @@ export const measure: Command = {
                    --report prints the five-measure comparison report as JSON; --diff prints the per-measure delta between two saved reports (A is the baseline)`,
   async run(ctx) {
     const {values, projectRoot, config, positionals} = ctx;
+    if (values.opinions) return measureOpinions(ctx);
     if (positionals[1] !== undefined && !values.diff) return measureFit(ctx);
     if (values.diff) {
       const [a, b] = [positionals[1], positionals[2]];
@@ -175,4 +180,48 @@ async function measureFit(ctx: CommandContext): Promise<void> {
     if (e instanceof UiConfigError) return fail(e.message, 1);
     throw e;
   }
+}
+
+/** The check records, oldest first; null when the file is not there. */
+function readCheckRecords(file: string): FailureRecord[] | null {
+  if (!existsSync(file)) return null;
+  return readFileSync(file, 'utf-8')
+    .split('\n')
+    .filter(l => l.trim() !== '')
+    .flatMap(l => {
+      try {
+        return [JSON.parse(l) as FailureRecord];
+      } catch {
+        return [];
+      }
+    });
+}
+
+/** Tickets whose PR merged, and the bodies of their issues; empty when gh cannot read them. */
+function mergedTickets(run: (cmd: string) => string): {tickets: Set<string>; bodies: string[]} {
+  try {
+    const prs = JSON.parse(run('gh pr list --state merged --limit 100 --json closingIssuesReferences')) as {closingIssuesReferences?: {number: number}[]}[];
+    const numbers = new Set(prs.flatMap(p => (p.closingIssuesReferences ?? []).map(i => i.number)));
+    const issues = JSON.parse(run('gh issue list --state all --limit 200 --json number,body')) as {number: number; body: string}[];
+    return {tickets: new Set([...numbers].map(n => `issue-${n}`)), bodies: issues.filter(i => numbers.has(i.number)).map(i => i.body ?? '')};
+  } catch {
+    return {tickets: new Set(), bodies: []};
+  }
+}
+
+function measureOpinions(ctx: CommandContext): void {
+  const {values, projectRoot, config, pluginRoot} = ctx;
+  const records = readCheckRecords(join(loopRootOf(ctx.run(), projectRoot), config.paths.checks));
+  if (records === null) {
+    console.log(values.json ? JSON.stringify({recorded: false}) : 'nothing is recorded yet: no check run inside a worker has written records');
+    return;
+  }
+  const lockFile = join(projectRoot, LOCK_PATH);
+  const installed = existsSync(lockFile) ? listOpinions(loadPacks(pluginRoot), parseLock(readFileSync(lockFile, 'utf-8'))) : [];
+  const {tickets, bodies} = mergedTickets(ctx.run());
+  const installedTemplate = join(projectRoot, '.forger/templates/ticket.md');
+  const template = [installedTemplate, join(pluginRoot, 'packs/base/files/ticket.md')].find(f => existsSync(f));
+  const rows = computeOpinionFailures(records, installed.filter(o => o.check !== null), tickets);
+  const sections = computeNoneSections(template === undefined ? [] : sectionNames(readFileSync(template, 'utf-8')), bodies);
+  console.log(values.json ? JSON.stringify({recorded: true, opinions: rows, sections}) : [formatOpinionFailures(rows), formatNoneSections(sections)].filter(Boolean).join('\n\n'));
 }

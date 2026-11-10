@@ -990,6 +990,24 @@ describe('measure and retro', () => {
     expect(out.tickets).toEqual([{ticket: 'alpha_ticket', runs: 1, seconds: 90, budget_cap_usd: 20, cost_usd: null, ci_rounds: 1}]);
   });
 
+  test('measure --opinions with no records file exits 0 and says nothing is recorded', async () => {
+    const root = projectWith({});
+    process.chdir(root);
+    process.exitCode = 0;
+    const out = await capture(['measure', '--opinions'], () => '[]');
+    expect(out).toContain('nothing is recorded yet');
+    expect(Number(process.exitCode ?? 0)).toBe(0);
+  });
+
+  test('measure --opinions prints the failures of each opinion with a check, as JSON', async () => {
+    const root = projectWith({});
+    writeFileSync(join(root, '.forger/checks.jsonl'), JSON.stringify({at: 't', ticket: 'issue-1', iteration: 1, opinion: 'x.y', check: 'docs', failed: 1, waived: 0}) + '\n');
+    process.chdir(root);
+    const out = JSON.parse(await capture(['measure', '--opinions', '--json'], () => '[]'));
+    expect(out.recorded).toBe(true);
+    expect(out.opinions).toEqual([]);
+  });
+
   test('measure --json carries the session cost beside the cap, unknown without a transcript', async () => {
     const root = projectWith({});
     mkdirSync(join(root, '.forger/output'));
