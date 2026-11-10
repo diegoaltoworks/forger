@@ -5,7 +5,7 @@
  */
 
 import type {TerminalEvent} from '../loop';
-import {uncausedClears} from '../loop';
+import {reasonSummary, uncausedClears} from '../loop';
 import type {OwnerItem} from './supervisor';
 
 /** Issue labels that park a ticket until the owner decides. */
@@ -79,16 +79,18 @@ function firstLine(text: string): string {
   return text.split('\n').find(l => l.trim() !== '' && !l.startsWith('#'))?.trim() ?? '';
 }
 
-export function waitingIssues(issues: WaitingIssue[]): OwnerItem[] {
+/** `setAside` holds the reason the loop recorded for each issue it set aside, by issue number. */
+export function waitingIssues(issues: WaitingIssue[], setAside: ReadonlyMap<number, string> = new Map()): OwnerItem[] {
   return issues
     .filter(i => i.labels.some(l => OWNER_LABELS.includes(l)))
     .sort((a, b) => a.number - b.number)
     .map(i => {
       const label = i.labels.find(l => OWNER_LABELS.includes(l)) as string;
+      const reason = label === 'needs-human' ? setAside.get(i.number) : undefined;
       return {
         question: `#${i.number} ${i.title} is ${label}`,
         recommendation: recommendationFrom(i.body) ?? 'you decide it, then relabel the issue (its text makes no recommendation)',
-        because: label === 'needs-triage' ? 'it was filed as a follow-up and no one has decided to build it' : 'a worker declined or handed it over and only you can unblock it',
+        because: reason !== undefined ? `the loop set it aside: ${reasonSummary(reason)}` : label === 'needs-triage' ? 'it was filed as a follow-up and no one has decided to build it' : 'a worker declined or handed it over and only you can unblock it',
       };
     });
 }

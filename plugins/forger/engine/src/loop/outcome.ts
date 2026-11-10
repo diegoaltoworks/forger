@@ -70,6 +70,8 @@ export interface Outcome {
   haltKind?: TerminalEventKind;
   /** The conflict the halt reports; the iteration posts it on the issue. */
   conflictStop?: Conflict;
+  /** Why the ticket is set aside: a stop for one ticket, which does not end the loop (ADR 0020). */
+  setAside?: string;
 }
 
 /**
@@ -228,18 +230,12 @@ export function decideOutcome(f: RunFacts): Outcome {
   if (f.claim === 'stop' && f.conflictStop) {
     const issue = /^issue-(\d+)$/.exec(f.ticket ?? '');
     const halt = conflictHalt(issue ? Number(issue[1]) : null, f.conflictStop);
-    return {status: 'halted', result: 'neutral', merged: false, error: halt, warning: null, halt, conflictStop: f.conflictStop};
+    return {status: 'set-aside', result: 'neutral', merged: false, error: halt, warning: null, halt: null, conflictStop: f.conflictStop, setAside: halt};
   }
 
   if (f.claim === 'stop') {
-    return {
-      status: 'halted',
-      result: 'neutral',
-      merged: false,
-      error: f.stopReason,
-      warning: null,
-      halt: f.stopReason,
-    };
+    const reason = f.stopReason ?? 'the worker stopped and gave no reason';
+    return {status: 'set-aside', result: 'neutral', merged: false, error: reason, warning: null, halt: null, setAside: reason};
   }
 
   const pushedNote = f.pushed && f.branch ? `${f.branch} pushed, not merged` : null;

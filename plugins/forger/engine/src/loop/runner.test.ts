@@ -934,7 +934,7 @@ describe('AutomationRunner declines', () => {
     writeFileSync(join(root, '.forger', 'declined.json'), JSON.stringify({ticket: 'the_ticket', reason: 'blocked', detail: 'old', at: 't'}));
     await runner.runIteration(1);
     expect(calls).toHaveLength(1);
-    expect(readState(root).status).toBe('halted');
+    expect(readState(root).status).toBe('set-aside');
     expect(readState(root).declined_tasks).toEqual([]);
   });
 });
@@ -1059,12 +1059,13 @@ describe('AutomationRunner on a conflict stop', () => {
     return {commands, prompts, state: readState(root)};
   }
 
-  test('a complete block labels the issue, posts the options and halts without asking again', async () => {
+  test('a conflict stop sets the ticket aside, labels it and posts the options', async () => {
     const r = await run([block('B')]);
     expect(r.prompts).toHaveLength(1);
     expect(r.commands.some(c => c.includes('gh issue edit 5 --add-label needs-human'))).toBe(true);
     expect(r.commands.some(c => c.startsWith('gh issue comment 5') && c.includes('Answer with: decide 5'))).toBe(true);
-    expect(r.state.status).toBe('halted');
+    expect(r.state.status).toBe('set-aside');
+    expect(r.state.set_aside_tasks.map((e: {ticket: string}) => e.ticket)).toEqual(['issue-5']);
   });
 
   test('an incomplete block is asked for once more and the second one is used', async () => {
@@ -1074,15 +1075,83 @@ describe('AutomationRunner on a conflict stop', () => {
     expect(r.commands.some(c => c.includes('--add-label needs-human'))).toBe(true);
   });
 
-  test('a block incomplete twice is an ordinary stop with no label', async () => {
+  test('a block incomplete twice is an ordinary stop: set aside with the reason, no options', async () => {
     const r = await run([block('C'), block('C')]);
     expect(r.prompts).toHaveLength(2);
-    expect(r.commands.some(c => c.includes('needs-human'))).toBe(false);
-    expect(r.state.status).toBe('halted');
+    expect(r.commands.some(c => c.includes('--add-label needs-human'))).toBe(true);
+    expect(r.commands.some(c => c.startsWith('gh issue comment 5') && c.includes('Reason:') && !c.includes('Options:'))).toBe(true);
+    expect(r.state.status).toBe('set-aside');
   });
 
   test('a second answer with no block at all is an ordinary stop', async () => {
     const r = await run([block('C'), 'sorry']);
-    expect(r.commands.some(c => c.includes('needs-human'))).toBe(false);
+    expect(r.commands.some(c => c.startsWith('gh issue comment 5') && !c.includes('Options:'))).toBe(true);
+  });
+});
+
+describe('AutomationRunner on a worker stop', () => {
+  const knock = (paths: string): string => `## Acceptance\n- [ ] \`bun run check\` exits 0\n\n## Knock-on\n\n${paths}\n`;
+  const ticket = (priority: string, paths: string) => ({priority, status: 'not_started', depends_on: [] as string[], body: knock(paths)});
+
+  function setup(features: Record<string, unknown>, limits: Record<string, number> = {}) {
+    const root = mkdtempSync(join(tmpdir(), 'forger-runner-'));
+    dirs.push(root);
+    const config = mergeConfig({tracker: {kind: 'github', label: 'ready-for-agent'}, limits: {maxStallIterations: 50, ...limits}});
+    const data = {features} as unknown as BacklogData;
+    const commands: string[] = [];
+    const backlog = backlogFrom(() => data, config);
+    const runner = new AutomationRunner(root, config, backlog, {
+      stateStore: localStateFor(root, config),
+      agent: {run: async () => ({exitCode: 0, signal: null, output: '<process>stop</process> needs a key', timedOut: false})},
+      gitRunner: cmd => (commands.push(cmd), ''),
+    });
+    return {runner, root, backlog, commands};
+  }
+
+  test('a worker stop sets the ticket aside and does not halt', async () => {
+    const {runner, root, commands} = setup({'issue-5': ticket('P1', '`src/a.ts`')});
+    expect(await runner.runIteration(1)).toBe(false);
+    const state = readState(root);
+    expect(state.status).toBe('set-aside');
+    expect(state.consecutive_failures).toBe(0);
+    expect(state.set_aside_tasks.map((e: {ticket: string; reason: string}) => [e.ticket, e.reason])).toEqual([['issue-5', 'needs a key']]);
+    expect(existsSync(join(root, '.forger', 'HALT'))).toBe(false);
+    expect(commands).toContain('gh issue edit 5 --add-label needs-human');
+    expect(commands.some(c => c.startsWith('gh issue comment 5') && c.includes('needs a key'))).toBe(true);
+    const recorded = readFileSync(join(root, '.forger', 'events.jsonl'), 'utf-8');
+    expect(recorded).toContain('"event":"set_aside"');
+  });
+
+  test('the pick after a set-aside skips a ticket that shares its footprint', async () => {
+    const {runner, backlog} = setup({
+      'issue-5': ticket('P1', '`src/loop/a.ts`'),
+      'issue-6': ticket('P1', '`src/loop/b.ts`\n`src/loop`'),
+      'issue-7': ticket('P2', '`src/other/c.ts`'),
+    });
+    expect(backlog.next()).toBe('issue-5');
+    await runner.runIteration(1);
+    expect(backlog.next()).toBe('issue-7');
+    expect(backlog.candidates().map(c => c.id)).toEqual(['issue-7']);
+    expect(backlog.report().workable.map(w => w.id)).toEqual(['issue-7']);
+  });
+
+  test('maxSetAside tickets set aside in a row halts the loop', async () => {
+    const {runner, root} = setup(
+      {'issue-5': ticket('P1', '`src/a.ts`'), 'issue-6': ticket('P1', '`src/b.ts`')},
+      {maxSetAside: 2}
+    );
+    await runner.runIteration(1);
+    expect(existsSync(join(root, '.forger', 'HALT'))).toBe(false);
+    await runner.runIteration(2);
+    expect(existsSync(join(root, '.forger', 'HALT'))).toBe(true);
+    expect(readFileSync(join(root, '.forger', 'HALT'), 'utf-8')).toContain('Set aside 2 tickets in a row');
+  });
+
+  test('resume clears the count of set-asides', async () => {
+    const {runner, root, backlog} = setup({'issue-5': ticket('P1', '`src/a.ts`'), 'issue-6': ticket('P1', '`src/a.ts`')});
+    await runner.runIteration(1);
+    expect(backlog.next()).toBeNull();
+    runner.clearHalt();
+    expect(readState(root).consecutive_set_asides).toBe(0);
   });
 });

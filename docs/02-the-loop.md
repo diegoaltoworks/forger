@@ -142,6 +142,17 @@ naming each ticket and reason; `report` lists the declined tickets. A record for
 a different ticket is a failure. The iteration log header always prints the engine's pick next to the
 ticket the run was held to. A timed-out run's log also names the worker's branch, its last commits and the PR with its state, and ends with the worker's output. The full table is in ADR 0008.
 
+A worker's `stop` is a verdict on its one ticket, not on the loop. The engine
+labels the issue `needs-human`, posts the reason (or, for a `stop conflict`,
+the options), records a `set_aside` event and picks again. The next pick also
+skips every ticket that shares a footprint with one set aside in this run.
+`limits.maxSetAside` tickets set aside in a row, with no merge between them,
+halt the loop, since the cause is then unlikely to be the tickets. An
+infrastructure error, a merge on red checks, an unverified merge, a backlog
+entry that reads completed with nothing merged, too many failures in a row and
+a stall still halt, because none of those belongs to one ticket
+([ADR 0020](adr/0020-a-stop-that-belongs-to-one-ticket-sets-the-ticket-aside.md)).
+
 A green merge is the only progress. Failures count toward a halt; a run that
 merged and then timed out is still a success, with a warning. A merge made on
 red or unfinished checks is never a success: the worker merges through

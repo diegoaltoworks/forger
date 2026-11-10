@@ -9,12 +9,12 @@
 import {join} from 'path';
 import {writeFileSync} from 'fs';
 
-import type {Backlog} from '../backlog';
+import type {Backlog, Footprint} from '../backlog';
 import {resolveModel, type WorkloopConfig} from '../config';
 import type {AgentRunner, CommandRunner, ProbeRunner} from '../ports';
 import {parseClaim, type Claim} from './claim';
 import {conflictComment, conflictReask, parseConflict, type Conflict} from './conflict';
-import {NEEDS_HUMAN_LABEL} from './handover-io';
+import {avoidedFootprints, setAsideComment, setAsideOnTracker, setAsideUpdate, type SetAsideEntry} from './aside';
 import type {EventKind, TerminalEventKind} from './events';
 import {declineUpdate, type DeclineEntry} from './decline';
 import {clearDeclineRecord, readDeclineRecord} from './decline-io';
@@ -118,6 +118,8 @@ export async function runIteration(
   ctx.store.save(state);
   if (attemptedTask) ctx.emit('picked', iteration, attemptedTask, null);
 
+  // Read before the run: a worker that hands the ticket over takes it out of the queue, and its text with it.
+  const ownBody = attemptedTask ? ctx.backlog.body(attemptedTask) : null;
   const {timeoutMinutes, killGraceSeconds} = ctx.config.limits;
   const probes = attemptedTask && ctx.probeRunner ? runProbes(parseProbes(ctx.backlog.body(attemptedTask)), c => ctx.probeRunner!(c, root, timeoutMinutes * 60 * 1000)) : [];
   const failed = failedProbe(probes);
@@ -236,8 +238,8 @@ export async function runIteration(
 
   const declined: DeclineEntry | null =
     outcome.status === 'declined' && record ? {ticket: record.ticket, reason: record.reason, iteration} : null;
-  const settled = settle(ctx, sessionId, iteration, ticket, backlogCompleted, outcome, countStall, declined);
-  if (outcome.conflictStop) handToOwnerOnConflict(ctx, ticket, outcome.conflictStop);
+  const body = ticket === attemptedTask ? ownBody : ticket === null ? null : ctx.backlog.body(ticket);
+  const settled = settle(ctx, sessionId, iteration, ticket, backlogCompleted, outcome, countStall, declined, ticket === null ? null : ctx.backlog.footprint(ticket, body));
   placement?.finish(outcome.status === 'conflict');
   return settled;
 }
@@ -311,18 +313,12 @@ async function completeConflict(ctx: IterationContext, claim: Claim, r: ReaskCon
   return null;
 }
 
-/** Labels the issue needs-human and posts the options; a tracker failure is logged, the halt stands either way. */
-function handToOwnerOnConflict(ctx: IterationContext, ticket: string | null, conflict: Conflict): void {
+/** Labels the issue needs-human and posts the reason or the options; a tracker failure is logged, the ticket is set aside either way. */
+function handToOwnerOnStop(ctx: IterationContext, ticket: string | null, reason: string, conflict: Conflict | undefined): void {
   const issue = issueOfTicket(ticket);
   if (issue === null || ctx.config.tracker.kind !== 'github') return;
-  const quoted = `'${conflictComment(issue, conflict).replace(/'/g, `'\\''`)}'`;
-  for (const command of [`gh issue edit ${issue} --add-label ${NEEDS_HUMAN_LABEL}`, `gh issue comment ${issue} --body ${quoted}`]) {
-    try {
-      ctx.gitRunner(command);
-    } catch (e) {
-      ctx.logger.log('WARN', `Could not run \`${command.slice(0, 40)}...\`: ${e instanceof Error ? e.message : String(e)}`);
-    }
-  }
+  const comment = conflict ? conflictComment(issue, conflict) : setAsideComment(issue, reason);
+  for (const problem of setAsideOnTracker(ctx.gitRunner, issue, comment, conflict !== undefined)) ctx.logger.log('WARN', problem);
 }
 
 /** Marks the PR and its issue, records the event and remembers the ticket; label failures are logged, not fatal. */
@@ -350,9 +346,10 @@ function settle(
   backlogCompleted: boolean,
   outcome: Outcome,
   countStall: boolean,
-  declined: DeclineEntry | null = null
+  declined: DeclineEntry | null = null,
+  footprint: Footprint | null = null
 ): boolean {
-  const {maxStallIterations, maxConsecutiveDeclines} = ctx.config.limits;
+  const {maxStallIterations, maxConsecutiveDeclines, maxSetAside} = ctx.config.limits;
   // Read afresh: other runs wrote the state while this one was away.
   const state = ctx.store.load();
   endRun(state, sessionId);
@@ -376,7 +373,7 @@ function settle(
     state.last_error = outcome.error;
   } else if (outcome.status === 'owner-review') {
     if (ticket && !state.owner_review_tasks.includes(ticket)) state.owner_review_tasks.push(ticket);
-  } else {
+  } else if (outcome.setAside === undefined) {
     ctx.logger.log('WARN', `Iteration ${iteration} signaled STOP`);
   }
   if (outcome.warning) ctx.logger.log('WARN', `Iteration ${iteration}: ${outcome.warning}`);
@@ -390,9 +387,20 @@ function settle(
   const declines = declineUpdate(state.declined_tasks, state.consecutive_declines, declined, maxConsecutiveDeclines);
   state.declined_tasks = declines.declined_tasks;
   state.consecutive_declines = declines.consecutive_declines;
+  const aside: SetAsideEntry | null = outcome.setAside === undefined ? null : {ticket: ticket ?? 'no ticket', reason: outcome.setAside, iteration, footprint};
+  const asides = setAsideUpdate(state.set_aside_tasks, state.consecutive_set_asides, aside, outcome.merged, maxSetAside);
+  state.set_aside_tasks = asides.set_aside_tasks;
+  state.consecutive_set_asides = asides.consecutive_set_asides;
   ctx.store.save(state);
+  ctx.backlog.avoid(avoidedFootprints(state.set_aside_tasks));
 
   if (outcome.merged && outcome.result === 'success') ctx.afterMerge?.(iteration);
+
+  if (aside) {
+    ctx.logger.log('WARN', `Iteration ${iteration} set ${aside.ticket} aside: ${aside.reason.split('\n')[0]}`);
+    ctx.emit('set_aside', iteration, ticket, aside.reason);
+    handToOwnerOnStop(ctx, ticket, aside.reason, outcome.conflictStop);
+  }
 
   if (outcome.ownerReviewPr !== undefined) handToOwner(ctx, iteration, ticket, outcome.ownerReviewPr);
 
@@ -405,6 +413,9 @@ function settle(
   } else if (declines.halt) {
     ctx.logger.log('ERROR', declines.halt);
     ctx.halt(declines.halt);
+  } else if (asides.halt) {
+    ctx.logger.log('ERROR', asides.halt);
+    ctx.halt(asides.halt);
   } else if (stall.stalled) {
     const reason = `Stalled: nothing merged in ${maxStallIterations} iterations`;
     ctx.logger.log('ERROR', reason);

@@ -115,11 +115,17 @@ describe('decideOutcome', () => {
     expect(o.warning).toBe('claimed stop but merged into main: needs a key');
   });
 
-  test('stop without a merge halts and counts neither way', () => {
+  test('a worker stop sets the ticket aside and does not halt', () => {
     const o = decideOutcome({...nothing, claim: 'stop', stopReason: 'no actionable work'});
+    expect(o.status).toBe('set-aside');
     expect(o.result).toBe('neutral');
     expect(o.merged).toBe(false);
-    expect(o.halt).toBe('no actionable work');
+    expect(o.halt).toBeNull();
+    expect(o.setAside).toBe('no actionable work');
+  });
+
+  test('a stop with no reason is set aside with a reason of its own', () => {
+    expect(decideOutcome({...nothing, claim: 'stop', stopReason: null}).setAside).toContain('gave no reason');
   });
 
   test('backlog reads completed but nothing merged: reported, halts, not progress', () => {
@@ -199,6 +205,20 @@ describe('decideOutcome', () => {
     expect(o.status).toBe('failed');
     expect(o.result).toBe('failure');
     expect(o.error).toBe('Nothing merged or pushed, exit code 2');
+  });
+
+  test('an infrastructure error still halts', () => {
+    expect(decideOutcome({...nothing, claim: 'stop', stopReason: 'x', infraError: 'Infrastructure error (network)'}).halt).toBe('Infrastructure error (network)');
+  });
+
+  test('a merge with red checks still halts', () => {
+    const o = decideOutcome({...nothing, merged: true, claim: 'stop', stopReason: 'x', pr: pr('failure', ['gates'])});
+    expect(o.halt).toContain('merged into main with failing check: gates');
+    expect(o.setAside).toBeUndefined();
+  });
+
+  test('a completed-but-not-merged backlog entry still halts, even beside a stop', () => {
+    expect(decideOutcome({...nothing, claim: 'stop', stopReason: 'x', backlogCompleted: true}).halt).toContain('reads completed in the backlog');
   });
 
   test('an infrastructure error halts with its reason and is not a failure', () => {
