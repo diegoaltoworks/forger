@@ -57,6 +57,14 @@ issue labelled `structure-review` is open no second one is filed, and a
 threshold of `0` turns its trigger off. Filing is the `file_tickets` action,
 which needs no approval.
 
+The safety pack has a second periodic review of the same shape, the access
+review. When `access_review.every_merged` in `.forger/safety.json` is above `0`
+(absent or `0` is off, and off is the default) and that many tickets have merged
+since the last `access_review_filed` event, the engine files one issue from
+`.forger/templates/access-review.md`, labelled `access-review` and with the
+intake label, and records `access_review_filed`. While an issue labelled
+`access-review` is open no second one is filed. Each kind keeps its own count.
+
 A ticket's `## Probe` section lists commands, each with its expected result in
 the forms of acceptance criteria. Before a worker starts, the engine runs each
 on the host in the directory the worker would start in, with the run's timeout

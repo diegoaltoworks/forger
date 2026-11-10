@@ -3,12 +3,12 @@ import {mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync} from 'node:
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 
-import {checkTicketCriteria} from './criteria';
-import {eventLine, terminalEvent, type EventKind} from './events';
+import {checkTicketCriteria} from '../criteria';
+import {eventLine, terminalEvent, type EventKind} from '../events';
 import {mergesSinceReview, reviewDue} from './structure-review';
 import {fileStructureReview} from './structure-review-io';
 
-const TEMPLATE = join(import.meta.dir, '../../../packs/structure/files/structure-review.md');
+const TEMPLATE = join(import.meta.dir, '../../../../packs/structure/files/structure-review.md');
 
 const events = (...kinds: EventKind[]) => kinds.map(k => terminalEvent(k, 1, null, null));
 const text = (...kinds: EventKind[]) => events(...kinds).map(eventLine).join('');
