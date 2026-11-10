@@ -425,11 +425,11 @@ describe('setup --json', () => {
     const root = realpathSync(mkdtempSync(join(tmpdir(), 'forger-cli-setup-')));
     dirs.push(root);
     process.chdir(root);
-    const first = JSON.parse(await capture(['setup', '--json', '--gates', 'make test', '--tracker', 'local']));
+    const first = JSON.parse(await capture(['setup', '--json', '--no-starter', '--gates', 'make test', '--tracker', 'local']));
     expect(first.files.map((f: {action: string}) => f.action)).not.toContain('kept');
     const config = JSON.parse(readFileSync(join(root, '.forger', 'workloop.config.json'), 'utf-8'));
     expect(config.tracker.kind).toBe('local');
-    const second = JSON.parse(await capture(['setup', '--json']));
+    const second = JSON.parse(await capture(['setup', '--json', '--no-starter']));
     expect(second.files.map((f: {action: string}) => f.action)).not.toContain('written');
   });
 
@@ -504,8 +504,44 @@ describe('setup with the testing pack', () => {
     const root = realpathSync(mkdtempSync(join(tmpdir(), 'forger-cli-setup-')));
     dirs.push(root);
     process.chdir(root);
-    const out = JSON.parse(await capture(['setup', '--json', '--tracker', 'local']));
+    const out = JSON.parse(await capture(['setup', '--json', '--no-starter', '--tracker', 'local']));
     expect(out.next_steps).toBeUndefined();
+  });
+});
+
+describe('setup starter', () => {
+  function empty(): string {
+    const root = realpathSync(mkdtempSync(join(tmpdir(), 'forger-cli-starter-')));
+    dirs.push(root);
+    process.chdir(root);
+    return root;
+  }
+
+  test('an empty repository gets the default starter, its gates and its coverage advice', async () => {
+    const root = empty();
+    const out = JSON.parse(await capture(['setup', '--json', '--tracker', 'local']));
+    expect(out.starter).toBe('bun-typescript');
+    expect(existsSync(join(root, 'src', 'core', 'greet.ts'))).toBe(true);
+    expect(out.coverage.gates_write_report).toBe(true);
+  });
+
+  test('--no-starter leaves an empty repository without a skeleton', async () => {
+    const root = empty();
+    const out = JSON.parse(await capture(['setup', '--json', '--no-starter', '--tracker', 'local']));
+    expect(out.starter).toBeUndefined();
+    expect(existsSync(join(root, 'package.json'))).toBe(false);
+    expect(existsSync(join(root, 'src'))).toBe(false);
+  });
+
+  test('an unknown starter name is an error that lists the names', async () => {
+    const root = empty();
+    const err = spyOn(console, 'error').mockImplementation(() => {});
+    await capture(['setup', '--json', '--starter', 'nope', '--tracker', 'local']);
+    expect(err.mock.calls.join(' ')).toContain('bun-typescript');
+    err.mockRestore();
+    expect(process.exitCode).toBe(1);
+    process.exitCode = 0;
+    expect(existsSync(join(root, '.forger'))).toBe(false);
   });
 });
 

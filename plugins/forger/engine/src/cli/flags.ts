@@ -42,6 +42,8 @@ export const FLAGS = {
   sandbox: {type: 'string'},
   credential: {type: 'string'},
   upgrade: {type: 'boolean'},
+  starter: {type: 'string'},
+  'no-starter': {type: 'boolean'},
   detect: {type: 'boolean', default: false},
   presets: {type: 'boolean', default: false},
   seen: {type: 'string', default: '0'},

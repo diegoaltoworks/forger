@@ -110,6 +110,14 @@ the source tree's shape under a check; setup records the structure that already
 exists as a baseline so the repository starts green and only improves, and it
 prints any boundary groups it derived from your workspaces so you can widen them.
 
+In a repository with no source file, setup also copies the default starter: a
+Bun and TypeScript skeleton with a pure `src/core/`, a `src/shell/`, tests, a CI
+workflow and one journey. It sets the gates to the starter's own and installs
+the `architecture`, `testing` and `journeys` packs configured for those folders.
+`--starter NAME` picks a starter by name (an unknown name lists the available
+ones) and `--no-starter` copies none. A repository that already has source
+files gets no starter, and setup never overwrites a file the starter also ships.
+
 With a GitHub tracker it also creates the intake label. To create it by hand:
 
 ```
