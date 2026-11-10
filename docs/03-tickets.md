@@ -46,6 +46,16 @@ A source is a spike's thresholds row, an ADR or a cited reference. A spike
 records its numbers in the thresholds table of its template (quantity, value,
 unit, tolerance, source), and build tickets cite its rows.
 
+A command that only counts a phrase in a file or lists files (`grep`, `ls`,
+`test -f`, `cat ... | wc`) proves the words or the file exist, not that the
+behaviour is right, and a worker can meet it to the letter. When every
+criterion of a ticket is of that kind, `check ticket` warns "name a test or a
+journey that shows the behaviour" (it never refuses); one criterion that names
+a test drops the warning, and so does a ticket that touches only Markdown.
+`Gates green` and a `check docs` command are not counted either way. Instead of
+"`grep -c "retry" src/fetch.ts` prints at least 1", write "the test `fetch
+retries a failed request once` passes".
+
 Subjective words ("sharpens", "better", "nice", "looks right", "fast") fail a
 criterion; a project adds its own under `criteria.subjective_words` in the
 config. `check ticket <n>` reports the failing criteria. The engine runs the same

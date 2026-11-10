@@ -79,3 +79,28 @@ describe('quoted expected output', () => {
     expect(subjectiveWordsIn('the code is clean and prints "ok"')).toEqual(['clean']);
   });
 });
+
+describe('text-only criteria warning', () => {
+  const WARN = 'name a test or a journey';
+  const ticket = (criteria: string[], knock = '`src/a.ts`') => `## Acceptance\n${criteria.map(c => `- [ ] ${c}`).join('\n')}\n\n## Placement\n\nnone\n\n## Knock-on\n\n${knock}\n`;
+  const warned = (body: string) => checkTicketCriteria(body).warnings.some(w => w.includes(WARN));
+
+  test('a ticket whose criteria are all text counts or listings gets the warning', () => {
+    const body = ticket(['`grep -c "retry" src/a.ts` prints a number of at least 1', '`ls src/a.ts` exits 0', '`test -f src/b.ts` exits 0', '`cat a.txt | wc -l` prints 3']);
+    expect(warned(body)).toBe(true);
+    expect(checkTicketCriteria(body).ok).toBe(true);
+  });
+
+  test('one criterion that names a test is enough to drop the warning', () => {
+    expect(warned(ticket(['`grep -c "x" a.ts` prints 1', 'Test `retries once` passes']))).toBe(false);
+  });
+
+  test('Gates green and check docs are not counted either way', () => {
+    expect(warned(ticket(['`grep -c "x" a.ts` prints 1', 'Gates green', '`bun work.ts check docs` exits 0']))).toBe(true);
+    expect(warned(ticket(['Gates green', '`bun work.ts check docs` exits 0']))).toBe(false);
+  });
+
+  test('a ticket that touches only Markdown gets no warning', () => {
+    expect(warned(ticket(['`grep -c "x" docs/a.md` prints 1'], '`docs/a.md`'))).toBe(false);
+  });
+});
