@@ -814,7 +814,7 @@ describe('supervisor commands', () => {
       cmd === 'git branch --show-current' ? 'main' : cmd.startsWith('gh issue view') ? '{"state":"OPEN","closedByPullRequestsReferences":[]}' : '';
     const out = JSON.parse(await capture(['facts', '--json', '--issue', '4'], run));
     expect(out.branch).toBe('main');
-    expect(out.issue).toEqual({number: 4, state: 'OPEN', closing_pr: null});
+    expect(out.issue).toEqual({number: 4, state: 'OPEN', closing_pr: null, delivery: null});
   });
 
   test('facts --guards prints the guard files and the tests that name a path, with --json as data', async () => {

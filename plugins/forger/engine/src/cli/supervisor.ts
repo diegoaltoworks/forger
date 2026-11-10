@@ -5,7 +5,7 @@ import {join} from 'path';
 import {readBaseSync, decideHalt, pidAlive, viewLease, standingHalt, parseAllEvents, GhTrackerHalt, requiresVerifyStatus, handedOver, listRepoLabels, loopLabels, missingLabels, readAllVerdicts, verdictsHome, setAsideReasons} from '../loop';
 import {describeBlocked} from '../backlog';
 import {engineStartLine, readEngineStart} from './detach';
-import {buildReport, formatReport, mergedInPeriod, orient as orientPlan, proposedAdrs, reportPeriod, uncausedClearItems, waitingIssues, ownerReviewPrs, OWNER_LABELS, type AdrText, type OwnerReviewPr, type MergedPrFact, type OwnerItem, type WaitingIssue} from '../supervisor';
+import {buildReport, formatReport, mergedInPeriod, orient as orientPlan, failedDeliveryItems, proposedAdrs, reportPeriod, uncausedClearItems, waitingIssues, ownerReviewPrs, OWNER_LABELS, type AdrText, type OwnerReviewPr, type MergedPrFact, type OwnerItem, type WaitingIssue} from '../supervisor';
 import {hooksGateProblems, hooksGateRefusal} from '../checks';
 import type {Command, CommandContext} from './command';
 import {harnessOfRoot} from './harness-of';
@@ -105,7 +105,7 @@ function supervise(which: 'orient' | 'report') {
     }
     const events = parseAllEvents(ctx.stateStore.readEvents());
     const out = which === 'orient' ? {...plan, engine_start: readEngineStart(ctx)} : buildReport({
-          ownerWaiting: [...ownerWaiting(ctx), ...uncausedClearItems(events)],
+          ownerWaiting: [...ownerWaiting(ctx), ...uncausedClearItems(events), ...failedDeliveryItems(events)],
           merged,
           period,
           status,

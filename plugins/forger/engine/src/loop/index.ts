@@ -4,6 +4,7 @@ export * from './absolute-rule';
 export * from './criteria';
 export * from './ticket-check';
 export * from './aside';
+export * from './delivery';
 export * from './decline';
 export * from './decline-io';
 export * from './events';
