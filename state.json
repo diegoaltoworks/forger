@@ -189,7 +189,10 @@
       "ticket": "issue-387",
       "pid": null,
       "session_id": "d4a7f299-d0a9-4d5e-9449-66fad09a86c5",
-      "snapshot": null,
+      "snapshot": {
+        "baseSha": "",
+        "reflogLength": 1
+      },
       "started_at": "2026-11-10T17:54:00.386Z",
       "plan": {
         "stages": [
