@@ -8,6 +8,7 @@ import {existsSync, readFileSync, unlinkSync, writeFileSync} from 'fs';
 
 import type {StateStore} from '../ports';
 import type {StoredPlan} from '../pipeline';
+import type {SetAsideEntry} from './aside/track';
 import type {DeclineEntry} from './decline';
 import {decideHalt, statusBody} from './halt-label';
 import type {TrackerHalt} from './halt-tracker';
@@ -25,6 +26,7 @@ export type AutomationStatus =
   | 'declined'
   | 'failed'
   | 'conflict'
+  | 'set-aside'
   | 'timeout'
   | 'error'
   | 'halted';
@@ -61,6 +63,10 @@ export interface AutomationState {
   consecutive_declines: number;
   /** Tickets whose PR is open for the owner to merge; absent in a state stored before the owner could review. */
   owner_review_tasks: string[];
+  /** Tickets set aside in this run after a worker's stop, oldest first. */
+  set_aside_tasks: SetAsideEntry[];
+  /** Set-asides since the last merge. */
+  consecutive_set_asides: number;
 }
 
 export function defaultState(): AutomationState {
@@ -78,6 +84,8 @@ export function defaultState(): AutomationState {
     declined_tasks: [],
     consecutive_declines: 0,
     owner_review_tasks: [],
+    set_aside_tasks: [],
+    consecutive_set_asides: 0,
   };
 }
 

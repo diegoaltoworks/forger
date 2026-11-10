@@ -26,15 +26,16 @@ function parsed(block: string) {
 }
 
 describe('conflict stop', () => {
-  test('a complete conflict stop halts with its options and recommendation in the halt message', () => {
+  test('a complete conflict stop sets the ticket aside with its options and recommendation as the reason', () => {
     const p = parsed(complete);
     if (!p.ok) throw new Error(p.problems.join('; '));
     const o = decideOutcome({...facts, conflictStop: p.conflict});
-    expect(o.status).toBe('halted');
-    expect(o.halt).toContain('1. A - shrink the footer text (trade-off: smaller type than the design rule allows)');
-    expect(o.halt).toContain('2. B - wrap the links onto two lines');
-    expect(o.halt).toContain('Recommendation: B');
-    expect(o.halt).toContain('Answer with: decide 344 "<choice>"');
+    expect(o.status).toBe('set-aside');
+    expect(o.halt).toBeNull();
+    expect(o.setAside).toContain('1. A - shrink the footer text (trade-off: smaller type than the design rule allows)');
+    expect(o.setAside).toContain('2. B - wrap the links onto two lines');
+    expect(o.setAside).toContain('Recommendation: B');
+    expect(o.setAside).toContain('Answer with: decide 344 "<choice>"');
     expect(o.conflictStop).toBeDefined();
   });
 
@@ -57,7 +58,8 @@ describe('conflict stop', () => {
 
   test('an incomplete block leaves an ordinary stop', () => {
     const o = decideOutcome({...facts, conflictStop: null});
-    expect(o.halt).toBe('x');
+    expect(o.setAside).toBe('x');
+    expect(o.halt).toBeNull();
     expect(o.conflictStop).toBeUndefined();
   });
 

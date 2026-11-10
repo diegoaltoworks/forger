@@ -1,4 +1,4 @@
-import {appendDecision, decisionEntry, haltedOnIssue, parseAllEvents, standingHalt} from '../loop';
+import {answerCommands, appendDecision, decisionEntry, haltedOnIssue, parseAllEvents, setAsideReasons, standingHalt} from '../loop';
 import type {Command} from './command';
 
 function quote(s: string): string {
@@ -16,7 +16,8 @@ export const decide: Command = {
   flags: ['json'],
   help: `  decide <n> "<text>" [--json]
                    Record the owner's answer under the Decisions section of issue <n>, with who decided and the date;
-                   when the loop is halted on that ticket, the halt is cleared with <n> as the cause`,
+                   when the loop is halted on that ticket, the halt is cleared with <n> as the cause;
+                   when the loop set the ticket aside, it comes back to the queue`,
   run(ctx) {
     const {positionals, values, config, runner, stateStore} = ctx;
     const raw = positionals[1] ?? '';
@@ -34,10 +35,17 @@ export const decide: Command = {
     const body = appendDecision(view.stdout, decisionEntry(text, login, date));
     const edit = run(`gh issue edit ${issue} --body ${quote(body)}`);
     if (edit.exitCode !== 0) return refuse(`could not update #${issue}`);
-    const halt = standingHalt(parseAllEvents(stateStore.readEvents()));
+    const events = parseAllEvents(stateStore.readEvents());
+    const halt = standingHalt(events);
+    const wasSetAside = setAsideReasons(events).has(issue);
+    let requeued = false;
+    if (wasSetAside) {
+      requeued = answerCommands(issue, config.tracker.label).every(c => run(c).exitCode === 0);
+      if (!requeued) console.error(`decide: recorded the decision, but could not return #${issue} to the queue; relabel it by hand`);
+    }
     const cleared = haltedOnIssue(halt, issue);
     if (cleared) runner.clearHalt('halt_cleared', null, {cause: issue, notADefect: null}, text);
-    if (values.json) console.log(JSON.stringify({issue, decided_by: login, date, halt_cleared: cleared}));
-    else console.log(`Recorded under Decisions on #${issue}.${cleared ? ' The halt on this ticket is cleared.' : ''}`);
+    if (values.json) console.log(JSON.stringify({issue, decided_by: login, date, halt_cleared: cleared, requeued}));
+    else console.log(`Recorded under Decisions on #${issue}.${cleared ? ' The halt on this ticket is cleared.' : ''}${requeued ? ' It is back in the queue.' : ''}`);
   },
 };

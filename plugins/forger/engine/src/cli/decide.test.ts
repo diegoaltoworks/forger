@@ -82,6 +82,41 @@ describe('decide', () => {
     expect(events(root)).toHaveLength(1);
   });
 
+  test('decide on a ticket set aside removes its needs-human label', async () => {
+    const root = project(null);
+    const e = {event: 'set_aside', at: '2030-01-01T00:00:00.000Z', iteration: 1, ticket: 'issue-7', reason: 'needs a key'};
+    writeFileSync(join(root, '.forger', 'events.jsonl'), `${JSON.stringify(e)}\n`);
+    const commands: string[] = [];
+    const run: CommandRunner = cmd => {
+      commands.push(cmd);
+      return cmd.startsWith('gh api user') ? 'the-owner\n' : '';
+    };
+    const log = spyOn(console, 'log').mockImplementation(() => {});
+    try {
+      await main(['decide', '7', 'use the key'], {run});
+    } finally {
+      log.mockRestore();
+    }
+    expect(commands).toContain('gh issue edit 7 --remove-label needs-human');
+    expect(commands.some(c => c.startsWith('gh issue edit 7 --add-label') && c.includes('ready-for-agent'))).toBe(true);
+  });
+
+  test('decide on a ticket the loop did not set aside leaves its labels alone', async () => {
+    project(null);
+    const commands: string[] = [];
+    const run: CommandRunner = cmd => {
+      commands.push(cmd);
+      return cmd.startsWith('gh api user') ? 'the-owner\n' : '';
+    };
+    const log = spyOn(console, 'log').mockImplementation(() => {});
+    try {
+      await main(['decide', '7', 'go'], {run});
+    } finally {
+      log.mockRestore();
+    }
+    expect(commands.some(c => c.includes('--remove-label'))).toBe(false);
+  });
+
   test('decide without a number and text is refused', async () => {
     project(null);
     const err = spyOn(console, 'error').mockImplementation(() => {});

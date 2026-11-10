@@ -31,6 +31,19 @@ describe('waitingIssues', () => {
   });
 });
 
+describe('a ticket set aside', () => {
+  test('report lists a ticket set aside with its reason under waiting on you', () => {
+    const w = waitingIssues([{number: 9, title: 'c', labels: ['needs-human'], body: ''}], new Map([[9, 'needs a key\nsecond line']]));
+    expect(w).toHaveLength(1);
+    expect(w[0].question).toBe('#9 c is needs-human');
+    expect(w[0].because).toBe('the loop set it aside: needs a key');
+  });
+  test('a reason recorded for an issue that is not needs-human is not shown', () => {
+    const w = waitingIssues([{number: 9, title: 'c', labels: ['needs-info'], body: ''}], new Map([[9, 'old']]));
+    expect(w[0].because).not.toContain('set it aside');
+  });
+});
+
 describe('proposedAdrs', () => {
   test('lists Proposed records only, with their recommendation', () => {
     const adrs = [

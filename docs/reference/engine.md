@@ -16,6 +16,12 @@ recovery. The ticket a run is held to is the one the worker took,
 read from its branch, which the log names when it differs from the engine's
 pick.
 
+A worker's `stop`, plain or `stop conflict`, sets its ticket aside and does not
+halt: the issue is labelled `needs-human` with the reason commented, a
+`set_aside` event is recorded and the next pick skips tickets that share a
+footprint with it. `limits.maxSetAside` set-asides in a row with no merge
+between them halt the loop; a merge resets the count.
+
 A run that exits non-zero with an authentication, billing, network or sandbox-limit error is
 an infrastructure error, not a worker failure: the loop halts at once with the
 reason and the failure counter is left alone. A tracker read refused by

@@ -209,3 +209,9 @@ export function pick<T extends Schedulable>(
   }
   return chosen;
 }
+
+/** Whether two declared footprints share a path or a module name; an undeclared footprint shares nothing. */
+export function footprintsShare(a: Footprint | null, b: Footprint | null): boolean {
+  if (!a || !b) return false;
+  return pathsOverlap(a.paths, b.paths) || a.modules.some(m => b.modules.includes(m));
+}

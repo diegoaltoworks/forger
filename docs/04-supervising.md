@@ -206,9 +206,12 @@ improvise them:
   with `<n>` as the cause. An answer given only in chat is lost on the next run.
   A worker that finds a design and a guarantee in conflict stops with `stop conflict` and a block: the
   constraint, the measured gap, two or three options with their trade-offs and one recommendation. A
-  complete block labels the issue `needs-human`, posts the options as a comment and halts; the halt
-  message and `report` show them with the `decide <n> "<choice>"` line to answer with. An incomplete
-  block is sent back once, then recorded as an ordinary stop.
+  complete block labels the issue `needs-human`, posts the options as a comment and sets the ticket
+  aside; the loop goes on to other tickets. `report` lists the ticket under "waiting on you" with the
+  reason and the options, and the comment carries the `decide <n> "<choice>"` line to answer with.
+  An incomplete block is sent back once, then recorded as an ordinary stop, which sets the ticket
+  aside with the worker's reason. `decide` on a ticket the loop set aside also removes its
+  `needs-human` label and restores the intake label, so the next pick can take it.
 - `recover [--json]`: the standing halt's recovery, from a table in the engine
   keyed by the halt's event kind. An `unverified` halt runs `verify` on the
   merged head: a pass resumes the loop and writes a `recovered` event (seen in

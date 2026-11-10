@@ -9,6 +9,7 @@ Pure:
 
 - `outcome.ts` - the outcome of a run, decided from facts. It tells whether
   the run built the engine's pick, declined it, or took another ticket.
+- `aside/` - a worker's stop sets its ticket aside (ADR 0020). See its README.
 - `decline.ts` - what a decline record must hold, and how a run of declines
   becomes a halt.
 - `absolute-rule.ts` - warns when a ticket with UI states states an absolute design rule and carries no measured number.

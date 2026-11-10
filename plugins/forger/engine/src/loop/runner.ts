@@ -262,6 +262,7 @@ export class AutomationRunner {
     const state = this.store.load();
     if (state.status === 'halted') state.status = 'ready';
     state.consecutive_failures = 0;
+    state.consecutive_set_asides = 0;
     state.stall_count = 0;
     this.store.save(state);
     this.store.publishStatus(state);
@@ -369,6 +370,12 @@ export class AutomationRunner {
     if (this.store.hasTracker() && !this.store.isHalted() && this.store.load().status === 'halted') this.clearHalt();
   }
 
+  /** A new run starts with no ticket set aside; the tickets labelled needs-human stay out of the queue on their own. */
+  private startRunAside(state: AutomationState): void {
+    state.set_aside_tasks = [];
+    this.backlog.avoid([]);
+  }
+
   private async loop(iterations: number, continuous: boolean): Promise<void> {
     this.resumeIfLabelCleared();
     if (this.store.isHalted()) {
@@ -384,6 +391,7 @@ export class AutomationRunner {
     }
 
     initial.stall_count = 0;
+    this.startRunAside(initial);
     this.store.save(initial);
 
     let iteration = initial.iteration;
@@ -509,6 +517,7 @@ export class AutomationRunner {
       return;
     }
     initial.stall_count = 0;
+    this.startRunAside(initial);
     this.store.save(initial);
 
     const {parallelism} = this.config;

@@ -8,7 +8,7 @@
  */
 
 import type {Tier, WorkloopConfig} from '../config';
-import {parseFootprint, type Schedulable} from './schedule';
+import {footprintsShare, parseFootprint, type Footprint, type Schedulable} from './schedule';
 
 export interface Ticket {
   status: string;
@@ -69,7 +69,8 @@ function isTicket(data: unknown): data is Ticket {
  */
 export function workableTasks(
   data: BacklogData | null,
-  config: WorkloopConfig
+  config: WorkloopConfig,
+  avoid: Footprint[] = []
 ): Array<{priority: number; label: string; name: string}> {
   const all = tickets(data);
   const isCompleted = (id: string): boolean => all[id]?.status === 'completed';
@@ -80,6 +81,7 @@ export function workableTasks(
     if (ticket.status !== 'not_started') continue;
     if (!isThisRepo(ticket, config)) continue;
     if (heldPrs(ticket).length > 0) continue;
+    if (avoid.length > 0 && avoid.some(a => footprintsShare(ticket.body ? parseFootprint(ticket.body) : null, a))) continue;
 
     const deps = Array.isArray(ticket.depends_on) ? ticket.depends_on : [];
     if (!deps.every(isCompleted)) continue;
@@ -141,14 +143,14 @@ export function describeBlocked(blocked: BlockedTicket[]): string {
   return blocked.map(b => `${b.id} blocked by ${b.blockedBy.map(x => `${x.id} (${x.status})`).join(', ')}`).join('; ');
 }
 
-export function workableCount(data: BacklogData | null, config: WorkloopConfig): number {
-  return workableTasks(data, config).length;
+export function workableCount(data: BacklogData | null, config: WorkloopConfig, avoid: Footprint[] = []): number {
+  return workableTasks(data, config, avoid).length;
 }
 
 /** The workable tickets in the engine's order, each with the footprint its text declares. */
-export function candidateTickets(data: BacklogData | null, config: WorkloopConfig): Schedulable[] {
+export function candidateTickets(data: BacklogData | null, config: WorkloopConfig, avoid: Footprint[] = []): Schedulable[] {
   const all = tickets(data);
-  return workableTasks(data, config).map(t => {
+  return workableTasks(data, config, avoid).map(t => {
     const ticket = all[t.name];
     return {id: t.name, footprint: ticket?.body ? parseFootprint(ticket.body) : null, serial: ticket?.serial === true};
   });
@@ -163,8 +165,8 @@ export function dependencyGraph(data: BacklogData | null): Record<string, string
   return graph;
 }
 
-export function nextTaskName(data: BacklogData | null, config: WorkloopConfig): string | null {
-  return workableTasks(data, config)[0]?.name ?? null;
+export function nextTaskName(data: BacklogData | null, config: WorkloopConfig, avoid: Footprint[] = []): string | null {
+  return workableTasks(data, config, avoid)[0]?.name ?? null;
 }
 
 /** Model and budget for a ticket, by priority and scaled by declared effort. */
@@ -212,8 +214,8 @@ function heldTickets(data: BacklogData | null, config: WorkloopConfig): Array<{i
     .map(([id, t]) => ({id, prs: heldPrs(t)}));
 }
 
-export function backlogReport(data: BacklogData | null, config: WorkloopConfig): BacklogReport {
-  const workable = workableTasks(data, config).map(t => ({id: t.name, priority: t.label}));
+export function backlogReport(data: BacklogData | null, config: WorkloopConfig, avoid: Footprint[] = []): BacklogReport {
+  const workable = workableTasks(data, config, avoid).map(t => ({id: t.name, priority: t.label}));
   return {workable, remaining: remainingTasks(data, config), next: workable[0]?.id ?? null, anomalies: data?.anomalies ?? [], held: heldTickets(data, config)};
 }
 
@@ -239,6 +241,8 @@ export interface Backlog {
   candidates(): Schedulable[];
   /** The text of a workable ticket, when the tracker holds one. */
   body(ticket: string): string | null;
+  /** The footprint a ticket text declares; `text` is read first when given, since a ticket taken out of the Backlog loses its own. */
+  footprint(ticket: string, text?: string | null): Footprint | null;
   /** Direct dependencies by ticket. */
   graph(): Record<string, string[]>;
   tier(ticket: string | null): Tier;
@@ -249,29 +253,40 @@ export interface Backlog {
   blocked(): BlockedTicket[];
   /** Read the tickets now, replacing what was read before. */
   refresh(): void;
+  /** Tickets that share a footprint with one of these are not workable until it is cleared; an empty list clears it. */
+  avoid(footprints: Footprint[]): void;
 }
 
 /** A Backlog over any loader; implementations differ only in where the tickets come from. */
 export function backlogFrom(load: () => BacklogData | null, config: WorkloopConfig): Backlog {
   let read: {data: BacklogData | null} | null = null;
   const data = (): BacklogData | null => (read ??= {data: load()}).data;
+  let avoided: Footprint[] = [];
   return {
     remaining: () => remainingTasks(data(), config),
-    workableCount: () => workableCount(data(), config),
-    next: () => nextTaskName(data(), config),
-    candidates: () => candidateTickets(data(), config),
+    workableCount: () => workableCount(data(), config, avoided),
+    next: () => nextTaskName(data(), config, avoided),
+    candidates: () => candidateTickets(data(), config, avoided),
     body: ticket => {
       const t = tickets(data())[ticket];
       return isTicket(t) && typeof t.body === 'string' ? t.body : null;
+    },
+    footprint: (ticket, text) => {
+      const t = tickets(data())[ticket];
+      const body = text ?? (isTicket(t) && typeof t.body === 'string' ? t.body : null);
+      return body ? parseFootprint(body) : null;
     },
     graph: () => dependencyGraph(data()),
     tier: ticket => tierFor(data(), config, ticket),
     isCompleted: ticket => isTicketCompleted(data(), ticket),
     has: ticket => hasTicket(data(), ticket),
-    report: () => backlogReport(data(), config),
+    report: () => backlogReport(data(), config, avoided),
     blocked: () => blockedTickets(data(), config),
     refresh: () => {
       read = {data: load()};
+    },
+    avoid: footprints => {
+      avoided = footprints;
     },
   };
 }
