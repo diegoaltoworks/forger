@@ -310,7 +310,10 @@
       "ticket": "issue-389",
       "pid": null,
       "session_id": "201d5bec-7f77-4f3a-9632-f7a57baf5d54",
-      "snapshot": null,
+      "snapshot": {
+        "baseSha": "",
+        "reflogLength": 1
+      },
       "started_at": "2026-11-10T05:41:45.436Z",
       "plan": {
         "stages": [
