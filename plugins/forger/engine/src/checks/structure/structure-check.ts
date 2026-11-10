@@ -12,14 +12,19 @@ import {forgerPath, loadConfig} from '../../config';
 import type {CommandRunner} from '../../ports';
 import {mergeBase} from '../decisions';
 import {projectFiles} from '../files';
+import {unreadGaps, unreadSources, type Gap, type UnreadSource} from '../gaps';
 import {decisionsOfBranch, withoutDecided} from '../guards';
 import type {Finding} from '../waivers';
 import {STRUCTURE_BASELINE_PATH, baselineGrew, classify, parseStructureBaseline, renderStructureBaseline, shrink, type StructureBaseline} from './baseline';
-import {observe, parseStructureConfig, STRUCTURE_PATH, toFinding, type Observation, type StructureConfig} from './structure';
+import {extractorFor} from '../arch';
+import {observe, parseStructureConfig, sourceFiles, STRUCTURE_PATH, toFinding, type Observation, type StructureConfig} from './structure';
+
+export const STRUCTURE_IMPORTS_OPINION = 'structure.import-rules';
 
 export interface StructureOutput {
   findings: Finding[];
   warnings: Finding[];
+  gaps: Gap[];
 }
 
 function readConfig(projectRoot: string): StructureConfig {
@@ -31,6 +36,13 @@ function readConfig(projectRoot: string): StructureConfig {
 function readBaseline(projectRoot: string): StructureBaseline | null {
   const path = forgerPath(projectRoot, STRUCTURE_BASELINE_PATH);
   return existsSync(path) ? parseStructureBaseline(readFileSync(path, 'utf-8')) : null;
+}
+
+/** Source files the import rules and the shim rule cannot read, by extension. */
+export function structureUnread(projectRoot: string, run: CommandRunner): UnreadSource[] {
+  const config = readConfig(projectRoot);
+  const paths = projectFiles(run).filter(p => existsSync(join(projectRoot, p)));
+  return unreadSources(sourceFiles(paths, config).sources, p => extractorFor(p) !== null, config.source_extensions);
 }
 
 function observations(projectRoot: string, run: CommandRunner): Observation[] {
@@ -59,7 +71,7 @@ export function runStructureCheck(projectRoot: string, run: CommandRunner): Stru
     const before = baselineAtBase(projectRoot, run);
     if (before) findings.push(...withoutDecided(baselineGrew(before, baseline), decisionsOfBranch(run)));
   }
-  return {findings, warnings: recorded.map(toFinding)};
+  return {findings, warnings: recorded.map(toFinding), gaps: unreadGaps(structureUnread(projectRoot, run), STRUCTURE_IMPORTS_OPINION)};
 }
 
 /** Writes the baseline from the current findings; refuses when one exists. */

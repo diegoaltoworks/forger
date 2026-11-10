@@ -48,3 +48,39 @@ export function gapsFail(gaps: ReportedGap[]): boolean {
 export function gapsOpen(gaps: ReportedGap[]): boolean {
   return gaps.some(g => !g.waiver);
 }
+
+/** Extensions a repository's source may be written in; a check that reads imports covers only some of them. */
+export const SOURCE_EXTENSIONS = ['.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs', '.py', '.go', '.rs', '.rb', '.java', '.kt', '.swift', '.vue', '.svelte'];
+
+export const extensionOf = (path: string): string => {
+  const base = path.slice(path.lastIndexOf('/') + 1);
+  return base.includes('.') ? base.slice(base.lastIndexOf('.')) : '';
+};
+
+export interface UnreadSource {
+  extension: string;
+  count: number;
+  /** First path in sorted order: the file a waiver names. */
+  first: string;
+}
+
+/** The files whose extension is a source extension but no extractor reads, grouped by extension. */
+export function unreadSources(paths: string[], isRead: (path: string) => boolean, extensions: string[] = SOURCE_EXTENSIONS): UnreadSource[] {
+  const groups = new Map<string, string[]>();
+  for (const p of [...paths].sort()) {
+    const ext = extensionOf(p);
+    if (!extensions.includes(ext) || isRead(p)) continue;
+    groups.set(ext, [...(groups.get(ext) ?? []), p]);
+  }
+  return [...groups].map(([extension, files]) => ({extension, count: files.length, first: files[0]})).sort((a, b) => a.extension.localeCompare(b.extension));
+}
+
+/** One SHOULD gap per unread extension: a pass over code nothing read must not look like a pass. */
+export function unreadGaps(unread: UnreadSource[], opinion: string): Gap[] {
+  return unread.map(u => ({
+    file: u.first,
+    opinion,
+    modality: 'SHOULD',
+    detail: `${u.count} ${u.count === 1 ? 'file' : 'files'} ${u.extension}: imports in ${u.extension} files are not read`,
+  }));
+}

@@ -6,6 +6,7 @@ import {coverageAdvice, formatCoverageAdvice, formatSetup, formatUpgrade, readRe
 import {existsSync, readFileSync} from 'fs';
 import {join} from 'path';
 import {formatCredentialSetup, formatSandboxSetup, setupCredential, setupSandbox, type CredentialSetup, type SandboxSetup} from './setup-sandbox';
+import {formatUnread, unreadChecks, type UnreadCheck} from './language-reach';
 import type {Command, CommandContext} from './command';
 
 /** setup runs before any `.forger/` exists, so outside a repository it acts where it was run. */
@@ -85,7 +86,8 @@ export const setup: Command = {
     if (values.upgrade) {
       try {
         const upgrade = runUpgrade(setupRoot(ctx), pluginRoot, c => ctx.run()(c));
-        console.log(values.json ? JSON.stringify(upgrade) : formatUpgrade(upgrade));
+        const unread = unreadChecks(setupRoot(ctx), pluginRoot, c => ctx.run()(c));
+        console.log(values.json ? JSON.stringify({...upgrade, ...(unread.length > 0 ? {unread} : {})}) : [formatUpgrade(upgrade), ...formatUnread(unread)].join('\n'));
       } catch (e) {
         console.error((e as Error).message);
         process.exitCode = 1;
@@ -132,6 +134,7 @@ export const setup: Command = {
       }
       if (box.docker && (!box.docker.reachable || !box.docker.image)) process.exitCode = 1;
     }
+    const unread: UnreadCheck[] = unreadChecks(setupRoot(ctx), pluginRoot, c => ctx.run()(c));
     let credential: CredentialSetup | undefined;
     if (values.credential) {
       try {
@@ -147,11 +150,12 @@ export const setup: Command = {
     const coverage = coverageNextStep(ctx, parsePackList(values.packs));
     const offered = offerPresets(loadPresets(pluginRoot), installedSkills());
     const presets = offered.map(p => p.name);
-    if (values.json) console.log(JSON.stringify({...result, presets, labels, ...(box ? {sandbox: box} : {}), ...(credential ? {credential} : {}), ...(verifyCheck ? {verify_check: verifyCheck} : {}), ...(coverage ? {coverage, next_steps: coverage.next_steps} : {})}));
+    if (values.json) console.log(JSON.stringify({...result, ...(unread.length > 0 ? {unread} : {}), presets, labels, ...(box ? {sandbox: box} : {}), ...(credential ? {credential} : {}), ...(verifyCheck ? {verify_check: verifyCheck} : {}), ...(coverage ? {coverage, next_steps: coverage.next_steps} : {})}));
     else
       console.log(
         [
           formatSetup(result, presets),
+          ...formatUnread(unread),
           ...(box ? formatSandboxSetup(box) : []),
           ...(credential ? formatCredentialSetup(credential) : []),
           ...labels.created.map(l => `label   ${l}`),

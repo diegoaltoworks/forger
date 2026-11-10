@@ -11,7 +11,7 @@ A baseline records today's findings: a recorded one warns, and an addition fails
 - `structure.ts` - the config parser and the rules over paths and file text. Pure.
 - `baseline.ts` - the ratchet: classify against the record, shrink it, spot growth. Pure.
 - `imports.ts` - the import rules, over `check arch`'s extractor and resolver. Pure.
-- `structure-check.ts` - lists the files, reads and writes the config and baseline, reads the merge-base's baseline. Touches the world.
+- `structure-check.ts` - lists the files, reads and writes the config and baseline, reads the merge-base's baseline. Reports a SHOULD gap per unread source extension. Touches the world.
 
 ## Entry point
 
@@ -19,4 +19,4 @@ A baseline records today's findings: a recorded one warns, and an addition fails
 
 ## May import
 
-The core: `../waivers`, `../files`, `../arch` (its index only), `decisions/`, `guards/`, `config`, `ports`.
+The core: `../waivers`, `../gaps`, `../files`, `../arch` (its index only), `decisions/`, `guards/`, `config`, `ports`.

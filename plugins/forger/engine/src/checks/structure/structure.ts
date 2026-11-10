@@ -5,6 +5,7 @@
  * file text; the I/O lives in structure-check.ts and the ratchet in baseline.ts.
  */
 
+import {SOURCE_EXTENSIONS} from '../gaps';
 import {globToRegExp, type Finding} from '../waivers';
 import {observeImports} from './imports';
 
@@ -62,7 +63,7 @@ export class StructureConfigError extends Error {
 }
 
 const DEFAULTS: StructureConfig = {
-  source_extensions: ['.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs', '.py', '.go', '.rs', '.rb', '.java', '.kt', '.swift', '.vue', '.svelte'],
+  source_extensions: SOURCE_EXTENSIONS,
   test_patterns: ['**/*.test.*', '**/*.spec.*', '**/test_*.py', '**/*_test.*', '**/__tests__/**'],
   folder_limit: 15,
   prefix_cluster: 4,
