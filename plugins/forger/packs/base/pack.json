@@ -1,12 +1,13 @@
 {
   "id": "base",
-  "version": "1.6.0",
+  "version": "1.7.0",
   "description": "The process every forger project starts from: the work-loop config, the process doc, the backlog and the ticket, PR, report and retro shapes.",
   "detect": [],
   "files": [
     {"source": "files/process.md", "target": ".forger/process.md"},
     {"source": "files/backlog.json", "target": ".forger/backlog.json"},
     {"source": "files/ticket.md", "target": ".forger/templates/ticket.md"},
+    {"source": "files/product.md", "target": ".forger/templates/product.md"},
     {"source": "files/spike.md", "target": ".forger/templates/spike.md"},
     {"source": "files/pr.md", "target": ".forger/templates/pr.md"},
     {"source": "files/work-order.md", "target": ".forger/templates/work-order.md"},

@@ -19,6 +19,7 @@ export const FLAGS = {
   tracker: {type: 'string'},
   issue: {type: 'string'},
   guards: {type: 'string'},
+  product: {type: 'boolean', default: false},
   ticket: {type: 'string'},
   stage: {type: 'string'},
   slot: {type: 'string'},
