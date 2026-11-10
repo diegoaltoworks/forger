@@ -1,0 +1,16 @@
+{
+  "id": "journeys",
+  "version": "1.0.0",
+  "description": "The few things a person must be able to do in the app, each run by its own command against a running build: check journeys.",
+  "detect": [],
+  "files": [
+    {"source": "files/journeys.md", "target": ".forger/opinions/journeys.md"},
+    {"source": "files/journeys.json", "target": ".forger/journeys.json"}
+  ],
+  "opinions": [
+    {"id": "journeys.named", "rung": "check", "summary": "At least one journey is named; with none the check reads unmeasured, never a pass.", "check": "journeys"},
+    {"id": "journeys.pass", "rung": "check", "summary": "Each journey's command exits zero against the running app; a failure names the journey and the end of its output.", "check": "journeys"}
+  ],
+  "checks": ["journeys"],
+  "slots": []
+}

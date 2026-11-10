@@ -1,6 +1,7 @@
 import {readFileSync} from 'fs';
 import {join} from 'path';
 
+import {journeysOf} from '../checks';
 import {formatGuardsReport, guardGlobsOf, guardsReport, testGlobsOf} from '../loop';
 import {formatFacts, gatherLoopFacts} from '../supervisor';
 import type {Command} from './command';
@@ -12,14 +13,14 @@ export const facts: Command = {
   help: `  facts [--json] [--issue N] [--pr N] [--guards PATH...]
                    Read-only: branch, clean, origin base head, issue -> closing PR -> merged,
                    and a PR's CI conclusion with whether it allows a merge;
-                   --guards lists the guard files and the test files that name any PATH`,
+                   --guards lists the guard files, the test files that name any PATH and the journeys whose paths match`,
   run(ctx) {
     const {values, config} = ctx;
     if (values.guards !== undefined) {
       const root = ctx.projectRoot;
       const paths = [values.guards, ...ctx.positionals.slice(1)].flatMap(p => p.split(',')).filter(p => p !== '');
       const files = ctx.run()('git ls-files').split('\n').filter(f => f !== '');
-      const report = guardsReport(paths, files, guardGlobsOf(root, config), testGlobsOf(root), f => readFileSync(join(root, f), 'utf-8'));
+      const report = guardsReport(paths, files, guardGlobsOf(root, config), testGlobsOf(root), f => readFileSync(join(root, f), 'utf-8'), journeysOf(root));
       console.log(values.json ? JSON.stringify(report) : formatGuardsReport(report));
       return;
     }

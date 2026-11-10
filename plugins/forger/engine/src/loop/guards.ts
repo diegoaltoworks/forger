@@ -7,6 +7,7 @@
  */
 
 import {globToRegExp} from '../checks';
+import type {Journey} from '../checks';
 import {BASELINE_MANIFEST} from '../ui';
 import {STRUCTURE_BASELINE_PATH} from '../checks';
 
@@ -77,6 +78,8 @@ export interface GuardsReport {
   paths: string[];
   guards: string[];
   tests: string[];
+  /** Names of the journeys whose paths match a touched path. */
+  journeys: string[];
 }
 
 /** The guard files among `files`, and the test files whose text names any of `paths`; pure over the reader. */
@@ -85,7 +88,8 @@ export function guardsReport(
   files: string[],
   guardGlobs: string[],
   testGlobs: string[],
-  read: (file: string) => string
+  read: (file: string) => string,
+  journeys: Journey[] = []
 ): GuardsReport {
   const guards = matchGlobs(files, guardGlobs);
   const tests = matchGlobs(files, testGlobs).filter(f => {
@@ -97,10 +101,11 @@ export function guardsReport(
     }
     return paths.some(p => p !== '' && text.includes(p));
   });
-  return {paths, guards, tests};
+  const named = journeys.filter(j => paths.some(p => matchGlobs([p], j.paths).length > 0)).map(j => j.name);
+  return {paths, guards, tests, journeys: named};
 }
 
 export function formatGuardsReport(r: GuardsReport): string {
   const list = (title: string, items: string[]) => `${title}:\n${items.length === 0 ? '  none' : items.map(i => `  ${i}`).join('\n')}`;
-  return [list('guard files', r.guards), list(`test files naming ${r.paths.join(', ')}`, r.tests)].join('\n');
+  return [list('guard files', r.guards), list(`test files naming ${r.paths.join(', ')}`, r.tests), list('journeys through them', r.journeys)].join('\n');
 }

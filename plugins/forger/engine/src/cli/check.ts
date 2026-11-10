@@ -13,6 +13,7 @@ import {
   runDocsCheck,
   runDocsWarnings,
   runHooksCheck,
+  runJourneysCheck,
   runSafetyCheck,
   runSpecDecision,
   runStructureCheck,
@@ -31,7 +32,7 @@ import {checkSequencing} from '../backlog';
 import {readOpenTickets} from './open-tickets';
 import {WORKER_ITERATION_VAR, WORKER_TICKET_VAR, checkTicketCriteria, criterionOptions, placementProblems} from '../loop';
 import {placementContext} from './placement-context';
-import type {Harness} from '../ports';
+import type {CommandRunner, Harness} from '../ports';
 import {UiInfrastructureError} from '../ports';
 import {harnessOfRoot} from './harness-of';
 import {loopRootOf, realHookIo} from './hook';
@@ -45,7 +46,7 @@ function checkWorker(env: Record<string, string | undefined>): {ticket: string; 
   return ticket ? {ticket, iteration: Number.isInteger(n) && n >= 0 ? n : 0} : null;
 }
 
-const SINGLE = {hooks: (root: string) => runHooksCheck(root, harnessOfRoot(root)), docs: runDocsCheck, arch: runArchCheck, decisions: runDecisionsCheck, guards: runGuardsCheck, safety: runSafetyCheck, tests: runTestsCheck, coverage: runCoverageCheck, ui: runUiCheck};
+const SINGLE = {hooks: (root: string) => runHooksCheck(root, harnessOfRoot(root)), docs: runDocsCheck, arch: runArchCheck, decisions: runDecisionsCheck, guards: runGuardsCheck, safety: runSafetyCheck, journeys: (root: string, run: CommandRunner) => runJourneysCheck(root, run).findings, tests: runTestsCheck, coverage: runCoverageCheck, ui: runUiCheck};
 
 export const check: Command = {
   name: 'check',
@@ -59,6 +60,7 @@ export const check: Command = {
   check guards [--json]    Fail when the diff loosens a guard, skips or deletes a test and the ticket's Decisions do not name it
   check hooks [--json] Fail when the hook policy is missing or drops a default rule without a waiver, or the harness's settings do not run the hook
   check safety [--json] Fail on an added secret or a stored-shape change with no test
+  check journeys [--json] Start the app, run each journey in .forger/journeys.json and fail on one that exits non-zero; no journey named is a gap, not a pass
   check tests [--json] Fail on a fix with no test, or a unit test that imports a network or process module
   check coverage [--json] [--update] Fail when line coverage drops below the baseline; --update raises it
   check ui [--json] Fail when a branch changes UI files and updates no screenshot under docs/screenshots/, or a UI file holds a raw colour literal
@@ -198,7 +200,7 @@ export const check: Command = {
       return;
     }
     if (!(positionals[1] in SINGLE)) {
-      console.error('Usage: check [--json | --summary] | check docs|arch|structure|decisions|guards|hooks|safety|tests|coverage|ui|spec|a11y|sandbox [--json] | check coverage --update');
+      console.error('Usage: check [--json | --summary] | check docs|arch|structure|decisions|guards|hooks|safety|journeys|tests|coverage|ui|spec|a11y|sandbox [--json] | check coverage --update');
       process.exitCode = 1;
       return;
     }

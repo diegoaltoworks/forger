@@ -119,6 +119,17 @@ The `safety` pack holds principle 9 (data in production is sacred) and the never
 
 The two path lists, and the optional `audit_command` (the project's own audit, whose flags choose the severity it fails at), live in `.forger/safety.json`. The audit needs the network, so it runs in `check` and unit tests use recorded output. A finding names the file, line and pattern and never prints the match, so a report does not spread the secret it found. The other two opinions, frozen lockfiles in the gates and destructive commands listed in the process gotchas, are rules kept by judgement. Like `check decisions`, the check reads the working tree and branch against the merge-base with the configured base branch, and an unresolvable base is an error, never a pass.
 
+## The journeys pack
+
+The `journeys` pack is opt-in (nothing detects it). Units and screens can pass while the app cannot do what it is for, so `.forger/journeys.json` names the few things a person must be able to do, each as `{name, command, paths}`: `command` exercises the journey against a running build and exits non-zero when it fails, and `paths` are the globs of the code it runs through. An optional `start` brings the app up for the whole run, `ready` exits 0 once it is up (polled for up to `ready_seconds`), and the app is stopped afterwards even when a journey fails. `check journeys` enforces two opinions:
+
+| Opinion | What the check flags |
+|---|---|
+| `journeys.named` | no journey is named; a gap, so the check reads `unmeasured`, never a pass |
+| `journeys.pass` | a journey's command exits non-zero or cannot start, or the app cannot start or is not ready; the finding names the journey and the end of its output |
+
+An entry missing its name, command or paths is a config error that names the entry. `facts --guards <path>...` lists the journeys whose paths match, so the planner names them under Guards.
+
 ## The testing pack
 
 The `testing` pack holds the testing habits the engine itself relies on. Three of its opinions are enforced, each under its own opinion id so a waiver can target one:
