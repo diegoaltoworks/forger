@@ -285,3 +285,20 @@ describe('session cost per ticket', () => {
     expect(formatMeasures(m)).toContain('cap $20, cost $1.50,');
   });
 });
+
+describe('measures carry the journey share', () => {
+  const base = {iterations: [], budgets: [], events: [], ciRuns: [], last: null};
+  const changes = {prs: [{number: 1, order: 0, title: 't', body: '', closes: null, ranges: [{file: 'src/a.ts', start: 1, end: 2}], replaced: [{file: 'docs/x.md', start: 1, end: 1}]}], issues: [], picks: [], window: 5};
+
+  test('with no journeys file the measure is null', () => {
+    const m = computeMeasures({...base, changes});
+    expect(m.journeys).toBeNull();
+    expect(formatMeasures(m)).not.toContain('journeys:');
+  });
+
+  test('a file the PR only deleted from still counts as changed', () => {
+    const m = computeMeasures({...base, changes, journeys: [{name: 'docs', paths: ['docs/**']}]});
+    expect(m.journeys).toEqual({merged: 1, touched_a_journey: 1, by_journey: {docs: 1}, upkeep: 0});
+    expect(formatMeasures(m)).toContain('journeys: 1 of 1');
+  });
+});

@@ -20,6 +20,8 @@ report, who may act, and the measures the refinement loop runs on.
   two reports. Pure.
 - `rework.ts` - rework inside a window of later merges, escaped defects and
   pick-versus-built mismatch over merged PRs (ADR 0013). Pure.
+- `journey-share.ts` - the share of merged PRs that changed a journey (by its
+  `paths`) against upkeep. Pure.
 - `waiting.ts` - what waits on the owner: parked issues, and Proposed ADRs with
   their stated recommendation. It also holds the report period with its
   merges. Pure.

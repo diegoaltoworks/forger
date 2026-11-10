@@ -9,3 +9,4 @@ export * from './report-measures';
 export * from './waiting';
 export * from './multi';
 export * from './follow';
+export * from './journey-share';

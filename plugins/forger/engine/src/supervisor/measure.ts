@@ -7,6 +7,7 @@
 import {formatHaltClears, haltClearCounts, type HaltClearCounts, type ScheduleRecord, type TerminalEvent, type VerdictRecord} from '../loop';
 import {formatStoredPlan, parsePlanLine, type StoredPlan} from '../pipeline';
 import {computeRework, formatRework, type ReworkInputs, type ReworkMeasures} from './rework';
+import {computeJourneyShare, formatJourneyShare, type JourneyPaths, type JourneyShare} from './journey-share';
 import {computeParallelMeasures, type ParallelMeasures} from './parallel-measures';
 
 export type Cause = 'ok' | 'timeout' | 'signal' | 'nonzero_exit' | 'unreadable';
@@ -77,6 +78,8 @@ export interface Measures {
   halt_clears: HaltClearCounts;
   /** Rework and escaped defects over merged PRs (ADR 0013); null when the tracker could not be read. */
   change_rework: ReworkMeasures | null;
+  /** Merged PRs that changed a journey against upkeep; null without a journeys file or a readable tracker. */
+  journeys: JourneyShare | null;
   events: Record<string, number>;
   tickets: TicketMeasure[];
   ci_rounds_unmatched: Record<string, number>;
@@ -170,6 +173,8 @@ export interface MeasureInputs {
   schedule?: ScheduleRecord[];
   /** Merged PRs, issues and picks for rework and escaped defects; absent reads as none gathered. */
   changes?: ReworkInputs;
+  /** The journeys of `.forger/journeys.json`; absent when the project has none. */
+  journeys?: JourneyPaths[];
   /** Only the most recent N iterations; null = all. */
   last: number | null;
 }
@@ -319,6 +324,7 @@ export function computeMeasures(inputs: MeasureInputs): Measures {
     interventions_unknown: eventsGap(windowed, inputs.events),
     halt_clears: haltClearCounts((inputs.clears ?? []).filter(e => first === null || e.iteration >= first)),
     change_rework: inputs.changes === undefined ? null : computeRework(inputs.changes),
+    journeys: inputs.journeys === undefined || inputs.changes === undefined ? null : computeJourneyShare(inputs.changes.prs.map(p => ({number: p.number, files: [...new Set([...p.ranges, ...(p.replaced ?? [])].map(r => r.file))]})), inputs.journeys),
     events,
     tickets: [...perTicket.values()],
     ci_rounds_unmatched: unmatched,
@@ -349,6 +355,7 @@ export function formatMeasures(m: Measures): string {
     `merged tickets: ${m.merged.tickets}, redone ${m.rework.redone_tickets}, owner interventions ${m.interventions_unknown === null ? m.owner_interventions.total : `unknown (${m.interventions_unknown})`}`,
     ...formatHaltClears(m.halt_clears),
     ...(m.change_rework === null ? ['rework and escaped defects: unknown'] : formatRework(m.change_rework)),
+    ...(m.journeys === null ? [] : [formatJourneyShare(m.journeys)]),
     `events: ${Object.entries(m.events).map(([k, v]) => `${k} ${v}`).join(', ') || 'none'}`,
     ...(m.not_on_this_machine?.length ? [`not on this machine: ${m.not_on_this_machine.join(', ')}`] : []),
     'tickets:',
