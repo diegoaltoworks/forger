@@ -36,6 +36,7 @@ A ticket is judged on its own diff. Its tests pass, its types hold, its review f
 - **The worker's instructions** carry a Structure section, so code is placed by feature from the first line.
 - **`## Placement` in a ticket** names where new code goes, and `check ticket` refuses a flagged folder unless the ticket moves the code or names a structure blocker.
 - **The periodic structure review** is one whole-repo ticket the loop files after enough merges, or when the baseline holds too many entries.
+  The periodic reviews share one schedule in `plugins/forger/engine/src/loop/reviews/`; the safety pack's access review is a second kind.
 
 The order matters when a repository is already in the old shape: enforcement first, so it stops getting worse; then expand, by adding the new location beside the old; then migrate callers a slice at a time; then contract, by deleting the old location. Skipping straight to a rename breaks every open branch at once.
 

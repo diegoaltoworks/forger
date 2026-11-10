@@ -70,6 +70,7 @@ describe('recorded events', () => {
     [['probe_failed', 6, 'issue-9', '`x` exits 0', at], '{"event":"probe_failed","at":"2000-01-02T03:04:05.000Z","iteration":6,"ticket":"issue-9","reason":"`x` exits 0"}\n'],
     [['merged', 8, 'issue-9', null, at], '{"event":"merged","at":"2000-01-02T03:04:05.000Z","iteration":8,"ticket":"issue-9","reason":null}\n'],
     [['structure_review_filed', 8, null, 'why', at], '{"event":"structure_review_filed","at":"2000-01-02T03:04:05.000Z","iteration":8,"ticket":null,"reason":"why"}\n'],
+    [['access_review_filed', 8, null, 'why', at], '{"event":"access_review_filed","at":"2000-01-02T03:04:05.000Z","iteration":8,"ticket":null,"reason":"why"}\n'],
     [['set_aside', 9, 'issue-9', 'needs a key', at], '{"event":"set_aside","at":"2000-01-02T03:04:05.000Z","iteration":9,"ticket":"issue-9","reason":"needs a key"}\n'],
     [['delivered', 10, 'issue-9', 'PR #12: ok', at], '{"event":"delivered","at":"2000-01-02T03:04:05.000Z","iteration":10,"ticket":"issue-9","reason":"PR #12: ok"}\n'],
     [['delivery_failed', 10, 'issue-9', 'PR #12: check failed', at], '{"event":"delivery_failed","at":"2000-01-02T03:04:05.000Z","iteration":10,"ticket":"issue-9","reason":"PR #12: check failed"}\n'],

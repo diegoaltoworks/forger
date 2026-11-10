@@ -536,7 +536,7 @@ function allEventsOf(root: string): {event: string; reason: string | null; ticke
   return readFileSync(f, 'utf-8').trimEnd().split('\n').map(l => JSON.parse(l));
 }
 
-const RECORDED = ['picked', 'approval_asked', 'halt_cleared', 'contract_attempt', 'merged', 'structure_review_filed'];
+const RECORDED = ['picked', 'approval_asked', 'halt_cleared', 'contract_attempt', 'merged', 'structure_review_filed', 'access_review_filed'];
 
 /** The terminal events only; the recorded ones have their own tests. */
 function eventsOf(root: string): {event: string; reason: string | null; ticket: string | null}[] {

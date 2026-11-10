@@ -16,7 +16,11 @@ import {type AutomationState, currentTicket, LoopStore} from './state';
 import type {TrackerHalt} from './halt-tracker';
 import {Logger, colors} from './logger';
 import {runDelivery} from './delivery';
-import {fileStructureReview, readReviewTemplate} from './structure-review-io';
+import {fileAccessReview} from './reviews/access-review-io';
+import {ACCESS_REVIEW} from './reviews/access-review';
+import {readReviewTemplate} from './reviews/schedule';
+import {STRUCTURE_REVIEW} from './reviews/structure-review';
+import {fileStructureReview} from './reviews/structure-review-io';
 import {RateLimitError, rateLimitWaitMs} from './infra';
 import type {StoredPlan} from '../pipeline';
 import {type IterationContext, type Placement, closeOrphan, runIteration} from './iteration';
@@ -166,7 +170,7 @@ export class AutomationRunner {
       emit: (kind, iteration, ticket, reason) => this.emit(kind, iteration, ticket, reason),
       halt: (reason, kind) => this.halt(reason, kind),
       afterMerge: (iteration, ticket) => {
-        this.reviewStructure(iteration);
+        this.fileReviews(iteration);
         this.deliver(iteration, ticket);
       },
       resolvePlan: deps.resolvePlan,
@@ -221,16 +225,22 @@ export class AutomationRunner {
     this.stateStore.appendEvent(eventLine(terminalEvent(kind, iteration, ticket, reason, now, extra)), now);
   }
 
-  /** Files the structure review when one is due. Best effort: a tracker or config failure never fails the iteration. */
-  private reviewStructure(iteration: number): void {
+  /** Files each periodic review that is due. Best effort: a tracker or config failure never fails the iteration. */
+  private fileReviews(iteration: number): void {
     if (this.config.tracker.kind !== 'github') return;
-    try {
-      const template = readReviewTemplate(this.projectRoot);
-      if (template === null) return;
-      const reason = fileStructureReview(this.projectRoot, this.gitRunner, this.config.tracker.label, this.stateStore.readEvents(), template);
-      if (reason !== null) this.emit('structure_review_filed', iteration, null, reason);
-    } catch (e) {
-      this.logger.log('WARN', `Could not check whether a structure review is due: ${(e as Error).message}`);
+    const kinds = [
+      {kind: STRUCTURE_REVIEW, file: fileStructureReview},
+      {kind: ACCESS_REVIEW, file: fileAccessReview},
+    ];
+    for (const {kind, file} of kinds) {
+      try {
+        const template = readReviewTemplate(this.projectRoot, kind);
+        if (template === null) continue;
+        const reason = file(this.projectRoot, this.gitRunner, this.config.tracker.label, this.stateStore.readEvents(), template);
+        if (reason !== null) this.emit(kind.filedEvent, iteration, null, reason);
+      } catch (e) {
+        this.logger.log('WARN', `Could not check whether a ${kind.label} is due: ${(e as Error).message}`);
+      }
     }
   }
 

@@ -21,6 +21,8 @@ export interface SafetyConfig {
   data_test_paths: string[];
   /** The project's own dependency audit; the flags it carries choose the severity it fails at. */
   audit_command?: string;
+  /** The periodic access review; absent or 0 is off. */
+  access_review?: {every_merged: number};
 }
 
 export class SafetyConfigError extends Error {
@@ -50,10 +52,18 @@ export function parseSafetyConfig(text: string): SafetyConfig {
   if (audit !== undefined && (typeof audit !== 'string' || audit.trim() === '')) {
     throw new SafetyConfigError('"audit_command" must be a non-empty command');
   }
+  const review = obj.access_review;
+  let accessReview: SafetyConfig['access_review'];
+  if (review !== undefined) {
+    const n = typeof review === 'object' && review !== null ? (review as Record<string, unknown>).every_merged : undefined;
+    if (typeof n !== 'number' || !Number.isInteger(n) || n < 0) throw new SafetyConfigError('"access_review.every_merged" must be a whole number, 0 to turn it off');
+    accessReview = {every_merged: n};
+  }
   return {
     migration_paths: globs(obj.migration_paths, 'migration_paths'),
     data_test_paths: globs(obj.data_test_paths, 'data_test_paths'),
     ...(audit === undefined ? {} : {audit_command: audit.trim()}),
+    ...(accessReview === undefined ? {} : {access_review: accessReview}),
   };
 }
 

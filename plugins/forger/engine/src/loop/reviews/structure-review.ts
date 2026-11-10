@@ -3,19 +3,22 @@
  * event record, the structure baseline and the open reviews.
  */
 
-import type {StructureReviewConfig} from '../checks';
-import type {TerminalEvent} from './events';
+import type {StructureReviewConfig} from '../../checks';
+import type {TerminalEvent} from '../events';
+import {mergesSinceFiled, type ReviewKind} from './schedule';
 
 export const STRUCTURE_REVIEW_LABEL = 'structure-review';
 
+export const STRUCTURE_REVIEW: ReviewKind = {
+  label: STRUCTURE_REVIEW_LABEL,
+  title: 'A structure review of the whole repository',
+  template: '.forger/templates/structure-review.md',
+  filedEvent: 'structure_review_filed',
+};
+
 /** Merges recorded since the last review was filed, or since the first event when none was. */
 export function mergesSinceReview(events: TerminalEvent[]): number {
-  let n = 0;
-  for (const e of events) {
-    if (e.event === 'structure_review_filed') n = 0;
-    else if (e.event === 'merged') n++;
-  }
-  return n;
+  return mergesSinceFiled(events, STRUCTURE_REVIEW.filedEvent);
 }
 
 export interface ReviewFacts {
