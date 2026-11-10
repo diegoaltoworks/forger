@@ -14,6 +14,8 @@ the skill slots a project can plug its own skills into.
   hash differs from the lock. Writes files.
 - `coverage-advice.ts` - what the testing pack's coverage check needs from
   the gates. It tells if the lcov report is missing and which flag writes it. Pure.
+- `starter/` - the skeleton for a repository with no source file.
+  `choose.ts` picks it (pure). `install.ts` copies it and never overwrites.
 - `skills.ts` - resolves each slot to a configured skill or its built-in
   fallback. It reads the shipped flavours that map a collection (as presets)
   and the installed skills.

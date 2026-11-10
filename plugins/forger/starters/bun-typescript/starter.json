@@ -1,0 +1,6 @@
+{
+  "name": "bun-typescript",
+  "description": "A Bun and TypeScript skeleton: strict types, a pure core, a shell, tests, one journey and a CI workflow.",
+  "gates": "bun install --frozen-lockfile && bun run check && bun test --coverage --coverage-reporter=lcov",
+  "packs": ["base", "structure", "architecture", "testing", "journeys"]
+}
