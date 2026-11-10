@@ -6,6 +6,7 @@ export * from './arch';
 export * from './decisions';
 export * from './docs';
 export * from './budgets';
+export * from './delivery';
 export * from './journeys';
 export * from './safety';
 export * from './guards';

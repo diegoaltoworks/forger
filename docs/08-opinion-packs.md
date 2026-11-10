@@ -130,6 +130,18 @@ The `journeys` pack is opt-in (nothing detects it). Units and screens can pass w
 
 An entry missing its name, command or paths is a config error that names the entry. `facts --guards <path>...` lists the journeys whose paths match, so the planner names them under Guards.
 
+## The delivery pack
+
+The `delivery` pack is opt-in (nothing detects it). A merge says the code is green, not that the delivered build works, so `.forger/deliver.json` names the project's own commands: a required `check` that exits 0 when the delivered build works (typically the journeys run against the delivered address), an optional `deploy` and an optional `rollback`, and `timeout_seconds`, an object keyed by step of positive numbers. Forger holds no deploy logic and no credentials, and nothing here runs before the merge (ADR 0021). `check delivery` validates the file and runs none of the commands:
+
+| Opinion | What the check flags |
+|---|---|
+| `delivery.checked-after-merge` | the file has no `check` command, a command that is not a non-empty string, or a timeout that is not a positive number |
+
+`delivery.project-commands` is a rule kept by judgement: the commands are the project's own, and forger holds no deploy logic or credentials.
+
+A delivery plans as deploy then check; for a failed step the plan names the rollback when one is configured, else nothing follows.
+
 ## The testing pack
 
 The `testing` pack holds the testing habits the engine itself relies on. Four of its opinions are enforced, each under its own opinion id so a waiver can target one:
