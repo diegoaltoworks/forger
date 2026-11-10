@@ -135,6 +135,13 @@ recommendation, and then writes a plan doc and the tickets. On GitHub each
 ticket is an issue with the `ready-for-agent` label. It ends with the goal and
 the tickets it created, in build order.
 
+The first time, it also writes a product brief to `docs/product.md`: who the app
+is for, the few things they must be able to do, how success shows and what is
+out. Setup installs the template as `.forger/templates/product.md` and never
+writes the brief itself. Every ticket then says which of those journeys it
+serves, or that it is upkeep. `work.ts facts --product` prints the brief and
+what is missing from it.
+
 ## 🚀 5. Start the loop
 
 Use the row for your harness.

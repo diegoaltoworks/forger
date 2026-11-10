@@ -793,6 +793,23 @@ describe('supervisor commands', () => {
     expect(await capture(['facts', '--guards', 'src/app.ts'], run)).toContain('src/layout.spec.ts');
   });
 
+  test('facts --product reports present false when there is no brief', async () => {
+    process.chdir(projectWith({a: {status: 'not_started'}}));
+    expect(JSON.parse(await capture(['facts', '--product', '--json']))).toEqual({present: false});
+  });
+
+  test('facts --product prints the parsed brief and what is missing', async () => {
+    const root = projectWith({a: {status: 'not_started'}});
+    mkdirSync(join(root, 'docs'));
+    writeFileSync(join(root, 'docs/product.md'), '## Who it is for\n\nCooks.\n\n## What they must be able to do\n\n- Plan a meal\n');
+    process.chdir(root);
+    const out = JSON.parse(await capture(['facts', '--product', '--json']));
+    expect(out.present).toBe(true);
+    expect(out.who).toBe('Cooks.');
+    expect(out.journeys).toEqual(['Plan a meal']);
+    expect(out.problems).toEqual(['missing section "## How success shows"', 'missing section "## Out"']);
+  });
+
   test('merge refuses a PR with a failing check and exits 1, without merging', async () => {
     process.chdir(projectWith({a: {status: 'not_started'}}));
     const calls: string[] = [];

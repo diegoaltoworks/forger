@@ -72,7 +72,7 @@ in one line ("Design review: none"), so its absence is a decision, not an oversi
 |---|---|
 | Owner request / Problem | the owner's words, and what is wrong or wanted |
 | What exists / Likely cause | what the supervisor found in the code, logs or data |
-| What to build | the change, with the defaults chosen |
+| What to build | the change, with the defaults chosen, and which journey of the product brief it serves or that it is upkeep |
 | Acceptance | testable checkboxes |
 | Placement | the folder each piece of new code goes in, as backticked paths, or "none". A missing section warns in `check ticket`; a folder that is frozen or recorded over its limit in the structure baseline is refused unless the ticket moves files out of it or is blocked by an open ticket labelled `structure` |
 | Guards | the guarantees (test floors, budgets, baselines, thresholds) the change must keep, each with its file and value, or "none"; `facts --guards <path>...` lists the guard files, the tests naming the paths and the journeys (journeys pack) whose paths match. A missing section warns in `check ticket`, an empty one is refused |
