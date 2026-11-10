@@ -8,6 +8,7 @@ import {existsSync, readFileSync} from 'fs';
 import {join} from 'path';
 
 import {runArchCheckOutput} from './arch';
+import {runBudgetsCheck} from './budgets';
 import {runDecisionsCheck} from './decisions';
 import {runDocsCheck} from './docs';
 import {runGuardsCheck} from './guards';
@@ -77,6 +78,7 @@ export const CHECKS: Record<string, (ctx: CheckContext) => Finding[] | CheckOutp
   guards: ctx => runGuardsCheck(ctx.projectRoot, ctx.run),
   safety: ctx => runSafetyCheckOutput(ctx.projectRoot, ctx.run),
   journeys: ctx => runJourneysCheck(ctx.projectRoot, ctx.run),
+  budgets: ctx => runBudgetsCheck(ctx.projectRoot, ctx.run),
   tests: ctx => runTestsCheck(ctx.projectRoot, ctx.run),
   coverage: ctx => runCoverageCheck(ctx.projectRoot, ctx.run),
   structure: ctx => {
