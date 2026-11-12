@@ -9,3 +9,4 @@
 {"event":"picked","at":"2026-11-12T14:29:25.705Z","iteration":209,"ticket":"issue-416","reason":null}
 {"event":"worker_denied","at":"2026-11-12T14:31:02.202Z","iteration":209,"ticket":"issue-416","reason":"merge: cd /home/diego/work/forger/.forger/worktrees/issue-416; gh pr merge 421 --squash --auto 2>&1 | tail -2; sleep 60; gh pr view 421 --json state,statusCheckRollup --jq '.state, [.statusCheckRollup[]?|.conclusion]'"}
 {"event":"merged","at":"2026-11-12T14:33:46.551Z","iteration":209,"ticket":"issue-416","reason":null}
+{"event":"completed","at":"2026-11-12T14:33:57.054Z","iteration":209,"ticket":null,"reason":null}
