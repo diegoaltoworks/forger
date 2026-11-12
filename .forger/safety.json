@@ -1,4 +1,5 @@
 {
   "migration_paths": ["**/migrations/**", "**/schema/**", "**/*.sql"],
-  "data_test_paths": ["**/*.test.*", "**/*.spec.*", "**/tests/**", "**/test/**"]
+  "data_test_paths": ["**/*.test.*", "**/*.spec.*", "**/tests/**", "**/test/**"],
+  "audit_command": "cd plugins/forger/engine && bun audit --audit-level=high"
 }
