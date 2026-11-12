@@ -10,6 +10,7 @@ import {ARCH_PATH} from '../arch';
 import type {Finding} from '../waivers';
 
 export const DECISIONS_OPINION = 'architecture.decisions-recorded';
+export const NUMBERS_OPINION = 'architecture.decision-numbers-unique';
 export const ADR_DIR = 'docs/adr/';
 
 export type ChangeStatus = 'added' | 'modified' | 'deleted';
@@ -148,4 +149,25 @@ export function parseNameStatus(text: string): FileChange[] {
     out.push({path, status});
   }
   return out;
+}
+
+/** File names under `docs/adr/` that start with the same number are one finding naming both; a name with no leading number is not numbered. */
+export function checkDecisionNumbers(names: string[]): Finding[] {
+  const byNumber = new Map<string, string[]>();
+  for (const name of names) {
+    const number = /^(\d+)-/.exec(name)?.[1];
+    if (number !== undefined) byNumber.set(number, [...(byNumber.get(number) ?? []), name]);
+  }
+  return [...byNumber.entries()]
+    .filter(([, files]) => files.length > 1)
+    .map(([number, files]) => {
+      const sorted = files.slice().sort().map(f => `${ADR_DIR}${f}`);
+      return {
+        file: sorted[0],
+        line: 1,
+        rule: 'decision-number-repeated',
+        opinion: NUMBERS_OPINION,
+        detail: `decision records ${sorted.join(' and ')} share the number ${number}`,
+      };
+    });
 }

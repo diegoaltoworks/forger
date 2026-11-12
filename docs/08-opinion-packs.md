@@ -80,7 +80,7 @@ Read the table as a list of ways docs rot quietly. Code spans and fences are nev
 
 ## The architecture pack
 
-The `architecture` pack holds the architecture forger is built on: pure decisions with I/O at the edges, every external system behind a port, parse at the boundary, fail loud, one source of truth per fact, and deep modules. Two of its opinions are enforced: `architecture.dependency-rule` by `check arch`, and `architecture.decisions-recorded` by `check decisions`.
+The `architecture` pack holds the architecture forger is built on: pure decisions with I/O at the edges, every external system behind a port, parse at the boundary, fail loud, one source of truth per fact, and deep modules. Three of its opinions are enforced: `architecture.dependency-rule` by `check arch`, and `architecture.decisions-recorded` and `architecture.decision-numbers-unique` by `check decisions`.
 
 ```mermaid
 flowchart LR
@@ -99,7 +99,7 @@ A layer may always import itself, and files outside every layer, packages and bu
 
 ### Decisions leave an ADR behind
 
-`check decisions` reads the working tree and branch against the merge-base with the configured base branch. A dependency added to a manifest (`package.json` today; another manifest is another entry behind the manifest-reader interface), or any change to `.forger/architecture.json`, needs a new or changed Markdown file under `docs/adr/` in the same diff. A version bump or a removed dependency is classified and needs no ADR. The pack ships an ADR template with context, decision, consequences and status; an accepted ADR is superseded by a new one, never edited. Like every opinion, it is waivable in `.forger/waivers.json`. A base branch that cannot be resolved is an error, never a pass.
+`check decisions` reads the working tree and branch against the merge-base with the configured base branch. A dependency added to a manifest (`package.json` today; another manifest is another entry behind the manifest-reader interface), or any change to `.forger/architecture.json`, needs a new or changed Markdown file under `docs/adr/` in the same diff. A version bump or a removed dependency is classified and needs no ADR. The pack ships an ADR template with context, decision, consequences and status; an accepted ADR is superseded by a new one, never edited. Like every opinion, it is waivable in `.forger/waivers.json`. A base branch that cannot be resolved is an error, never a pass. `architecture.decision-numbers-unique` reads the working tree, not the diff: two files under `docs/adr/` whose names start with the same number are one finding that names both, so a branch that holds both after it takes in the base fails.
 
 The decision to use packs is [ADR 0003](adr/0003-opinion-packs.md).
 
@@ -132,7 +132,7 @@ An entry missing its name, command or paths is a config error that names the ent
 
 ## The delivery pack
 
-The `delivery` pack is opt-in (nothing detects it). A merge says the code is green, not that the delivered build works, so `.forger/deliver.json` names the project's own commands: a required `check` that exits 0 when the delivered build works (typically the journeys run against the delivered address), an optional `deploy` and an optional `rollback`, and `timeout_seconds`, an object keyed by step of positive numbers. Forger holds no deploy logic and no credentials, and nothing here runs before the merge (ADR 0021). `check delivery` validates the file and runs none of the commands:
+The `delivery` pack is opt-in (nothing detects it). A merge says the code is green, not that the delivered build works, so `.forger/deliver.json` names the project's own commands: a required `check` that exits 0 when the delivered build works (typically the journeys run against the delivered address), an optional `deploy` and an optional `rollback`, and `timeout_seconds`, an object keyed by step of positive numbers. Forger holds no deploy logic and no credentials, and nothing here runs before the merge (ADR 0022). `check delivery` validates the file and runs none of the commands:
 
 | Opinion | What the check flags |
 |---|---|
