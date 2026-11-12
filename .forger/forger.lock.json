@@ -50,11 +50,11 @@
     },
     {
       "id": "architecture",
-      "version": "1.2.0",
+      "version": "1.3.0",
       "files": [
         {
           "path": ".forger/opinions/architecture.md",
-          "sha256": "88a9cdc46ccdb2c43467cc78684fecde719426fe45816f5a02bc29e3ec888ae3"
+          "sha256": "24273eb15578b9ce33f49defabf072ce76ee1b7bb9f12686b41ccd8625c72d06"
         },
         {
           "path": ".forger/templates/adr.md",

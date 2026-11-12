@@ -113,11 +113,26 @@ describe('runDecisionsCheck', () => {
   });
 });
 
+describe('decision numbers', () => {
+  test('two decision records with one number are a finding that names both files', () => {
+    const root = repo({'docs/adr/0021-a.md': '# a', 'docs/adr/0021-b.md': '# b'});
+    const out = runDecisionsCheck(root, git({}));
+    expect(out.map(f => f.opinion)).toEqual(['architecture.decision-numbers-unique']);
+    expect(out[0].detail).toContain('docs/adr/0021-a.md');
+    expect(out[0].detail).toContain('docs/adr/0021-b.md');
+  });
+
+  test('decision records with distinct numbers are no finding', () => {
+    const root = repo({'docs/adr/0021-a.md': '# a', 'docs/adr/0022-b.md': '# b'});
+    expect(runDecisionsCheck(root, git({}))).toEqual([]);
+  });
+});
+
 describe('the shipped architecture pack', () => {
   const pack = loadPacks(join(import.meta.dir, '..', '..', '..', '..')).find(p => p.manifest.id === 'architecture')!;
 
   test('declares the decisions opinion against the decisions check', () => {
-    expect(pack.manifest.opinions.filter(o => o.check === 'decisions').map(o => o.id)).toEqual(['architecture.decisions-recorded']);
+    expect(pack.manifest.opinions.filter(o => o.check === 'decisions').map(o => o.id)).toEqual(['architecture.decisions-recorded', 'architecture.decision-numbers-unique']);
     expect(pack.manifest.checks).toContain('decisions');
   });
 

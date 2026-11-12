@@ -6,12 +6,12 @@
  * before the commit as well as in CI.
  */
 
-import {existsSync, readFileSync} from 'fs';
+import {existsSync, readdirSync, readFileSync} from 'fs';
 import {join} from 'path';
 
 import {FORGER_DIR, LEGACY_DIR, loadConfig, toLogical} from '../../config';
 import {ARCH_PATH} from '../arch';
-import {checkDecisions, diffAgainstMoved, diffDependencies, layerMapChanged, lineOf, manifestReaderFor, parseNameStatus, type FileChange, type ManifestChange} from './decisions';
+import {ADR_DIR, checkDecisionNumbers, checkDecisions, diffAgainstMoved, diffDependencies, layerMapChanged, lineOf, manifestReaderFor, parseNameStatus, type FileChange, type ManifestChange} from './decisions';
 import type {CommandRunner} from '../../ports';
 import type {Finding} from '../waivers';
 
@@ -42,7 +42,9 @@ export function runDecisionsCheck(projectRoot: string, run: CommandRunner): Find
       c.status === 'added' ? diffAgainstMoved(after, deletedTexts(c.path.split('/').pop() ?? ''), read) : diffDependencies(before === '' ? null : before, after, read);
     manifests.push({path: c.path, diff, lines: Object.fromEntries(diff.added.map(n => [n, lineOf(after, n)]))});
   }
-  return checkDecisions(settleLayerMap(projectRoot, run, mb, changes), manifests);
+  const adrDir = join(projectRoot, ADR_DIR);
+  const numbers = checkDecisionNumbers(existsSync(adrDir) ? readdirSync(adrDir).filter(n => n.endsWith('.md')) : []);
+  return [...checkDecisions(settleLayerMap(projectRoot, run, mb, changes), manifests), ...numbers];
 }
 
 /** The layer map is judged by content across both homes: a move with the same content is no change. */

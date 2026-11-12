@@ -1,6 +1,6 @@
 # delivery
 
-After a merge, the engine runs the delivery pack's plan (ADR 0021): the project's deploy and check, then its rollback when a step fails.
+After a merge, the engine runs the delivery pack's plan (ADR 0022): the project's deploy and check, then its rollback when a step fails.
 Without `.forger/deliver.json` nothing here runs.
 
 ## Files
