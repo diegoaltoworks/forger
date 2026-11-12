@@ -1,0 +1,15 @@
+{
+  "journeys": [
+    {
+      "name": "set up a repository and pass its gates",
+      "command": "bun test/fixtures/run.integration.ts",
+      "paths": [
+        "plugins/forger/packs/**",
+        "plugins/forger/starters/**",
+        "plugins/forger/engine/src/packs/**",
+        "test/fixtures/**"
+      ]
+    }
+  ],
+  "ready_seconds": 30
+}

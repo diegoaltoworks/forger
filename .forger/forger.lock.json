@@ -115,6 +115,20 @@
           "sha256": "41d1fa1dd0c0e1b6b7ffc6d027478d03586b8e179938f07c8f450d968ede370d"
         }
       ]
+    },
+    {
+      "id": "journeys",
+      "version": "1.0.0",
+      "files": [
+        {
+          "path": ".forger/journeys.json",
+          "sha256": "5366cc882236d5a8922580383d3c081a5911a31029769a99d80e60c30e3551df"
+        },
+        {
+          "path": ".forger/opinions/journeys.md",
+          "sha256": "2c87397bdfd4963b1d48e3c80eee61e1c0912ce81317f45d766d36da2db904e4"
+        }
+      ]
     }
   ]
 }
