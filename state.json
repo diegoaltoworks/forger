@@ -197,7 +197,10 @@
       "ticket": "issue-412",
       "pid": null,
       "session_id": "54dff8b3-4518-4c07-a432-97835145c350",
-      "snapshot": null,
+      "snapshot": {
+        "baseSha": "",
+        "reflogLength": 1
+      },
       "started_at": "2026-11-12T14:10:26.072Z",
       "plan": {
         "stages": [
