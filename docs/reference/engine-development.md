@@ -23,3 +23,7 @@ for the folder map; each folder's README says what it owns, which files are
 pure, and what it may import. `plugins/forger/bin/work.ts` is the stable entry the plugin
 commands call.
 
+Forger runs its own packs. A change to a pack runs `bun plugins/forger/bin/work.ts setup --upgrade`
+in this repository in the same PR, and resolves every conflict it reports by hand. A test fails
+when the lock falls behind a pack's version or an `.upstream` file is left under `.forger/`.
+

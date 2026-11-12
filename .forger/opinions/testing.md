@@ -41,6 +41,20 @@ does not. The name is the sentence a failing run prints.
 writes (`coverage_report`) with the generated baseline file
 (`coverage_baseline`) and fails on a drop. `check coverage --update` raises the
 baseline when coverage has risen and never lowers it; commit the raised file
-with the work that earned it. The number lives only in that generated file,
+with the work that earned it. The report must exist before the check can run: make the gates write it (for
+example `bun test --coverage --coverage-reporter=lcov`, or the pytest, vitest
+and jest equivalents), and `setup` says when it is missing. The number lives only in that generated file,
 never in a doc. A drop that is deliberate is a recorded waiver, not an edited
 baseline.
+
+## Any other number is held too (check: testing.budget-ratchet)
+
+`.forger/budgets.json` lists `{name, command, direction}` entries. `command`
+prints one number on its last line (an artifact size, a start time, a count of
+open type errors); `direction` is `down` when smaller is better and `up` when
+larger is. `check budgets` runs each command and fails on a number worse than
+the one in `.forger/budgets-baseline.json`, on output that is not a number and
+on a command that fails. A budget with no recorded number is a gap: run
+`check budgets --update`, which records new and better numbers and refuses a
+worse one. The baseline is a guard file: `check guards` fails a diff that
+moves a number the loose way.
