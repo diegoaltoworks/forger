@@ -322,7 +322,10 @@
       "ticket": "issue-413",
       "pid": null,
       "session_id": "4c4d01dc-bbef-44a6-a614-908b7ba21173",
-      "snapshot": null,
+      "snapshot": {
+        "baseSha": "",
+        "reflogLength": 1
+      },
       "started_at": "2026-11-12T14:10:35.754Z",
       "plan": {
         "stages": [
