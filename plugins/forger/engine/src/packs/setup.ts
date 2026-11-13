@@ -66,6 +66,23 @@ export function gitignoreLines(dir: string): string[] {
   return ['state.json', 'work.log', 'output/', 'HALT', 'runner.lock', 'events.jsonl', 'declined.json', 'verdicts/', 'tmp/', 'checks.jsonl'].map(f => `${dir}/${f}`);
 }
 
+/** Runtime files git still tracks: an ignore line does not stop tracking a committed file. Unreadable git state reports none. */
+export function trackedRuntimeFiles(projectRoot: string, run: CommandRunner): string[] {
+  const dir = detectLayout(projectRoot).dir;
+  const files = gitignoreLines(dir).filter(l => !l.endsWith('/'));
+  const dirs = gitignoreLines(dir).filter(l => l.endsWith('/'));
+  try {
+    const out = run(`git ls-files -- ${[...files, ...dirs].map(f => `'${f}'`).join(' ')}`);
+    return out.split('\n').map(l => l.trim()).filter(l => l !== '');
+  } catch {
+    return [];
+  }
+}
+
+export function formatTrackedRuntime(files: string[]): string[] {
+  return files.map(f => `! git tracks ${f}; stop tracking it and keep the file with: git rm --cached ${f}`);
+}
+
 /** The gates always end with the check command, run from the plugin that is installed now. */
 export function withCheck(gates: string, checkCommand: string): string {
   if (CHECK_MARKER.test(gates)) return gates;

@@ -2,7 +2,7 @@ import {ensureLabels, requireVerifyStatus, VERIFY_STATUS_CONTEXT, type RequireOu
 import {forgerPath, loadConfig} from '../config';
 import {flavourRef, loadFlavour} from '../pipeline';
 import {findHarness} from '../adapters';
-import {coverageAdvice, formatCoverageAdvice, formatSetup, formatUpgrade, readRepoFacts, type CoverageAdvice, loadPresets, offerPresets, parsePackList, runSetup, runUpgrade, chooseStarter, hasSourceFile, loadStarters, withStarterPacks, type StarterManifest} from '../packs';
+import {coverageAdvice, formatCoverageAdvice, formatSetup, formatUpgrade, readRepoFacts, type CoverageAdvice, loadPresets, offerPresets, parsePackList, runSetup, runUpgrade, trackedRuntimeFiles, formatTrackedRuntime, chooseStarter, hasSourceFile, loadStarters, withStarterPacks, type StarterManifest} from '../packs';
 import {existsSync, readFileSync} from 'fs';
 import {join} from 'path';
 import {formatCredentialSetup, formatSandboxSetup, setupCredential, setupSandbox, type CredentialSetup, type SandboxSetup} from './setup-sandbox';
@@ -73,6 +73,7 @@ export const setup: Command = {
                    labels and makes the base branch require the forger/verify check, when the token can.
                    It installs forger's tool-call hook into the harness's project settings, keeping
                    a settings file that already runs it.
+                   It also lists each runtime file git tracks, with the git rm --cached command that stops tracking it; it runs none.
                    --flavour NAME records the flavour (shipped or in .forger/flavours/) the config picks skills with;
                    --preset NAME is the same
                    --harness H sets the harness (claude, opencode, codex, copilot) and installs its commands
@@ -89,7 +90,8 @@ export const setup: Command = {
       try {
         const upgrade = runUpgrade(setupRoot(ctx), pluginRoot, c => ctx.run()(c));
         const unread = unreadChecks(setupRoot(ctx), pluginRoot, c => ctx.run()(c));
-        console.log(values.json ? JSON.stringify({...upgrade, ...(unread.length > 0 ? {unread} : {})}) : [formatUpgrade(upgrade), ...formatUnread(unread)].join('\n'));
+        const tracked = trackedRuntimeFiles(setupRoot(ctx), c => ctx.run()(c));
+        console.log(values.json ? JSON.stringify({...upgrade, ...(unread.length > 0 ? {unread} : {}), ...(tracked.length > 0 ? {tracked_runtime: tracked} : {})}) : [formatUpgrade(upgrade), ...formatUnread(unread), ...formatTrackedRuntime(tracked)].join('\n'));
       } catch (e) {
         console.error((e as Error).message);
         process.exitCode = 1;
@@ -156,17 +158,19 @@ export const setup: Command = {
         return;
       }
     }
+    const tracked = trackedRuntimeFiles(setupRoot(ctx), c => ctx.run()(c));
     const labels = createLabels(ctx);
     const verifyCheck = requireVerify(ctx);
     const coverage = coverageNextStep(ctx, starter ? withStarterPacks(parsePackList(values.packs), starter) : parsePackList(values.packs));
     const offered = offerPresets(loadPresets(pluginRoot), installedSkills());
     const presets = offered.map(p => p.name);
-    if (values.json) console.log(JSON.stringify({...result, ...(unread.length > 0 ? {unread} : {}), presets, labels, ...(box ? {sandbox: box} : {}), ...(credential ? {credential} : {}), ...(verifyCheck ? {verify_check: verifyCheck} : {}), ...(coverage ? {coverage, next_steps: coverage.next_steps} : {})}));
+    if (values.json) console.log(JSON.stringify({...result, ...(unread.length > 0 ? {unread} : {}), ...(tracked.length > 0 ? {tracked_runtime: tracked} : {}), presets, labels, ...(box ? {sandbox: box} : {}), ...(credential ? {credential} : {}), ...(verifyCheck ? {verify_check: verifyCheck} : {}), ...(coverage ? {coverage, next_steps: coverage.next_steps} : {})}));
     else
       console.log(
         [
           formatSetup(result, presets),
           ...formatUnread(unread),
+          ...formatTrackedRuntime(tracked),
           ...(box ? formatSandboxSetup(box) : []),
           ...(credential ? formatCredentialSetup(credential) : []),
           ...labels.created.map(l => `label   ${l}`),
