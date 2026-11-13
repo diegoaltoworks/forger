@@ -202,7 +202,10 @@
       "ticket": "issue-422",
       "pid": null,
       "session_id": "95b0afbe-d2e1-4251-bb25-a23eb3095d6a",
-      "snapshot": null,
+      "snapshot": {
+        "baseSha": "",
+        "reflogLength": 1
+      },
       "started_at": "2026-11-13T05:52:35.426Z",
       "plan": {
         "stages": [
