@@ -20,7 +20,7 @@
     {"id": "base.determinism-first", "rung": "rule", "summary": "Every decision a ticket adds lands as a tested command with machine-readable output, not as prompt text.", "check": null},
     {"id": "base.comments-say-why", "rung": "rule", "summary": "Comments say why, never narrate a change; history belongs in the commit.", "check": null},
     {"id": "base.ascii-punctuation", "rung": "check", "summary": "Prose, code and commits use ASCII punctuation only.", "check": "docs"},
-    {"id": "base.nothing-personal", "rung": "check", "summary": "Docs and code carry no emails, home paths or terms on the project's denylist.", "check": "docs"},
+    {"id": "base.nothing-personal", "rung": "check", "summary": "Docs and code carry no emails, home paths or terms on the project's denylist; addresses under hosts reserved for documentation and testing (RFC 2606, RFC 6761) are not reported, and a project that wants them reported denylists the domains.", "check": "docs"},
     {"id": "base.no-hard-coded-skills", "rung": "check", "summary": "Shipped instructions reach a skill only through a skill slot, never by name.", "check": "docs"},
     {"id": "base.model-agnostic", "rung": "check", "summary": "Prose names roles, not models or vendors; the adapter docs and the config name them.", "check": "docs"},
     {"id": "base.no-transient-specifics", "rung": "rule", "summary": "Durable docs carry no counts, timings or dates; they point at the command that computes them.", "check": null},
