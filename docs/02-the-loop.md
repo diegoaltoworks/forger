@@ -96,6 +96,10 @@ way than by a merged PR, so it is neither done nor work to start.
 `completed` must mean merged. A worker that marks a ticket completed before its
 PR merges can mislead the engine (see the failure catalogue).
 
+## Before the first pick
+
+`run` brings the base branch up to date itself. On the base branch, with no other engine holding the lock and no uncommitted change besides the engine's runtime files, it fast-forwards to the remote and, when that changed the plugin it runs from, starts itself again once on the new code. A failed fast-forward stops the start with git's reason; nothing is stashed, reset or discarded, and any other checkout is left as it is.
+
 ## One engine iteration
 
 The engine does not take the worker's word. It gathers facts about the

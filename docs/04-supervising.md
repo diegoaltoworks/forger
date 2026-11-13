@@ -40,9 +40,13 @@ Asked once, written down, refined later (see `05-refining-the-process.md`):
   needs no wait: a stop by SIGTERM or SIGINT releases the lease, and a lease left by a killed engine on this machine
   is taken over at once.
 - The base branch against its remote. The engine runs its own code from the loop's checkout, so a base branch
-  behind `origin/<base>` means every restart runs old code. `orient` lists it as an anomaly while no engine is
-  alive and names the fix (`git pull --ff-only origin <base>`); `run` refuses to start on a behind base branch in a
-  clean checkout and gives the same message.
+  behind `origin/<base>` means every restart runs old code. `orient` lists the gap as an anomaly while no engine is
+  alive and says `run` closes it. `run` fast-forwards the base branch before its first pick when the checkout is on
+  it, no other engine holds the lock, and the only uncommitted changes are the engine's runtime files (the ones
+  `setup` adds to `.gitignore`). It is fast-forward only: nothing is stashed, reset or discarded, and a checkout with
+  any other uncommitted change is left as it is. When git refuses, `run` does not start and prints git's reason.
+  When the update changed files under the plugin the engine runs from, the engine starts itself again once with the
+  same arguments so that it runs the new code.
 - The hooks gate. A repository set up before a gate existed fails it on a clean base branch, and a worker would
   spend an iteration to find out. `orient` lists it as an anomaly and `run` refuses to start; both name the fix,
   `work.ts setup` in the repository, which keeps the config and adds what is missing. Commit what it writes.
