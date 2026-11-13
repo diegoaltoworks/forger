@@ -178,6 +178,7 @@ export interface CatalogueProblem {
     | 'catalogue-no-table'
     | 'catalogue-entry-section'
     | 'catalogue-open-no-issue'
+    | 'catalogue-open-own-ticket'
     | 'catalogue-fixed-no-merge'
     | 'catalogue-stale-status';
   detail: string;
@@ -187,12 +188,13 @@ export interface CatalogueProblem {
  * The facts as the tracker will hold them once the branch working `ticket`
  * merges. A PR cannot see its own issue closed before it merges, so a Fixed row
  * naming the ticket and its PR counts that ticket closed by the PR the row
- * names: the one no other ticket in the row was closed by.
+ * names: the one no other ticket in the row was closed by. With no such row,
+ * an open PR of the branch is the one that will close it (`open`), for the update.
  */
-export function factsOnMerge(text: string, facts: TicketFacts, ticket: number | null): TicketFacts {
+export function factsOnMerge(text: string, facts: TicketFacts, ticket: number | null, open: number | null = null): TicketFacts {
   if (ticket === null || facts.get(ticket)?.closed !== false) return facts;
   const row = parseCatalogue(text).fixed.find(r => r.tickets.includes(ticket));
-  if (!row) return facts;
+  if (!row) return open === null ? facts : new Map([...facts, [ticket, {closed: true, mergedPr: open}]]);
   const others = new Set(row.tickets.filter(n => n !== ticket).map(n => facts.get(n)?.mergedPr));
   const pr = row.prs.find(p => !others.has(p)) ?? row.prs[0];
   if (pr === undefined) return facts;
@@ -203,9 +205,11 @@ export function factsOnMerge(text: string, facts: TicketFacts, ticket: number | 
  * A catalogue without both tables, one with an entry section, an Open row with
  * no open issue, and rows that disagree with the tracker. Without facts only
  * the structure is checked. `ticket` is the one the branch being checked
- * works, judged as it will be after its merge (see `factsOnMerge`).
+ * works, judged as it will be after its merge (see `factsOnMerge`). Once that
+ * branch has an open PR (`pr`), an Open row whose only open issue is `ticket`
+ * fails: the merge closes the issue and leaves the row Open.
  */
-export function checkCatalogue(text: string, tracker: TicketFacts | null, ticket: number | null = null): CatalogueProblem[] {
+export function checkCatalogue(text: string, tracker: TicketFacts | null, ticket: number | null = null, pr: number | null = null): CatalogueProblem[] {
   const facts = tracker && factsOnMerge(text, tracker, ticket);
   const c = parseCatalogue(text);
   const problems: CatalogueProblem[] = [];
@@ -217,6 +221,8 @@ export function checkCatalogue(text: string, tracker: TicketFacts | null, ticket
   for (const row of c.open) {
     if (row.tickets.length === 0) {
       problems.push({line: row.line + 1, rule: 'catalogue-open-no-issue', detail: `"${row.title}" is Open and links no issue; open one for it`});
+    } else if (facts && pr !== null && ticket !== null && row.tickets.includes(ticket) && facts.get(ticket)?.closed === false && noOpenIssue({...row, tickets: row.tickets.filter(n => n !== ticket)}, facts)) {
+      problems.push({line: row.line + 1, rule: 'catalogue-open-own-ticket', detail: `"${row.title}" is Open and its only open issue is #${ticket}, which this branch's PR #${pr} closes; run \`catalogue --update\` to move it to Fixed`});
     } else if (facts && row.tickets.every(n => facts.has(n)) && noOpenIssue(row, facts)) {
       problems.push({line: row.line + 1, rule: 'catalogue-open-no-issue', detail: `"${row.title}" is Open and none of its issues is open; open one, or run \`catalogue --update\``});
     }
@@ -226,7 +232,7 @@ export function checkCatalogue(text: string, tracker: TicketFacts | null, ticket
       problems.push({line: row.line + 1, rule: 'catalogue-fixed-no-merge', detail: `"${row.title}" is Fixed but names no merged PR`});
     }
   }
-  if (facts && problems.every(p => p.rule !== 'catalogue-open-no-issue') && updateCatalogue(text, facts) !== text) {
+  if (facts && problems.every(p => p.rule !== 'catalogue-open-no-issue' && p.rule !== 'catalogue-open-own-ticket') && updateCatalogue(text, facts) !== text) {
     problems.push({line: 1, rule: 'catalogue-stale-status', detail: 'a row disagrees with the tracker; run `catalogue --update`'});
   }
   return problems;

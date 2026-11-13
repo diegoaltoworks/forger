@@ -7,9 +7,11 @@ that decide which table a row belongs in.
 
 - `catalogue.ts` - the two tables and the check's findings. It moves a row to
   the table the tracker names. It reads the facts as they will be once the
-  branch's own ticket merges. Pure.
-- `tracker.ts` - the issues' facts from GitHub, through a `CommandRunner`
-  handed in, and the ticket the checked-out branch works. Pure over it.
+  branch's own ticket merges. Once that branch has an open PR, it fails an
+  Open row whose only open issue is that ticket. Pure.
+- `tracker.ts` - the issues' facts from GitHub, through a `CommandRunner` handed in.
+  It also finds the ticket the checked-out branch works and its open PR.
+  Pure over it.
 
 ## Entry point
 

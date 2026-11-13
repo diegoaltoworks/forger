@@ -118,7 +118,8 @@ gets it at the next setup or update.
    seen again gets its new open issue added to its Fixed row. `work catalogue
    --update` moves a row to Fixed once every issue in it is closed by a merged
    PR, and back to Open when one is open. Rows stay. The PR that fixes a
-   failure moves its row to Fixed itself, so main never holds a stale row.
+   failure moves its row to Fixed itself, so main never holds a stale row;
+   this holds for a row the PR adds for its own issue too.
 
 ## Hygiene
 
