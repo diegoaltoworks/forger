@@ -205,7 +205,7 @@ export async function verifyPr(run: CommandRunner, agent: AgentRunner, opts: Ver
     outOfSpace(e);
   }
   const log = `${dir}.commands.jsonl`;
-  const runLogged = opts.runLogged ? `${opts.runLogged} --file ${shellQuote(log)}` : undefined;
+  const runLogged = opts.runLogged ? `${opts.runLogged} --file ${shellQuote(log)} --root ${shellQuote(dir)}` : undefined;
   try {
     run(`git worktree add --detach ${shellQuote(dir)} ${head}`);
     if (opts.setup) {
