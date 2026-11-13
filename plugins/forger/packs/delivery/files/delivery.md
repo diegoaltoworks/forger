@@ -20,3 +20,36 @@ records `delivered` or `delivery_failed`, and on a failure files a `P0` issue
 (or comments on the open one) and runs the rollback when one is configured. A
 failed delivery does not halt the loop; a failed rollback does. When a check fails after a merge, the plan runs the rollback only when
 one is configured; with none, nothing is reverted.
+
+## A smoke check
+
+A project that wants a plain smoke check can copy this `check` command. It is a
+script the project owns, for example `scripts/smoke.sh`, named in `deliver.json`:
+
+```sh
+#!/bin/sh
+# Usage: smoke.sh <base-url> <expected-commit> <path>...
+base="$1"; want="$2"; shift 2
+
+# Wait until the delivered address reports the merged commit. The engine
+# ends the step at timeout_seconds.check, so the loop needs no clock of its own.
+until [ "$(curl -fsS "$base/version" 2>/dev/null)" = "$want" ]; do
+  sleep 5
+done
+
+# Request each public address; any status outside 2xx fails the check.
+status=0
+for path in "$@"; do
+  code=$(curl -s -o /dev/null -w '%{http_code}' "$base$path")
+  case "$code" in
+    2??) ;;
+    *) echo "FAIL $base$path $code"; status=1 ;;
+  esac
+done
+exit $status
+```
+
+The `/version` address and the list of public paths are the project's own;
+forger keeps no address list. When the check exits non-zero, or runs past
+`timeout_seconds.check`, the delivery has failed: forger files a `P0` issue
+that links the merged PR, and runs the `rollback` when one is configured.
