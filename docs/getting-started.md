@@ -63,6 +63,10 @@ hand merge and push to the base branch, in the way each harness documents:
 a plugin for OpenCode, a hook file for Codex and Copilot. In Codex, trust the
 project and review the hook with `/hooks`.
 
+If git already tracks one of the engine's runtime files, setup (and `setup --upgrade`)
+names it with the `git rm --cached` command that stops tracking it and keeps the
+file. Setup never runs that command.
+
 ```
 bun ~/forger/plugins/forger/bin/work.ts setup --harness opencode    # OpenCode
 bun ~/forger/plugins/forger/bin/work.ts setup --harness codex    # Codex

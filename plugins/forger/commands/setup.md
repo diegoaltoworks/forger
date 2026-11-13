@@ -61,6 +61,10 @@ and reports each file as `written` or `kept`; a second run writes nothing. The f
 come from opinion packs (`--packs`, default `base`), and `.forger/forger.lock.json`
 records what was installed.
 
+For each engine runtime file that git already tracks (an ignore line does not stop
+that), the report has a `tracked_runtime` list and a line naming the file and
+`git rm --cached <file>`. Relay it; setup never runs it.
+
 ## Upgrading
 
 When `.forger/forger.lock.json` already exists, the repo is set up and the job is

@@ -99,7 +99,7 @@ $ bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts status --json
 
 | Command | What it does |
 |---|---|
-| `setup` | Installs the chosen packs into `.forger/` without overwriting, and records them in the lock file. |
+| `setup` | Installs the chosen packs into `.forger/` without overwriting, and records them in the lock file. Lists each runtime file git still tracks, with the `git rm --cached` command that stops tracking it; it runs none itself. |
 | `migrate` | Moves forger's files from the legacy layout to `.forger/`, or the state to the state branch. |
 | `packs` | Lists the available packs and which are installed; `--detect` suggests packs. |
 | `opinions` | Lists each installed opinion with its pack, rung and enforcing check. |
