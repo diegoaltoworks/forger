@@ -119,6 +119,8 @@ export interface VerdictRecord {
   /** Why the output was rejected; empty when it was valid. */
   problems: string[];
   at: string;
+  /** The setup command that ran in the verifier's copy and where it came from; null when none ran. */
+  setup?: {command: string; source: 'configured' | 'gates' | 'lockfile'} | null;
 }
 
 export interface RecordSubject {

@@ -3,7 +3,7 @@ import {randomUUID} from 'crypto';
 
 import {agentFor, execCapture, findHarness, sandboxFor, sandboxSite, slcrProvider} from '../adapters';
 import {resolveModel} from '../config';
-import {loopRootOf, setupCommand, verdictsHome, verifierTier, verifyPr, type VerifyResult} from '../loop';
+import {loopRootOf, verdictsHome, verifierTier, verifyPr, type VerifyResult} from '../loop';
 import type {Command, CommandContext} from './command';
 
 /** Verifies one PR's head with the project's verifier; shared by `verify` and `recover`. */
@@ -17,7 +17,7 @@ export function verifyOne(ctx: CommandContext, pr: number): Promise<VerifyResult
     verdictsDir: verdictsHome(ctx.run(), projectRoot, config.paths.verdicts),
     tmpDir: join(loopRootOf(ctx.run(), projectRoot), config.paths.tmp),
     tier,
-    setup: setupCommand(config.verify.setup, config.gates),
+    setup: config.verify.setup,
     model: resolveModel(tier.model, config.models),
     verifierCommand: 'forger:verify',
     timeoutMinutes: config.limits.timeoutMinutes,

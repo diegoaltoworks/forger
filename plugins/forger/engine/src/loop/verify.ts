@@ -32,7 +32,7 @@ export interface VerifyOptions {
   /** Where the disposable checkout is made: under the state directory, never the system temp folder. */
   tmpDir: string;
   tier: Tier;
-  /** The shell command that installs dependencies in the copy; null when there is nothing to install. */
+  /** `verify.setup` as configured: a shell command, "" for no setup, null to use the gates' install step, else the lockfile's. */
   setup: string | null;
   model: string;
   /** The command the harness is asked to run; it carries the verifier's prompt. */
@@ -93,14 +93,43 @@ export function installStep(gates: string): string | null {
   return at === -1 ? null : parts.slice(0, at + 1).join(' && ');
 }
 
-/** What runs in the verifier's copy before the model starts: the configured command, else the gates' install step. Pure. */
-export function setupCommand(setup: string | null | undefined, gates: string): string | null {
-  const configured = setup?.trim();
-  return configured ? configured : installStep(gates);
+/** Where the setup command that ran came from. */
+export type SetupSource = 'configured' | 'gates' | 'lockfile';
+
+export interface SetupChoice {
+  command: string;
+  source: SetupSource;
+}
+
+/** The frozen install for each lockfile at the root of a copy, in the order they are looked for. */
+export const LOCKFILE_INSTALLS: readonly {file: string; command: string}[] = [
+  {file: 'bun.lock', command: 'bun install --frozen-lockfile'},
+  {file: 'bun.lockb', command: 'bun install --frozen-lockfile'},
+  {file: 'package-lock.json', command: 'npm ci'},
+  {file: 'pnpm-lock.yaml', command: 'pnpm install --frozen-lockfile'},
+  {file: 'yarn.lock', command: 'yarn install --frozen-lockfile'},
+  {file: 'uv.lock', command: 'uv sync --frozen'},
+  {file: 'Cargo.lock', command: 'cargo fetch --locked'},
+];
+
+/**
+ * What runs in the verifier's copy before the model starts: the configured command, else the gates'
+ * install step, else the frozen install for a lockfile at the root of the copy. A configured empty
+ * string turns setup off. Pure; `hasFile` says whether a file exists at the root of the copy.
+ */
+export function chooseSetup(setup: string | null | undefined, gates: string, hasFile: (name: string) => boolean): SetupChoice | null {
+  if (setup !== null && setup !== undefined) {
+    const configured = setup.trim();
+    return configured ? {command: configured, source: 'configured'} : null;
+  }
+  const step = installStep(gates);
+  if (step) return {command: step, source: 'gates'};
+  const found = LOCKFILE_INSTALLS.find(l => hasFile(l.file));
+  return found ? {command: found.command, source: 'lockfile'} : null;
 }
 
 export const NO_SETUP_WARNING =
-  "verify: no setup ran in the verifier's copy because the gates name no install step; put one in verify.setup in .forger/workloop.config.json";
+  "verify: no setup ran in the verifier's copy: verify.setup is unset, the gates name no install step and the copy has no recognised lockfile at its root; put one in verify.setup in .forger/workloop.config.json";
 
 /** The verifier could not be set up to run: an infrastructure fault, never a verdict on the ticket's criteria. */
 export class VerifyInfraError extends Error {
@@ -213,12 +242,13 @@ export async function verifyPr(run: CommandRunner, agent: AgentRunner, opts: Ver
   const runLogged = opts.runLogged ? `${opts.runLogged} --file ${shellQuote(log)} --root ${shellQuote(dir)}` : undefined;
   try {
     run(`git worktree add --detach ${shellQuote(dir)} ${head}`);
-    if (!opts.setup) opts.warn?.(NO_SETUP_WARNING);
-    if (opts.setup) {
+    const setup = chooseSetup(opts.setup, opts.gates ?? '', name => existsSync(join(dir, name)));
+    if (!setup && opts.setup === null) opts.warn?.(NO_SETUP_WARNING);
+    if (setup) {
       try {
-        run(`cd ${shellQuote(dir)} && ${opts.setup}`);
+        run(`cd ${shellQuote(dir)} && ${setup.command}`);
       } catch (e) {
-        throw new VerifyInfraError(`setup failed in the verifier's copy (${opts.setup}): ${(e as Error).message}`);
+        throw new VerifyInfraError(`setup failed in the verifier's copy (${setup.command}): ${(e as Error).message}`);
       }
     }
     let report: SpecReport | null = null;
@@ -239,13 +269,13 @@ export async function verifyPr(run: CommandRunner, agent: AgentRunner, opts: Ver
     const remaining = toJudge.filter(c => !unseen.includes(c));
     const subject = {pr: opts.pr, head, ticket, verifier: opts.model, at: (opts.now?.() ?? new Date()).toISOString()};
     if (remaining.length === 0) {
-      return writeRecord(opts, {...subject, verifier: 'spec-check', ...mergeEntries(criteria, mechanical, []), problems: []});
+      return writeRecord(opts, setup, {...subject, verifier: 'spec-check', ...mergeEntries(criteria, mechanical, []), problems: []});
     }
     const diff = run(`gh pr diff ${opts.pr}`);
     const gate = {checks: pr.checks, failing_checks: pr.failing_checks};
     const ask = async (criteriaAsked: Criterion[], failed?: {criterion: string; citations: string[]}[]) => {
       const result = await agent.run({
-        prompt: buildVerifierInput({criteria: criteriaAsked, decided: gateCriteria, diff, gate, setupRan: Boolean(opts.setup), screenshots, approved, runLogged, failedCitations: failed}),
+        prompt: buildVerifierInput({criteria: criteriaAsked, decided: gateCriteria, diff, gate, setupRan: Boolean(setup), screenshots, approved, runLogged, failedCitations: failed}),
         sessionId: opts.sessionId,
         tier: opts.tier,
         model: opts.model,
@@ -272,7 +302,7 @@ export async function verifyPr(run: CommandRunner, agent: AgentRunner, opts: Ver
         judged = {...judged, decision: reduceVerdict(judged.entries)};
       }
     }
-    return writeRecord(opts, {...judged, ...mergeEntries(criteria, mechanical, judged.entries), problems: judged.problems});
+    return writeRecord(opts, setup, {...judged, ...mergeEntries(criteria, mechanical, judged.entries), problems: judged.problems});
   } catch (e) {
     return outOfSpace(e);
   } finally {
@@ -298,7 +328,8 @@ export function dropCheckout(run: CommandRunner, dir: string): void {
   }
 }
 
-function writeRecord(opts: VerifyOptions, record: VerdictRecord): VerifyResult {
+function writeRecord(opts: VerifyOptions, setup: SetupChoice | null, base: VerdictRecord): VerifyResult {
+  const record: VerdictRecord = {...base, setup};
   mkdirSync(opts.verdictsDir, {recursive: true});
   writeFileSync(verdictFile(opts.verdictsDir, record.pr, record.head), JSON.stringify(record, null, 2) + '\n');
   if (opts.trackerKind !== 'github' || !opts.capture) return record;
