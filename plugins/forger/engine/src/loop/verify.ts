@@ -5,7 +5,7 @@
  * sits here behind the injected runner and agent.
  */
 
-import {existsSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync} from 'fs';
+import {existsSync, mkdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync} from 'fs';
 import {join} from 'path';
 
 import type {Tier} from '../config';
@@ -143,6 +143,11 @@ export function verdictFile(dir: string, pr: number, head: string): string {
   return join(dir, `pr-${pr}-${head}.json`);
 }
 
+/** Where a non-pass verdict's command log is kept: beside the verdict record, same name. */
+export function commandLogFile(dir: string, pr: number, head: string): string {
+  return verdictFile(dir, pr, head).replace(/\.json$/, '.commands.jsonl');
+}
+
 function shellQuote(s: string): string {
   return `'${s.replace(/'/g, `'\\''`)}'`;
 }
@@ -269,7 +274,7 @@ export async function verifyPr(run: CommandRunner, agent: AgentRunner, opts: Ver
     const remaining = toJudge.filter(c => !unseen.includes(c));
     const subject = {pr: opts.pr, head, ticket, verifier: opts.model, at: (opts.now?.() ?? new Date()).toISOString()};
     if (remaining.length === 0) {
-      return writeRecord(opts, setup, {...subject, verifier: 'spec-check', ...mergeEntries(criteria, mechanical, []), problems: []});
+      return writeRecord(opts, setup, log, {...subject, verifier: 'spec-check', ...mergeEntries(criteria, mechanical, []), problems: []});
     }
     const diff = run(`gh pr diff ${opts.pr}`);
     const gate = {checks: pr.checks, failing_checks: pr.failing_checks};
@@ -302,7 +307,7 @@ export async function verifyPr(run: CommandRunner, agent: AgentRunner, opts: Ver
         judged = {...judged, decision: reduceVerdict(judged.entries)};
       }
     }
-    return writeRecord(opts, setup, {...judged, ...mergeEntries(criteria, mechanical, judged.entries), problems: judged.problems});
+    return writeRecord(opts, setup, log, {...judged, ...mergeEntries(criteria, mechanical, judged.entries), problems: judged.problems});
   } catch (e) {
     return outOfSpace(e);
   } finally {
@@ -328,9 +333,17 @@ export function dropCheckout(run: CommandRunner, dir: string): void {
   }
 }
 
-function writeRecord(opts: VerifyOptions, setup: SetupChoice | null, base: VerdictRecord): VerifyResult {
-  const record: VerdictRecord = {...base, setup};
+function writeRecord(opts: VerifyOptions, setup: SetupChoice | null, log: string, base: VerdictRecord): VerifyResult {
   mkdirSync(opts.verdictsDir, {recursive: true});
+  const kept = commandLogFile(opts.verdictsDir, base.pr, base.head);
+  const unchecked = base.entries.some(e => e.demoted?.startsWith(EVIDENCE_DEMOTION));
+  let commandLog: string | null = null;
+  rmSync(kept, {force: true});
+  if ((base.decision !== 'pass' || unchecked) && existsSync(log)) {
+    renameSync(log, kept);
+    commandLog = kept;
+  }
+  const record: VerdictRecord = {...base, setup, commandLog};
   writeFileSync(verdictFile(opts.verdictsDir, record.pr, record.head), JSON.stringify(record, null, 2) + '\n');
   if (opts.trackerKind !== 'github' || !opts.capture) return record;
   return {...record, status: setVerifyStatus(opts.capture, record.head, record.decision)};

@@ -4,7 +4,7 @@ import {tmpdir} from 'os';
 import {join} from 'path';
 
 import type {AgentRunner, CapturingRunner, CommandRunner} from '../ports';
-import {chooseSetup, installStep, LOCKFILE_INSTALLS, verdictFile, verifyPr, VerifyInfraError, type VerifyOptions} from './verify';
+import {chooseSetup, commandLogFile, installStep, LOCKFILE_INSTALLS, verdictFile, verifyPr, VerifyInfraError, type VerifyOptions} from './verify';
 
 const dirs: string[] = [];
 afterEach(() => {
@@ -544,5 +544,47 @@ describe('screenshot evidence', () => {
     await verifyPr(run, f.agentSaying(out), f.opts);
     expect(f.prompts[0]).toContain(`## Changed screenshots\n- ${shot}`);
     expect(f.prompts[0]).not.toContain('## Approved screenshots');
+  });
+});
+
+describe('the kept command log', () => {
+  const cmd = (ref: string) => ({kind: 'command', ref});
+  const verdict = (a: object, b: object) => JSON.stringify({verdict: [{criterion: 'c1', ...a}, {criterion: 'c2', ...b}]});
+  const met = (ref: string) => ({verdict: 'met', evidence: [cmd(ref)]});
+  const unsure = {verdict: 'cannot_tell', missing: 'no_test', evidence: []};
+
+  test('verify keeps the command log beside the verdict when evidence does not check out', async () => {
+    const f = fixture();
+    const record = await verifyPr(f.run, f.agentSaying(verdict(met('never ran'), met('bun test'))), f.opts);
+    expect(record.entries[0].demoted).toContain('evidence does not check out');
+    const kept = commandLogFile(f.verdicts, 5, 'deadbeef');
+    expect(readFileSync(kept, 'utf-8')).toContain('bun test');
+    expect(record.commandLog).toBe(kept);
+  });
+
+  test('verify keeps the command log beside the verdict when the decision is not a pass', async () => {
+    const f = fixture();
+    const record = await verifyPr(f.run, f.agentSaying(verdict(met('bun test'), unsure)), f.opts);
+    expect(record.decision).not.toBe('pass');
+    expect(existsSync(commandLogFile(f.verdicts, 5, 'deadbeef'))).toBe(true);
+    expect(readdirSync(f.scratch).filter(n => n.endsWith('.commands.jsonl'))).toEqual([]);
+  });
+
+  test('verify removes the command log when the verdict passes and every citation checks out', async () => {
+    const f = fixture();
+    const kept = commandLogFile(f.verdicts, 5, 'deadbeef');
+    mkdirSync(f.verdicts, {recursive: true});
+    writeFileSync(kept, 'from an earlier verdict\n');
+    const record = await verifyPr(f.run, f.agentSaying(verdict(met('bun test'), met('bun test'))), f.opts);
+    expect(record.decision).toBe('pass');
+    expect(existsSync(kept)).toBe(false);
+    expect(record.commandLog).toBeNull();
+  });
+
+  test('the verdict record names the kept command log', async () => {
+    const f = fixture();
+    await verifyPr(f.run, f.agentSaying(verdict(met('bun test'), unsure)), f.opts);
+    const onDisk = JSON.parse(readFileSync(verdictFile(f.verdicts, 5, 'deadbeef'), 'utf-8'));
+    expect(onDisk.commandLog).toBe(commandLogFile(f.verdicts, 5, 'deadbeef'));
   });
 });

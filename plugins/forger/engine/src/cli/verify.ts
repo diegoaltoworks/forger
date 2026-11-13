@@ -41,7 +41,8 @@ export const verify: Command = {
                    the gate result, never the worker's claims) and record its verdict per criterion
                    (exit 1 unless every criterion is met); on GitHub it also sets the forger/verify
                    status on the head: success for a pass, failure otherwise. "Gates green" is decided
-                   from the head's CI checks, waiting up to the timeout for unfinished ones`,
+                   from the head's CI checks, waiting up to the timeout for unfinished ones. A verdict that is not a pass
+                   keeps the copy's command log beside the verdict record (commandLog in the JSON)`,
   async run(ctx) {
     const {values} = ctx;
     const pr = parseInt((values.pr as string | undefined) ?? '', 10);

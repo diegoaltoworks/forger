@@ -120,6 +120,8 @@ export interface VerdictRecord {
   problems: string[];
   at: string;
   /** The setup command that ran in the verifier's copy and where it came from; null when none ran. */
+  /** The copy's command log, kept beside this record when the verdict is not a pass or a citation did not check out; null when none was kept. */
+  commandLog?: string | null;
   setup?: {command: string; source: 'configured' | 'gates' | 'lockfile'} | null;
 }
 
