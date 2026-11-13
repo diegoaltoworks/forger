@@ -215,7 +215,9 @@ messages. The verifier runs through the same agent seam as a worker, in a
 writable, throwaway copy of the head, on the `verifier` tier of the config.
 Before the model starts, the engine installs dependencies in that copy: the
 `verify.setup` command if the config has one, otherwise the install step of
-`gates`. When the gates name no install step and `verify.setup` is unset, no setup
+`gates`, otherwise the frozen install for the lockfile at the root of the copy; an
+empty `verify.setup` turns setup off, and the verdict record names the command that ran
+and where it came from. When none of the three gives a command, no setup
 runs: the prompt says the copy has no dependencies, and `verify` warns on stderr.
 The model can then run the tests and the gates itself. A setup that
 fails is reported as an infrastructure error and records no verdict, so it is

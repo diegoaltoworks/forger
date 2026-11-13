@@ -4,7 +4,7 @@ import {tmpdir} from 'os';
 import {join} from 'path';
 
 import type {AgentRunner, CapturingRunner, CommandRunner} from '../ports';
-import {installStep, setupCommand, verdictFile, verifyPr, VerifyInfraError, type VerifyOptions} from './verify';
+import {chooseSetup, installStep, LOCKFILE_INSTALLS, verdictFile, verifyPr, VerifyInfraError, type VerifyOptions} from './verify';
 
 const dirs: string[] = [];
 afterEach(() => {
@@ -57,7 +57,8 @@ function fixture() {
     sessionId: 's',
     now: () => new Date('2026-01-01T00:00:00Z'),
   };
-  return {run, calls, prompts, cwds, agentSaying, opts, verdicts, scratch};
+  const cwdOf = (cmd: string): string => /git worktree add --detach '([^']+)'/.exec(cmd)![1];
+  return {run, calls, prompts, cwds, cwdOf, agentSaying, opts, verdicts, scratch};
 }
 
 describe('verifyPr', () => {
@@ -215,11 +216,70 @@ describe('verifyPr', () => {
   });
 
   test('the setup is the configured command, else the gates install step', () => {
-    expect(setupCommand('make deps', 'cd a && bun install')).toBe('make deps');
-    expect(setupCommand(null, 'cd a && bun install --frozen-lockfile && bun run check && cd .. && x check')).toBe('cd a && bun install --frozen-lockfile');
-    expect(setupCommand(null, 'bun test')).toBeNull();
+    const none = () => false;
+    expect(chooseSetup('make deps', 'cd a && bun install', none)?.command).toBe('make deps');
+    expect(chooseSetup(null, 'cd a && bun install --frozen-lockfile && bun run check && cd .. && x check', none)).toEqual({command: 'cd a && bun install --frozen-lockfile', source: 'gates'});
+    expect(chooseSetup(null, 'bun test', none)).toBeNull();
     expect(installStep('npm ci && npm test')).toBe('npm ci');
-    expect(setupCommand('  ', '')).toBeNull();
+  });
+
+  test('each recognised lockfile maps to its frozen install command', () => {
+    const expected: Record<string, string> = {
+      'bun.lock': 'bun install --frozen-lockfile',
+      'bun.lockb': 'bun install --frozen-lockfile',
+      'package-lock.json': 'npm ci',
+      'pnpm-lock.yaml': 'pnpm install --frozen-lockfile',
+      'yarn.lock': 'yarn install --frozen-lockfile',
+      'uv.lock': 'uv sync --frozen',
+      'Cargo.lock': 'cargo fetch --locked',
+    };
+    expect(LOCKFILE_INSTALLS.map(l => l.file).sort()).toEqual(Object.keys(expected).sort());
+    for (const [file, command] of Object.entries(expected)) {
+      expect(chooseSetup(null, 'bun test', n => n === file)).toEqual({command, source: 'lockfile'});
+    }
+  });
+
+  test('a configured verify.setup wins over the gates and the lockfile', () => {
+    expect(chooseSetup('make deps', 'npm ci && npm test', () => true)).toEqual({command: 'make deps', source: 'configured'});
+    expect(chooseSetup(null, 'npm ci && npm test', () => true)).toEqual({command: 'npm ci', source: 'gates'});
+  });
+
+  test('an empty verify.setup turns the setup off', async () => {
+    expect(chooseSetup('', 'npm ci && npm test', () => true)).toBeNull();
+    expect(chooseSetup('  ', '', () => true)).toBeNull();
+    const f = fixture();
+    const warnings: string[] = [];
+    const run: CommandRunner = cmd => {
+      if (cmd.startsWith('git worktree add')) writeFileSync(join(f.cwdOf(cmd), 'bun.lock'), '');
+      return f.run(cmd);
+    };
+    const record = await verifyPr(run, f.agentSaying('x'), {...f.opts, setup: '', gates: 'bun test', warn: m => warnings.push(m)});
+    expect(f.calls.some(c => c.includes('install'))).toBe(false);
+    expect(warnings).toEqual([]);
+    expect(record.setup).toBeNull();
+  });
+
+  test('verify runs the frozen install for the lockfile at the root of the copy when nothing else names a setup', async () => {
+    const f = fixture();
+    const warnings: string[] = [];
+    const run: CommandRunner = cmd => {
+      if (cmd.startsWith('git worktree add')) writeFileSync(join(f.cwdOf(cmd), 'package-lock.json'), '');
+      return f.run(cmd);
+    };
+    await verifyPr(run, f.agentSaying('x'), {...f.opts, gates: 'bun test', warn: m => warnings.push(m)});
+    expect(f.calls.some(c => c.includes(`cd '${f.cwds[0]}' && npm ci`))).toBe(true);
+    expect(warnings).toEqual([]);
+    expect(f.prompts[0]).toContain('with its dependencies installed');
+  });
+
+  test('the verdict record names the setup command that ran and where it came from', async () => {
+    const f = fixture();
+    const record = await verifyPr(f.run, f.agentSaying('x'), {...f.opts, setup: 'make deps'});
+    expect(record.setup).toEqual({command: 'make deps', source: 'configured'});
+    const onDisk = JSON.parse(readFileSync(verdictFile(f.verdicts, 5, 'deadbeef'), 'utf-8'));
+    expect(onDisk.setup).toEqual({command: 'make deps', source: 'configured'});
+    const viaGates = await verifyPr(f.run, f.agentSaying('x'), {...f.opts, gates: 'bun install && bun test'});
+    expect(viaGates.setup).toEqual({command: 'bun install', source: 'gates'});
   });
 
   describe('the forger/verify status', () => {
