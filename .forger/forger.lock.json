@@ -82,7 +82,7 @@
     },
     {
       "id": "testing",
-      "version": "1.1.0",
+      "version": "1.2.0",
       "files": [
         {
           "path": ".forger/budgets.json",
@@ -90,7 +90,7 @@
         },
         {
           "path": ".forger/opinions/testing.md",
-          "sha256": "e69f0e4a8e08106b50b972fe58951f315429811c80c614b94b8ebe80b593a0f7"
+          "sha256": "cceb8a0ff426594a1f09b87a45d566abe047caf3fb368fbb4fc15ac52d2086ea"
         },
         {
           "path": ".forger/testing.json",

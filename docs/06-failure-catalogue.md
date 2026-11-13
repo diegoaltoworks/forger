@@ -23,6 +23,7 @@ the next `work catalogue --update` moves the row back to Open.
 
 | Failure | What it looks like | Issue |
 |---|---|---|
+| A regression guard misses the next path | A fix comes with a guard test that lists the files it checks; the defect returns through a path the list does not name and the guard still passes. | [#425](https://github.com/diegoaltoworks/forger/issues/425) |
 
 ## Fixed
 
