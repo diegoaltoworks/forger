@@ -12,8 +12,9 @@ import type {Tier} from '../config';
 import type {AgentRunner, CapturingRunner, CommandRunner, SpecReport} from '../ports';
 import {BASELINE_MANIFEST, parseBaselines, withoutBaseline, type BaselineManifest} from '../ui';
 import {issueNumber} from './decline';
-import {ciConfigured, PR_FIELDS, parsePr} from './pr-checks';
-import {decideGatesGreen, fromGatesCommand, isGatesGreen, stillPending} from './gates-green';
+import {ciConfigured, failingChecks, PR_FIELDS, parsePr} from './pr-checks';
+import {alreadyRerun, markRerun, rerunFailedJobs, rerunMarker, failedTests, type FlakyGate} from './flaky-gate';
+import {decideGatesGreen, fromGatesCommand, type GatesGreen, isGatesGreen, stillPending} from './gates-green';
 import {mergeEntries, partitionCriteria} from './mechanical';
 import {evidenceHolds, failedCitations, SCREENSHOTS_DIR, type CommandRun, type CopyRecord} from './evidence-check';
 import {parseCommandLog} from './run-logged';
@@ -52,6 +53,8 @@ export interface VerifyOptions {
   checksTimeoutMs?: number;
   /** Told when no setup ran in the copy, so the cause and the fix reach the operator. */
   warn?: (message: string) => void;
+  /** Told when a gate failed and then passed on a rerun with no change; records and tickets it. */
+  onFlaky?: (flaky: FlakyGate) => void;
   pollMs?: number;
   sleep?: (ms: number) => Promise<void>;
   now?: () => Date;
@@ -188,35 +191,68 @@ export function copyRecord(root: string, commands: CommandRun[]): CopyRecord {
 }
 
 /** Decides each "Gates green" criterion from the head's CI checks, waiting for unfinished ones; the verifier model never sees it. */
-async function decideGates(run: CommandRunner, opts: VerifyOptions, criteria: Criterion[], rollup: unknown, base: string | undefined, dir: string): Promise<CheckedEntry[]> {
+async function decideGates(run: CommandRunner, opts: VerifyOptions, criteria: Criterion[], rollup: unknown, base: string | undefined, dir: string, head: string): Promise<CheckedEntry[]> {
   const ci = base ? ciConfigured(run, base) : false;
   const pollMs = opts.pollMs ?? 10_000;
   const sleep = opts.sleep ?? (ms => new Promise<void>(r => setTimeout(r, ms)));
-  const entries: CheckedEntry[] = [];
-  for (const c of criteria) {
-    let current = rollup;
-    let result = decideGatesGreen(c, current, ci);
+  const marker = rerunMarker(opts.verdictsDir, opts.pr, head);
+  const read = () => withoutVerifyStatus((JSON.parse(run(`gh pr view ${opts.pr} --json statusCheckRollup`)) as {statusCheckRollup?: unknown}).statusCheckRollup);
+  const wait = async (c: Criterion, start: GatesGreen, startRollup: unknown): Promise<{result: GatesGreen; rollup: unknown}> => {
+    let current = startRollup;
+    let result = start;
     for (let waited = 0; result.state === 'pending' && waited < (opts.checksTimeoutMs ?? 0); waited += pollMs) {
       await sleep(pollMs);
-      const fresh = JSON.parse(run(`gh pr view ${opts.pr} --json statusCheckRollup`)) as {statusCheckRollup?: unknown};
-      current = withoutVerifyStatus(fresh.statusCheckRollup);
+      current = read();
       result = decideGatesGreen(c, current, ci);
+    }
+    return {result, rollup: current};
+  };
+  const entries: CheckedEntry[] = [];
+  for (const c of criteria) {
+    let {result, rollup: current} = await wait(c, decideGatesGreen(c, rollup, ci), rollup);
+    if (result.state === 'decided' && result.entry.verdict === 'not_met' && failingChecks(current).length > 0 && !alreadyRerun(marker)) {
+      const failed = failingChecks(current);
+      markRerun(marker);
+      const rerun = rerunFailedJobs(run, head);
+      if (!rerun.started) {
+        result = {state: 'decided', entry: {...result.entry, evidence: [...result.entry.evidence, {kind: 'ci', ref: `rerun not started: ${rerun.why}`}]}};
+      } else {
+        await sleep(pollMs);
+        const fresh = read();
+        const again = await wait(c, decideGatesGreen(c, fresh, ci), fresh);
+        if (again.result.state === 'decided' && again.result.entry.verdict === 'met') {
+          opts.onFlaky?.({pr: opts.pr, head, check: failed.join(', '), tests: rerun.tests});
+          result = {state: 'decided', entry: {...again.result.entry, evidence: [...again.result.entry.evidence, {kind: 'ci', ref: `${failed.join(', ')}: failed, then passed on a rerun with no change`}]}};
+        } else if (again.result.state === 'decided') {
+          result = {state: 'decided', entry: {...again.result.entry, evidence: [...again.result.entry.evidence, {kind: 'ci', ref: 'failed again on a rerun with no change'}]}};
+        } else result = again.result;
+      }
     }
     if (result.state === 'decided') entries.push(result.entry);
     else if (result.state === 'pending') entries.push(stillPending(c));
-    else {
-      let passed = true;
-      if (opts.gates) {
-        try {
-          run(`cd ${shellQuote(dir)} && ${opts.gates}`);
-        } catch {
-          passed = false;
-        }
-      }
-      entries.push(opts.gates ? fromGatesCommand(c, opts.gates, passed) : stillPending(c));
-    }
+    else entries.push(await gatesCommandEntry(run, opts, c, dir, head, marker));
   }
   return entries;
+}
+
+/** A repository without CI: the gates command in the copy, and once more when it fails. */
+async function gatesCommandEntry(run: CommandRunner, opts: VerifyOptions, c: Criterion, dir: string, head: string, marker: string): Promise<CheckedEntry> {
+  if (!opts.gates) return stillPending(c);
+  const attempt = (): string | null => {
+    try {
+      run(`cd ${shellQuote(dir)} && ${opts.gates}`);
+      return null;
+    } catch (e) {
+      return (e as Error).message;
+    }
+  };
+  const first = attempt();
+  if (first === null) return fromGatesCommand(c, opts.gates, true);
+  if (alreadyRerun(marker)) return fromGatesCommand(c, opts.gates, false);
+  markRerun(marker);
+  if (attempt() !== null) return fromGatesCommand(c, opts.gates, false);
+  opts.onFlaky?.({pr: opts.pr, head, check: 'the gates command', tests: failedTests(first)});
+  return {...fromGatesCommand(c, opts.gates, true), evidence: [{kind: 'command', ref: opts.gates}, {kind: 'command', ref: 'failed, then passed on a rerun with no change'}]};
 }
 
 export async function verifyPr(run: CommandRunner, agent: AgentRunner, opts: VerifyOptions): Promise<VerifyResult> {
@@ -268,7 +304,7 @@ export async function verifyPr(run: CommandRunner, agent: AgentRunner, opts: Ver
     const approved = changed.filter(c => !screenshots.includes(c));
     const unseen = changed.length === 0 ? uiStates : [];
     const gateCriteria = criteria.filter(isGatesGreen);
-    const gatesDecided = gateCriteria.length > 0 ? await decideGates(run, opts, gateCriteria, withoutVerifyStatus(view.statusCheckRollup), view.baseRefName, dir) : [];
+    const gatesDecided = gateCriteria.length > 0 ? await decideGates(run, opts, gateCriteria, withoutVerifyStatus(view.statusCheckRollup), view.baseRefName, dir, head) : [];
     const {mechanical: specDecided, remaining: toJudge} = partitionCriteria(criteria.filter(c => !gateCriteria.includes(c)), report);
     const mechanical = [...gatesDecided, ...specDecided, ...unseenStates(unseen)];
     const remaining = toJudge.filter(c => !unseen.includes(c));

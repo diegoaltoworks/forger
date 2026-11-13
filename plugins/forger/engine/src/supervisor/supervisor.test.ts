@@ -177,3 +177,12 @@ describe('report', () => {
     expect(formatReport(r)).toContain('**Measures**');
   });
 });
+
+describe('report flaky gates', () => {
+  test('report lists the flaky gates of the run', () => {
+    const plan = orient({...base, status: status()});
+    const r = buildReport({status: status(), plan, branch: 'main', baseBranch: 'main', flakyGates: ['PR #5: test (clock > reads the wall clock)']});
+    expect(r.flaky_gates).toEqual(['PR #5: test (clock > reads the wall clock)']);
+    expect(formatReport(r)).toContain('**Flaky gates**\n- PR #5: test (clock > reads the wall clock)');
+  });
+});
