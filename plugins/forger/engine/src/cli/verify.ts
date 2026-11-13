@@ -26,6 +26,7 @@ export function verifyOne(ctx: CommandContext, pr: number): Promise<VerifyResult
     checksTimeoutMs: parseInt(ctx.values.timeout as string, 10) * 1000,
     sessionId: randomUUID(),
     runLogged: `bun ${join(ctx.pluginRoot, 'bin', 'work.ts')} run-logged`,
+    warn: message => console.error(message),
     capture: ctx.capture(),
     specReport: dir => slcrProvider({projectRoot: dir, baseBranch: config.base_branch}).report('head'),
   });

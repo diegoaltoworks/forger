@@ -50,6 +50,8 @@ export interface VerifyOptions {
   gates?: string;
   /** How long "Gates green" waits for unfinished checks before it is cannot_tell; 0 or absent does not wait. */
   checksTimeoutMs?: number;
+  /** Told when no setup ran in the copy, so the cause and the fix reach the operator. */
+  warn?: (message: string) => void;
   pollMs?: number;
   sleep?: (ms: number) => Promise<void>;
   now?: () => Date;
@@ -96,6 +98,9 @@ export function setupCommand(setup: string | null | undefined, gates: string): s
   const configured = setup?.trim();
   return configured ? configured : installStep(gates);
 }
+
+export const NO_SETUP_WARNING =
+  "verify: no setup ran in the verifier's copy because the gates name no install step; put one in verify.setup in .forger/workloop.config.json";
 
 /** The verifier could not be set up to run: an infrastructure fault, never a verdict on the ticket's criteria. */
 export class VerifyInfraError extends Error {
@@ -208,6 +213,7 @@ export async function verifyPr(run: CommandRunner, agent: AgentRunner, opts: Ver
   const runLogged = opts.runLogged ? `${opts.runLogged} --file ${shellQuote(log)} --root ${shellQuote(dir)}` : undefined;
   try {
     run(`git worktree add --detach ${shellQuote(dir)} ${head}`);
+    if (!opts.setup) opts.warn?.(NO_SETUP_WARNING);
     if (opts.setup) {
       try {
         run(`cd ${shellQuote(dir)} && ${opts.setup}`);
@@ -239,7 +245,7 @@ export async function verifyPr(run: CommandRunner, agent: AgentRunner, opts: Ver
     const gate = {checks: pr.checks, failing_checks: pr.failing_checks};
     const ask = async (criteriaAsked: Criterion[], failed?: {criterion: string; citations: string[]}[]) => {
       const result = await agent.run({
-        prompt: buildVerifierInput({criteria: criteriaAsked, decided: gateCriteria, diff, gate, screenshots, approved, runLogged, failedCitations: failed}),
+        prompt: buildVerifierInput({criteria: criteriaAsked, decided: gateCriteria, diff, gate, setupRan: Boolean(opts.setup), screenshots, approved, runLogged, failedCitations: failed}),
         sessionId: opts.sessionId,
         tier: opts.tier,
         model: opts.model,

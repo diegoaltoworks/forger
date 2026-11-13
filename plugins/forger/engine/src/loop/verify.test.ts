@@ -177,6 +177,20 @@ describe('verifyPr', () => {
     expect(setup).toContain(`cd '${f.cwds[0]}' && bun install`);
   });
 
+  test('verify warns that no setup ran when the gates name no install step and verify.setup is unset', async () => {
+    const f = fixture();
+    const warnings: string[] = [];
+    await verifyPr(f.run, f.agentSaying('x'), {...f.opts, warn: m => warnings.push(m)});
+    expect(warnings).toHaveLength(1);
+    expect(warnings[0]).toContain('verify.setup');
+    expect(warnings[0]).toContain('no install step');
+    expect(f.prompts[0]).toContain('No setup ran');
+    const ran: string[] = [];
+    await verifyPr(f.run, f.agentSaying('x'), {...f.opts, setup: 'bun install', warn: m => ran.push(m)});
+    expect(ran).toEqual([]);
+    expect(f.prompts[1]).toContain('with its dependencies installed');
+  });
+
   test('a failed setup is an infrastructure error: no model run, no record, the copy removed', async () => {
     const f = fixture();
     const run: CommandRunner = cmd => {
