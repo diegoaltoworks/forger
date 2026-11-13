@@ -7,3 +7,4 @@
 {"event":"set_aside","at":"2026-11-13T06:08:40.037Z","iteration":211,"ticket":"issue-423","reason":"verify failed twice on criterion c5 (`check docs`), which passes locally, so `handover` labelled issue #423 `needs-human`; PR #433 is open and unmerged."}
 {"event":"picked","at":"2026-11-13T06:09:06.201Z","iteration":214,"ticket":"issue-426","reason":null}
 {"event":"merged","at":"2026-11-13T06:09:15.032Z","iteration":213,"ticket":"issue-424","reason":null}
+{"event":"structure_review_filed","at":"2026-11-13T06:09:20.845Z","iteration":213,"ticket":null,"reason":"25 tickets merged since the last review (every_merged 25)"}
