@@ -9,7 +9,7 @@ import {existsSync, readFileSync} from 'fs';
 import {join} from 'path';
 
 import {checkAvoidedTerms, checkDiagrams, checkLinks, parseGlossaryAvoid, type AvoidedTerm, type LinkWorld} from './docs-content';
-import {branchTicket, CATALOGUE_OPINION, CATALOGUE_PATH, checkCatalogue, ticketsOf, trackerFacts, type TicketFacts} from '../../catalogue';
+import {branchPr, branchTicket, CATALOGUE_OPINION, CATALOGUE_PATH, checkCatalogue, ticketsOf, trackerFacts, type TicketFacts} from '../../catalogue';
 import {loadConfig} from '../../config';
 import type {CommandRunner} from '../../ports';
 import {projectFiles} from '../files';
@@ -69,7 +69,8 @@ export function runDocsWarnings(projectRoot: string, run: CommandRunner, packs?:
 /**
  * The catalogue's missing or stale statuses. Facts the tracker cannot give
  * leave only the structure checked. On a ticket branch, a Fixed row may name
- * that ticket while its issue is still open: the merge closes it.
+ * that ticket while its issue is still open: the merge closes it. Once the
+ * branch has an open PR, an Open row whose only open issue is that ticket fails.
  */
 export function catalogueFindings(
   projectRoot: string,
@@ -79,7 +80,8 @@ export function catalogueFindings(
   const path = join(projectRoot, CATALOGUE_PATH);
   if (!existsSync(path)) return [];
   const text = readFileSync(path, 'utf-8');
-  return checkCatalogue(text, lookup(ticketsOf(text)), branchTicket(run)).map(p => ({file: CATALOGUE_PATH, line: p.line, rule: p.rule, opinion: CATALOGUE_OPINION, detail: p.detail}));
+  const ticket = branchTicket(run);
+  return checkCatalogue(text, lookup(ticketsOf(text)), ticket, ticket === null ? null : branchPr(run)).map(p => ({file: CATALOGUE_PATH, line: p.line, rule: p.rule, opinion: CATALOGUE_OPINION, detail: p.detail}));
 }
 
 /** Roadmap items that link no issue. */

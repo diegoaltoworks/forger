@@ -154,9 +154,12 @@ Documentation is part of Definition of Done, every iteration:
 - Update `.forger/inbox/*.md` (clock -> check) for anything you finished.
 - When the ticket's issue is in the Open table of the failure catalogue
   (`docs/06-failure-catalogue.md`), move that row to the Fixed table in the
-  same PR, naming the PR once it is open, and push again before `verify`. On
-  the ticket's own branch `check docs` accepts the row while the issue is
-  still open; the merge closes it.
+  same PR, naming the PR once it is open, and push again before `verify`. A
+  row you add yourself for the ticket's own issue ends in Fixed too. Run
+  `work catalogue --update` to move it. Before the PR exists `check docs`
+  accepts the Open row; once it is open, `check docs` fails on it. On the
+  ticket's own branch a Fixed row is accepted while the issue is still open;
+  the merge closes it.
 
 ### 8. Commit + PR
 The PR body comes from the `pr_body` slot. Built-in: write it by
