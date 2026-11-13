@@ -234,22 +234,7 @@
   ],
   "consecutive_declines": 0,
   "owner_review_tasks": [],
-  "set_aside_tasks": [
-    {
-      "ticket": "issue-423",
-      "reason": "verify failed twice on criterion c5 (`check docs`), which passes locally, so `handover` labelled issue #423 `needs-human`; PR #433 is open and unmerged.",
-      "iteration": 211,
-      "footprint": {
-        "paths": [
-          "plugins/forger/engine/src/loop/verify.ts",
-          "plugins/forger/engine/src/loop/verify-input.ts",
-          "plugins/forger/engine/src/cli/verify.ts",
-          "plugins/forger/commands/verify.md"
-        ],
-        "modules": []
-      }
-    }
-  ],
+  "set_aside_tasks": [],
   "consecutive_set_asides": 0,
   "last_remaining_count": 12
 }
