@@ -14,3 +14,4 @@
 {"event":"blocked_on_owner","at":"2026-11-13T06:21:50.347Z","iteration":215,"ticket":null,"reason":"issue-427 blocked by issue-423 (untracked)"}
 {"event":"picked","at":"2026-11-13T15:50:01.914Z","iteration":216,"ticket":"issue-437","reason":null}
 {"event":"merged","at":"2026-11-13T15:56:32.578Z","iteration":216,"ticket":"issue-437","reason":null}
+{"event":"picked","at":"2026-11-13T15:56:48.550Z","iteration":217,"ticket":"issue-423","reason":null}
