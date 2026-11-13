@@ -23,6 +23,14 @@ commits include a `fix:` subject unless the diff also adds or changes a file
 matching `test_paths` in `.forger/testing.json`. Write the failing test first,
 see it fail for the right reason, then fix.
 
+## A guard finds its cases by scanning (rule: testing.guard-finds-its-cases)
+
+A test that guards against a regression finds its cases by scanning the source
+for the pattern: every call of the function, every file of the kind. It never
+reads them from a list of today's files, because the defect comes back through
+the path the list does not name, and the guard passes. Show the guard failing on
+the code before the fix, so it is known to catch the pattern and not a snapshot.
+
 ## Unit tests stay off the network (check: testing.no-network)
 
 A unit test that reaches the network or spawns a process is slow, flaky and

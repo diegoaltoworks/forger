@@ -106,6 +106,9 @@ takes the ticket out of the backlog; do not relabel the issue by hand.
   seam, in the `test_first` slot. Built-in: write the failing test, make it pass,
   then refactor.
 - Pure logic must be pure and tested as such.
+- A fix comes with a guard test, and the guard follows `testing.guard-finds-its-cases`:
+  it finds its cases by scanning the source for the pattern, never from a list of
+  today's files, and you show it failing on the code before the fix.
 
 ### 5. Quality gates (must all pass)
 Run the gate command from `workloop.config.json` (`gates`). Fix failures; do not
