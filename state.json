@@ -206,7 +206,10 @@
       "ticket": "issue-431",
       "pid": null,
       "session_id": "c37dcc37-8f4a-4396-bf50-f4bac174672a",
-      "snapshot": null,
+      "snapshot": {
+        "baseSha": "",
+        "reflogLength": 1
+      },
       "started_at": "2026-11-13T06:16:35.765Z",
       "plan": {
         "stages": [
