@@ -139,6 +139,9 @@ supervisor opens for itself carries `Closes #n` or an `## Acceptance` section of
 checkbox criteria in its body; one with neither is refused and cannot merge.
 A ticket whose verification ran out of rounds carries `needs-human`; The report's
 **Handed over** section (and `handover --list`) names it with the criteria at fault.
+When a verdict is not a pass, or a citation did not check out, `verify` keeps the
+verifier's command log beside the verdict record (the record's `commandLog` names
+it); it stays on the machine and is never posted to the tracker.
 
 ## 6. Sync
 
