@@ -236,6 +236,17 @@ that must be among the successes. A repository with no CI runs the configured
 `gates` command in the verifier's copy and decides from its exit code. The
 verifier's input lists the criterion as decided by the engine.
 
+A failed check is run once more on the same head, with no change, to name the
+cause. The engine starts the failed jobs again, waits as it waits for pending
+checks and decides from the result. A pass is a flaky gate: the criterion is
+`met` by the passing run, a `flaky_gate` event names the check and the failed
+tests the job's log names, and one ticket is filed to make the test
+deterministic (a later sighting of the same check comments on the open ticket).
+A second failure, a rerun that cannot be started, or a head whose failed check
+was already rerun leaves the criterion `not_met`. A red check is never waved
+through, and a repository with no CI reruns a failing `gates` command once in
+the verifier's copy under the same rules.
+
 When the PR changes images under `docs/screenshots/`, the verifier opens each
 one and checks it against the ticket's "UI states" section and any criterion
 about what is visible. Each state is an entry in the verdict, judged from the

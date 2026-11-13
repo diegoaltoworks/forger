@@ -75,6 +75,7 @@ describe('recorded events', () => {
     [['delivered', 10, 'issue-9', 'PR #12: ok', at], '{"event":"delivered","at":"2000-01-02T03:04:05.000Z","iteration":10,"ticket":"issue-9","reason":"PR #12: ok"}\n'],
     [['delivery_failed', 10, 'issue-9', 'PR #12: check failed', at], '{"event":"delivery_failed","at":"2000-01-02T03:04:05.000Z","iteration":10,"ticket":"issue-9","reason":"PR #12: check failed"}\n'],
     [['rolled_back', 10, 'issue-9', 'PR #12: undone', at], '{"event":"rolled_back","at":"2000-01-02T03:04:05.000Z","iteration":10,"ticket":"issue-9","reason":"PR #12: undone"}\n'],
+    [['flaky_gate', 11, null, 'PR #12: test (a > b)', at], '{"event":"flaky_gate","at":"2000-01-02T03:04:05.000Z","iteration":11,"ticket":null,"reason":"PR #12: test (a > b)"}\n'],
     [['rollback_failed', 10, 'issue-9', 'PR #12: no way back', at], '{"event":"rollback_failed","at":"2000-01-02T03:04:05.000Z","iteration":10,"ticket":"issue-9","reason":"PR #12: no way back"}\n'],
   ];
   test.each(cases)('%j is written as one fixed line', (args, line) => {

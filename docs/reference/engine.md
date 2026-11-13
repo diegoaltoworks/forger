@@ -36,6 +36,10 @@ the `cause` or `not_a_defect`, and both are null when the halt label was removed
 by hand. `measure` counts clears with a cause, as not a defect and with no
 reason; `report` lists each uncaused clear under waiting on you.
 
+A failed gate is run once more on the same head by `verify`; a pass records a
+`flaky_gate` event (the check and the failed tests in `reason`) and files one
+`flaky-gate` ticket, and `report` lists the flaky gates of the run.
+
 One engine works a repo at a time. `run` writes its pid to the lock file and
 refuses to start while that pid is alive; a lock whose pid is dead is taken
 over. If the previous engine died mid-iteration, the new one first closes that

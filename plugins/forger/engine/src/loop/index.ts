@@ -47,6 +47,7 @@ export * from './run-logged';
 export * from './verdict';
 export * from './verdict-store';
 export * from './scratch';
+export * from './flaky-gate';
 export * from './verify';
 export * from './verify-input';
 export * from './verify-status';

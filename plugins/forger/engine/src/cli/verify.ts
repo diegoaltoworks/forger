@@ -3,7 +3,7 @@ import {randomUUID} from 'crypto';
 
 import {agentFor, execCapture, findHarness, sandboxFor, sandboxSite, slcrProvider} from '../adapters';
 import {resolveModel} from '../config';
-import {loopRootOf, verdictsHome, verifierTier, verifyPr, type VerifyResult} from '../loop';
+import {eventLine, flakyReason, loopRootOf, terminalEvent, ticketFlaky, verdictsHome, verifierTier, verifyPr, type VerifyResult} from '../loop';
 import type {Command, CommandContext} from './command';
 
 /** Verifies one PR's head with the project's verifier; shared by `verify` and `recover`. */
@@ -23,6 +23,10 @@ export function verifyOne(ctx: CommandContext, pr: number): Promise<VerifyResult
     timeoutMinutes: config.limits.timeoutMinutes,
     killGraceSeconds: config.limits.killGraceSeconds,
     gates: config.gates,
+    onFlaky: flaky => {
+      ctx.stateStore.appendEvent(eventLine(terminalEvent('flaky_gate', 0, null, flakyReason(flaky))), new Date());
+      if (config.tracker.kind === 'github') ticketFlaky(ctx.run(), flaky, config.tracker.label);
+    },
     checksTimeoutMs: parseInt(ctx.values.timeout as string, 10) * 1000,
     sessionId: randomUUID(),
     runLogged: `bun ${join(ctx.pluginRoot, 'bin', 'work.ts')} run-logged`,

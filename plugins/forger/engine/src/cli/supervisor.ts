@@ -113,6 +113,7 @@ function supervise(which: 'orient' | 'report') {
           plan,
           haltKind: standingHalt(events)?.event ?? null,
           recovered: events.filter(e => e.event === 'recovered').map(e => `${e.ticket ?? 'no ticket'}: ${e.reason ?? 'recovered'} (${e.at})`),
+          flakyGates: events.filter(e => e.event === 'flaky_gate').map(e => e.reason ?? 'unnamed gate'),
           branch,
           baseBranch: config.base_branch,
           handedOver: handedOver(readAllVerdicts(verdictsHome(ctx.run(), projectRoot, config.paths.verdicts)), config.limits.maxVerifyRounds),

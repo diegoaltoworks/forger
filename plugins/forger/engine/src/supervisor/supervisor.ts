@@ -151,6 +151,8 @@ export interface ReportInputs {
   haltKind?: string | null;
   /** Halts the engine recovered by itself, one line each. */
   recovered?: string[];
+  /** Gates that failed and passed on a rerun with no change, one line each. */
+  flakyGates?: string[];
   /** What merged in the period; absent when the tracker could not be read. */
   merged?: string[];
   period?: Period;
@@ -164,6 +166,7 @@ export interface Report {
   in_progress: Array<{ticket: string; branch: string}>;
   declined: Array<{ticket: string; reason: string}>;
   recovered: string[];
+  flaky_gates: string[];
   handed_over: Array<{ticket: string; pr: number; criteria: string[]}>;
   next: string[];
   waiting_on_owner: OwnerItem[];
@@ -202,6 +205,7 @@ export function buildReport(i: ReportInputs): Report {
     in_progress: inProgress,
     declined: s.declined,
     recovered: i.recovered ?? [],
+    flaky_gates: i.flakyGates ?? [],
     handed_over: (i.handedOver ?? []).map(h => ({
       ticket: h.ticket,
       pr: h.pr,
@@ -227,6 +231,9 @@ export function formatReport(r: Report): string {
     '',
     '**Recovered by the engine**',
     ...list(r.recovered),
+    '',
+    '**Flaky gates**',
+    ...list(r.flaky_gates),
     '',
     '**Handed over**',
     ...list(r.handed_over.map(h => `${h.ticket} (PR #${h.pr}): ${h.criteria.join(', ')}`)),

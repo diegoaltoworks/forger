@@ -155,6 +155,7 @@ In plain words, in the owner's timezone:
 - **Merged** in the period, with what it means for a user. The period runs
   from the previous `report` (or `report --since DATE`).
 - **In progress**, the real branch.
+- **Flaky gates**: each gate that failed and passed on a rerun with no change (`flaky_gate` events), naming the check and the failed tests.
 - **Next.**
 - **Waiting on you**, each item with a recommendation: every open issue
   labelled `needs-info`, `needs-human` or `needs-triage`, every open PR labelled `owner-review` (with its link), every Proposed ADR,

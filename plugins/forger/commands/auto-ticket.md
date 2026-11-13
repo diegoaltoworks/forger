@@ -119,6 +119,11 @@ failing output, form one hypothesis and test it. If it is still red, signal `sto
 `check guards` is among the gates. Never lower a guard, skip a test or delete one to get
 green; when the change needs it, ask the owner, who records it with `decide`.
 
+A gate that fails on something your change did not touch is run once more with no
+change, never more. A pass on the rerun is a flaky gate: say so in the PR, and
+the engine files the ticket. A second failure is real. No test is skipped,
+weakened, retried inside the test tool or marked as allowed to fail to get past it.
+
 Read the gate's exit status, not its last lines: a gate piped into `tail` or
 chained with `;` reports success whatever happened. A failing gate stops the
 push. Any edit after a gate run - a test, an import, a doc - makes that run
