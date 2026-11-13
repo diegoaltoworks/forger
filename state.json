@@ -333,7 +333,10 @@
       "ticket": "issue-428",
       "pid": null,
       "session_id": "292e2655-05ac-4a1e-8809-0525440cae1f",
-      "snapshot": null,
+      "snapshot": {
+        "baseSha": "",
+        "reflogLength": 1
+      },
       "started_at": "2026-11-13T15:56:55.129Z",
       "plan": {
         "stages": [
