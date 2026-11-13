@@ -142,6 +142,8 @@ The `delivery` pack is opt-in (nothing detects it). A merge says the code is gre
 
 A delivery plans as deploy then check; for a failed step the plan names the rollback when one is configured, else nothing follows.
 
+The pack's `delivery.md` carries a worked example of a smoke check: wait until the delivered address reports the merged commit, then request each public address and fail on a status outside 2xx.
+
 ## The testing pack
 
 The `testing` pack holds the testing habits the engine itself relies on. Four of its opinions are enforced, each under its own opinion id so a waiver can target one:

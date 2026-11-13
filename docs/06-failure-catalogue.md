@@ -23,7 +23,6 @@ the next `work catalogue --update` moves the row back to Open.
 
 | Failure | What it looks like | Issue |
 |---|---|---|
-| A regression guard misses the next path | A fix comes with a guard test that lists the files it checks; the defect returns through a path the list does not name and the guard still passes. | [#425](https://github.com/diegoaltoworks/forger/issues/425) |
 
 ## Fixed
 
@@ -86,3 +85,4 @@ the next `work catalogue --update` moves the row back to Open.
 | A design rule meets a layout guarantee only at CI | A worker builds to a design rule, a guarantee fails at CI, and the owner gets prose to untangle instead of options. | [#344](https://github.com/diegoaltoworks/forger/issues/344) - merged in [#353](https://github.com/diegoaltoworks/forger/pull/353) |
 | Screenshots that don't render in the `reviewer's client` | A screenshot link loads only in a signed-in browser and shows as a broken image in the app the owner reviews in. | [#332](https://github.com/diegoaltoworks/forger/issues/332) - merged in [#358](https://github.com/diegoaltoworks/forger/pull/358) |
 | Structure decays while every ticket passes | Each ticket passes its gates, and the tree as a whole drifts into flat folders, prefixes and leftovers. | [#362](https://github.com/diegoaltoworks/forger/issues/362), [#363](https://github.com/diegoaltoworks/forger/issues/363), [#364](https://github.com/diegoaltoworks/forger/issues/364), [#365](https://github.com/diegoaltoworks/forger/issues/365) - merged in [#371](https://github.com/diegoaltoworks/forger/pull/371), [#368](https://github.com/diegoaltoworks/forger/pull/368), [#373](https://github.com/diegoaltoworks/forger/pull/373), [#374](https://github.com/diegoaltoworks/forger/pull/374) |
+| A regression guard misses the next path | A fix comes with a guard test that lists the files it checks; the defect returns through a path the list does not name and the guard still passes. | [#425](https://github.com/diegoaltoworks/forger/issues/425) - merged in [#432](https://github.com/diegoaltoworks/forger/pull/432) |

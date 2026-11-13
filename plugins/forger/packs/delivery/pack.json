@@ -1,6 +1,6 @@
 {
   "id": "delivery",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "The project's own commands to deploy, check and roll back a build after the merge: check delivery validates the file.",
   "detect": [],
   "files": [
