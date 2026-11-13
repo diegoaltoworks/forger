@@ -245,7 +245,9 @@ citation is then checked against what the engine recorded in the copy: a `file`
 exists and the line is within it, a `test` appears in a recorded run and passed
 (cited as the run reported it, or as `describe > test` with the enclosing
 describes in order and the last part the test's own name), a `command` is in the
-log with exit 0, a `screenshot` exists under `docs/screenshots/`. A `met` with a
+log with exit 0 (matched on the folder it ran in and its shell words, so a leading
+`cd <folder> &&`, a `sh -c` or `bash -c` wrapper and the style of quoting do not
+matter; `run-logged` records the folder relative to the copy), a `screenshot` exists under `docs/screenshots/`. A `met` with a
 citation that does not check out becomes `cannot_tell`, and the verifier is asked
 once more about those criteria with the failed citations named. Every
 `cannot_tell` carries `missing`, one of `no_state`, `no_test`, `no_data`,

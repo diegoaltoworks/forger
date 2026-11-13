@@ -1,6 +1,6 @@
 import {describe, expect, test} from 'bun:test';
 
-import {evidenceHolds, failedCitations, testNameMatches, testResults, type CopyRecord} from './evidence-check';
+import {evidenceHolds, failedCitations, shellWords, testNameMatches, testResults, type CopyRecord} from './evidence-check';
 import {loggedEnv, logLine, parseCommandLog} from './run-logged';
 
 const output = ['(pass) the engine refuses a red merge [1.2ms]', '(pass) verify > classifyCriterion > a vague criterion fails [0.4ms]', '(fail) the engine names the head', 'ok 3 - tap style passes', 'not ok 4 - tap style fails'].join('\n');
@@ -94,4 +94,42 @@ test('testNameMatches needs the last part to be the test itself', () => {
 
 test('a logged command runs without the switches that hide passed tests', () => {
   expect(loggedEnv({PATH: '/bin', CLAUDECODE: '1', REPL_ID: 'x', AGENT: '1', AI_AGENT: 'y', GONE: undefined})).toEqual({PATH: '/bin', AI_AGENT: 'y'});
+});
+
+describe('a cited command', () => {
+  const logged = (command: string, dir: string, exit = 0): CopyRecord => ({fileLines: () => null, commands: [{command, dir, exit, output: ''}]});
+  const cites = (rec: CopyRecord, ref: string) => evidenceHolds(rec, {kind: 'command', ref});
+
+  test('a command cited with a cd prefix checks out against the same command logged in that folder', () => {
+    expect(cites(logged('bun test src/a.test.ts', 'app'), 'cd app && bun test src/a.test.ts')).toBe(true);
+    expect(cites(logged('cd app && bun test', '.'), 'bun test')).toBe(false);
+  });
+
+  test('a command cited inside a sh -c or bash -c wrapper checks out against the logged command', () => {
+    expect(cites(logged('bun test -t "a b"', 'app'), `sh -c 'cd app && bun test -t "a b"'`)).toBe(true);
+    expect(cites(logged('bun test', '.'), `bash -c "bun test"`)).toBe(true);
+  });
+
+  test('a command cited with other quoting checks out against the logged command', () => {
+    expect(cites(logged(`bun test -t 'one two'`, '.'), 'bun test -t "one two"')).toBe(true);
+    expect(cites(logged(`bun test -t 'one two'`, '.'), 'bun test -t one two')).toBe(false);
+  });
+
+  test('a cited command that was logged in another folder does not check out', () => {
+    expect(cites(logged('bun test', 'app'), 'bun test')).toBe(false);
+    expect(cites(logged('bun test', 'app'), 'cd other && bun test')).toBe(false);
+  });
+
+  test('a cited command that exited non-zero does not check out', () => {
+    expect(cites(logged('bun test', 'app', 1), 'cd app && bun test')).toBe(false);
+  });
+
+  test('a log line without a folder means the root, and the folder survives parsing', () => {
+    expect(cites({fileLines: () => null, commands: parseCommandLog('{"command":"bun test","exit":0}\n')}, 'bun test')).toBe(true);
+    expect(parseCommandLog(logLine({command: 'x', exit: 0, output: '', dir: 'app'}))[0].dir).toBe('app');
+  });
+
+  test('shell words handle escapes and empty quotes', () => {
+    expect(shellWords(`a "b \\" c" '' d\\ e`)).toEqual(['a', 'b " c', '', 'd e']);
+  });
 });

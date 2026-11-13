@@ -17,12 +17,18 @@ export function parseCommandLog(text: string): CommandRun[] {
     if (!line.trim()) continue;
     try {
       const r = JSON.parse(line) as Partial<CommandRun>;
-      if (typeof r.command === 'string' && typeof r.exit === 'number') runs.push({command: r.command, exit: r.exit, output: typeof r.output === 'string' ? r.output : ''});
+      if (typeof r.command === 'string' && typeof r.exit === 'number') runs.push({command: r.command, exit: r.exit, output: typeof r.output === 'string' ? r.output : '', ...(typeof r.dir === 'string' ? {dir: r.dir} : {})});
     } catch {
       // skip
     }
   }
   return runs;
+}
+
+/** The command line for arguments run as given: one argument is the line itself, several are each quoted so they stay one word. */
+export function commandLine(args: string[]): string {
+  if (args.length === 1) return args[0].trim();
+  return args.map(a => (/^[A-Za-z0-9_@%+=:,./-]+$/.test(a) ? a : `'${a.replace(/'/g, `'\\''`)}'`)).join(' ');
 }
 
 /**

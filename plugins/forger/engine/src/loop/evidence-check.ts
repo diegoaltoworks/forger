@@ -4,7 +4,7 @@
  * Pure: the files and the command log are handed in as a `CopyRecord`.
  */
 
-import {isAbsolute, normalize} from 'path';
+import {isAbsolute, join, normalize} from 'path';
 
 import type {Evidence} from './verdict';
 
@@ -13,6 +13,8 @@ export interface CommandRun {
   command: string;
   exit: number;
   output: string;
+  /** The folder it ran in, relative to the root of the copy; a log written without it means the root. */
+  dir?: string;
 }
 
 export interface CopyRecord {
@@ -58,6 +60,64 @@ export function testNameMatches(reported: string, ref: string): boolean {
   return i === want.length - 1;
 }
 
+/** Splits a shell command line into words, honouring quotes and backslashes; operators stay words of their own when spaced. */
+export function shellWords(line: string): string[] {
+  const words: string[] = [];
+  let cur: string | null = null;
+  let quote: '"' | "'" | null = null;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (quote === "'") {
+      if (ch === "'") quote = null;
+      else cur += ch;
+    } else if (quote === '"') {
+      if (ch === '"') quote = null;
+      else if (ch === '\\' && i + 1 < line.length && '"\\$`'.includes(line[i + 1])) cur += line[++i];
+      else cur += ch;
+    } else if (ch === "'" || ch === '"') {
+      quote = ch;
+      cur = cur ?? '';
+    } else if (ch === '\\' && i + 1 < line.length) {
+      cur = (cur ?? '') + line[++i];
+    } else if (/\s/.test(ch)) {
+      if (cur !== null) words.push(cur);
+      cur = null;
+    } else {
+      cur = (cur ?? '') + ch;
+    }
+  }
+  if (cur !== null) words.push(cur);
+  return words;
+}
+
+const folderOf = (p: string): string => normalize(p || '.').replace(/\/+$/, '') || '.';
+
+/**
+ * A command and the folder it ran in, in one form: a `sh -c` or `bash -c`
+ * wrapper removed, a leading `cd <folder> &&` counted into the folder, and the
+ * rest split into shell words so the style of quoting does not matter.
+ */
+export function normalizeCommand(command: string, dir = '.'): {dir: string; words: string[]} {
+  let words = shellWords(command);
+  let folder = folderOf(dir);
+  for (let guard = 0; guard < 8; guard++) {
+    if ((words[0] === 'sh' || words[0] === 'bash') && words[1] === '-c' && words.length === 3) {
+      words = shellWords(words[2]);
+    } else if (words[0] === 'cd' && words.length > 3 && words[2] === '&&') {
+      folder = folderOf(join(folder, words[1]));
+      words = words.slice(3);
+    } else break;
+  }
+  return {dir: folder, words};
+}
+
+/** Whether a cited command is a logged one: the same folder and the same words. */
+export function sameCommand(cited: string, run: CommandRun, citedDir = '.'): boolean {
+  const a = normalizeCommand(cited, citedDir);
+  const b = normalizeCommand(run.command, run.dir ?? '.');
+  return a.dir === b.dir && a.words.length > 0 && a.words.length === b.words.length && a.words.every((w, i) => w === b.words[i]);
+}
+
 function insideCopy(path: string): string | null {
   const rel = normalize(path);
   return isAbsolute(rel) || rel.startsWith('..') ? null : rel;
@@ -86,7 +146,7 @@ export function evidenceHolds(record: CopyRecord, e: Evidence): boolean {
       return hits.length > 0 && hits.every(t => t.passed);
     }
     case 'command':
-      return record.commands.some(c => squash(c.command) === squash(ref) && c.exit === 0);
+      return record.commands.some(c => c.exit === 0 && sameCommand(ref, c));
     // Only the engine's own spec check is evidence of kind check; a verifier cannot claim it.
     default:
       return false;

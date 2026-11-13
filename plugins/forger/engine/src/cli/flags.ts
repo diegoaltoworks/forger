@@ -69,6 +69,7 @@ export const FLAGS = {
   'enforced-by': {type: 'string'},
   title: {type: 'string'},
   file: {type: 'string'},
+  root: {type: 'string'},
   'dry-run': {type: 'boolean', default: false},
   section: {type: 'string', multiple: true},
   fix: {type: 'boolean', default: false},
