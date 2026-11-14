@@ -18,3 +18,4 @@
 {"event":"blocked_on_owner","at":"2026-11-14T07:27:52.717Z","iteration":228,"ticket":null,"reason":"issue-457 blocked by issue-456 (needs_human); issue-458 blocked by issue-457 (not_started), issue-456 (needs_human); issue-459 blocked by issue-458 (not_started), issue-457 (not_started), issue-456 (needs_human)"}
 {"event":"picked","at":"2026-11-14T07:33:16.368Z","iteration":229,"ticket":"issue-461","reason":null}
 {"event":"merged","at":"2026-11-14T07:37:54.967Z","iteration":229,"ticket":"issue-461","reason":null}
+{"event":"picked","at":"2026-11-14T07:38:10.298Z","iteration":230,"ticket":"issue-457","reason":null}
