@@ -26,6 +26,7 @@ the next `work catalogue --update` moves the row back to Open.
 
 | Failure | What it looks like | Issue |
 |---|---|---|
+| The comparison report prices a ticket at its budget cap | The cost per merged ticket in the comparison report is the cap, so two runs with the same cap never differ on cost. | [#458](https://github.com/diegoaltoworks/forger/issues/458) |
 
 ## Fixed
 

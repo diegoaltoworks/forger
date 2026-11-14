@@ -9,8 +9,10 @@ import type {Measures} from './measure';
 export interface ComparisonReport {
   tickets_merged: number;
   failure_causes: Record<string, number>;
-  /** Budget lines over merged tickets; null when nothing merged or no budget was recorded. */
+  /** Session spend of every ticket in the period over the merged tickets; null when nothing merged or any ticket's cost is unknown. */
   cost_per_merged_ticket: number | null;
+  /** Tickets in the period whose cost is unknown; a null cost says why. A report saved before this field reads as zero. */
+  cost_unknown_tickets: number;
   rework: {ci_extra_rounds: number; blocked_prs: number; rerun_after_conflict: number; redone_tickets: number};
   owner_interventions: {total: number | null; by_event: Record<string, number>; unknown_reason?: string};
 }
@@ -31,12 +33,13 @@ export interface ReportDiff {
 }
 
 export function buildComparisonReport(m: Measures): ComparisonReport {
-  const budgeted = m.tickets.filter(t => t.budget_cap_usd !== null);
-  const budget = budgeted.reduce((a, t) => a + (t.budget_cap_usd as number), 0);
+  const unknown = m.tickets.filter(t => t.cost_usd === null).length;
+  const spend = m.tickets.reduce((a, t) => a + (t.cost_usd ?? 0), 0);
   return {
     tickets_merged: m.merged.tickets,
     failure_causes: {...m.runs.by_cause},
-    cost_per_merged_ticket: m.merged.tickets === 0 || budgeted.length === 0 ? null : budget / m.merged.tickets,
+    cost_per_merged_ticket: m.merged.tickets === 0 || unknown > 0 ? null : spend / m.merged.tickets,
+    cost_unknown_tickets: unknown,
     rework: {
       ci_extra_rounds: m.tickets.reduce((a, t) => a + Math.max((t.ci_rounds ?? 1) - 1, 0), 0),
       blocked_prs: m.verification.blocked,

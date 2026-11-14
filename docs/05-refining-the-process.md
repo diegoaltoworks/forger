@@ -208,7 +208,10 @@ records yet it says so and exits 0.
 
 `measure --report` folds these into the five-measure comparison report of
 ADR 0012, and `measure --diff A.json B.json` gives the per-measure delta between
-two saved reports.
+two saved reports. The report's cost per merged ticket is the session spend of
+every ticket in the period, merged or not, over the merged tickets; it is null
+when nothing merged or any ticket's cost is unknown, and `cost_unknown_tickets`
+counts those tickets. The budget cap is not part of it.
 
 `report` shows the owner four of these without the retro detail: cost per merged
 ticket (the mean over tickets whose cost is known, with how many are unknown),

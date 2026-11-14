@@ -32,6 +32,7 @@ describe('buildComparisonReport', () => {
       tickets_merged: 0,
       failure_causes: {},
       cost_per_merged_ticket: null,
+      cost_unknown_tickets: 0,
       rework: {ci_extra_rounds: 0, blocked_prs: 0, rerun_after_conflict: 0, redone_tickets: 0},
       owner_interventions: {total: 0, by_event: {}},
     });
@@ -42,10 +43,11 @@ describe('buildComparisonReport', () => {
       ...base,
       iterations: [it(1, 'a', 'completed'), it(2, 'b', 'completed'), it(3, 'c', 'failed', 'timeout')],
       budgets: [
-        {ticket: 'a', model: 'm', budgetUsd: 10},
-        {ticket: 'b', model: 'm', budgetUsd: 20},
-        {ticket: 'c', model: 'm', budgetUsd: 5},
+        {ticket: 'a', model: 'm', budgetUsd: 10, sessionId: 'sa'},
+        {ticket: 'b', model: 'm', budgetUsd: 20, sessionId: 'sb'},
+        {ticket: 'c', model: 'm', budgetUsd: 5, sessionId: 'sc'},
       ],
+      sessionCosts: {sa: 1, sb: 2, sc: 0.5},
       ciRuns: [
         {headBranch: 'feat/a', event: 'pull_request'},
         {headBranch: 'feat/a', event: 'pull_request'},
@@ -57,10 +59,42 @@ describe('buildComparisonReport', () => {
     expect(buildComparisonReport(m)).toEqual({
       tickets_merged: 2,
       failure_causes: {timeout: 1},
-      cost_per_merged_ticket: 17.5,
+      cost_per_merged_ticket: 1.75,
+      cost_unknown_tickets: 0,
       rework: {ci_extra_rounds: 2, blocked_prs: 0, rerun_after_conflict: 0, redone_tickets: 0},
       owner_interventions: {total: 2, by_event: {halted: 1, merged_red: 1}},
     });
+  });
+});
+
+describe('cost per merged ticket', () => {
+  const run = (cap: number, costs: Record<string, number | null>, statuses = ['completed', 'completed']) =>
+    buildComparisonReport(
+      computeMeasures({
+        ...base,
+        iterations: statuses.map((s, i) => it(i + 1, 't' + i, s)),
+        budgets: statuses.map((_, i) => ({ticket: 't' + i, model: 'm', budgetUsd: cap, sessionId: 's' + i})),
+        sessionCosts: costs,
+      })
+    );
+
+  test("the report's cost per merged ticket is the spend of the period over the merged tickets", () => {
+    expect(run(18, {s0: 1, s1: 3}).cost_per_merged_ticket).toBe(2);
+  });
+
+  test('spend on a ticket that did not merge counts toward the cost per merged ticket', () => {
+    expect(run(18, {s0: 1, s1: 3}, ['completed', 'failed']).cost_per_merged_ticket).toBe(4);
+  });
+
+  test("the report's cost is unknown when a ticket's cost is unknown, and it counts those tickets", () => {
+    const r = run(18, {s0: 1, s1: null});
+    expect(r.cost_per_merged_ticket).toBeNull();
+    expect(r.cost_unknown_tickets).toBe(1);
+  });
+
+  test('two runs with the same cap and different spend differ on cost per merged ticket', () => {
+    const d = diffReports(run(18, {s0: 1, s1: 1}), run(18, {s0: 2, s1: 4}));
+    expect(d.cost_per_merged_ticket).toEqual({a: 1, b: 3, delta: 2});
   });
 });
 
@@ -89,6 +123,7 @@ describe('diffReports', () => {
     tickets_merged: merged,
     failure_causes: causes,
     cost_per_merged_ticket: cost,
+    cost_unknown_tickets: 0,
     rework: {ci_extra_rounds: merged, blocked_prs: 0, rerun_after_conflict: 0, redone_tickets: 0},
     owner_interventions: {total: halted, by_event: (halted === 0 ? {} : {halted}) as Record<string, number>},
   });
