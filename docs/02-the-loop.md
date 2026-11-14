@@ -259,7 +259,7 @@ verifier, and a `met` on a state with no resolving screenshot is demoted to
 The engine does not take a `met` on the verifier's word. The verifier runs the
 commands it cites through `run-logged`, which appends each command with its exit
 code and output to a log the engine owns. It clears the variables under which a
-test tool prints failures only, so a passed test shows in the log. Every
+test tool prints failures only, so a passed test shows in the log. Output past the log's limit is cut, but every test result line is kept and the record says `truncated`; a demoted test citation says so when a record was cut. Every
 citation is then checked against what the engine recorded in the copy: a `file`
 exists and the line is within it, a `test` appears in a recorded run and passed
 (cited as the run reported it, or as `describe > test` with the enclosing

@@ -50,3 +50,13 @@ test('run-logged records the folder a command ran in, relative to the copy', asy
   await runLogged(['--file', log, '--root', d, '--', 'true']);
   expect(parseCommandLog(readFileSync(log, 'utf-8')).map(r => r.dir)).toEqual(['.', 'app']);
 });
+
+test('run-logged keeps the result lines of a long output and marks the record truncated', async () => {
+  const d = copy();
+  const log = join(d, 'log.jsonl');
+  await runLogged(['--file', log, '--', `echo '(pass) early test'; head -c 300000 /dev/zero | tr '\\0' x`]);
+  const [run] = parseCommandLog(readFileSync(log, 'utf-8'));
+  expect(run.truncated).toBe(true);
+  expect(run.output).toContain('(pass) early test');
+  expect(run.output.length).toBeLessThan(201_000);
+});
