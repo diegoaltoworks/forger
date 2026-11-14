@@ -208,3 +208,62 @@ describe('the read-only rule resolves the repository a git command acts on', () 
     expect(allowed('cat <<-\'EOF\'\n\tgit reset --hard\n\tEOF\ngit commit -m x')).toBe(false);
   });
 });
+
+describe('leave-worktree', () => {
+  const wf: WorkerFacts = {...facts, worktree: {path: '/loop/.forger/worktrees/issue-7', loopRoot: '/loop', cwd: '/loop/.forger/worktrees/issue-7'}};
+  const edit = (tool: string, file_path: string): ToolCall => ({tool_name: tool, tool_input: {file_path}});
+  const editRule = (tool: string, path: string): string | null => {
+    const d = decideWorker(DEFAULT_POLICY, edit(tool, path), wf);
+    return d.allow ? null : d.rule;
+  };
+
+  test.each(['Edit', 'Write', 'MultiEdit', 'NotebookEdit'])('an editor tool call on a path in the loop\'s checkout outside the worker\'s worktree is refused as leave-worktree (%s)', tool => {
+    expect(editRule(tool, '/loop/plugins/x.ts')).toBe('leave-worktree');
+    expect(editRule(tool, '../../../plugins/x.ts')).toBe('leave-worktree');
+  });
+
+  test.each([
+    'cd /loop',
+    'cd /loop/plugins && ls',
+    'pushd /loop',
+    'git status && cd .. && cd ../.. && ls',
+    'bash -c "cd /loop && ls"',
+    'echo hi; (cd /loop)',
+  ])('cd into the loop\'s checkout outside the worker\'s worktree is refused as leave-worktree: %s', command => expect(rule(command, wf)).toBe('leave-worktree'));
+
+  test.each([
+    'echo x > /loop/a.ts',
+    'echo x >> /loop/a.ts',
+    'cat y | tee /loop/a.ts',
+    'sed -i s/a/b/ /loop/a.ts',
+    'cp a.ts /loop/a.ts',
+    'rm /loop/a.ts',
+    'cd .. && echo x > ../../../a.ts',
+  ])('a redirect or an in-place edit aimed at the loop\'s checkout outside the worker\'s worktree is refused as leave-worktree: %s', command => expect(rule(command, wf)).toBe('leave-worktree'));
+
+  test('another worker\'s worktree counts as outside', () => {
+    expect(rule('cd /loop/.forger/worktrees/issue-8', wf)).toBe('leave-worktree');
+    expect(editRule('Edit', '/loop/.forger/worktrees/issue-8/a.ts')).toBe('leave-worktree');
+  });
+
+  test('a path inside the worker\'s own worktree is allowed', () => {
+    expect(rule('cd /loop/.forger/worktrees/issue-7/plugins && echo x > a.ts', wf)).toBeNull();
+    expect(rule('echo x > /loop/.forger/worktrees/issue-7/a.ts', wf)).toBeNull();
+    expect(rule('echo x > /tmp/a.ts', wf)).toBeNull();
+    expect(editRule('Write', '/loop/.forger/worktrees/issue-7/a.ts')).toBeNull();
+    expect(editRule('Write', 'src/a.ts')).toBeNull();
+    expect(editRule('Write', '/tmp/notes/a.md')).toBeNull();
+  });
+
+  test('reading a file of the loop\'s checkout by its absolute path is allowed, and so is running the engine from there', () => {
+    expect(rule('cat /loop/docs/a.md', wf)).toBeNull();
+    expect(rule('cp /loop/docs/a.md ./a.md', wf)).toBeNull();
+    expect(rule('grep -r x /loop/plugins | head', wf)).toBeNull();
+    expect(rule('bun /loop/plugins/forger/bin/work.ts verify --pr 3 --json', wf)).toBeNull();
+  });
+
+  test('the rule does not apply to a worker the engine did not start in a worktree, or when the policy drops it', () => {
+    expect(rule('cd /loop', facts)).toBeNull();
+    expect(rule('cd /loop', wf, {...DEFAULT_POLICY, rules: ['merge']})).toBeNull();
+  });
+});

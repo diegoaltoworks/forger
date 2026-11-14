@@ -191,6 +191,11 @@ policy and the call, and it reads through chains (`&&`, `;`, pipes), wrappers
   `forger/verify`.
 - `state-edit`: editing or removing the engine's state under `.forger/` (state,
   events, verdicts, checks, HALT, lock, lease), by an editor tool or a shell write.
+- `leave-worktree`: for a worker the engine started in a worktree of its own
+  (the engine names it in the worker's environment), an editor tool call, a
+  `cd` or a shell write on a path in the loop's checkout outside that
+  worktree. Another worker's worktree counts as outside. Reading the loop's
+  checkout by path, and running the engine from it, stay allowed.
 
 A refusal tells the worker what to do instead, and is appended to the event
 file as `worker_denied`, with the ticket, the rule and the refused command. A

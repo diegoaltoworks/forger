@@ -81,6 +81,7 @@ takes the ticket out of the backlog; do not relabel the issue by hand.
   concurrent sessions skip it.
 
 ### 4. Implement
+- All work happens in your worktree: the loop's checkout is read by path and never entered or written.
 - If the issue has a `Satisfies:` line, read the context of each ID it names with
   `bun "${CLAUDE_PLUGIN_ROOT}/bin/work.ts" slice <ID...>` (exit 2: no spec provider installed; carry on).
 - Follow existing patterns - read the files the ticket names and match the code

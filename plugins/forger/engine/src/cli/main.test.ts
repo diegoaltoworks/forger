@@ -445,7 +445,7 @@ describe('setup --json', () => {
     const settings = readFileSync(join(root, '.claude', 'settings.json'), 'utf-8');
     expect(JSON.parse(settings).permissions).toEqual({allow: ['Bash(ls)']});
     expect(JSON.parse(settings).hooks.PreToolUse[0].hooks[0].command).toBe(HOOK_COMMAND_LINE);
-    expect(JSON.parse(readFileSync(join(root, '.forger', 'hooks.json'), 'utf-8')).rules).toEqual(['merge', 'push-base', 'status-write', 'state-edit']);
+    expect(JSON.parse(readFileSync(join(root, '.forger', 'hooks.json'), 'utf-8')).rules).toEqual(['merge', 'push-base', 'status-write', 'state-edit', 'leave-worktree']);
     const second = JSON.parse(await capture(['setup', '--json']));
     expect(second.files).toContainEqual({path: '.claude/settings.json', action: 'kept'});
     expect(readFileSync(join(root, '.claude', 'settings.json'), 'utf-8')).toBe(settings);

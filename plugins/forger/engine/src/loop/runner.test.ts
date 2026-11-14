@@ -133,6 +133,7 @@ describe('AutomationRunner worker environment', () => {
     await runner.runIteration(1);
     expect(calls[0].env?.FORGER_PLUGIN_ROOT).toBe('/opt/plugin');
     expect(calls[0].env?.FORGER_ROLE).toBe('worker');
+    expect('FORGER_WORKTREE' in (calls[0].env ?? {})).toBe(false);
   });
 });
 

@@ -1,6 +1,6 @@
 import {describe, expect, test} from 'bun:test';
 
-import {workerEnv, workerIdentity} from './worker-env';
+import {workerEnv, workerIdentity, workerWorktree} from './worker-env';
 
 describe('worker environment', () => {
   test('the identity reads back what the engine set', () => {
@@ -19,5 +19,17 @@ describe('worker environment', () => {
   test('a process the engine did not start is no worker', () => {
     expect(workerIdentity({})).toBeNull();
     expect(workerIdentity({FORGER_ROLE: 'supervisor'})).toBeNull();
+  });
+});
+
+describe('the worker\'s worktree', () => {
+  test('the engine starts a worker with its worktree named in the environment', () => {
+    const env = workerEnv('issue-7', 1, undefined, undefined, '/loop/.forger/worktrees/issue-7');
+    expect(env.FORGER_WORKTREE).toBe('/loop/.forger/worktrees/issue-7');
+    expect(workerWorktree(env)).toBe('/loop/.forger/worktrees/issue-7');
+  });
+  test('a worker in the loop\'s own checkout has none', () => {
+    expect('FORGER_WORKTREE' in workerEnv('t', 1)).toBe(false);
+    expect(workerWorktree(workerEnv('t', 1))).toBeNull();
   });
 });

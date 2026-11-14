@@ -31,6 +31,20 @@ const bash = (root: string, command: string) => ({tool_name: 'Bash', tool_input:
 const now = new Date('2000-01-02T03:04:05.000Z');
 
 describe('the hook for a worker', () => {
+  test('a leave-worktree refusal is recorded as worker_denied with the ticket', () => {
+    const root = project();
+    const tree = join(root, '.forger', 'worktrees', 'issue-7');
+    mkdirSync(tree, {recursive: true});
+    const appended: Array<{event: string; ticket?: string | null; reason?: string}> = [];
+    const spy = {...io('feat/issue-7'), appendEvent: (_r: string, _c: unknown, e: never) => void appended.push(e)};
+    const env = workerEnv('issue-7', 3, undefined, undefined, tree);
+    const run = runHook({tool_name: 'Bash', tool_input: {command: `cd ${root}`}, cwd: tree}, env, spy, now);
+    expect(run.decision).toMatchObject({allow: false, rule: 'leave-worktree'});
+    expect(appended).toMatchObject([{event: 'worker_denied', ticket: 'issue-7', reason: `leave-worktree: cd ${root}`}]);
+    const inside = runHook({tool_name: 'Write', tool_input: {file_path: join(tree, 'a.ts')}, cwd: tree}, env, spy, now);
+    expect(inside.decision).toEqual({allow: true});
+  });
+
   test('a refusal is recorded as worker_denied, and events --json lists it', async () => {
     const root = project();
     const run = runHook(bash(root, 'git status && gh pr merge 7 --squash'), workerEnv('issue-7', 3), io('feat/issue-7'), now);
