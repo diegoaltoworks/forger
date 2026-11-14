@@ -209,8 +209,9 @@ finish, squash-merges only when all passed and `verify` recorded a passing
 verdict for the PR's current head (a later push makes it stale; `block` and
 `unclear` both refuse and name the criteria), and confirms the merge from the
 PR's state; it exits 1 when it refuses. When `verify` or `merge` refuses because the engine's source has
-uncommitted changes, the engine's checkout is not yours to repair: do not touch it, run `decline --reason blocked`
-with the refusal as the detail, and signal `stop`. When `verify` does not pass, run
+uncommitted changes, the engine's checkout is not yours to repair: do not touch it, do not decline the ticket
+(the cause is the checkout, not the ticket), and signal `stop` with the refusal as the reason. The engine halts the loop
+and keeps the ticket and its PR for the run after the resume. When `verify` does not pass, run
 `handover --pr <pr> --json`: `move: "fix"` means make the open criteria decidable
 (a test, a command, a clearer assertion), push, and `verify` again;
 `move: "hand_over"` means the rounds are spent, the issue is now `needs-human`

@@ -1111,6 +1111,59 @@ describe('AutomationRunner on a conflict stop', () => {
   });
 });
 
+describe('AutomationRunner on an engine_changed event', () => {
+  function refusedRunner(declines: boolean) {
+    const root = mkdtempSync(join(tmpdir(), 'forger-runner-'));
+    dirs.push(root);
+    const config = mergeConfig({limits: {maxStallIterations: 50}});
+    const data = {features: {the_ticket: {priority: 'P1', status: 'not_started', depends_on: []}}} as BacklogData;
+    const runner = new AutomationRunner(root, config, backlogFrom(() => data, config), {
+      stateStore: localStateFor(root, config),
+      agent: {run: async () => {
+        mkdirSync(join(root, '.forger'), {recursive: true});
+        const event = {event: 'engine_changed', at: 't', iteration: 1, ticket: 'the_ticket', reason: 'merge: engine/a.ts, engine/b.ts'};
+        writeFileSync(join(root, '.forger', 'events.jsonl'), `${JSON.stringify(event)}\n`);
+        if (declines) writeFileSync(join(root, '.forger', 'declined.json'), JSON.stringify({ticket: 'the_ticket', reason: 'blocked', detail: 'refused', at: 't'}));
+        return {exitCode: 0, signal: null, output: '<process>stop</process> the engine checkout changed', timedOut: false};
+      }},
+      gitRunner: sceneRunner({}, () => true),
+      uuid: () => '00000000-0000-0000-0000-000000000000',
+    });
+    return {runner, root};
+  }
+
+  test('an iteration with an engine_changed event for its ticket halts the loop and the reason names the paths', async () => {
+    const {runner, root} = refusedRunner(false);
+    await runner.runIteration(1);
+    expect(existsSync(join(root, '.forger', 'HALT'))).toBe(true);
+    const halt = readFileSync(join(root, '.forger', 'HALT'), 'utf-8');
+    expect(halt).toContain('engine/a.ts, engine/b.ts');
+    expect(halt).toContain('Commit or discard');
+  });
+
+  test('an iteration with an engine_changed event sets no ticket aside and counts no failure, stall or decline', async () => {
+    const {runner, root} = refusedRunner(false);
+    await runner.runIteration(1);
+    const state = readState(root);
+    expect(state.set_aside_tasks).toEqual([]);
+    expect(state.consecutive_set_asides).toBe(0);
+    expect(state.consecutive_failures).toBe(0);
+    expect(state.failed_iterations).toBe(0);
+    expect(state.stall_count).toBe(0);
+    expect(state.declined_tasks).toEqual([]);
+    expect(state.consecutive_declines).toBe(0);
+  });
+
+  test('a decline recorded in an iteration with an engine_changed event is dropped', async () => {
+    const {runner, root} = refusedRunner(true);
+    await runner.runIteration(1);
+    const state = readState(root);
+    expect(state.declined_tasks).toEqual([]);
+    expect(state.consecutive_declines).toBe(0);
+    expect(existsSync(join(root, '.forger', 'HALT'))).toBe(true);
+  });
+});
+
 describe('AutomationRunner on a worker stop', () => {
   const knock = (paths: string): string => `## Acceptance\n- [ ] \`bun run check\` exits 0\n\n## Knock-on\n\n${paths}\n`;
   const ticket = (priority: string, paths: string) => ({priority, status: 'not_started', depends_on: [] as string[], body: knock(paths)});

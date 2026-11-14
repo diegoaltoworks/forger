@@ -53,6 +53,8 @@ export interface RunFacts {
   ownerReviews?: boolean;
   /** The worker's complete conflict block, when it stopped on one. */
   conflictStop?: Conflict | null;
+  /** Why the loop halts: the run's `verify` or `merge` was refused for a changed engine. Null or absent when it was not. */
+  engineChanged?: string | null;
 }
 
 export interface Outcome {
@@ -129,6 +131,12 @@ export function decideOutcome(f: RunFacts): Outcome {
   const unverified = f.merged ? unverifiedMerge(f.pr, f.verdict, f.baseBranch) : null;
   if (unverified) {
     return {status: 'unverified', result: 'failure', merged: true, error: unverified, warning: null, halt: unverified, haltKind: 'unverified'};
+  }
+
+  // The cause is the engine's checkout, not the ticket: halt, count nothing, set
+  // nothing aside, and let a decline the worker recorded fall away.
+  if (!f.merged && f.engineChanged) {
+    return {status: 'error', result: 'neutral', merged: false, error: f.engineChanged, warning: null, halt: f.engineChanged};
   }
 
   // The pick is the contract: work on another ticket is real but is never the

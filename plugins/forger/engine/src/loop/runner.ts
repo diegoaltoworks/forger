@@ -28,7 +28,7 @@ import {conflictAfterAttempt, folderMapFrom, inWorktree} from './parallel';
 import {worktreeWorkspace, type WorkspaceSandbox} from './worktree-workspace';
 import {pidAlive, RunnerLock} from './lock';
 import {criterionOptions, refuseUncheckable} from './ticket-check';
-import {eventLine, terminalEvent, type EventKind, type TerminalEvent, type TerminalEventKind} from './events';
+import {eventLine, parseAllEvents, terminalEvent, type EventKind, type TerminalEvent, type TerminalEventKind} from './events';
 import {UNCAUSED, type HaltClearWhy} from './halt-clear';
 import {appendSchedule} from './schedule-log';
 import {buildStatus, type StatusReport} from './status-report';
@@ -173,6 +173,7 @@ export class AutomationRunner {
         this.fileReviews(iteration);
         this.deliver(iteration, ticket);
       },
+      events: () => parseAllEvents(this.stateStore.readEvents()),
       resolvePlan: deps.resolvePlan,
       probeRunner: deps.probeRunner,
       pluginRoot: deps.pluginRoot,
