@@ -214,7 +214,9 @@ ticket (the mean over tickets whose cost is known, with how many are unknown),
 the rework rate, escaped defects and owner interventions, all from `measure`.
 `report --json` carries them under `measures`; an unreadable tracker reports
 them as null, not zero. Owner interventions are unknown, with the reason, when
-the events file has no record of a run in the period. Cost finds a session's
+the events file has no record of any kind (picked, merged, a mid-run or a
+terminal event) for a run in the period; the comparison report then carries a
+null total with the reason, and `measure --diff` gives no delta for it. Cost finds a session's
 transcript from the full id in the work log, or from the shortened id older
 runs wrote.
 

@@ -106,6 +106,7 @@ export function gatherMeasures(ctx: CommandContext): Measures {
     ...(Object.values(sessionCosts).some(c => c === null) ? ['session transcripts'] : []),
   ];
   const journeysFile = forgerPath(projectRoot, JOURNEYS_PATH);
+  const allEvents = parseAllEvents(ctx.stateStore.readEvents());
   const measures = computeMeasures({
     ...(existsSync(journeysFile) ? {journeys: loadJourneysConfig(projectRoot).journeys} : {}),
     ...(changes === null ? {} : {changes}),
@@ -115,7 +116,8 @@ export function gatherMeasures(ctx: CommandContext): Measures {
     verdicts: readAllVerdicts(verdictsHome(ctx.run(), projectRoot, config.paths.verdicts)),
     schedule: readSchedule(join(outDir, 'schedule-decisions.jsonl')),
     events: parseEvents(ctx.stateStore.readEvents()),
-    clears: parseAllEvents(ctx.stateStore.readEvents()).filter(e => e.event === 'halt_cleared'),
+    records: allEvents,
+    clears: allEvents.filter(e => e.event === 'halt_cleared'),
     ciRuns,
     last: values.last === undefined ? null : parseInt(values.last, 10),
   });

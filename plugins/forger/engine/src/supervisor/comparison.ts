@@ -12,7 +12,7 @@ export interface ComparisonReport {
   /** Budget lines over merged tickets; null when nothing merged or no budget was recorded. */
   cost_per_merged_ticket: number | null;
   rework: {ci_extra_rounds: number; blocked_prs: number; rerun_after_conflict: number; redone_tickets: number};
-  owner_interventions: {total: number; by_event: Record<string, number>};
+  owner_interventions: {total: number | null; by_event: Record<string, number>; unknown_reason?: string};
 }
 
 export interface Delta {
@@ -43,7 +43,10 @@ export function buildComparisonReport(m: Measures): ComparisonReport {
       rerun_after_conflict: m.parallel.rework.rerun_after_conflict,
       redone_tickets: m.rework.redone_tickets,
     },
-    owner_interventions: {total: m.owner_interventions.total, by_event: {...m.owner_interventions.by_event}},
+    owner_interventions:
+      m.interventions_unknown === null
+        ? {total: m.owner_interventions.total, by_event: {...m.owner_interventions.by_event}}
+        : {total: null, by_event: {}, unknown_reason: m.interventions_unknown},
   };
 }
 
