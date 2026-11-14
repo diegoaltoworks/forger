@@ -14,7 +14,7 @@ export const runLogged: Command = {
   help: `  run-logged --file LOG [--root DIR] -- COMMAND...
                    Run a command in a shell, pass its output and exit code through, and append the
                    command, the folder it ran in (relative to DIR, default the current folder), its
-                   exit code and its output to LOG (every test result line is kept; the rest is cut to a limit and the record says `truncated`); several arguments stay one argument each; the verifier's evidence is checked
+                   exit code and its output to LOG (every test result line is kept; the rest is cut to a limit and the record says truncated); several arguments stay one argument each; the verifier's evidence is checked
                    against this log`,
   run(ctx) {
     const file = ctx.values.file as string | undefined;
