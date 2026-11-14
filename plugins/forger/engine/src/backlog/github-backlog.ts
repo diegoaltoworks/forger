@@ -203,16 +203,20 @@ export function parseIssuesResponse(raw: string): TrackedIssue[] {
   return [...issues.values()];
 }
 
+/** The tickets whose blocker list the first query cut short; each is read whole by its own query. */
+export function cutShortBlockers(issues: TrackedIssue[]): TrackedIssue[] {
+  return issues.filter(issue => isTruncated(issue.blockedBy));
+}
+
 function isTruncated(page: Page<unknown> | undefined): boolean {
   return typeof page?.totalCount === 'number' && page.totalCount > (page.nodes?.length ?? 0);
 }
 
-/** Lists the query cut short; a missing label or blocker would change the pick. */
+/** Label lists the query cut short; a missing label would change the pick. */
 export function truncatedLists(issues: TrackedIssue[]): string[] {
   const found: string[] = [];
   for (const issue of issues) {
     if (isTruncated(issue.labels)) found.push(`labels on #${issue.number}`);
-    if (isTruncated(issue.blockedBy)) found.push(`blockers on #${issue.number}`);
     for (const b of issue.blockedBy?.nodes ?? []) {
       if (isTruncated(b.labels)) found.push(`labels on #${b.number}`);
     }
@@ -231,6 +235,70 @@ export function issuesCommand(tracker: TrackerSettings): string {
     `-f label=${shellQuote(tracker.label)}`,
     `-f query=${shellQuote(ISSUES_QUERY)}`,
   ].join(' ');
+}
+
+/** Blockers read per request when one ticket's whole list is fetched. */
+export const BLOCKERS_PAGE = 25;
+
+export const BLOCKERS_QUERY = `query($owner: String!, $repo: String!, $number: Int!, $endCursor: String) {
+  repository(owner: $owner, name: $repo) {
+    issue(number: $number) {
+      blockedBy(first: ${BLOCKERS_PAGE}, after: $endCursor) {
+        totalCount
+        pageInfo { hasNextPage endCursor }
+        nodes { number state ${LABELS} ${CLOSER} }
+      }
+    }
+  }
+}`;
+
+export function blockersCommand(number: number): string {
+  return [
+    'gh api graphql --paginate --slurp',
+    `-F owner='{owner}' -F repo='{repo}'`,
+    `-F number=${number}`,
+    `-f query=${shellQuote(BLOCKERS_QUERY)}`,
+  ].join(' ');
+}
+
+/**
+ * Every blocker of one ticket from `gh api graphql --paginate --slurp`. Fewer
+ * nodes than the ticket's totalCount throws: a shorter list would change the pick.
+ */
+export function parseBlockersResponse(raw: string, number: number): Page<IssueNode> {
+  const fail = (why: string): Error => new Error(`GitHub backlog: the blockers of #${number} ${why}`);
+  if (raw.trim() === '') throw fail('could not be read: gh printed nothing');
+  let pages: unknown;
+  try {
+    pages = JSON.parse(raw);
+  } catch {
+    throw fail('could not be read: gh returned invalid JSON');
+  }
+  if (!Array.isArray(pages) || pages.length === 0) throw fail('could not be read: expected an array of pages');
+  const nodes: IssueNode[] = [];
+  let totalCount: number | undefined;
+  for (const p of pages) {
+    const list = (p as {data?: {repository?: {issue?: {blockedBy?: Page<IssueNode>}}}})?.data?.repository?.issue?.blockedBy;
+    if (!Array.isArray(list?.nodes)) throw fail('could not be read: a page has no blockers');
+    totalCount = list.totalCount;
+    nodes.push(...list.nodes);
+  }
+  if (typeof totalCount !== 'number') throw fail('could not be read: no total count');
+  const unique = [...new Map(nodes.map(n => [n.number, n])).values()];
+  if (unique.length < totalCount) throw fail(`were read short: ${unique.length} of ${totalCount}`);
+  const found = truncatedLists(unique.map(n => ({...n})));
+  if (found.length > 0) throw new Error(`GitHub backlog: more than a page of ${found.join(', ')}; raise PAGE in github-backlog.ts`);
+  return {totalCount, nodes: unique};
+}
+
+function withWholeBlockers(run: CapturingRunner, issue: TrackedIssue): TrackedIssue {
+  const result = run(blockersCommand(issue.number));
+  if (result.exitCode !== 0 || result.stdout.trim() === '') {
+    if (isRateLimited(result.stderr)) throw ghFailure(run, result.exitCode, result.stderr);
+    const said = result.stderr.trim() === '' ? 'nothing on stderr' : `on stderr: ${result.stderr.trim()}`;
+    throw new Error(`GitHub backlog: the blockers of #${issue.number} could not be read: gh exited ${result.exitCode}, ${said}`);
+  }
+  return {...issue, blockedBy: parseBlockersResponse(result.stdout, issue.number)};
 }
 
 export const RATE_LIMIT_COMMAND = 'gh api rate_limit';
@@ -271,7 +339,9 @@ export function readIssueBacklog(run: CapturingRunner, tracker: TrackerSettings)
   if (result.exitCode !== 0 || result.stdout.trim() === '') {
     throw ghFailure(run, result.exitCode, result.stderr);
   }
-  const issues = parseIssuesResponse(result.stdout);
+  const first = parseIssuesResponse(result.stdout);
+  const cut = new Set(cutShortBlockers(first).map(i => i.number));
+  const issues = first.map(i => (cut.has(i.number) ? withWholeBlockers(run, i) : i));
   const {prs, anomaly} = readOutsidePrs(run);
   const data = backlogFromIssues(issues, tracker, prs);
   if (anomaly) data.anomalies = [...(data.anomalies ?? []), anomaly];

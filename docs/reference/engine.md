@@ -27,7 +27,9 @@ an infrastructure error, not a worker failure: the loop halts at once with the
 reason and the failure counter is left alone. A tracker read refused by
 GitHub's rate limit is one too, naming the limit and its reset time (from
 `gh api rate_limit`); the engine waits for the reset and carries on, never
-charging the wait to a ticket. `resume` requires `--cause <issue>` (with a GitHub tracker the issue must exist)
+charging the wait to a ticket. A ticket with more blockers than the backlog query's page has
+its whole blocker list read by a second query for that ticket; a list that cannot be read in
+full fails the read and names the ticket, never reading as a shorter one. `resume` requires `--cause <issue>` (with a GitHub tracker the issue must exist)
 or `--not-a-defect "<why>"`; with neither it exits non-zero and clears nothing.
 It clears the HALT and zeroes the failure and stall counters, so the first run
 after a fix starts clean, and the first run after any start is never counted as

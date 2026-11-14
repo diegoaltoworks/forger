@@ -17,7 +17,8 @@ reads; a tracker is an adapter behind it.
   footprint and the folder map. Then `schedule` rules on a pair. Then `pick`
   works over the ordered candidates (ADR 0011). Pure, no I/O.
 - `github-backlog.ts` - GitHub Issues as a Backlog, through an injected
-  `CapturingRunner`. Pure over it.
+  `CapturingRunner`. Pure over it. A second query fetches the whole blocker
+  list of a ticket the first query cut short.
 - `graphql-cost.ts` - a GraphQL query's rate-limit cost. Pure.
 - `file-backlog.ts` - `backlog.json` as a Backlog. Reads the file.
 - `*.json`, `*.stderr` - recorded `gh` output the tests replay.

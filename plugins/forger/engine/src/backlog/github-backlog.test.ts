@@ -14,10 +14,13 @@ import {
   issuesCommand,
   labelMatches,
   ISSUES_QUERY,
+  BLOCKERS_QUERY,
+  blockersCommand,
   PAGE,
   QUERY_COST_BUDGET,
   RATE_LIMIT_COMMAND,
   parseIssuesResponse,
+  readIssueBacklog,
   ticketFromIssue,
   truncatedLists,
 } from './github-backlog';
@@ -318,8 +321,6 @@ describe('parseIssuesResponse with recently closed issues', () => {
   });
 
   test('a list longer than its page fails the read instead of dropping entries', () => {
-    const many = {...issue(2), blockedBy: {totalCount: PAGE.blockers + 1, nodes: [issue(1)]}};
-    expect(() => parseIssuesResponse(JSON.stringify([page([many])]))).toThrow(/more than a page of blockers on #2/);
     expect(truncatedLists([{...issue(4), labels: {totalCount: 3, nodes: [{name: 'a'}]}}])).toEqual(['labels on #4']);
   });
 });
@@ -406,5 +407,72 @@ describe('an open outside PR', () => {
   test('an unreadable PR list is reported, not read as none', () => {
     const backlog = tracked('fail');
     expect(backlog.report().anomalies).toEqual([expect.stringContaining('could not be read')]);
+  });
+});
+
+describe('a ticket with more blockers than a page', () => {
+  const blockerIds = Array.from({length: PAGE.blockers + 2}, (_, i) => 100 + i);
+  const cutShort = (): TrackedIssue => ({
+    ...issue(2),
+    blockedBy: {totalCount: blockerIds.length, nodes: blockerIds.slice(0, PAGE.blockers).map(n => issue(n))},
+  });
+  const blockersPage = (ids: number[], total = blockerIds.length): unknown => ({
+    data: {repository: {issue: {blockedBy: {totalCount: total, nodes: ids.map(n => issue(n))}}}},
+  });
+  const reader = (blockers: (cmd: string) => CommandResult, calls: string[] = []) => (cmd: string): CommandResult => {
+    calls.push(cmd);
+    if (cmd === VIEWER_COMMAND) return ok('loop\n');
+    if (cmd === OPEN_PRS_COMMAND) return ok('[]');
+    if (cmd === RATE_LIMIT_COMMAND) return ok(rateLimitJson);
+    if (cmd.includes('number=')) return blockers(cmd);
+    return ok(JSON.stringify([page([cutShort(), issue(3)])]));
+  };
+
+  test('a ticket with more blockers than a page depends on every one of them', () => {
+    const read = reader(() => ok(JSON.stringify([blockersPage(blockerIds.slice(0, 4)), blockersPage(blockerIds.slice(4))])));
+    const data = readIssueBacklog(read, tracker);
+    expect((data.features['issue-2'] as {depends_on?: string[]}).depends_on).toEqual(blockerIds.map(n => `issue-${n}`));
+  });
+
+  test('the second blockers query runs only for tickets whose blockers were cut short', () => {
+    const calls: string[] = [];
+    readIssueBacklog(reader(() => ok(JSON.stringify([blockersPage(blockerIds)])), calls), tracker);
+    expect(calls.filter(c => c.includes('number='))).toEqual([blockersCommand(2)]);
+    const plain: string[] = [];
+    readIssueBacklog(
+      cmd => {
+        plain.push(cmd);
+        if (cmd === VIEWER_COMMAND) return ok('loop\n');
+        if (cmd === OPEN_PRS_COMMAND) return ok('[]');
+        return ok(JSON.stringify([page([issue(3)])]));
+      },
+      tracker
+    );
+    expect(plain.filter(c => c.includes('number='))).toEqual([]);
+  });
+
+  test('a second blockers read that fails fails the backlog read and names the ticket', () => {
+    for (const out of [{stdout: '', stderr: 'HTTP 502', exitCode: 1}, ok('')]) {
+      expect(() => readIssueBacklog(reader(() => out), tracker)).toThrow(/blockers of #2 could not be read/);
+    }
+  });
+
+  test('a second blockers read that is still short fails the backlog read', () => {
+    expect(() => readIssueBacklog(reader(() => ok(JSON.stringify([blockersPage(blockerIds.slice(0, 6))]))), tracker)).toThrow(
+      /blockers of #2 were read short: 6 of 7/
+    );
+  });
+
+  test('a rate limit on the second blockers read is a rate-limit infrastructure error', () => {
+    expect(() => readIssueBacklog(reader(() => ({stdout: '', stderr: rateLimitStderr, exitCode: 1})), tracker)).toThrow(RateLimitError);
+  });
+
+  test('the second blockers query stays within the cost budget', () => {
+    expect(graphqlCost(BLOCKERS_QUERY)).toBeLessThanOrEqual(QUERY_COST_BUDGET);
+  });
+
+  test('more labels than a page still fails the read', () => {
+    const many = {...issue(2), labels: {totalCount: PAGE.labels + 1, nodes: [{name: 'ready-for-agent'}]}};
+    expect(() => parseIssuesResponse(JSON.stringify([page([many])]))).toThrow(/more than a page of labels on #2/);
   });
 });
