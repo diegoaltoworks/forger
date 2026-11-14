@@ -38,6 +38,8 @@ reason; `report` lists each uncaused clear under waiting on you.
 
 `measure` counts a run as covered when the events file holds a record of it of any kind, but counts owner interventions by terminal events only. When a run has no record the count is unknown: `measure --report` writes `owner_interventions` as `{total: null, by_event: {}, unknown_reason}`, and `measure --diff` gives a null delta for the total.
 
+`measure --json` also reports `worker_denials` as `{total, by_rule, by_ticket}`: the `worker_denied` events of the runs in the period, the rule being the reason's text before its first colon. It is null, and the readable line says `unknown` with the reason, when the events file does not cover the period. The comparison report does not carry it.
+
 `verify` and `merge` refuse, and record `engine_changed`, when the engine's own source still has uncommitted changes after waiting `limits.engineChangedWaitSeconds`. The loop halts on that event and sets no ticket aside.
 
 A failed gate is run once more on the same head by `verify`; a pass records a

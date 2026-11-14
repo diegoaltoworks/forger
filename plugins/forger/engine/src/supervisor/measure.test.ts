@@ -302,3 +302,40 @@ describe('measures carry the journey share', () => {
     expect(formatMeasures(m)).toContain('journeys: 1 of 1');
   });
 });
+
+describe('worker denials', () => {
+  const run = (iteration: number) => parseIterationLog(log({iteration, ticket: `issue-${iteration}`})) as IterationRecord;
+  const ev = (name: 'worker_denied' | 'completed', iteration: number, reason: string | null = null) => terminalEvent(name, iteration, `issue-${iteration}`, reason);
+  const base = {budgets: [], ciRuns: [], last: null};
+
+  test('worker denials are counted by rule and by ticket within the period', () => {
+    const denials = [ev('worker_denied', 1, 'merge: first'), ev('worker_denied', 1, 'merge: second'), ev('worker_denied', 2, 'leave-worktree: cd /x: y')];
+    const m = computeMeasures({...base, iterations: [run(1), run(2)], events: [ev('completed', 1), ev('completed', 2)], records: [...denials, ev('completed', 1), ev('completed', 2)], denials});
+    expect(m.worker_denials).toEqual({total: 3, by_rule: {merge: 2, 'leave-worktree': 1}, by_ticket: {'issue-1': 2, 'issue-2': 1}});
+    expect(m.events).toEqual({completed: 2});
+  });
+
+  test('a period with no refused call reports zero worker denials', () => {
+    const m = computeMeasures({...base, iterations: [run(1)], events: [ev('completed', 1)]});
+    expect(m.worker_denials).toEqual({total: 0, by_rule: {}, by_ticket: {}});
+    expect(formatMeasures(m)).toContain('worker denials: none');
+  });
+
+  test('worker denials are unknown when the events file does not cover the period', () => {
+    const m = computeMeasures({...base, iterations: [run(1), run(2)], events: [ev('completed', 1)]});
+    expect(m.worker_denials).toBeNull();
+    expect(formatMeasures(m)).toContain(`worker denials: unknown (${m.interventions_unknown})`);
+  });
+
+  test('the readable measure prints the worker denials line with each rule and its count', () => {
+    const denials = [ev('worker_denied', 1, 'merge: a'), ev('worker_denied', 1, 'merge: b'), ev('worker_denied', 1, 'push: c')];
+    const m = computeMeasures({...base, iterations: [run(1)], events: [ev('completed', 1)], denials});
+    expect(formatMeasures(m)).toContain('worker denials: 3 (merge 2, push 1)');
+  });
+
+  test('a denial outside the last N runs is not counted', () => {
+    const denials = [ev('worker_denied', 1, 'merge: a'), ev('worker_denied', 2, 'push: b')];
+    const m = computeMeasures({...base, iterations: [run(1), run(2)], events: [ev('completed', 1), ev('completed', 2)], denials, last: 1});
+    expect(m.worker_denials).toEqual({total: 1, by_rule: {push: 1}, by_ticket: {'issue-2': 1}});
+  });
+});

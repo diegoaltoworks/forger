@@ -168,6 +168,7 @@ and the time, budget cap (`budget_cap_usd`), cost (`cost_usd`) and CI rounds per
 (a `feat/issue-<n>` branch attaches to ticket `issue-<n>`),
 over all runs or the last N. It also reports the merged tickets, the tickets
 that had to be redone and the events that stop the loop until a person acts.
+It reports the calls the worker's hook refused (`worker_denials`) by rule and by ticket, so a change to the worker's instructions shows in how often a refused call is tried.
 The cost is what the ticket's sessions spent: the work log names each worker's
 session id, the harness's transcript for that session holds the token usage per
 message, and a price table kept as data turns it into dollars. A project
