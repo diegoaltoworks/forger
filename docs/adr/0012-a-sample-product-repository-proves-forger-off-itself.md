@@ -55,7 +55,7 @@ All measures already exist or are small additions to `measure`, so none is colle
 |---|---|
 | Tickets merged | the tracker: closed by a merged PR |
 | Failures and their causes | `measure` (failures by cause) |
-| Cost per merged ticket | the budget lines in the work log, divided by merged tickets |
+| Cost per merged ticket | the session transcripts' cost of every ticket in the period (merged or not), divided by merged tickets; see [ADR 0013](0013-measures-report-cost-and-rework-per-merged-ticket.md) |
 | Rework | CI rounds per ticket (`measure`), plus PRs reopened or followed by a fix for the same ticket |
 | Owner interventions | events in the event log of an approval asked, a HALT cleared by a human, or a work-order note |
 
