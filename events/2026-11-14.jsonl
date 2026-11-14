@@ -26,3 +26,4 @@
 {"event":"merged","at":"2026-11-14T07:58:12.621Z","iteration":232,"ticket":"issue-459","reason":null}
 {"event":"completed","at":"2026-11-14T07:58:22.055Z","iteration":232,"ticket":null,"reason":null}
 {"event":"picked","at":"2026-11-14T20:58:41.784Z","iteration":233,"ticket":"issue-466","reason":null}
+{"event":"worker_denied","at":"2026-11-14T20:59:35.956Z","iteration":233,"ticket":"issue-466","reason":"leave-worktree: cd /home/diego/work/forger; sed -n 24,60p docs/06-failure-catalogue.md; grep -n -i \"github-backlog\\|tracker read\\|blocked-by\" docs/reference/engine.md plugins/forger/engine/src/backlog/README.md | head"}
