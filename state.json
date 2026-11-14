@@ -215,7 +215,10 @@
       "ticket": "issue-444",
       "pid": null,
       "session_id": "81615877-0586-4ab5-a718-45dd22c57fca",
-      "snapshot": null,
+      "snapshot": {
+        "baseSha": "",
+        "reflogLength": 1
+      },
       "started_at": "2026-11-14T04:02:03.909Z",
       "plan": {
         "stages": [
