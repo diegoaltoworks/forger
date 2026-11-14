@@ -1,6 +1,6 @@
 {
   "id": "base",
-  "version": "1.7.0",
+  "version": "1.8.0",
   "description": "The process every forger project starts from: the work-loop config, the process doc, the backlog and the ticket, PR, report and retro shapes.",
   "detect": [],
   "files": [
@@ -26,7 +26,7 @@
     {"id": "base.no-transient-specifics", "rung": "rule", "summary": "Durable docs carry no counts, timings or dates; they point at the command that computes them.", "check": null},
     {"id": "base.one-ticket-one-pr", "rung": "template", "summary": "One ticket per iteration, one feat PR carrying code, tests and docs.", "check": null},
     {"id": "base.merge-through-tool", "rung": "check", "summary": "Commands merge only through the merge tool, which waits for every check and refuses a red PR.", "check": "docs"},
-    {"id": "base.worker-hooks", "rung": "check", "summary": "The harness hook refuses a worker's hand merge, push to the base branch or force push, status write and edit of the engine's state; dropping a default rule needs a waiver.", "check": "hooks"},
+    {"id": "base.worker-hooks", "rung": "check", "summary": "The harness hook refuses a worker's hand merge, push to the base branch or force push, status write, edit of the engine's state and a write or cd into the loop's checkout outside the worker's worktree; dropping a default rule needs a waiver.", "check": "hooks"},
     {"id": "base.guards-hold", "rung": "check", "summary": "A diff does not loosen a guard file, delete a guard or test file or skip a test unless the ticket's Decisions name it.", "check": "guards"},
     {"id": "base.gates-never-bypassed", "rung": "rule", "summary": "Gates are green before every commit and merge, and hooks are never bypassed.", "check": null}
   ],

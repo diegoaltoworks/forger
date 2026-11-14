@@ -2,11 +2,11 @@
   "packs": [
     {
       "id": "base",
-      "version": "1.7.0",
+      "version": "1.8.0",
       "files": [
         {
           "path": ".forger/templates/pr.md",
-          "sha256": "4cc1fbdba26617792d68984215d4c74b4ef996f6d7fac8fea7aa684623c46525"
+          "sha256": "076020e351411b082fec63ae2244c902dab7635b260e4e01855b84bbb69ddc66"
         },
         {
           "path": ".forger/templates/product.md",
@@ -30,7 +30,7 @@
         },
         {
           "path": ".forger/templates/ticket.md",
-          "sha256": "b3073b3bb6cfe2a18caa217702fd245082e743da6f823af31cc0932e71c7f7db"
+          "sha256": "99fd3b693c961caaace6188e1f4c20bdb6d0d17cfb041c3bb28832acf59c627c"
         },
         {
           "path": ".forger/templates/work-order.md",

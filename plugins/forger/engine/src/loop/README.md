@@ -64,7 +64,7 @@ Pure:
   (ADR 0011). It holds the git calls aimed at a worktree and the folder map
   the scheduling rule reads. It also holds the conflict check after a worker's
   one attempt, and the clean-up that drops a conflicted branch.
-- `worker-env.ts` - the role, ticket and iteration the engine puts in a
+- `worker-env.ts` - the role, ticket, iteration and worktree the engine puts in a
   worker's environment. The harness hook reads them back.
 - `merged.ts`, `run-facts.ts` - git facts, through an injected `CommandRunner`.
 - `merge.ts` - merges a PR only once every check passed. The decision is pure.

@@ -5,7 +5,7 @@ import {dirname, isAbsolute, join, resolve} from 'path';
 import {gitStateStore, localStateFor} from '../adapters';
 import {isProjectRoot, loadConfig, type WorkloopConfig} from '../config';
 import {decideSupervisor, decideWorker, DEFAULT_POLICY, HOOKS_POLICY_PATH, parseHookPolicy, toolCalls, type HookDecision, type HookPayload, type HookPolicy, type ToolCall} from '../hooks';
-import {eventLine, RunnerLock, terminalEvent, workerIdentity, type TerminalEvent} from '../loop';
+import {eventLine, RunnerLock, terminalEvent, workerIdentity, workerWorktree, type TerminalEvent} from '../loop';
 import type {Command} from './command';
 
 /** What the hook reads of the world, so a test hands in its own. */
@@ -78,7 +78,8 @@ export function runHook(input: HookInput, env: Record<string, string | undefined
   }
   const branch = io.git(cwd, 'branch --show-current')?.trim() || null;
   const policy = policyAt(io, loopRoot);
-  const facts = {baseBranch: config.base_branch, currentBranch: branch, statePaths: statePaths(config)};
+  const worktree = workerWorktree(env);
+  const facts = {baseBranch: config.base_branch, currentBranch: branch, statePaths: statePaths(config), ...(worktree ? {worktree: {path: worktree, loopRoot, cwd}} : {})};
   const decision = calls.map((call: ToolCall) => decideWorker(policy, call, facts)).find(d => !d.allow) ?? {allow: true as const};
   if (decision.allow) return {decision, role: 'worker'};
   try {

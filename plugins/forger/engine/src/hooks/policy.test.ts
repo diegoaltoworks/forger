@@ -14,7 +14,7 @@ describe('parseHookPolicy', () => {
   });
 
   test('a list that leaves defaults out drops them', () => {
-    expect(droppedRules(parseHookPolicy('{"rules": ["merge"]}'))).toEqual(['push-base', 'status-write', 'state-edit']);
+    expect(droppedRules(parseHookPolicy('{"rules": ["merge"]}'))).toEqual(['push-base', 'status-write', 'state-edit', 'leave-worktree']);
   });
 
   test.each([

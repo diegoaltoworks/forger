@@ -8,7 +8,7 @@
 
 export const HOOKS_POLICY_PATH = '.forger/hooks.json';
 
-export const DEFAULT_RULES = ['merge', 'push-base', 'status-write', 'state-edit'] as const;
+export const DEFAULT_RULES = ['merge', 'push-base', 'status-write', 'state-edit', 'leave-worktree'] as const;
 
 export type DefaultRule = (typeof DEFAULT_RULES)[number];
 

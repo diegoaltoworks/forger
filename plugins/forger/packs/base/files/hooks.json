@@ -3,7 +3,8 @@
     "merge",
     "push-base",
     "status-write",
-    "state-edit"
+    "state-edit",
+    "leave-worktree"
   ],
   "deny": []
 }
