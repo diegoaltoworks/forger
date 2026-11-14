@@ -1,6 +1,6 @@
 {
   "iteration": 228,
-  "status": "running",
+  "status": "set-aside",
   "last_completed_at": "2026-11-14T06:09:04.325Z",
   "completed_iterations": 209,
   "failed_iterations": 7,
@@ -214,133 +214,7 @@
     "issue-452",
     "issue-453"
   ],
-  "in_flight": [
-    {
-      "ticket": "issue-456",
-      "pid": null,
-      "session_id": "732b84f5-e71f-49b0-ad85-9e73f34ae189",
-      "snapshot": {
-        "baseSha": "",
-        "reflogLength": 1
-      },
-      "started_at": "2026-11-14T07:25:21.731Z",
-      "plan": {
-        "stages": [
-          {
-            "id": "intake",
-            "slots": [
-              {
-                "slot": "interview",
-                "invoke": "builtin",
-                "target": "Ask the open decisions in numbered rounds, each with a recommended answer"
-              },
-              {
-                "slot": "glossary",
-                "invoke": "builtin",
-                "target": "Record new terms in GLOSSARY.md and decisions in docs/adr/"
-              },
-              {
-                "slot": "prototype",
-                "invoke": "file",
-                "target": "/home/diego/work/forger/plugins/forger/skills/prototype/SKILL.md",
-                "on": "creative_intent"
-              }
-            ]
-          },
-          {
-            "id": "plan",
-            "slots": []
-          },
-          {
-            "id": "build",
-            "slots": [
-              {
-                "slot": "test_first",
-                "invoke": "file",
-                "target": "/home/diego/work/forger/plugins/forger/skills/test_first/SKILL.md"
-              },
-              {
-                "slot": "diagnose",
-                "invoke": "file",
-                "target": "/home/diego/work/forger/plugins/forger/skills/diagnose/SKILL.md",
-                "on": "gate_red"
-              }
-            ]
-          },
-          {
-            "id": "review",
-            "slots": [
-              {
-                "slot": "review",
-                "invoke": "file",
-                "target": "/home/diego/work/forger/plugins/forger/skills/review/SKILL.md"
-              }
-            ]
-          },
-          {
-            "id": "risk",
-            "slots": [
-              {
-                "slot": "risk",
-                "invoke": "builtin",
-                "target": "List what the change touches beyond the diff and run the tests for it"
-              }
-            ]
-          },
-          {
-            "id": "pr",
-            "slots": [
-              {
-                "slot": "pr_body",
-                "invoke": "builtin",
-                "target": "Write the PR body by docs/03-tickets.md"
-              },
-              {
-                "slot": "merge_conflicts",
-                "invoke": "builtin",
-                "target": "Resolve the conflict by hand and re-run the gates",
-                "on": "rebase_conflict"
-              }
-            ]
-          },
-          {
-            "id": "verify",
-            "slots": [
-              {
-                "slot": "verify",
-                "invoke": "builtin",
-                "target": null
-              }
-            ]
-          },
-          {
-            "id": "merge",
-            "slots": []
-          },
-          {
-            "id": "critique",
-            "slots": [
-              {
-                "slot": "critique",
-                "invoke": "file",
-                "target": "/home/diego/work/forger/plugins/forger/skills/critique/SKILL.md"
-              }
-            ]
-          },
-          {
-            "id": "retro",
-            "slots": [
-              {
-                "slot": "retro",
-                "invoke": "builtin",
-                "target": "Walk the retro steps: capture, cause, form, write, land"
-              }
-            ]
-          }
-        ]
-      }
-    }
-  ],
+  "in_flight": [],
   "last_error": null,
   "stall_count": 0,
   "declined_tasks": [
@@ -372,7 +246,21 @@
   ],
   "consecutive_declines": 0,
   "owner_review_tasks": [],
-  "set_aside_tasks": [],
-  "consecutive_set_asides": 0,
+  "set_aside_tasks": [
+    {
+      "ticket": "issue-456",
+      "reason": "constraint: `the five measures from one run` (events for one of three runs, expects known counts) and `interventions are unknown while the events file misses a run` (events-only input with a gap, expects unknown) must both pass unchanged. The ticket also requires the comparison report to carry th...",
+      "iteration": 228,
+      "footprint": {
+        "paths": [
+          "plugins/forger/engine/src/supervisor/measure.ts",
+          "plugins/forger/engine/src/supervisor/comparison.ts",
+          "plugins/forger/engine/src/cli/measure.ts"
+        ],
+        "modules": []
+      }
+    }
+  ],
+  "consecutive_set_asides": 1,
   "last_remaining_count": 12
 }
