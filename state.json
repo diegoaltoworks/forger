@@ -222,7 +222,10 @@
       "ticket": "issue-459",
       "pid": null,
       "session_id": "b905b349-6e3f-4e6f-a6e6-ac69e8bcf4b2",
-      "snapshot": null,
+      "snapshot": {
+        "baseSha": "",
+        "reflogLength": 1
+      },
       "started_at": "2026-11-14T07:48:42.812Z",
       "plan": {
         "stages": [
