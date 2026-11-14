@@ -1,8 +1,8 @@
 {
   "iteration": 224,
-  "status": "running",
-  "last_completed_at": "2026-11-14T04:01:53.189Z",
-  "completed_iterations": 205,
+  "status": "completed",
+  "last_completed_at": "2026-11-14T04:10:50.304Z",
+  "completed_iterations": 206,
   "failed_iterations": 7,
   "consecutive_failures": 0,
   "completed_tasks": [
@@ -208,135 +208,10 @@
     "issue-438",
     "issue-429",
     "issue-446",
-    "issue-447"
+    "issue-447",
+    "issue-444"
   ],
-  "in_flight": [
-    {
-      "ticket": "issue-444",
-      "pid": null,
-      "session_id": "81615877-0586-4ab5-a718-45dd22c57fca",
-      "snapshot": {
-        "baseSha": "",
-        "reflogLength": 1
-      },
-      "started_at": "2026-11-14T04:02:03.909Z",
-      "plan": {
-        "stages": [
-          {
-            "id": "intake",
-            "slots": [
-              {
-                "slot": "interview",
-                "invoke": "builtin",
-                "target": "Ask the open decisions in numbered rounds, each with a recommended answer"
-              },
-              {
-                "slot": "glossary",
-                "invoke": "builtin",
-                "target": "Record new terms in GLOSSARY.md and decisions in docs/adr/"
-              },
-              {
-                "slot": "prototype",
-                "invoke": "file",
-                "target": "/home/diego/work/forger/plugins/forger/skills/prototype/SKILL.md",
-                "on": "creative_intent"
-              }
-            ]
-          },
-          {
-            "id": "plan",
-            "slots": []
-          },
-          {
-            "id": "build",
-            "slots": [
-              {
-                "slot": "test_first",
-                "invoke": "file",
-                "target": "/home/diego/work/forger/plugins/forger/skills/test_first/SKILL.md"
-              },
-              {
-                "slot": "diagnose",
-                "invoke": "file",
-                "target": "/home/diego/work/forger/plugins/forger/skills/diagnose/SKILL.md",
-                "on": "gate_red"
-              }
-            ]
-          },
-          {
-            "id": "review",
-            "slots": [
-              {
-                "slot": "review",
-                "invoke": "file",
-                "target": "/home/diego/work/forger/plugins/forger/skills/review/SKILL.md"
-              }
-            ]
-          },
-          {
-            "id": "risk",
-            "slots": [
-              {
-                "slot": "risk",
-                "invoke": "builtin",
-                "target": "List what the change touches beyond the diff and run the tests for it"
-              }
-            ]
-          },
-          {
-            "id": "pr",
-            "slots": [
-              {
-                "slot": "pr_body",
-                "invoke": "builtin",
-                "target": "Write the PR body by docs/03-tickets.md"
-              },
-              {
-                "slot": "merge_conflicts",
-                "invoke": "builtin",
-                "target": "Resolve the conflict by hand and re-run the gates",
-                "on": "rebase_conflict"
-              }
-            ]
-          },
-          {
-            "id": "verify",
-            "slots": [
-              {
-                "slot": "verify",
-                "invoke": "builtin",
-                "target": null
-              }
-            ]
-          },
-          {
-            "id": "merge",
-            "slots": []
-          },
-          {
-            "id": "critique",
-            "slots": [
-              {
-                "slot": "critique",
-                "invoke": "file",
-                "target": "/home/diego/work/forger/plugins/forger/skills/critique/SKILL.md"
-              }
-            ]
-          },
-          {
-            "id": "retro",
-            "slots": [
-              {
-                "slot": "retro",
-                "invoke": "builtin",
-                "target": "Walk the retro steps: capture, cause, form, write, land"
-              }
-            ]
-          }
-        ]
-      }
-    }
-  ],
+  "in_flight": [],
   "last_error": null,
   "stall_count": 0,
   "declined_tasks": [
