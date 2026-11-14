@@ -13,3 +13,4 @@
 {"event":"merged","at":"2026-11-14T06:09:04.325Z","iteration":227,"ticket":"issue-453","reason":null}
 {"event":"completed","at":"2026-11-14T06:09:14.343Z","iteration":227,"ticket":null,"reason":null}
 {"event":"picked","at":"2026-11-14T07:25:26.156Z","iteration":228,"ticket":"issue-456","reason":null}
+{"event":"worker_denied","at":"2026-11-14T07:26:06.549Z","iteration":228,"ticket":"issue-456","reason":"leave-worktree: cd /home/diego/work/forger; sed -n 214,220p docs/05-refining-the-process.md; grep -n \"interventions\" docs/reference/engine.md; tail -5 docs/06-failure-catalogue.md; grep -n \"catalogue\" plugins/forger/engine/src/cli/*.ts | head -3"}
