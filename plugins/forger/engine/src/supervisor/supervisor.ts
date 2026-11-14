@@ -4,7 +4,7 @@
  * (`commands/work.md`) calls these through the CLI and keeps only judgement.
  */
 
-import {conflictAnswer, behindBaseAnomaly, type BaseSync, missingVerifyStatusAnomaly, type LeaseView, openLabel, recommendationFor, type HandedOver, type StatusReport} from '../loop';
+import {conflictAnswer, behindBaseAnomaly, dirtyCheckoutAnomaly, type BaseSync, missingVerifyStatusAnomaly, type LeaseView, openLabel, recommendationFor, type HandedOver, type StatusReport} from '../loop';
 import type {Measures} from './measure';
 import {type Period} from './waiting';
 import {buildReportMeasures, formatReportMeasures, type ReportMeasures} from './report-measures';
@@ -69,6 +69,8 @@ export function orient(i: OrientInputs): OrientPlan {
   }
   const behind = behindBaseAnomaly(i.baseSync, i.baseBranch, s.runner.alive);
   if (behind) anomalies.push(behind);
+  const dirty = dirtyCheckoutAnomaly(i.baseSync, s.runner.alive);
+  if (dirty) anomalies.push(dirty);
   if (i.requiresVerify === false) anomalies.push(missingVerifyStatusAnomaly(i.baseBranch));
   if (i.hooksGate) anomalies.push(i.hooksGate);
   anomalies.push(...(i.backlogAnomalies ?? []));

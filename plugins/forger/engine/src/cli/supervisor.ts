@@ -4,6 +4,8 @@ import {join} from 'path';
 
 import {readBaseSync, decideHalt, pidAlive, viewLease, standingHalt, parseAllEvents, GhTrackerHalt, requiresVerifyStatus, handedOver, listRepoLabels, loopLabels, missingLabels, readAllVerdicts, verdictsHome, setAsideReasons} from '../loop';
 import {describeBlocked} from '../backlog';
+import {detectLayout} from '../config';
+import {gitignoreLines} from '../packs';
 import {engineStartLine, readEngineStart} from './detach';
 import {buildReport, formatReport, mergedInPeriod, orient as orientPlan, failedDeliveryItems, proposedAdrs, reportPeriod, uncausedClearItems, waitingIssues, ownerReviewPrs, OWNER_LABELS, type AdrText, type OwnerReviewPr, type MergedPrFact, type OwnerItem, type WaitingIssue} from '../supervisor';
 import {hooksGateProblems, hooksGateRefusal} from '../checks';
@@ -78,7 +80,7 @@ function supervise(which: 'orient' | 'report') {
     const lease = viewLease(ctx.stateStore.readLease(), new Date(), {host: hostname(), isAlive: pidAlive});
     const plan = orientPlan({
       lease,
-      baseSync: readBaseSync(ctx.run(), config.base_branch),
+      baseSync: readBaseSync(ctx.run(), config.base_branch, gitignoreLines(detectLayout(projectRoot).dir)),
       backlogAnomalies: ctx.backlog.report().anomalies,
       blockers: ctx.backlog.blocked().map(b => describeBlocked([b])),
       missingLabels: missing,

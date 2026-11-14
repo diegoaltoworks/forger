@@ -77,9 +77,23 @@ describe('orient', () => {
     expect(orient({...base, status: status(), requiresVerify: null}).anomalies).toEqual([]);
   });
   test('a behind base branch is an anomaly with no engine alive, not with one', () => {
-    const baseSync = {behind: 4, clean: true, onBase: true};
+    const baseSync = {behind: 4, clean: true, onBase: true, changed: []};
     expect(orient({...base, status: status(), baseSync}).anomalies.join(' ')).toContain('behind origin/main');
     expect(orient({...base, status: status({alive: true}), baseSync}).anomalies).toEqual([]);
+  });
+  test('orient reports a checkout with uncommitted changes when no engine is alive', () => {
+    const baseSync = {behind: 0, clean: false, onBase: true, changed: ['plugins/forger/engine/src/a.ts']};
+    const text = orient({...base, status: status(), baseSync}).anomalies.join(' ');
+    expect(text).toContain('plugins/forger/engine/src/a.ts');
+    expect(text).toContain('leaves such a checkout as it is');
+    expect(orient({...base, status: status({alive: true}), baseSync}).anomalies).toEqual([]);
+  });
+  test('orient does not say run brings the checkout up to date when it has uncommitted changes', () => {
+    const baseSync = {behind: 4, clean: false, onBase: true, changed: ['a.ts']};
+    const text = orient({...base, status: status(), baseSync}).anomalies.join(' ');
+    expect(text).toContain('behind origin/main');
+    expect(text).not.toContain('fast-forwards');
+    expect(text).toContain('does not bring it up to date');
   });
   test('a dead runner off the base branch is an anomaly', () => {
     const p = orient({...base, branch: 'feat/x', status: status({pid: 9})});

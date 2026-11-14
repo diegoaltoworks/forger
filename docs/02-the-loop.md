@@ -204,6 +204,11 @@ simple command, and the message). The defaults ship on: a policy may drop one,
 but `check hooks` fails until a waiver on `base.worker-hooks` records who
 approved it, and it fails too when the harness's settings do not run the hook.
 
+`verify` and `merge` look at the engine they were loaded from before anything else. When its source is in a git
+work tree and has an uncommitted change (a changed tracked file, or a new file git does not ignore), they refuse with
+exit 1: no verdict, no status, no merge, and an `engine_changed` event naming the paths. A verdict or a merge from a
+changed engine does not count. An engine outside a git work tree, as an installed plugin is, is not checked.
+
 The same hook guards the supervisor: a call made without the worker role,
 while an engine holds the lock, may not run a state-changing git command
 (`checkout`, `switch`, `reset`, `stash`, `pull`, `merge`, `commit`, `rebase`

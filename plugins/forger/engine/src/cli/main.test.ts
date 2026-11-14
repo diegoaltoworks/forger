@@ -752,7 +752,7 @@ describe('hooks gate before a worker starts', () => {
 
   test('orient reports a failing hooks gate as an anomaly', async () => {
     process.chdir(olderInstall());
-    const out = JSON.parse(await capture(['orient', '--json'], () => 'main'));
+    const out = JSON.parse(await capture(['orient', '--json'], cmd => (cmd.startsWith('git status') ? '' : 'main')));
     expect(out.anomalies.join(' ')).toContain('run `work.ts setup`');
   });
 
@@ -789,7 +789,7 @@ describe('supervisor commands', () => {
   });
   test('orient starts a runner when work remains and none is alive', async () => {
     process.chdir(projectWith({a: {status: 'not_started', priority: 'P0'}}));
-    const out = JSON.parse(await capture(['orient', '--json'], () => 'main'));
+    const out = JSON.parse(await capture(['orient', '--json'], cmd => (cmd.startsWith('git status') ? '' : 'main')));
     expect(out.action).toBe('start');
     expect(out.anomalies).toEqual([]);
   });
