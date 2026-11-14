@@ -133,7 +133,7 @@ The worker's hook records each call it refused as a `worker_denied` event, with
 the ticket, the rule and the command. It is a mid-run event: `events --json`
 lists it, and `await-event` and `watch` wake on it, but the run goes on. Report it; denials
 repeated on one ticket mean the ticket or the process tells the worker to do
-something it may not.
+something it may not. `measure` counts them by rule and by ticket (`worker_denials`).
 `verify` and `merge` refuse when the engine they run from has uncommitted changes, and record `engine_changed`
 (a mid-run event, like `worker_denied`) with the ticket and the paths. They wait `limits.engineChangedWaitSeconds` for the changes to go first. The worker stops without declining, and
 the loop halts naming the command and the paths; the ticket is not set aside. Commit or discard the changes in the

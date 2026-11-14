@@ -50,6 +50,12 @@ export interface TicketMeasure {
   plan?: StoredPlan;
 }
 
+export interface WorkerDenials {
+  total: number;
+  by_rule: Record<string, number>;
+  by_ticket: Record<string, number>;
+}
+
 export interface Measures {
   window: {last: number | null; iterations: number};
   runs: {total: number; ok: number; failed: number; by_cause: Record<string, number>};
@@ -76,6 +82,8 @@ export interface Measures {
   interventions_unknown: string | null;
   /** How cleared halts were explained: with a cause, as not a defect, or with no reason (ADR 0012). */
   halt_clears: HaltClearCounts;
+  /** Calls the worker's hook refused in the window, by rule and by ticket; null when the events file does not cover the window (see `interventions_unknown`). */
+  worker_denials: WorkerDenials | null;
   /** Rework and escaped defects over merged PRs (ADR 0013); null when the tracker could not be read. */
   change_rework: ReworkMeasures | null;
   /** Merged PRs that changed a journey against upkeep; null without a journeys file or a readable tracker. */
@@ -166,6 +174,8 @@ export interface MeasureInputs {
   records?: {iteration: number}[];
   /** The `halt_cleared` events; absent reads as none. */
   clears?: TerminalEvent[];
+  /** The `worker_denied` events; absent reads as none. */
+  denials?: TerminalEvent[];
   ciRuns: CiRun[];
   /** Session id -> cost in dollars, null when its transcript is missing; absent reads as none known. */
   sessionCosts?: Record<string, number | null>;
@@ -261,6 +271,21 @@ export function eventsGap(windowed: IterationRecord[], events: {iteration: numbe
   return `the events file has no record of ${missing.size} of ${windowed.length} run(s) in the period`;
 }
 
+/** The rule is the reason's text before its first colon. */
+export function workerDenials(denials: TerminalEvent[], first: number | null): WorkerDenials {
+  const out: WorkerDenials = {total: 0, by_rule: {}, by_ticket: {}};
+  for (const e of denials) {
+    if (e.event !== 'worker_denied' || (first !== null && e.iteration < first)) continue;
+    const reason = e.reason ?? '';
+    const rule = reason.includes(':') ? reason.slice(0, reason.indexOf(':')) : reason;
+    const ticket = e.ticket ?? 'none';
+    out.total += 1;
+    out.by_rule[rule] = (out.by_rule[rule] ?? 0) + 1;
+    out.by_ticket[ticket] = (out.by_ticket[ticket] ?? 0) + 1;
+  }
+  return out;
+}
+
 export function computeMeasures(inputs: MeasureInputs): Measures {
   const sorted = [...inputs.iterations].sort((a, b) => a.iteration - b.iteration);
   const windowed = inputs.last === null ? sorted : sorted.slice(-Math.max(inputs.last, 0));
@@ -286,6 +311,7 @@ export function computeMeasures(inputs: MeasureInputs): Measures {
   const interventions: Record<string, number> = {};
   for (const [name, n] of Object.entries(events)) if (INTERVENTION_EVENTS.includes(name)) interventions[name] = n;
   const rework = reworkMeasures(windowed);
+  const gap = eventsGap(windowed, inputs.records ?? inputs.events);
 
   const rounds = ciRoundsByBranch(inputs.ciRuns);
   const byTicket = new Map<string, string>();
@@ -323,7 +349,8 @@ export function computeMeasures(inputs: MeasureInputs): Measures {
     merged: {tickets: rework.merged},
     rework: {redone_tickets: rework.redone},
     owner_interventions: {total: Object.values(interventions).reduce((a, b) => a + b, 0), by_event: interventions},
-    interventions_unknown: eventsGap(windowed, inputs.records ?? inputs.events),
+    interventions_unknown: gap,
+    worker_denials: gap === null ? workerDenials(inputs.denials ?? [], first) : null,
     halt_clears: haltClearCounts((inputs.clears ?? []).filter(e => first === null || e.iteration >= first)),
     change_rework: inputs.changes === undefined ? null : computeRework(inputs.changes),
     journeys: inputs.journeys === undefined || inputs.changes === undefined ? null : computeJourneyShare(inputs.changes.prs.map(p => ({number: p.number, files: [...new Set([...p.ranges, ...(p.replaced ?? [])].map(r => r.file))]})), inputs.journeys),
@@ -347,6 +374,13 @@ function formatParallel(p: Measures['parallel']): string[] {
   ];
 }
 
+function formatWorkerDenials(m: Measures): string {
+  if (m.worker_denials === null) return `worker denials: unknown (${m.interventions_unknown})`;
+  if (m.worker_denials.total === 0) return 'worker denials: none';
+  const rules = Object.entries(m.worker_denials.by_rule).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).map(([k, v]) => `${k} ${v}`).join(', ');
+  return `worker denials: ${m.worker_denials.total} (${rules})`;
+}
+
 export function formatMeasures(m: Measures): string {
   const causes = Object.entries(m.runs.by_cause).map(([k, v]) => `${k} ${v}`).join(', ');
   const lines = [
@@ -355,6 +389,7 @@ export function formatMeasures(m: Measures): string {
     `verification: blocked ${pct(m.verification.blocked_share)} (${m.verification.blocked} of ${m.verification.verified}), passed then failed ${pct(m.verification.passed_then_failed_share)} (${m.verification.passed_then_failed} of ${m.verification.passed})`,
     ...formatParallel(m.parallel),
     `merged tickets: ${m.merged.tickets}, redone ${m.rework.redone_tickets}, owner interventions ${m.interventions_unknown === null ? m.owner_interventions.total : `unknown (${m.interventions_unknown})`}`,
+    formatWorkerDenials(m),
     ...formatHaltClears(m.halt_clears),
     ...(m.change_rework === null ? ['rework and escaped defects: unknown'] : formatRework(m.change_rework)),
     ...(m.journeys === null ? [] : [formatJourneyShare(m.journeys)]),
