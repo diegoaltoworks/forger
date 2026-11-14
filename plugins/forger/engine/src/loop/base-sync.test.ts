@@ -11,20 +11,20 @@ const fakeGit = (behind: string, status: string, branch = 'main') => (cmd: strin
 
 describe('base sync', () => {
   test('reads the behind count and cleanliness through git', () => {
-    expect(readBaseSync(fakeGit('3\n', ''), 'main')).toEqual({behind: 3, clean: true, onBase: true});
-    expect(readBaseSync(fakeGit('0', ' M a.ts'), 'main')).toEqual({behind: 0, clean: false, onBase: true});
+    expect(readBaseSync(fakeGit('3\n', ''), 'main')).toEqual({behind: 3, clean: true, onBase: true, changed: []});
+    expect(readBaseSync(fakeGit('0', ' M a.ts'), 'main')).toEqual({behind: 0, clean: false, onBase: true, changed: ['a.ts']});
   });
   test('a failing git leaves the count unknown', () => {
     const boom = (): string => {
       throw new Error('offline');
     };
-    expect(readBaseSync(boom, 'main')).toEqual({behind: null, clean: false, onBase: false});
+    expect(readBaseSync(boom, 'main')).toEqual({behind: null, clean: false, onBase: false, changed: []});
   });
   test('orient reports a behind base only while no engine is alive', () => {
-    const sync = {behind: 2, clean: false, onBase: true};
+    const sync = {behind: 2, clean: true, onBase: true, changed: []};
     expect(behindBaseAnomaly(sync, 'main', false)).toContain('fast-forwards it');
     expect(behindBaseAnomaly(sync, 'main', true)).toBeNull();
-    expect(behindBaseAnomaly({behind: 0, clean: true, onBase: true}, 'main', false)).toBeNull();
+    expect(behindBaseAnomaly({behind: 0, clean: true, onBase: true, changed: []}, 'main', false)).toBeNull();
     expect(behindBaseAnomaly(undefined, 'main', false)).toBeNull();
   });
   test('runtime files do not count as changes', () => {
@@ -34,7 +34,7 @@ describe('base sync', () => {
     expect(readBaseSync(fakeGit('1', ' M .forger/state.json'), 'main', runtime).clean).toBe(true);
   });
   test('the plan fast-forwards only on the base branch, clean, with no engine alive', () => {
-    const sync = {behind: 2, clean: true, onBase: true};
+    const sync = {behind: 2, clean: true, onBase: true, changed: []};
     expect(planBaseSync(sync, false)).toBe('fast-forward');
     expect(planBaseSync(sync, true)).toBe('none');
     expect(planBaseSync({...sync, clean: false}, false)).toBe('none');

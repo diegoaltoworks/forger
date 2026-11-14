@@ -36,9 +36,10 @@ export type RecordedEventKind = (typeof RECORDED_EVENTS)[number];
 /**
  * Mid-run facts a watcher wakes on while the run continues: a worker's call
  * the hook refused (`reason` carries the rule and the refused command) and a
- * halt the engine recovered by itself (`reason` carries the check that passed).
+ * halt the engine recovered by itself (`reason` carries the check that passed),
+ * and a `verify` or `merge` refused because the engine's source had uncommitted changes (`reason` carries the command and the paths).
  */
-export const MIDRUN_EVENTS = ['worker_denied', 'recovered'] as const;
+export const MIDRUN_EVENTS = ['worker_denied', 'recovered', 'engine_changed'] as const;
 
 export type MidrunEventKind = (typeof MIDRUN_EVENTS)[number];
 

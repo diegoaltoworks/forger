@@ -3,8 +3,28 @@ import {randomUUID} from 'crypto';
 
 import {agentFor, execCapture, findHarness, sandboxFor, sandboxSite, slcrProvider} from '../adapters';
 import {resolveModel} from '../config';
-import {eventLine, flakyReason, loopRootOf, terminalEvent, ticketFlaky, verdictsHome, verifierTier, verifyPr, type VerifyResult} from '../loop';
+import {engineChangedMessage, engineChanges, eventLine, flakyReason, loopRootOf, terminalEvent, ticketFlaky, verdictsHome, verifierTier, verifyPr, workerIdentity, type VerifyResult} from '../loop';
 import type {Command, CommandContext} from './command';
+
+/**
+ * Refuses a decision made from an engine whose source has uncommitted changes:
+ * sets exit 1, records `engine_changed` and says so. True when it refused.
+ */
+export function refuseChangedEngine(ctx: CommandContext, command: 'verify' | 'merge'): boolean {
+  const paths = engineChanges(ctx.run(), ctx.pluginRoot);
+  if (paths.length === 0) return false;
+  const worker = workerIdentity(process.env);
+  try {
+    ctx.stateStore.appendEvent(eventLine(terminalEvent('engine_changed', worker?.iteration ?? 0, worker?.ticket ?? null, `${command}: ${paths.join(', ')}`)), new Date());
+  } catch (e) {
+    console.error(`${command}: the refusal was not recorded: ${(e as Error).message}`);
+  }
+  process.exitCode = 1;
+  const message = engineChangedMessage(command, paths);
+  if (ctx.values.json) console.log(JSON.stringify({refused: 'engine_changed', paths, reason: message}));
+  else console.error(message);
+  return true;
+}
 
 /** Verifies one PR's head with the project's verifier; shared by `verify` and `recover`. */
 export function verifyOne(ctx: CommandContext, pr: number): Promise<VerifyResult> {
@@ -46,7 +66,8 @@ export const verify: Command = {
                    (exit 1 unless every criterion is met); on GitHub it also sets the forger/verify
                    status on the head: success for a pass, failure otherwise. "Gates green" is decided
                    from the head's CI checks, waiting up to the timeout for unfinished ones. A verdict that is not a pass
-                   keeps the copy's command log beside the verdict record (commandLog in the JSON)`,
+                   keeps the copy's command log beside the verdict record (commandLog in the JSON).
+                   Refuses (exit 1, no verdict, no status) when the engine's own source has uncommitted changes`,
   async run(ctx) {
     const {values} = ctx;
     const pr = parseInt((values.pr as string | undefined) ?? '', 10);
@@ -55,6 +76,7 @@ export const verify: Command = {
       process.exitCode = 1;
       return;
     }
+    if (refuseChangedEngine(ctx, 'verify')) return;
     try {
       const record = await verifyOne(ctx, pr);
       if (record.decision !== 'pass') process.exitCode = 1;

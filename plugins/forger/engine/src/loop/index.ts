@@ -7,6 +7,7 @@ export * from './aside';
 export * from './delivery';
 export * from './decline';
 export * from './decline-io';
+export * from './engine-changed';
 export * from './events';
 export * from './guards';
 export * from './placement';

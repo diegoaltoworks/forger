@@ -44,7 +44,8 @@ Asked once, written down, refined later (see `05-refining-the-process.md`):
   alive and says `run` closes it. `run` fast-forwards the base branch before its first pick when the checkout is on
   it, no other engine holds the lock, and the only uncommitted changes are the engine's runtime files (the ones
   `setup` adds to `.gitignore`). It is fast-forward only: nothing is stashed, reset or discarded, and a checkout with
-  any other uncommitted change is left as it is. When git refuses, `run` does not start and prints git's reason.
+  any other uncommitted change is left as it is; `orient` lists those changes as an anomaly by path, and then does
+  not say `run` brings the checkout up to date. When git refuses, `run` does not start and prints git's reason.
   When the update changed files under the plugin the engine runs from, the engine starts itself again once with the
   same arguments so that it runs the new code.
 - The hooks gate. A repository set up before a gate existed fails it on a clean base branch, and a worker would
@@ -133,6 +134,9 @@ the ticket, the rule and the command. It is a mid-run event: `events --json`
 lists it, and `await-event` and `watch` wake on it, but the run goes on. Report it; denials
 repeated on one ticket mean the ticket or the process tells the worker to do
 something it may not.
+`verify` and `merge` refuse when the engine they run from has uncommitted changes, and record `engine_changed`
+(a mid-run event, like `worker_denied`) with the ticket and the paths. The worker declines the ticket; the checkout
+is the owner's to repair.
 `verify` finds a PR's ticket from a `Closes #n` line in its body, then from a
 `feat/issue-<n>` branch (on a local tracker, `feat/<ticket-id>`). A PR the
 supervisor opens for itself carries `Closes #n` or an `## Acceptance` section of

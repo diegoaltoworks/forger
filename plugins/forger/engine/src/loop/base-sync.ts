@@ -13,6 +13,8 @@ export interface BaseSync {
   clean: boolean;
   /** The checkout is on the base branch. */
   onBase: boolean;
+  /** The uncommitted paths besides the engine's own runtime files. */
+  changed: string[];
 }
 
 /** Whether `path` is one of the runtime files; a pattern ending in a slash names a folder. */
@@ -22,10 +24,16 @@ export function isRuntimeFile(path: string, runtimeFiles: string[]): boolean {
 
 /** True when every change `git status --porcelain` lists is a runtime file. */
 export function onlyRuntimeChanges(porcelain: string, runtimeFiles: string[]): boolean {
+  return nonRuntimeChanges(porcelain, runtimeFiles).length === 0;
+}
+
+/** The changed paths `git status --porcelain` lists that are not runtime files. */
+export function nonRuntimeChanges(porcelain: string, runtimeFiles: string[]): string[] {
   return porcelain
     .split('\n')
     .filter(l => l.trim() !== '')
-    .every(l => isRuntimeFile(l.slice(3).replace(/^"|"$/g, ''), runtimeFiles));
+    .map(l => l.slice(3).replace(/^"|"$/g, ''))
+    .filter(path => !isRuntimeFile(path, runtimeFiles));
 }
 
 export type BaseSyncPlan = 'none' | 'fast-forward';
@@ -49,14 +57,21 @@ export function touchesPlugin(changed: string, pluginDir: string): boolean {
 }
 
 /** One line naming the gap and the command that closes it. */
-export function behindBaseMessage(base: string, behind: number): string {
-  return `the checkout's ${base} is ${behind} commit(s) behind origin/${base}, so the engine runs old code; \`run\` fast-forwards it before its first pick`;
+export function behindBaseMessage(base: string, behind: number, dirty = false): string {
+  const gap = `the checkout's ${base} is ${behind} commit(s) behind origin/${base}, so the engine runs old code`;
+  return dirty ? `${gap}; \`run\` does not bring it up to date while the checkout has uncommitted changes` : `${gap}; \`run\` fast-forwards it before its first pick`;
+}
+
+/** The anomaly `orient` reports for a checkout with uncommitted changes while no engine is alive. */
+export function dirtyCheckoutAnomaly(sync: BaseSync | undefined, engineAlive: boolean): string | null {
+  if (engineAlive || !sync || sync.changed.length === 0) return null;
+  return `the loop's checkout has uncommitted changes (${sync.changed.join(', ')}); \`run\` leaves such a checkout as it is, so the engine runs from it as it stands`;
 }
 
 /** The anomaly `orient` reports: only while no engine is alive, since a live one cannot be updated under itself. */
 export function behindBaseAnomaly(sync: BaseSync | undefined, base: string, engineAlive: boolean): string | null {
   if (engineAlive || !sync || sync.behind === null || sync.behind <= 0) return null;
-  return behindBaseMessage(base, sync.behind);
+  return behindBaseMessage(base, sync.behind, sync.changed.length > 0);
 }
 
 /** Reads the facts; a fetch or compare that fails leaves `behind` unknown. */
@@ -69,9 +84,11 @@ export function readBaseSync(run: CommandRunner, base: string, runtimeFiles: str
   } catch {
     behind = null;
   }
+  let changed: string[] = [];
   let clean = false;
   try {
-    clean = onlyRuntimeChanges(run('git status --porcelain'), runtimeFiles);
+    changed = nonRuntimeChanges(run('git status --porcelain'), runtimeFiles);
+    clean = changed.length === 0;
   } catch {
     clean = false;
   }
@@ -81,7 +98,7 @@ export function readBaseSync(run: CommandRunner, base: string, runtimeFiles: str
   } catch {
     onBase = false;
   }
-  return {behind, clean, onBase};
+  return {behind, clean, onBase, changed};
 }
 
 /** The message for a state-branch write that was refused, naming who pushed. */
