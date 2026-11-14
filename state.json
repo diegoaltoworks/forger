@@ -221,7 +221,10 @@
       "ticket": "issue-458",
       "pid": null,
       "session_id": "e055c935-f144-466b-b8d2-a95138322803",
-      "snapshot": null,
+      "snapshot": {
+        "baseSha": "",
+        "reflogLength": 1
+      },
       "started_at": "2026-11-14T07:43:17.530Z",
       "plan": {
         "stages": [
