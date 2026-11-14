@@ -1,5 +1,6 @@
 import {describe, expect, test} from 'bun:test';
 
+import {gitignoreLines} from '../packs';
 import {behindBaseAnomaly, fastForwardRefusal, onlyRuntimeChanges, planBaseSync, readBaseSync, touchesPlugin} from './base-sync';
 
 const fakeGit = (behind: string, status: string, branch = 'main') => (cmd: string): string => {
@@ -32,6 +33,11 @@ describe('base sync', () => {
     expect(onlyRuntimeChanges(' M .forger/state.json\n?? .forger/output/a.log\n', runtime)).toBe(true);
     expect(onlyRuntimeChanges(' M .forger/state.json\n M src/a.ts\n', runtime)).toBe(false);
     expect(readBaseSync(fakeGit('1', ' M .forger/state.json'), 'main', runtime).clean).toBe(true);
+  });
+  test('orient does not count the worktrees folder as an uncommitted change', () => {
+    const runtime = gitignoreLines('.forger');
+    expect(onlyRuntimeChanges('?? .forger/worktrees/issue-1/\n', runtime)).toBe(true);
+    expect(readBaseSync(fakeGit('0', '?? .forger/worktrees/'), 'main', runtime).clean).toBe(true);
   });
   test('the plan fast-forwards only on the base branch, clean, with no engine alive', () => {
     const sync = {behind: 2, clean: true, onBase: true, changed: []};

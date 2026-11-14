@@ -63,7 +63,7 @@ export function relocatableGates(gates: string): string {
 
 /** Per-run files a project never commits. */
 export function gitignoreLines(dir: string): string[] {
-  return ['state.json', 'work.log', 'output/', 'HALT', 'runner.lock', 'events.jsonl', 'declined.json', 'verdicts/', 'tmp/', 'checks.jsonl'].map(f => `${dir}/${f}`);
+  return ['state.json', 'work.log', 'output/', 'HALT', 'runner.lock', 'events.jsonl', 'declined.json', 'verdicts/', 'tmp/', 'checks.jsonl', 'worktrees/'].map(f => `${dir}/${f}`);
 }
 
 /** Runtime files git still tracks: an ignore line does not stop tracking a committed file. Unreadable git state reports none. */
