@@ -1564,3 +1564,73 @@ describe('setup --credential', () => {
     process.exitCode = 0;
   });
 });
+
+describe('setup --upgrade runs the checks after it wrote something', () => {
+  /** An installed repo where one pack file is forgotten by the lock and the disk, so the upgrade installs it. */
+  async function installed(extra: Record<string, string> = {}): Promise<string> {
+    const root = realpathSync(mkdtempSync(join(tmpdir(), 'forger-cli-upgrade-')));
+    dirs.push(root);
+    process.chdir(root);
+    execRunner(root)('git init -q -b main');
+    await capture(['setup', '--json', '--no-starter', '--gates', 'make test', '--tracker', 'local', '--packs', 'base,structure']);
+    for (const [p, c] of Object.entries(extra)) {
+      mkdirSync(join(root, p, '..'), {recursive: true});
+      writeFileSync(join(root, p), c);
+    }
+    execRunner(root)('git add -A && git -c user.name=t -c user.email=t@t commit -q -m init');
+    return root;
+  }
+  function forgetOneFile(root: string): void {
+    const lockPath = join(root, '.forger', 'forger.lock.json');
+    const lock = JSON.parse(readFileSync(lockPath, 'utf-8'));
+    const pack = lock.packs.find((p: {files: {path: string}[]}) => p.files.length > 0);
+    const [gone] = pack.files.splice(0, 1);
+    rmSync(join(root, gone.path), {force: true});
+    writeFileSync(lockPath, JSON.stringify(lock));
+  }
+  const crowded = (): Record<string, string> => ({'src/a.ts': 'export {}\n', 'src/b.ts': 'export {}\n', 'src/c.ts': 'export {}\n'});
+
+  test('setup --upgrade names a check that fails after it wrote a pack file', async () => {
+    const root = await installed(crowded());
+    writeFileSync(join(root, '.forger', 'structure.json'), JSON.stringify({folder_limit: 1}));
+    forgetOneFile(root);
+    const out = await capture(['setup', '--upgrade']);
+    expect(out).toMatch(/^failing {8}check structure: \d+ finding\(s\); run check for the detail$/m);
+    expect(out).not.toContain('pass after the upgrade');
+  });
+
+  test('setup --upgrade --json lists the failing checks', async () => {
+    const root = await installed(crowded());
+    writeFileSync(join(root, '.forger', 'structure.json'), JSON.stringify({folder_limit: 1}));
+    forgetOneFile(root);
+    const out = JSON.parse(await capture(['setup', '--upgrade', '--json']));
+    expect(out.failing_checks.map((c: {check: string}) => c.check)).toContain('structure');
+    expect(out.failing_checks[0].findings).toBeGreaterThan(0);
+  });
+
+  test('setup --upgrade says the checks pass when none fails after it', async () => {
+    const root = await installed();
+    forgetOneFile(root);
+    const out = await capture(['setup', '--upgrade']);
+    expect(out).toContain('checks         pass after the upgrade');
+    expect(JSON.parse(await capture(['setup', '--upgrade', '--json'])).failing_checks).toBeUndefined();
+  });
+
+  test('setup --upgrade that changes nothing runs no check', async () => {
+    const root = await installed();
+    writeFileSync(join(root, '.forger', 'waivers.json'), 'not json');
+    const out = await capture(['setup', '--upgrade']);
+    expect(out).toBe('already up to date');
+    expect(JSON.parse(await capture(['setup', '--upgrade', '--json']))).not.toHaveProperty('failing_checks');
+  });
+
+  test('setup --upgrade says the checks could not run and does not call them passed', async () => {
+    const root = await installed();
+    writeFileSync(join(root, '.forger', 'waivers.json'), 'not json');
+    forgetOneFile(root);
+    const out = await capture(['setup', '--upgrade']);
+    expect(out).toContain('checks         could not run: ');
+    expect(out).not.toContain('pass after the upgrade');
+    expect(out).toMatch(/^(installed|written|install)/m);
+  });
+});

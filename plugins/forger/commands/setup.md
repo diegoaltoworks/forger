@@ -80,6 +80,12 @@ difference and ask the owner whether to merge, keep theirs or take the pack's;
 a `removed` or `deleted` file only needs mentioning. Once the owner has decided,
 delete the `.upstream` file. Do not decide a conflict yourself.
 
+When the upgrade wrote a file or added a pack it then runs the checks. The result
+carries `failing_checks`, each `{check, findings}`: a check that fails after the
+upgrade. Pass every one on to the owner, with `check <name>` as the way to see the
+detail; a `checks_error` means the checks could not run, which is not a pass. The
+upgrade itself succeeded either way.
+
 When the testing pack was chosen, the result carries `coverage` and `next_steps`:
 whether the gates write the lcov report the pack's `check coverage` needs, and
 the flag for the test command the tool recognised. Relay those lines, offer to edit

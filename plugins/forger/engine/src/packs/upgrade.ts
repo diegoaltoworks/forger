@@ -176,3 +176,29 @@ export function formatUpgrade(result: UpgradeResult): string {
   if (result.flavour) lines.push(`flavour        ${result.flavour.name}@${result.flavour.available} is available (config pins @${result.flavour.pinned}); change "flavour" in the config to take it`);
   return lines.length === 0 ? 'already up to date' : lines.join('\n');
 }
+
+/** The checks after an upgrade: which failed, or why none could run. */
+export type UpgradeChecks = {failing: FailingCheck[]} | {error: string};
+
+export interface FailingCheck {
+  check: string;
+  findings: number;
+}
+
+const WRITING_ACTIONS: UpgradeAction[] = ['install', 'take-upstream', 'conflict'];
+
+/** An upgrade that wrote no file and added no pack cannot have changed what a check sees. */
+export function upgradeChangedFiles(result: UpgradeResult): boolean {
+  return result.added.length > 0 || result.files.some(f => WRITING_ACTIONS.includes(f.action));
+}
+
+/** Only a failed check counts; a waived or unmeasured one is not a new failure. */
+export function failingChecksOf(report: {results: {check: string; status: string; violations: unknown[]}[]}): FailingCheck[] {
+  return report.results.filter(r => r.status === 'failed').map(r => ({check: r.check, findings: r.violations.length}));
+}
+
+export function formatUpgradeChecks(checks: UpgradeChecks): string[] {
+  if ('error' in checks) return [`checks         could not run: ${checks.error}`];
+  if (checks.failing.length === 0) return ['checks         pass after the upgrade'];
+  return checks.failing.map(f => `failing        check ${f.check}: ${f.findings} finding(s); run check for the detail`);
+}
