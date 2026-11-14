@@ -2,7 +2,10 @@ import {ensureLabels, requireVerifyStatus, VERIFY_STATUS_CONTEXT, type RequireOu
 import {forgerPath, loadConfig} from '../config';
 import {flavourRef, loadFlavour} from '../pipeline';
 import {findHarness} from '../adapters';
-import {coverageAdvice, formatCoverageAdvice, formatSetup, formatUpgrade, readRepoFacts, type CoverageAdvice, loadPresets, offerPresets, parsePackList, runSetup, runUpgrade, trackedRuntimeFiles, formatTrackedRuntime, chooseStarter, hasSourceFile, loadStarters, withStarterPacks, type StarterManifest} from '../packs';
+import {runChecks} from '../checks';
+import {harnessOfRoot} from './harness-of';
+import {specProvider} from './spec-provider';
+import {coverageAdvice, formatCoverageAdvice, formatSetup, failingChecksOf, formatUpgrade, formatUpgradeChecks, upgradeChangedFiles, type UpgradeChecks, readRepoFacts, type CoverageAdvice, loadPresets, offerPresets, parsePackList, runSetup, runUpgrade, trackedRuntimeFiles, formatTrackedRuntime, chooseStarter, hasSourceFile, loadStarters, withStarterPacks, type StarterManifest} from '../packs';
 import {existsSync, readFileSync} from 'fs';
 import {join} from 'path';
 import {formatCredentialSetup, formatSandboxSetup, setupCredential, setupSandbox, type CredentialSetup, type SandboxSetup} from './setup-sandbox';
@@ -83,7 +86,8 @@ export const setup: Command = {
                    --starter NAME copies the named starter skeleton (default for a repository with no source file: Bun and TypeScript),
                    sets the gates to its own and installs the packs it is configured for; --no-starter copies none; never overwrites
                    --upgrade installs the default packs the project lacks, then brings installed packs to this plugin's version: untouched files take the
-                   new version, refined files are kept, files both sides changed get <file>.upstream`,
+                   new version, refined files are kept, files both sides changed get <file>.upstream;
+                   when it wrote a file or added a pack it then runs the checks and names each one that fails (failing_checks with --json)`,
   run(ctx) {
     const {values, pluginRoot, installedSkills} = ctx;
     if (values.upgrade) {
@@ -91,7 +95,16 @@ export const setup: Command = {
         const upgrade = runUpgrade(setupRoot(ctx), pluginRoot, c => ctx.run()(c));
         const unread = unreadChecks(setupRoot(ctx), pluginRoot, c => ctx.run()(c));
         const tracked = trackedRuntimeFiles(setupRoot(ctx), c => ctx.run()(c));
-        console.log(values.json ? JSON.stringify({...upgrade, ...(unread.length > 0 ? {unread} : {}), ...(tracked.length > 0 ? {tracked_runtime: tracked} : {})}) : [formatUpgrade(upgrade), ...formatUnread(unread), ...formatTrackedRuntime(tracked)].join('\n'));
+        let checks: UpgradeChecks | undefined;
+        if (upgradeChangedFiles(upgrade)) {
+          try {
+            checks = {failing: failingChecksOf(runChecks(setupRoot(ctx), pluginRoot, ctx.run(), specProvider(ctx), harnessOfRoot(setupRoot(ctx))))};
+          } catch (e) {
+            checks = {error: (e as Error).message};
+          }
+        }
+        const checked = checks && 'failing' in checks ? {failing_checks: checks.failing} : checks ? {checks_error: checks.error} : {};
+        console.log(values.json ? JSON.stringify({...upgrade, ...(unread.length > 0 ? {unread} : {}), ...(tracked.length > 0 ? {tracked_runtime: tracked} : {}), ...checked}) : [formatUpgrade(upgrade), ...formatUnread(unread), ...formatTrackedRuntime(tracked), ...(checks ? formatUpgradeChecks(checks) : [])].join('\n'));
       } catch (e) {
         console.error((e as Error).message);
         process.exitCode = 1;
