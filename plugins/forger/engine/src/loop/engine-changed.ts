@@ -29,7 +29,38 @@ export function engineChanges(run: CommandRunner, pluginRoot: string): string[] 
   }
 }
 
-/** What a refused `verify` or `merge` says: the paths, and that nothing decided by this engine counts. */
+/** The pause between two looks at the engine's checkout while a command waits for it to clear. */
+export const ENGINE_LOOK_PAUSE_MS = 5000;
+
+/**
+ * Looks at the engine's changes, and while there are some looks again after each
+ * pause, up to `waitSeconds`. Returns what the last look found: empty when the
+ * changes went within the wait. The pause is passed in so no test waits in real time.
+ */
+export async function awaitCleanEngine(look: () => string[], sleep: (ms: number) => Promise<void>, waitSeconds: number, pauseMs: number = ENGINE_LOOK_PAUSE_MS): Promise<string[]> {
+  let paths = look();
+  let waited = 0;
+  while (paths.length > 0 && waited < waitSeconds * 1000) {
+    const step = Math.min(pauseMs, waitSeconds * 1000 - waited);
+    await sleep(step);
+    waited += step;
+    paths = look();
+  }
+  return paths;
+}
+
+/** What a refused `verify` or `merge` says: the paths, whose cause it is, and that the caller stops without declining. */
 export function engineChangedMessage(command: string, paths: string[]): string {
-  return `${command}: refused. The engine this command runs from has uncommitted changes, and a verdict or a merge from a changed engine does not count: ${paths.join(', ')}. The engine's checkout is not yours to repair; decline the ticket and say so`;
+  return `${command}: refused. The engine this command runs from has uncommitted changes, and a verdict or a merge from a changed engine does not count: ${paths.join(', ')}. The cause is the engine's checkout, not the ticket. The checkout is not yours to repair: do not touch it and do not decline the ticket; stop and say so`;
+}
+
+/**
+ * Why the loop halts for an iteration whose ticket has an `engine_changed` event
+ * (its reason is `<command>: <paths>`); null when it has none. Read from the
+ * recorded event, not from what the worker said.
+ */
+export function engineChangedHalt(events: {event: string; iteration: number; ticket: string | null; reason: string | null}[], iteration: number, ticket: string | null): string | null {
+  const hit = events.filter(e => e.event === 'engine_changed' && e.iteration === iteration && e.ticket === ticket).pop();
+  if (!hit) return null;
+  return `${hit.reason ?? 'verify or merge'} was refused: the engine's checkout has uncommitted changes. Commit or discard the changes in the engine's checkout, then resume. "${ticket ?? 'the ticket'}" is not set aside and keeps its label and its open PR.`;
 }

@@ -4,7 +4,7 @@ import {mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync} from 'fs';
 import {tmpdir} from 'os';
 import {join} from 'path';
 
-import {changedPaths, engineChangedMessage, engineChanges} from './engine-changed';
+import {awaitCleanEngine, changedPaths, engineChangedMessage, engineChanges} from './engine-changed';
 
 const dirs: string[] = [];
 afterEach(() => {
@@ -67,4 +67,34 @@ test('the refusal names the paths and says the verdict does not count', () => {
   const text = engineChangedMessage('verify', ['a.ts', 'b.ts']);
   expect(text).toContain('a.ts, b.ts');
   expect(text).toContain('does not count');
+});
+
+test('the refusal tells a worker to stop without declining', () => {
+  const text = engineChangedMessage('merge', ['a.ts']);
+  expect(text).toContain('do not decline the ticket');
+  expect(text).toContain('not the ticket');
+  expect(text).not.toContain('decline the ticket and');
+});
+
+describe('awaitCleanEngine', () => {
+  test('goes on as soon as a look finds nothing, pausing between looks', async () => {
+    const looks = [['a.ts'], ['a.ts'], []];
+    const pauses: number[] = [];
+    const found = await awaitCleanEngine(() => looks.shift() ?? [], async ms => void pauses.push(ms), 180, 5000);
+    expect(found).toEqual([]);
+    expect(pauses).toEqual([5000, 5000]);
+  });
+
+  test('returns what the last look found when the changes outlast the wait', async () => {
+    const pauses: number[] = [];
+    const found = await awaitCleanEngine(() => ['a.ts'], async ms => void pauses.push(ms), 12, 5000);
+    expect(found).toEqual(['a.ts']);
+    expect(pauses).toEqual([5000, 5000, 2000]);
+  });
+
+  test('looks once and does not pause with a wait of zero', async () => {
+    const pauses: number[] = [];
+    expect(await awaitCleanEngine(() => ['a.ts'], async ms => void pauses.push(ms), 0)).toEqual(['a.ts']);
+    expect(pauses).toEqual([]);
+  });
 });

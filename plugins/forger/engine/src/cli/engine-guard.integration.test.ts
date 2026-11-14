@@ -18,11 +18,11 @@ afterEach(() => {
 
 const sh = (cmd: string): string => execSync(cmd, {encoding: 'utf-8', stdio: ['ignore', 'pipe', 'pipe']});
 
-function setup(): {root: string; engine: string} {
+function setup(wait = 0): {root: string; engine: string} {
   const root = realpathSync(mkdtempSync(join(tmpdir(), 'forger-guard-')));
   dirs.push(root);
   mkdirSync(join(root, '.forger'));
-  writeFileSync(join(root, '.forger', 'workloop.config.json'), JSON.stringify({tracker: {kind: 'local'}, base_branch: 'main'}));
+  writeFileSync(join(root, '.forger', 'workloop.config.json'), JSON.stringify({tracker: {kind: 'local'}, base_branch: 'main', limits: {engineChangedWaitSeconds: wait}}));
   const engine = join(root, 'engine');
   mkdirSync(engine);
   writeFileSync(join(engine, 'a.ts'), 'a\n');
@@ -32,7 +32,7 @@ function setup(): {root: string; engine: string} {
   return {root, engine};
 }
 
-async function call(argv: string[], engine: string): Promise<{calls: string[]; out: string}> {
+async function call(argv: string[], engine: string, sleep?: (ms: number) => Promise<void>): Promise<{calls: string[]; out: string}> {
   const calls: string[] = [];
   const run: CommandRunner = cmd => {
     if (cmd.startsWith('git -C ')) return sh(cmd);
@@ -43,7 +43,7 @@ async function call(argv: string[], engine: string): Promise<{calls: string[]; o
   const log = spyOn(console, 'log').mockImplementation((...a: unknown[]) => void lines.push(a.join(' ')));
   const err = spyOn(console, 'error').mockImplementation((...a: unknown[]) => void lines.push(a.join(' ')));
   try {
-    await main(argv, {run, pluginRoot: engine});
+    await main(argv, {run, pluginRoot: engine, ...(sleep ? {sleep} : {})});
   } finally {
     log.mockRestore();
     err.mockRestore();
@@ -90,5 +90,41 @@ describe('verify and merge from a changed engine', () => {
     const {engine} = setup();
     const {calls} = await call(['merge', '--pr', '9'], engine);
     expect(calls.some(c => c.startsWith('gh pr'))).toBe(true);
+  });
+
+  const gone = (engine: string) => async () => void writeFileSync(join(engine, 'a.ts'), 'a\n');
+
+  test('verify goes on when the engine\'s changes are gone within the wait', async () => {
+    const {engine} = setup(60);
+    writeFileSync(join(engine, 'a.ts'), 'draft\n');
+    const {out} = await call(['verify', '--pr', '9', '--json'], engine, gone(engine));
+    expect(out).not.toContain('engine_changed');
+    expect(out).not.toContain('uncommitted changes');
+  });
+
+  test('merge goes on when the engine\'s changes are gone within the wait', async () => {
+    const {engine} = setup(60);
+    writeFileSync(join(engine, 'a.ts'), 'draft\n');
+    const {calls} = await call(['merge', '--pr', '9'], engine, gone(engine));
+    expect(calls.some(c => c.startsWith('gh pr'))).toBe(true);
+  });
+
+  test('no engine_changed event is recorded when the changes are gone within the wait', async () => {
+    const {root, engine} = setup(60);
+    writeFileSync(join(engine, 'a.ts'), 'draft\n');
+    await call(['merge', '--pr', '9'], engine, gone(engine));
+    expect(existsSync(join(root, '.forger', 'events.jsonl')) ? events(root).filter(e => e.event === 'engine_changed') : []).toEqual([]);
+  });
+
+  test('verify refuses and records engine_changed when the changes outlast the wait', async () => {
+    const {root, engine} = setup(10);
+    writeFileSync(join(engine, 'a.ts'), 'draft\n');
+    const pauses: number[] = [];
+    const {calls, out} = await call(['verify', '--pr', '9', '--json'], engine, async ms => void pauses.push(ms));
+    expect(process.exitCode).toBe(1);
+    expect(pauses.reduce((a, b) => a + b, 0)).toBe(10000);
+    expect(out).toContain('engine/a.ts');
+    expect(calls).toEqual([]);
+    expect(events(root)).toMatchObject([{event: 'engine_changed', reason: 'verify: engine/a.ts'}]);
   });
 });

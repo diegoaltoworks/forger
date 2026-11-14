@@ -77,6 +77,8 @@ export interface WorkloopConfig {
     maxSetAside: number;
     /** Verifier rounds per PR before the ticket is handed to the owner (ADR 0010). */
     maxVerifyRounds: number;
+    /** Seconds `verify` and `merge` wait for the engine's uncommitted changes to go before they refuse. */
+    engineChangedWaitSeconds: number;
   };
   /**
    * Workers the loop runs at once (ADR 0011). 1 is the single-worker loop; a
@@ -267,6 +269,7 @@ export const DEFAULT_CONFIG: WorkloopConfig = {
     maxConsecutiveDeclines: 3,
     maxSetAside: 3,
     maxVerifyRounds: 2,
+    engineChangedWaitSeconds: 180,
   },
   paths: {
     backlog: `${FORGER_DIR}/backlog.json`,

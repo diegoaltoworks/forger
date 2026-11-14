@@ -135,8 +135,9 @@ lists it, and `await-event` and `watch` wake on it, but the run goes on. Report 
 repeated on one ticket mean the ticket or the process tells the worker to do
 something it may not.
 `verify` and `merge` refuse when the engine they run from has uncommitted changes, and record `engine_changed`
-(a mid-run event, like `worker_denied`) with the ticket and the paths. The worker declines the ticket; the checkout
-is the owner's to repair.
+(a mid-run event, like `worker_denied`) with the ticket and the paths. They wait `limits.engineChangedWaitSeconds` for the changes to go first. The worker stops without declining, and
+the loop halts naming the command and the paths; the ticket is not set aside. Commit or discard the changes in the
+engine's checkout, then resume.
 `verify` finds a PR's ticket from a `Closes #n` line in its body, then from a
 `feat/issue-<n>` branch (on a local tracker, `feat/<ticket-id>`). A PR the
 supervisor opens for itself carries `Closes #n` or an `## Acceptance` section of

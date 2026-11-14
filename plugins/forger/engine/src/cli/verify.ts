@@ -3,15 +3,16 @@ import {randomUUID} from 'crypto';
 
 import {agentFor, execCapture, findHarness, sandboxFor, sandboxSite, slcrProvider} from '../adapters';
 import {resolveModel} from '../config';
-import {engineChangedMessage, engineChanges, eventLine, flakyReason, loopRootOf, terminalEvent, ticketFlaky, verdictsHome, verifierTier, verifyPr, workerIdentity, type VerifyResult} from '../loop';
+import {awaitCleanEngine, engineChangedMessage, engineChanges, eventLine, flakyReason, loopRootOf, terminalEvent, ticketFlaky, verdictsHome, verifierTier, verifyPr, workerIdentity, type VerifyResult} from '../loop';
 import type {Command, CommandContext} from './command';
 
 /**
- * Refuses a decision made from an engine whose source has uncommitted changes:
- * sets exit 1, records `engine_changed` and says so. True when it refused.
+ * Refuses a decision made from an engine whose source still has uncommitted
+ * changes after the wait: sets exit 1, records `engine_changed` and says so. True when it refused.
  */
-export function refuseChangedEngine(ctx: CommandContext, command: 'verify' | 'merge'): boolean {
-  const paths = engineChanges(ctx.run(), ctx.pluginRoot);
+export async function refuseChangedEngine(ctx: CommandContext, command: 'verify' | 'merge'): Promise<boolean> {
+  const sleep = ctx.deps.sleep ?? ((ms: number) => new Promise<void>(r => setTimeout(r, ms)));
+  const paths = await awaitCleanEngine(() => engineChanges(ctx.run(), ctx.pluginRoot), sleep, ctx.config.limits.engineChangedWaitSeconds);
   if (paths.length === 0) return false;
   const worker = workerIdentity(process.env);
   try {
@@ -67,7 +68,8 @@ export const verify: Command = {
                    status on the head: success for a pass, failure otherwise. "Gates green" is decided
                    from the head's CI checks, waiting up to the timeout for unfinished ones. A verdict that is not a pass
                    keeps the copy's command log beside the verdict record (commandLog in the JSON).
-                   Refuses (exit 1, no verdict, no status) when the engine's own source has uncommitted changes`,
+                   Refuses (exit 1, no verdict, no status) when the engine's own source has uncommitted changes
+                   that outlast limits.engineChangedWaitSeconds`,
   async run(ctx) {
     const {values} = ctx;
     const pr = parseInt((values.pr as string | undefined) ?? '', 10);
@@ -76,7 +78,7 @@ export const verify: Command = {
       process.exitCode = 1;
       return;
     }
-    if (refuseChangedEngine(ctx, 'verify')) return;
+    if (await refuseChangedEngine(ctx, 'verify')) return;
     try {
       const record = await verifyOne(ctx, pr);
       if (record.decision !== 'pass') process.exitCode = 1;

@@ -205,9 +205,14 @@ but `check hooks` fails until a waiver on `base.worker-hooks` records who
 approved it, and it fails too when the harness's settings do not run the hook.
 
 `verify` and `merge` look at the engine they were loaded from before anything else. When its source is in a git
-work tree and has an uncommitted change (a changed tracked file, or a new file git does not ignore), they refuse with
+work tree and has an uncommitted change (a changed tracked file, or a new file git does not ignore), they look again every few seconds while it has
+one, up to `limits.engineChangedWaitSeconds`, and go on as if they had found none when the changes go within the wait.
+When the changes outlast it they refuse with
 exit 1: no verdict, no status, no merge, and an `engine_changed` event naming the paths. A verdict or a merge from a
-changed engine does not count. An engine outside a git work tree, as an installed plugin is, is not checked.
+changed engine does not count. The cause is the engine's checkout, not the ticket: an iteration whose ticket has an `engine_changed` event halts the
+loop with the command and the paths in the reason, counts no failure, stall or decline, sets no ticket aside and drops
+any decline the worker recorded. The ticket keeps its label and its open PR, and the run after the resume picks it
+again. An engine outside a git work tree, as an installed plugin is, is not checked.
 
 The same hook guards the supervisor: a call made without the worker role,
 while an engine holds the lock, may not run a state-changing git command

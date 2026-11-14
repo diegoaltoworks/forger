@@ -15,6 +15,7 @@ import type {AgentRunner, CommandRunner, ProbeRunner} from '../ports';
 import {parseClaim, type Claim} from './claim';
 import {conflictComment, conflictReask, parseConflict, type Conflict} from './conflict';
 import {avoidedFootprints, setAsideComment, setAsideOnTracker, setAsideUpdate, type SetAsideEntry} from './aside';
+import {engineChangedHalt} from './engine-changed';
 import type {EventKind, TerminalEventKind} from './events';
 import {declineUpdate, type DeclineEntry} from './decline';
 import {clearDeclineRecord, readDeclineRecord} from './decline-io';
@@ -56,6 +57,8 @@ export interface IterationContext {
   resolvePlan?(ticket: string | null): StoredPlan | null;
   /** Runs a probe command on the host; absent, probes are not run. */
   probeRunner?: ProbeRunner;
+  /** The events recorded so far, for the facts about a run that only a recorded event holds. */
+  events?(): {event: string; iteration: number; ticket: string | null; reason: string | null}[];
   /** Exported to the worker, whose gates name it. */
   pluginRoot?: string;
 }
@@ -212,6 +215,7 @@ export async function runIteration(
   clearDeclineRecord(declinedFile);
   const conflict = placement && !gitFacts.merged && gitFacts.pushed ? placement.conflicts() : null;
   const exit = classifyExit(result.exitCode, result.output, result.timedOut, result.inputError ?? null);
+  const engineChanged = engineChangedHalt(ctx.events?.() ?? [], iteration, attemptedTask);
   const outcome = decideOutcome({
     ...gitFacts,
     infraError: exit.kind === 'infrastructure' ? exit.reason : null,
@@ -231,6 +235,7 @@ export async function runIteration(
     verdict: verdictOf(ctx, gitFacts.pr, root),
     ownerReviews: ticket !== null && mergeMode(ctx.backlog.body(ticket)) === 'owner reviews',
     conflictStop,
+    engineChanged,
   });
 
   // Rewritten with the decided status so measures can read it back from the file.
@@ -239,7 +244,7 @@ export async function runIteration(
   const declined: DeclineEntry | null =
     outcome.status === 'declined' && record ? {ticket: record.ticket, reason: record.reason, iteration} : null;
   const body = ticket === attemptedTask ? ownBody : ticket === null ? null : ctx.backlog.body(ticket);
-  const settled = settle(ctx, sessionId, iteration, ticket, backlogCompleted, outcome, countStall, declined, ticket === null ? null : ctx.backlog.footprint(ticket, body));
+  const settled = settle(ctx, sessionId, iteration, ticket, backlogCompleted, outcome, countStall && !engineChanged, declined, ticket === null ? null : ctx.backlog.footprint(ticket, body));
   placement?.finish(outcome.status === 'conflict');
   return settled;
 }
