@@ -1,6 +1,6 @@
 {
-  "iteration": 230,
-  "status": "completed",
+  "iteration": 231,
+  "status": "running",
   "last_completed_at": "2026-11-14T07:43:07.095Z",
   "completed_iterations": 211,
   "failed_iterations": 7,
@@ -216,7 +216,15 @@
     "issue-461",
     "issue-457"
   ],
-  "in_flight": [],
+  "in_flight": [
+    {
+      "ticket": null,
+      "pid": null,
+      "session_id": "e055c935-f144-466b-b8d2-a95138322803",
+      "snapshot": null,
+      "started_at": "2026-11-14T07:43:17.530Z"
+    }
+  ],
   "last_error": null,
   "stall_count": 0,
   "declined_tasks": [
