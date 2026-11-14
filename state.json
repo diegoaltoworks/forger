@@ -246,21 +246,7 @@
   ],
   "consecutive_declines": 0,
   "owner_review_tasks": [],
-  "set_aside_tasks": [
-    {
-      "ticket": "issue-456",
-      "reason": "constraint: `the five measures from one run` (events for one of three runs, expects known counts) and `interventions are unknown while the events file misses a run` (events-only input with a gap, expects unknown) must both pass unchanged. The ticket also requires the comparison report to carry th...",
-      "iteration": 228,
-      "footprint": {
-        "paths": [
-          "plugins/forger/engine/src/supervisor/measure.ts",
-          "plugins/forger/engine/src/supervisor/comparison.ts",
-          "plugins/forger/engine/src/cli/measure.ts"
-        ],
-        "modules": []
-      }
-    }
-  ],
+  "set_aside_tasks": [],
   "consecutive_set_asides": 1,
   "last_remaining_count": 12
 }
