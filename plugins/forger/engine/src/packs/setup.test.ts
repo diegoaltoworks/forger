@@ -86,6 +86,12 @@ describe('runSetup', () => {
     expect(second.gitignore.added).toEqual([]);
   });
 
+  test('setup ignores the worktrees folder', () => {
+    const root = emptyProject();
+    runSetup(root, PLUGIN_ROOT, {gates: 'make test'});
+    expect(readFileSync(join(root, '.gitignore'), 'utf-8').split('\n')).toContain('.forger/worktrees/');
+  });
+
   test('never overwrites a file the project already has', () => {
     const root = emptyProject();
     runSetup(root, PLUGIN_ROOT, {});

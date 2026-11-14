@@ -13,3 +13,4 @@ coverage/
 .forger/verdicts/
 .forger/tmp/
 .forger/checks.jsonl
+.forger/worktrees/
