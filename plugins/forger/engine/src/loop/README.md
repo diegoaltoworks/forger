@@ -10,6 +10,7 @@ Pure:
 - `outcome.ts` - the outcome of a run, decided from facts. It tells whether
   the run built the engine's pick, declined it, or took another ticket.
 - `aside/` - a worker's stop sets its ticket aside (ADR 0020). See its README.
+- `delivery/` - runs the delivery pack's commands after a merge. See its README.
 - `decline.ts` - what a decline record must hold, and how a run of declines
   becomes a halt.
 - `absolute-rule.ts` - warns when a ticket with UI states states an absolute design rule and carries no measured number.
@@ -27,7 +28,11 @@ Pure:
   `viewLease` is what `orient` reports.
 - `runner.ts` takes, renews and releases the lease when the config puts the
   state on the branch. It also releases on SIGTERM and SIGINT.
-- `structure-review.ts` - decides when a structure review is due, from merges, baseline size and open reviews. `structure-review-io.ts` files it.
+- `reviews/` - the periodic whole-repo reviews.
+  - `schedule.ts` - what every kind shares.
+  - `structure-review.ts` - when a structure review is due.
+  - `access-review.ts` - when an access review is due.
+  - The `-io` files file them.
 - `state.ts` - the loop state record and `LoopStore`, which persists it
   through the `StateStore` port.
 - `halt-label.ts` - decides HALT from the `halted` label and the local HALT
@@ -59,7 +64,7 @@ Pure:
   (ADR 0011). It holds the git calls aimed at a worktree and the folder map
   the scheduling rule reads. It also holds the conflict check after a worker's
   one attempt, and the clean-up that drops a conflicted branch.
-- `worker-env.ts` - the role, ticket and iteration the engine puts in a
+- `worker-env.ts` - the role, ticket, iteration and worktree the engine puts in a
   worker's environment. The harness hook reads them back.
 - `merged.ts`, `run-facts.ts` - git facts, through an injected `CommandRunner`.
 - `merge.ts` - merges a PR only once every check passed. The decision is pure.

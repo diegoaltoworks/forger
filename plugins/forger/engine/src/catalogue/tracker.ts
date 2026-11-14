@@ -61,3 +61,16 @@ export function branchTicket(run: CommandRunner): number | null {
     return null;
   }
 }
+
+/** The open PR of the checked-out branch (found by head commit when detached), or null when it has none or gh cannot say. */
+export function branchPr(run: CommandRunner): number | null {
+  try {
+    const branch = run('git branch --show-current').trim();
+    const sha = run('git rev-parse HEAD').trim();
+    const prs = JSON.parse(run('gh pr list --state open --json number,headRefName,headRefOid')) as Array<{number: number; headRefName: string; headRefOid: string}>;
+    const pr = prs.find(p => (branch === '' ? p.headRefOid === sha : p.headRefName === branch));
+    return pr ? pr.number : null;
+  } catch {
+    return null;
+  }
+}

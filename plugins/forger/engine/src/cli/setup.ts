@@ -2,7 +2,7 @@ import {ensureLabels, requireVerifyStatus, VERIFY_STATUS_CONTEXT, type RequireOu
 import {forgerPath, loadConfig} from '../config';
 import {flavourRef, loadFlavour} from '../pipeline';
 import {findHarness} from '../adapters';
-import {coverageAdvice, formatCoverageAdvice, formatSetup, formatUpgrade, readRepoFacts, type CoverageAdvice, loadPresets, offerPresets, parsePackList, runSetup, runUpgrade} from '../packs';
+import {coverageAdvice, formatCoverageAdvice, formatSetup, formatUpgrade, readRepoFacts, type CoverageAdvice, loadPresets, offerPresets, parsePackList, runSetup, runUpgrade, trackedRuntimeFiles, formatTrackedRuntime, chooseStarter, hasSourceFile, loadStarters, withStarterPacks, type StarterManifest} from '../packs';
 import {existsSync, readFileSync} from 'fs';
 import {join} from 'path';
 import {formatCredentialSetup, formatSandboxSetup, setupCredential, setupSandbox, type CredentialSetup, type SandboxSetup} from './setup-sandbox';
@@ -66,19 +66,22 @@ function coverageNextStep(ctx: CommandContext, chosen: string[]): CoverageAdvice
 export const setup: Command = {
   name: 'setup',
   needs: 'none',
-  flags: ['json', 'gates', 'base-branch', 'tracker', 'flavour', 'preset', 'packs', 'upgrade', 'harness', 'sandbox', 'credential'],
-  help: `  setup [--json] [--gates CMD] [--base-branch B] [--tracker KIND] [--flavour NAME] [--packs A,B] [--harness H] [--sandbox S] [--credential KIND] [--upgrade]
+  flags: ['json', 'gates', 'base-branch', 'tracker', 'flavour', 'preset', 'packs', 'upgrade', 'harness', 'sandbox', 'credential', 'no-starter', 'starter'],
+  help: `  setup [--json] [--gates CMD] [--base-branch B] [--tracker KIND] [--flavour NAME] [--packs A,B] [--harness H] [--sandbox S] [--credential KIND] [--starter NAME | --no-starter] [--upgrade]
                    Install the chosen opinion packs (default base and structure) into .forger/, never overwriting,
                    and record them in .forger/forger.lock.json. On a GitHub tracker it creates the loop
                    labels and makes the base branch require the forger/verify check, when the token can.
                    It installs forger's tool-call hook into the harness's project settings, keeping
                    a settings file that already runs it.
+                   It also lists each runtime file git tracks, with the git rm --cached command that stops tracking it; it runs none.
                    --flavour NAME records the flavour (shipped or in .forger/flavours/) the config picks skills with;
                    --preset NAME is the same
                    --harness H sets the harness (claude, opencode, codex, copilot) and installs its commands
                    --sandbox S sets where workers run (host or docker); docker also checks that the Docker API is reachable
                    --credential KIND sets whether the harness's model credential is an api_key or a subscription token,
                    and says how to make a subscription token for headless use
+                   --starter NAME copies the named starter skeleton (default for a repository with no source file: Bun and TypeScript),
+                   sets the gates to its own and installs the packs it is configured for; --no-starter copies none; never overwrites
                    --upgrade installs the default packs the project lacks, then brings installed packs to this plugin's version: untouched files take the
                    new version, refined files are kept, files both sides changed get <file>.upstream`,
   run(ctx) {
@@ -87,7 +90,8 @@ export const setup: Command = {
       try {
         const upgrade = runUpgrade(setupRoot(ctx), pluginRoot, c => ctx.run()(c));
         const unread = unreadChecks(setupRoot(ctx), pluginRoot, c => ctx.run()(c));
-        console.log(values.json ? JSON.stringify({...upgrade, ...(unread.length > 0 ? {unread} : {})}) : [formatUpgrade(upgrade), ...formatUnread(unread)].join('\n'));
+        const tracked = trackedRuntimeFiles(setupRoot(ctx), c => ctx.run()(c));
+        console.log(values.json ? JSON.stringify({...upgrade, ...(unread.length > 0 ? {unread} : {}), ...(tracked.length > 0 ? {tracked_runtime: tracked} : {})}) : [formatUpgrade(upgrade), ...formatUnread(unread), ...formatTrackedRuntime(tracked)].join('\n'));
       } catch (e) {
         console.error((e as Error).message);
         process.exitCode = 1;
@@ -106,8 +110,16 @@ export const setup: Command = {
       }
     }
     let result;
+    let starter: StarterManifest | undefined;
     try {
       const harness = values.harness ? findHarness(values.harness) : undefined;
+      const choice = chooseStarter({
+        hasSource: hasSourceFile(setupRoot(ctx)),
+        noStarter: values['no-starter'] === true,
+        wanted: values.starter as string | undefined,
+        available: loadStarters(pluginRoot),
+      });
+      starter = choice.kind === 'use' ? choice.starter : undefined;
       result = runSetup(setupRoot(ctx), pluginRoot, {
         packs: parsePackList(values.packs),
         gates: values.gates,
@@ -115,6 +127,7 @@ export const setup: Command = {
         baseBranch: values['base-branch'],
         trackerKind: values.tracker,
         flavour,
+        starter,
         harness,
         hookHarness: harness ?? findHarness(loadConfig(setupRoot(ctx)).harness),
       });
@@ -145,17 +158,19 @@ export const setup: Command = {
         return;
       }
     }
+    const tracked = trackedRuntimeFiles(setupRoot(ctx), c => ctx.run()(c));
     const labels = createLabels(ctx);
     const verifyCheck = requireVerify(ctx);
-    const coverage = coverageNextStep(ctx, parsePackList(values.packs));
+    const coverage = coverageNextStep(ctx, starter ? withStarterPacks(parsePackList(values.packs), starter) : parsePackList(values.packs));
     const offered = offerPresets(loadPresets(pluginRoot), installedSkills());
     const presets = offered.map(p => p.name);
-    if (values.json) console.log(JSON.stringify({...result, ...(unread.length > 0 ? {unread} : {}), presets, labels, ...(box ? {sandbox: box} : {}), ...(credential ? {credential} : {}), ...(verifyCheck ? {verify_check: verifyCheck} : {}), ...(coverage ? {coverage, next_steps: coverage.next_steps} : {})}));
+    if (values.json) console.log(JSON.stringify({...result, ...(unread.length > 0 ? {unread} : {}), ...(tracked.length > 0 ? {tracked_runtime: tracked} : {}), presets, labels, ...(box ? {sandbox: box} : {}), ...(credential ? {credential} : {}), ...(verifyCheck ? {verify_check: verifyCheck} : {}), ...(coverage ? {coverage, next_steps: coverage.next_steps} : {})}));
     else
       console.log(
         [
           formatSetup(result, presets),
           ...formatUnread(unread),
+          ...formatTrackedRuntime(tracked),
           ...(box ? formatSandboxSetup(box) : []),
           ...(credential ? formatCredentialSetup(credential) : []),
           ...labels.created.map(l => `label   ${l}`),

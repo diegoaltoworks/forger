@@ -99,6 +99,13 @@ other within months. Point at the command that computes the number instead.
 Narrative ("we changed X to Y") belongs in the PR and the commit, not the code or
 the process doc.
 
+## 8a. The default stack is Bun and TypeScript
+
+A repository with no source file gets a running Bun and TypeScript skeleton
+from `setup`, with gates that run and a journey that passes. A repository that
+already has code keeps its own stack and gets no skeleton. Another stack brings
+its own skeleton as a starter, chosen by name.
+
 ## 9. Data in production is sacred
 
 No resets, no "the old shape is gone". A change to a stored shape carries every

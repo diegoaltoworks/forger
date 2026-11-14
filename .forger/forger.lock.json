@@ -2,11 +2,15 @@
   "packs": [
     {
       "id": "base",
-      "version": "1.6.0",
+      "version": "1.8.0",
       "files": [
         {
           "path": ".forger/templates/pr.md",
-          "sha256": "4cc1fbdba26617792d68984215d4c74b4ef996f6d7fac8fea7aa684623c46525"
+          "sha256": "076020e351411b082fec63ae2244c902dab7635b260e4e01855b84bbb69ddc66"
+        },
+        {
+          "path": ".forger/templates/product.md",
+          "sha256": "4a1c11a0fe381aed0b259235c158928d0fb6b6fb14d435beee4c9fd70d849b8c"
         },
         {
           "path": ".forger/templates/report.md",
@@ -26,7 +30,7 @@
         },
         {
           "path": ".forger/templates/ticket.md",
-          "sha256": "b3073b3bb6cfe2a18caa217702fd245082e743da6f823af31cc0932e71c7f7db"
+          "sha256": "99fd3b693c961caaace6188e1f4c20bdb6d0d17cfb041c3bb28832acf59c627c"
         },
         {
           "path": ".forger/templates/work-order.md",
@@ -40,17 +44,17 @@
       "files": [
         {
           "path": ".forger/opinions/docs.md",
-          "sha256": "c93c9efcbaf68a459c5680390bc7ab09b637b18052d518877f38d1451eaebebe"
+          "sha256": "497922415427f2ce3f869e5575bd81fe58687bbf56d1c4ed0c6e196403bb5e3e"
         }
       ]
     },
     {
       "id": "architecture",
-      "version": "1.2.0",
+      "version": "1.3.0",
       "files": [
         {
           "path": ".forger/opinions/architecture.md",
-          "sha256": "7eca705affa19aa285dafe0f777406cd3271fc23f12ac5d9e2c02d42ed164a35"
+          "sha256": "24273eb15578b9ce33f49defabf072ce76ee1b7bb9f12686b41ccd8625c72d06"
         },
         {
           "path": ".forger/templates/adr.md",
@@ -60,29 +64,37 @@
     },
     {
       "id": "safety",
-      "version": "1.0.2",
+      "version": "1.2.0",
       "files": [
         {
           "path": ".forger/opinions/safety.md",
-          "sha256": "6dca90d11c581111d1ce6d009d2a22d58a7927427f27292716e48cdd231cc3aa"
+          "sha256": "84a9e7ece81f4be49cfefd5338884777f5e0f133dd19a14bebd51b78599c5a75"
         },
         {
           "path": ".forger/safety.json",
           "sha256": "67c256049a81bbb8a88f80fb86e923f02c7f99413a469de2e9ecdbb23493d315"
+        },
+        {
+          "path": ".forger/templates/access-review.md",
+          "sha256": "5af7a942b0052af93be5b42d96e084a54b687b8bd431f716bce2f9c378d7255e"
         }
       ]
     },
     {
       "id": "testing",
-      "version": "1.1.0",
+      "version": "1.2.0",
       "files": [
         {
+          "path": ".forger/budgets.json",
+          "sha256": "b38c35870bd195b74abd4151ba168feb404790f414f86592cc3db98e6584cf92"
+        },
+        {
           "path": ".forger/opinions/testing.md",
-          "sha256": "05ef79162a37ae61aa5e48bc01b9fbd0e49eb2dab7658244851103b67ca41d9b"
+          "sha256": "cceb8a0ff426594a1f09b87a45d566abe047caf3fb368fbb4fc15ac52d2086ea"
         },
         {
           "path": ".forger/testing.json",
-          "sha256": "c80ecd63e389ec0d08908b3a91c1bd100237a21dbb067cc31b389b160f5a8d37"
+          "sha256": "3e435d0af41d85529de85efd2064e32e81dbf0bfd1619f2bb65e34a745ceec21"
         }
       ]
     },
@@ -101,6 +113,20 @@
         {
           "path": ".forger/templates/structure-review.md",
           "sha256": "41d1fa1dd0c0e1b6b7ffc6d027478d03586b8e179938f07c8f450d968ede370d"
+        }
+      ]
+    },
+    {
+      "id": "journeys",
+      "version": "1.0.0",
+      "files": [
+        {
+          "path": ".forger/journeys.json",
+          "sha256": "5366cc882236d5a8922580383d3c081a5911a31029769a99d80e60c30e3551df"
+        },
+        {
+          "path": ".forger/opinions/journeys.md",
+          "sha256": "2c87397bdfd4963b1d48e3c80eee61e1c0912ce81317f45d766d36da2db904e4"
         }
       ]
     }

@@ -87,3 +87,10 @@ under `docs/adr/` in the same diff (`.forger/templates/adr.md` is the shape:
 context, decision, consequences, status). An ADR is superseded by a new one,
 never edited. `check decisions` enforces this by reading the diff against the
 base branch; a version bump or a removed dependency needs no ADR.
+
+## Decision numbers are unique
+
+Two tickets can each take the next free ADR number. `check decisions` reads
+the working tree, so two files under `docs/adr/` whose names start with the
+same number are one finding that names both, also after a branch takes in its
+base. Renumber the later record and its citations.

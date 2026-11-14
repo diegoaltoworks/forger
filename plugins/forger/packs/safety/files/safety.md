@@ -36,6 +36,16 @@ network, so it runs in `check`, not in unit tests. Examples:
 - npm: `"audit_command": "npm audit --audit-level=high"`
 - Python: `"audit_command": "pip-audit"`
 
+## Access is reviewed (template: safety.access-reviewed)
+
+No check can decide who may read or change whose data; it takes a reviewer who
+reads the whole app. Set `access_review.every_merged` in `.forger/safety.json`
+and the loop files one access review after that many merges, from the template
+in `.forger/templates/access-review.md`, unless one is still open. The reviewer
+lists every route, handler or command that touches stored data, says whose data
+it is, names the test that shows another person is refused, and files a ticket
+for each missing test or missing refusal. `0`, or leaving it out, is off.
+
 ## Lockfiles are frozen in the gates
 
 The gates install with the frozen-lockfile flag of your dependency installer, so a

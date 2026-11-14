@@ -19,6 +19,8 @@ export interface Observation {
   coverage?: {report_present: boolean; gates_write_report: boolean};
   /** Whether the lcov report exists after the gates ran. */
   reportWritten: boolean;
+  /** True for a project with no source file, where setup copies a starter and detection has nothing to read. */
+  starter?: boolean;
 }
 
 export interface Failure {
@@ -39,7 +41,7 @@ export function checkObservation(o: Observation): Failure[] {
   if (o.config.includes(o.home) || HOME_PATH.test(o.config)) {
     fail(184, 'the written config holds an absolute home path');
   }
-  if (!o.detected.includes('testing')) {
+  if (!o.starter && !o.detected.includes('testing')) {
     fail(185, `packs --detect did not suggest the testing pack (got: ${o.detected.join(', ') || 'nothing'})`);
   }
   if (!o.coverage) {

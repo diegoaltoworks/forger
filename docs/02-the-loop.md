@@ -96,6 +96,10 @@ way than by a merged PR, so it is neither done nor work to start.
 `completed` must mean merged. A worker that marks a ticket completed before its
 PR merges can mislead the engine (see the failure catalogue).
 
+## Before the first pick
+
+`run` brings the base branch up to date itself. On the base branch, with no other engine holding the lock and no uncommitted change besides the engine's runtime files, it fast-forwards to the remote and, when that changed the plugin it runs from, starts itself again once on the new code. A failed fast-forward stops the start with git's reason; nothing is stashed, reset or discarded, and any other checkout is left as it is.
+
 ## One engine iteration
 
 The engine does not take the worker's word. It gathers facts about the
@@ -128,6 +132,8 @@ flowchart TD
     P -- yes --> PA[partial: failure]
     P -- no --> FN[failed: nothing happened]
 ```
+
+After a merge, a project with the delivery pack gets its own commands run before the next pick (ADR 0022): `deploy` when configured, then `check`, in the main checkout at the merged commit. A pass records `delivered`. A failure records `delivery_failed`, files one `P0` issue with the intake label that links the merged PR and ends with the failing command's output (an open one is commented on instead), and then runs `rollback` when configured, recording `rolled_back` or `rollback_failed`. A failed delivery does not halt and the new issue is a normal pick; a failed rollback halts, since the build is broken with no way back. Delivery never changes whether a merge happens, and without the pack nothing runs.
 
 The engine's pick is the contract, and the worker's prompt names it: the worker builds that ticket or declines it, and is never asked to choose. A run with no workable ticket gets a prompt that says so. A branch for any other ticket is `off-pick`,
 a failure, even when its own PR merged: the work is real but is never counted as
@@ -185,6 +191,11 @@ policy and the call, and it reads through chains (`&&`, `;`, pipes), wrappers
   `forger/verify`.
 - `state-edit`: editing or removing the engine's state under `.forger/` (state,
   events, verdicts, checks, HALT, lock, lease), by an editor tool or a shell write.
+- `leave-worktree`: for a worker the engine started in a worktree of its own
+  (the engine names it in the worker's environment), an editor tool call, a
+  `cd` or a shell write on a path in the loop's checkout outside that
+  worktree. Another worker's worktree counts as outside. Reading the loop's
+  checkout by path, and running the engine from it, stay allowed.
 
 A refusal tells the worker what to do instead, and is appended to the event
 file as `worker_denied`, with the ticket, the rule and the refused command. A
@@ -192,6 +203,11 @@ project adds rules of its own in `deny` (an id, a regular expression over each
 simple command, and the message). The defaults ship on: a policy may drop one,
 but `check hooks` fails until a waiver on `base.worker-hooks` records who
 approved it, and it fails too when the harness's settings do not run the hook.
+
+`verify` and `merge` look at the engine they were loaded from before anything else. When its source is in a git
+work tree and has an uncommitted change (a changed tracked file, or a new file git does not ignore), they refuse with
+exit 1: no verdict, no status, no merge, and an `engine_changed` event naming the paths. A verdict or a merge from a
+changed engine does not count. An engine outside a git work tree, as an installed plugin is, is not checked.
 
 The same hook guards the supervisor: a call made without the worker role,
 while an engine holds the lock, may not run a state-changing git command
@@ -209,7 +225,11 @@ messages. The verifier runs through the same agent seam as a worker, in a
 writable, throwaway copy of the head, on the `verifier` tier of the config.
 Before the model starts, the engine installs dependencies in that copy: the
 `verify.setup` command if the config has one, otherwise the install step of
-`gates`. The model can then run the tests and the gates itself. A setup that
+`gates`, otherwise the frozen install for the lockfile at the root of the copy; an
+empty `verify.setup` turns setup off, and the verdict record names the command that ran
+and where it came from. When none of the three gives a command, no setup
+runs: the prompt says the copy has no dependencies, and `verify` warns on stderr.
+The model can then run the tests and the gates itself. A setup that
 fails is reported as an infrastructure error and records no verdict, so it is
 never mistaken for `cannot_tell` on a criterion. The engine never pushes or
 changes the PR from the verifier, and the copy is removed afterwards. That tier
@@ -226,6 +246,17 @@ that must be among the successes. A repository with no CI runs the configured
 `gates` command in the verifier's copy and decides from its exit code. The
 verifier's input lists the criterion as decided by the engine.
 
+A failed check is run once more on the same head, with no change, to name the
+cause. The engine starts the failed jobs again, waits as it waits for pending
+checks and decides from the result. A pass is a flaky gate: the criterion is
+`met` by the passing run, a `flaky_gate` event names the check and the failed
+tests the job's log names, and one ticket is filed to make the test
+deterministic (a later sighting of the same check comments on the open ticket).
+A second failure, a rerun that cannot be started, or a head whose failed check
+was already rerun leaves the criterion `not_met`. A red check is never waved
+through, and a repository with no CI reruns a failing `gates` command once in
+the verifier's copy under the same rules.
+
 When the PR changes images under `docs/screenshots/`, the verifier opens each
 one and checks it against the ticket's "UI states" section and any criterion
 about what is visible. Each state is an entry in the verdict, judged from the
@@ -238,12 +269,14 @@ verifier, and a `met` on a state with no resolving screenshot is demoted to
 The engine does not take a `met` on the verifier's word. The verifier runs the
 commands it cites through `run-logged`, which appends each command with its exit
 code and output to a log the engine owns. It clears the variables under which a
-test tool prints failures only, so a passed test shows in the log. Every
+test tool prints failures only, so a passed test shows in the log. Output past the log's limit is cut, but every test result line is kept and the record says `truncated`; a demoted test citation says so when a record was cut. Every
 citation is then checked against what the engine recorded in the copy: a `file`
 exists and the line is within it, a `test` appears in a recorded run and passed
 (cited as the run reported it, or as `describe > test` with the enclosing
 describes in order and the last part the test's own name), a `command` is in the
-log with exit 0, a `screenshot` exists under `docs/screenshots/`. A `met` with a
+log with exit 0 (matched on the folder it ran in and its shell words, so a leading
+`cd <folder> &&`, a `sh -c` or `bash -c` wrapper and the style of quoting do not
+matter; `run-logged` records the folder relative to the copy), a `screenshot` exists under `docs/screenshots/`. A `met` with a
 citation that does not check out becomes `cannot_tell`, and the verifier is asked
 once more about those criteria with the failed citations named. Every
 `cannot_tell` carries `missing`, one of `no_state`, `no_test`, `no_data`,

@@ -8,6 +8,7 @@ import {dirname, join} from 'path';
 
 import {DEFAULT_PACKS, LOCK_PATH, loadPacks, mergeLock, parseLock, renderLock, selectPacks, sha256, type Lock, type LockedFile} from './packs';
 import type {CommandRunner, Harness} from '../ports';
+import {installStarter, withStarterPacks, type StarterManifest} from './starter';
 import {finishStructure, formatStructureSetup, type StructureSetup} from './structure-defaults';
 import {CONFIG_FILE, FORGER_DIR, detectLayout, forgerPath} from '../config';
 
@@ -25,6 +26,8 @@ export interface SetupOptions {
   hookHarness?: Harness;
   /** Lists the project's files; with it, installing the structure pack records its baseline. */
   run?: CommandRunner;
+  /** A starter to copy first; its gates and packs apply unless the caller named its own. */
+  starter?: StarterManifest;
 }
 
 export interface SetupEntry {
@@ -36,6 +39,8 @@ export interface SetupResult {
   files: SetupEntry[];
   gitignore: {added: string[]; kept: string[]};
   structure?: StructureSetup;
+  /** The starter copied, when one was. */
+  starter?: string;
 }
 
 const CHECK_MARKER = /\bwork\.ts\s+check\b|\bcheck docs\b/;
@@ -59,6 +64,23 @@ export function relocatableGates(gates: string): string {
 /** Per-run files a project never commits. */
 export function gitignoreLines(dir: string): string[] {
   return ['state.json', 'work.log', 'output/', 'HALT', 'runner.lock', 'events.jsonl', 'declined.json', 'verdicts/', 'tmp/', 'checks.jsonl'].map(f => `${dir}/${f}`);
+}
+
+/** Runtime files git still tracks: an ignore line does not stop tracking a committed file. Unreadable git state reports none. */
+export function trackedRuntimeFiles(projectRoot: string, run: CommandRunner): string[] {
+  const dir = detectLayout(projectRoot).dir;
+  const files = gitignoreLines(dir).filter(l => !l.endsWith('/'));
+  const dirs = gitignoreLines(dir).filter(l => l.endsWith('/'));
+  try {
+    const out = run(`git ls-files -- ${[...files, ...dirs].map(f => `'${f}'`).join(' ')}`);
+    return out.split('\n').map(l => l.trim()).filter(l => l !== '');
+  } catch {
+    return [];
+  }
+}
+
+export function formatTrackedRuntime(files: string[]): string[] {
+  return files.map(f => `! git tracks ${f}; stop tracking it and keep the file with: git rm --cached ${f}`);
 }
 
 /** The gates always end with the check command, run from the plugin that is installed now. */
@@ -129,17 +151,19 @@ export function runSetup(projectRoot: string, pluginRoot: string, opts: SetupOpt
   const templates = join(pluginRoot, 'templates');
   const read = (name: string) => readFileSync(join(templates, name), 'utf-8');
 
-  const {packs, unknown} = selectPacks(loadPacks(pluginRoot), opts.packs ?? DEFAULT_PACKS);
+  const starter = opts.starter;
+  const wanted = opts.packs ?? DEFAULT_PACKS;
+  const {packs, unknown} = selectPacks(loadPacks(pluginRoot), starter ? withStarterPacks(wanted, starter) : wanted);
   if (unknown.length > 0) throw new Error(`Unknown pack: ${unknown.join(', ')}`);
 
-  const files: SetupEntry[] = [
-    {
-      path: `${FORGER_DIR}/${CONFIG_FILE}`,
-      action: writeIfAbsent(forgerPath(projectRoot, `${FORGER_DIR}/${CONFIG_FILE}`), () =>
-        renderConfig(read('workloop.config.json'), opts, CHECK_COMMAND)
-      ),
-    },
-  ];
+  // First, so the starter's own journeys and files stand and the packs' empty defaults are kept.
+  const files: SetupEntry[] = starter ? installStarter(projectRoot, pluginRoot, starter) : [];
+  files.push({
+    path: `${FORGER_DIR}/${CONFIG_FILE}`,
+    action: writeIfAbsent(forgerPath(projectRoot, `${FORGER_DIR}/${CONFIG_FILE}`), () =>
+      renderConfig(read('workloop.config.json'), {...opts, gates: opts.gates ?? starter?.gates}, CHECK_COMMAND)
+    ),
+  });
   const installs = packs.map(({manifest, dir}) => {
     const written: LockedFile[] = [];
     for (const f of manifest.files) {
@@ -173,12 +197,13 @@ export function runSetup(projectRoot: string, pluginRoot: string, opts: SetupOpt
   const ignorePath = join(projectRoot, '.gitignore');
   const merged = mergeGitignore(existsSync(ignorePath) ? readFileSync(ignorePath, 'utf-8') : '', gitignoreLines(detectLayout(projectRoot).dir));
   if (merged.added.length > 0) writeFileSync(ignorePath, merged.text);
-  return {files, gitignore: {added: merged.added, kept: merged.kept}, ...(structure ? {structure} : {})};
+  return {files, gitignore: {added: merged.added, kept: merged.kept}, ...(structure ? {structure} : {}), ...(starter ? {starter: starter.name} : {})};
 }
 
 export function formatSetup(result: SetupResult, offeredPresets: string[] = []): string {
   const lines = result.files.map(f => `${f.action.padEnd(7)} ${f.path}`);
   lines.push(...result.gitignore.added.map(l => `ignored ${l}`));
+  if (result.starter) lines.push(`starter  ${result.starter}`);
   if (result.structure) lines.push(...formatStructureSetup(result.structure));
   lines.push(...offeredPresets.map(p => `flavour available: ${p} (setup --flavour ${p})`));
   return lines.join('\n');

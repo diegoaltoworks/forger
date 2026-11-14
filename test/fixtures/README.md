@@ -9,6 +9,7 @@ A fixture is a directory under `projects/`. Adding one needs no change to the CI
 An optional `fixture.json` in the fixture gives:
 
 - `gates`: the gates passed to `setup --gates`. They must write the lcov report the testing pack reads.
+- `starter`: the project has no source file, so `setup` copies a starter and its own gates run; `--gates` is not passed.
 - `prepare`: a command that installs the tools the gates need. It runs in the project and may use `$FIXTURE_TOOLS`, a scratch directory outside the project.
 
 Run it locally with `bun test/fixtures/run.integration.ts [fixture...]`, and the assertions' own tests with `bun test test/fixtures/assertions.test.ts`.

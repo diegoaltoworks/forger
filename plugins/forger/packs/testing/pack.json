@@ -1,20 +1,23 @@
 {
   "id": "testing",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "The testing habits forger's engine relies on: tables for the pure core, fixtures for adapters, fixes with tests, coverage that never drops.",
   "detect": ["dep:vitest", "dep:jest", "dep:mocha", "dep:@types/bun", "file:pytest.ini", "file:bunfig.toml", "table:tool.pytest.ini_options", "glob:*.test.ts", "glob:*.spec.ts", "glob:test_*.py"],
   "files": [
     {"source": "files/testing.md", "target": ".forger/opinions/testing.md"},
-    {"source": "files/testing.json", "target": ".forger/testing.json"}
+    {"source": "files/testing.json", "target": ".forger/testing.json"},
+    {"source": "files/budgets.json", "target": ".forger/budgets.json"}
   ],
   "opinions": [
     {"id": "testing.tables", "rung": "rule", "summary": "The pure core is tested by tables of input and expected output.", "check": null},
     {"id": "testing.fixtures", "rung": "rule", "summary": "Adapters are tested on recorded real output, never on a live service.", "check": null},
     {"id": "testing.fix-with-test", "rung": "check", "summary": "A branch with a fix: commit adds or changes a test file.", "check": "tests"},
     {"id": "testing.no-network", "rung": "check", "summary": "Unit test files do not import network or process-spawning modules.", "check": "tests"},
+    {"id": "testing.guard-finds-its-cases", "rung": "rule", "summary": "A regression guard finds its cases by scanning the source for the pattern, never from a list of today's files.", "check": null},
     {"id": "testing.behaviour-names", "rung": "rule", "summary": "Tests are named for behaviour, not for the function they call.", "check": null},
-    {"id": "testing.coverage-ratchet", "rung": "check", "summary": "Line coverage never falls below the generated baseline; the baseline only goes up.", "check": "coverage"}
+    {"id": "testing.coverage-ratchet", "rung": "check", "summary": "Line coverage never falls below the generated baseline; the baseline only goes up.", "check": "coverage"},
+    {"id": "testing.budget-ratchet", "rung": "check", "summary": "Each number a budget command prints stays no worse than its recorded one; the record only moves the good way.", "check": "budgets"}
   ],
-  "checks": ["tests", "coverage"],
+  "checks": ["tests", "coverage", "budgets"],
   "slots": []
 }

@@ -49,6 +49,10 @@ chosen ids go to `--packs` below, after `base`.
 bun "${CLAUDE_PLUGIN_ROOT}/bin/work.ts" setup --json --gates "<gates>" --base-branch "<branch>" --tracker "<kind>" [--flavour "<name>"] [--packs "base,<chosen>"]
 ```
 
+In a repository with no source file the tool also copies the default starter (a
+Bun and TypeScript skeleton) and uses its gates; pass `--no-starter` to copy none
+or `--starter <name>` to pick one. A repository with source files gets none.
+
 The tool writes the config (with `check` appended to the gates),
 `process.md` with principle 0 and the default gotchas, a starter `backlog.json`,
 the ticket, PR, work order, report, retro and rule templates under
@@ -56,6 +60,10 @@ the ticket, PR, work order, report, retro and rule templates under
 and reports each file as `written` or `kept`; a second run writes nothing. The files
 come from opinion packs (`--packs`, default `base`), and `.forger/forger.lock.json`
 records what was installed.
+
+For each engine runtime file that git already tracks (an ignore line does not stop
+that), the report has a `tracked_runtime` list and a line naming the file and
+`git rm --cached <file>`. Relay it; setup never runs it.
 
 ## Upgrading
 

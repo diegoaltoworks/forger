@@ -130,3 +130,16 @@ describe('runUpgrade gates', () => {
     expect(runUpgrade(project, plugin('1.0.0', {})).gates).toBeUndefined();
   });
 });
+
+describe('the base pack hooks policy', () => {
+  test('setup --upgrade brings an unedited hooks policy to the default that lists leave-worktree', () => {
+    const project = tmp();
+    const old = JSON.stringify({rules: ['merge', 'push-base', 'status-write', 'state-edit'], deny: []}, null, 2) + '\n';
+    mkdirSync(join(project, '.forger'), {recursive: true});
+    writeFileSync(join(project, '.forger/hooks.json'), old);
+    writeFileSync(join(project, LOCK_PATH), JSON.stringify({packs: [{id: 'base', version: '1.7.0', files: [{path: '.forger/hooks.json', sha256: sha256(old)}]}]}));
+    const result = runUpgrade(project, join(import.meta.dir, '../../..'));
+    expect(result.files).toContainEqual(expect.objectContaining({path: '.forger/hooks.json', action: 'take-upstream'}));
+    expect(JSON.parse(readFileSync(join(project, '.forger/hooks.json'), 'utf-8')).rules).toContain('leave-worktree');
+  });
+});

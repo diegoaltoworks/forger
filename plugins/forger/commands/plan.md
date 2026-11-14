@@ -66,6 +66,20 @@ what is already in the backlog, and the current direction as you read it. Ask th
 user to correct anything before you proceed. This proves you did the reading and
 anchors the interview.
 
+## 1b. The product brief
+
+Run `bun "${CLAUDE_PLUGIN_ROOT}/bin/work.ts" facts --product` and read the brief
+it prints: who the app is for, the journeys they must be able to do, how
+success shows and what is out.
+
+- `{"present": false}`: there is no brief. Write it once from the interview,
+  as `docs/product.md`, in the shape of `.forger/templates/product.md`.
+- Present with `problems`: ask only for the sections it names, then write them
+  into the file.
+- Present with no problems: use it, and do not ask again what it answers.
+
+File no ticket before the brief has all four sections.
+
 ## 2. Scope the session
 
 Ask what they want to achieve. Frame it as an enhancement or small set of them,
@@ -213,7 +227,7 @@ Read `tracker.kind` from `workloop.config.json`.
 **`github`:** one issue per ticket, in dependency order (blockers first) so edges
 can reference real numbers. Then:
 - `gh issue create --title "<ticket title>" --label <tracker.label> --body "<body>"`
-  with a Merge section (`when green`, or `owner reviews` when the acceptance includes a judgement only the owner can make, with the reason in the ticket) a Probe section when the ticket rests on an assumption that can be measured in minutes (a backticked command with its expected result: `exits 0`, `prints "text"` or `prints a number of at least N`; otherwise "none"), a Placement section (the folder each piece of new code goes in, as backticked paths, or "none"; from `## Structure` in process.md and `.forger/structure.json`; when the folder is frozen or recorded over its limit, file a ticket labelled `structure` that makes the folder and block this ticket on it), and a Guards section (each guarantee the change must keep - a test floor, budget, baseline or threshold - with its file and value, or "none"; start from `work.ts facts --guards <paths the ticket touches>`) and a body of: what to build (end-to-end behaviour), acceptance criteria as
+  with a Merge section (`when green`, or `owner reviews` when the acceptance includes a judgement only the owner can make, with the reason in the ticket) a Probe section when the ticket rests on an assumption that can be measured in minutes (a backticked command with its expected result: `exits 0`, `prints "text"` or `prints a number of at least N`; otherwise "none"), a Placement section (the folder each piece of new code goes in, as backticked paths, or "none"; from `## Structure` in process.md and `.forger/structure.json`; when the folder is frozen or recorded over its limit, file a ticket labelled `structure` that makes the folder and block this ticket on it), and a Guards section (each guarantee the change must keep - a test floor, budget, baseline or threshold - with its file and value, or "none"; start from `work.ts facts --guards <paths the ticket touches>`) and a body of: what to build (end-to-end behaviour, and which journey of the product brief it serves or that it is upkeep), acceptance criteria as
   checkboxes, and a `Blocked by` list.
 - Link every issue the body lists under `Blocked by` as a native blocked-by with
   `link-blockers --issue <n>` (the work command's `bin/work.ts`), after the

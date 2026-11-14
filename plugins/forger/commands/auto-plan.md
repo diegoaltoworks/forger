@@ -26,7 +26,8 @@ The tracker settings are in `.forger/workloop.config.json`; its conventions are 
    vocabulary and respect the ADRs in the area you touch
 4. `.forger/backlog.json` - what already exists, so you do not duplicate it
 5. `.forger/human.md` - known blockers
-6. The source (next section)
+6. The product brief: `work.ts facts --product`. When it reports `present: false` or `problems`, plan only what the source states and mark each such ticket as upkeep; do not invent a brief
+7. The source (next section)
 
 ## The source
 
@@ -67,6 +68,7 @@ shape. Good tickets:
 - name the **files** they touch and the **patterns** to reuse, as hints for a
   cold worker (read the code to fill these in; do not copy stale paths from
   the source);
+- say in `What to build` which journey of the product brief the ticket serves, or that it is upkeep (no new section);
 - carry a `## Merge` section: `when green`, or `owner reviews` when the acceptance includes a judgement only the owner can make (taste, an approved baseline), with the reason stated in the ticket;
 - carry a `## Placement` section: the folder each piece of new code goes in, as backticked paths, or "none", taken from `## Structure` in process.md and `.forger/structure.json`. When a planned change has nowhere to go (its folder is frozen or recorded over its limit), file a ticket labelled `structure` that makes the folder, and list it under `## Blocked by` of the ticket that needs it (a missing section warns, a flagged folder with neither the move nor the blocker is refused);
 - carry a `## Guards` section: each guarantee the change must keep (a test floor, budget, baseline or threshold) with its file and value, or "none"; start from `work.ts facts --guards <paths the ticket touches>` (an empty section is refused, a missing one warns);

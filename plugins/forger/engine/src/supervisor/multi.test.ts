@@ -24,6 +24,7 @@ const report = (over: Partial<Report>): Report => ({
   in_progress: [],
   declined: [],
   recovered: [],
+  flaky_gates: [],
   handed_over: [],
   next: [],
   waiting_on_owner: [],

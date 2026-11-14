@@ -2,6 +2,7 @@ import {describe, expect, test} from 'bun:test';
 import {readFileSync} from 'fs';
 import {join} from 'path';
 
+import type {TerminalEvent} from '../loop';
 import type {CommandRunner} from '../ports';
 import {checksConclusion, closingPrNumber, formatFacts, gatherLoopFacts, parsePr} from './facts';
 
@@ -44,9 +45,21 @@ describe('gatherLoopFacts', () => {
       clean: true,
       base_branch: 'main',
       origin_base_head: 'abc123',
-      issue: {number: 5, state: 'CLOSED', closing_pr: {number: 7, state: 'MERGED', merged: true, checks: 'success', checks_ok: true, failing_checks: [], head: null}},
+      issue: {number: 5, state: 'CLOSED', closing_pr: {number: 7, state: 'MERGED', merged: true, checks: 'success', checks_ok: true, failing_checks: [], head: null}, delivery: null},
     });
     expect(formatFacts(f)).toContain('PR #7 merged, checks success');
+  });
+
+  test('facts reports the delivery outcome for the PR that closed an issue', () => {
+    const events = [
+      {event: 'delivery_failed', at: 't', iteration: 1, ticket: 'issue-5', reason: 'PR #7: check: `x` exited 1'},
+      {event: 'rolled_back', at: 't', iteration: 1, ticket: 'issue-5', reason: 'PR #7: undone'},
+    ] as TerminalEvent[];
+    const f = gatherLoopFacts(stub(answers), {baseBranch: 'main', ignore: [], issue: 5, events});
+    expect(f.issue?.delivery).toBe('rolled_back');
+    expect(formatFacts(f)).toContain('delivery rolled_back');
+    const other = [{event: 'delivered', at: 't', iteration: 1, ticket: 'issue-9', reason: 'PR #8: ok'}] as TerminalEvent[];
+    expect(gatherLoopFacts(stub(answers), {baseBranch: 'main', ignore: [], issue: 5, events: other}).issue?.delivery).toBeNull();
   });
 
   test('dirty tree, detached HEAD, issue without a PR', () => {
@@ -54,7 +67,7 @@ describe('gatherLoopFacts', () => {
     expect(f.branch).toBeNull();
     expect(f.clean).toBe(false);
     expect(f.origin_base_head).toBeNull();
-    expect(f.issue).toEqual({number: 5, state: 'OPEN', closing_pr: null});
+    expect(f.issue).toEqual({number: 5, state: 'OPEN', closing_pr: null, delivery: null});
   });
 
   test('issues only read-only commands', () => {

@@ -1,7 +1,7 @@
 import {describe, expect, test} from 'bun:test';
 
 import {terminalEvent} from '../loop';
-import {mergedInPeriod, ownerReviewPrs, proposedAdrs, recommendationFrom, reportPeriod, uncausedClearItems, waitingIssues} from './waiting';
+import {mergedInPeriod, ownerReviewPrs, proposedAdrs, recommendationFrom, reportPeriod, failedDeliveryItems, uncausedClearItems, waitingIssues} from './waiting';
 
 describe('recommendationFrom', () => {
   test('the paragraph under a Recommendation heading', () => {
@@ -99,5 +99,13 @@ describe('ownerReviewPrs', () => {
       'PR #20 second is waiting for your review: https://example.test/pull/20',
     ]);
     expect(w[0].recommendation).toContain('merge it');
+  });
+});
+
+describe('failedDeliveryItems', () => {
+  test('lists a failed delivery until a later one passes', () => {
+    const failed = {event: 'delivery_failed', at: 't', iteration: 1, ticket: 'issue-1', reason: 'PR #5: check failed'} as never;
+    expect(failedDeliveryItems([failed])[0].question).toContain('PR #5');
+    expect(failedDeliveryItems([failed, {event: 'delivered', at: 't', iteration: 2, ticket: 'issue-2', reason: 'PR #6: ok'} as never])).toEqual([]);
   });
 });

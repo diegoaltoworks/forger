@@ -23,7 +23,7 @@ describe('hookFindings', () => {
 
   test('each dropped default rule is a finding a waiver can cover', () => {
     const findings = hookFindings('{"rules": ["merge", "push-base"]}', installed);
-    expect(findings.map(f => f.detail)).toEqual(['drops the default rule status-write', 'drops the default rule state-edit']);
+    expect(findings.map(f => f.detail)).toEqual(['drops the default rule status-write', 'drops the default rule state-edit', 'drops the default rule leave-worktree']);
     const waiver = {opinion: WORKER_HOOKS_OPINION, path: '.forger/hooks.json', reason: 'this project sets its own statuses', approved_by: 'the owner'};
     expect(applyWaivers(findings, [waiver]).violations).toEqual([]);
   });

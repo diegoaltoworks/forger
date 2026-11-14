@@ -63,8 +63,8 @@ $ bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts status --json
 | `events` | Lists the terminal and mid-run events so far. |
 | `await-event` | Blocks until an event past the first N arrives. |
 | `report` | Reports across loops: merged, in progress, next, waiting on the owner, and the measures. |
-| `measure` | Reports runs, failures by cause, time, cost, rework and escaped defects. Given a route or state and a selector, reports the text's width against the room it has at each viewport, locale and text scale, worst case first. |
-| `retro` | Writes a rule record or an upstream issue draft from a captured signal. |
+| `measure` | Reports runs, failures by cause, time, cost, rework and escaped defects, and with a journeys file the share of merged PRs that changed a journey against upkeep. With `--opinions`, reports per installed opinion with a check how many runs and tickets failed and how they ended (fixed, waived, open), and per ticket-template section how many merged tickets answered none. Given a route or state and a selector, reports the text's width against the room it has at each viewport, locale and text scale, worst case first. |
+| `retro` | Writes a rule record or an upstream issue draft from a captured signal; `retro demote` lists opinions that do not earn their place and drafts the demotion, filing nothing. |
 | `catalogue` | Lists the failure catalogue's rows and, with `--update`, syncs them with the tracker. |
 
 ### Tickets and pull requests
@@ -77,7 +77,7 @@ $ bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts status --json
 | `slice` | Prints the spec slice of each requirement a ticket's `Satisfies:` line names. |
 | `intent` | Classifies a planning request as product or creative. |
 | `pr-body` | Checks a PR body keeps its closing line and the ticket's review sections. |
-| `facts` | Reads the branch, the issue, its closing PR and a PR's CI conclusion, changing nothing. `--guards <path>...` lists the guard files and the test files that name any of the paths. |
+| `facts` | Reads the branch, the issue, its closing PR and a PR's CI conclusion, changing nothing. `--guards <path>...` lists the guard files and the test files that name any of the paths. `--product` prints the parsed product brief (`docs/product.md`: who it is for, the journeys, how success shows, what is out, and the `problems` where a section is missing or empty), or `{"present": false}` when there is none. |
 | `verify` | Runs a fresh-context verifier on a PR's head and records its verdict per criterion; "Gates green" is decided from the head's CI checks, not by the model. |
 | `merge` | Waits for every check, then squash-merges only a passing, verified PR. |
 | `handover` | After a failed verify, says the next move or hands the ticket to the owner. |
@@ -89,17 +89,17 @@ $ bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts status --json
 
 | Command | What it does |
 |---|---|
-| `check` | Runs every check the installed packs declare with waivers applied; name one (`arch`, `structure`, `decisions`, `guards`, `docs`, `safety`, `tests`, `coverage`, `ui`, `a11y`, `spec`, `ticket`, `hooks`, `sandbox`) to run it alone. `check guards` fails when the diff against the merge-base loosens a guard file (a minimum lowered, a maximum raised, or a number of unknown direction changed), deletes a guard or test file, or adds a skip or focus to a test, unless the ticket's Decisions name the file; each finding says to ask the owner, who records it with `decide`. `check structure` fails on a new folder over the size limit, a new prefix cluster, a file named after its folder, a new file in a frozen folder or a file that only re-exports; findings recorded in `.forger/structure-baseline.json` warn, `--baseline` writes that record once and `--update` only removes entries that no longer hold. `check sandbox` tests the docker sandbox image against the image contract, one line per item, and exits 0 only when all pass. |
+| `check` | Runs every check the installed packs declare with waivers applied; name one (`arch`, `structure`, `decisions`, `guards`, `docs`, `safety`, `delivery`, `journeys`, `budgets`, `tests`, `coverage`, `ui`, `a11y`, `spec`, `ticket`, `hooks`, `sandbox`) to run it alone. `check guards` fails when the diff against the merge-base loosens a guard file (a minimum lowered, a maximum raised, or a number of unknown direction changed), deletes a guard or test file, or adds a skip or focus to a test, unless the ticket's Decisions name the file; each finding says to ask the owner, who records it with `decide`. `check structure` fails on a new folder over the size limit, a new prefix cluster, a file named after its folder, a new file in a frozen folder or a file that only re-exports; findings recorded in `.forger/structure-baseline.json` warn, `--baseline` writes that record once and `--update` only removes entries that no longer hold. `check budgets` runs each command in `.forger/budgets.json` and fails on a number worse than its record in `.forger/budgets-baseline.json`, on output that is not a number or on a failing command; a budget with no record is a gap, and `--update` records new and better numbers and refuses a worse one. `check delivery` validates `.forger/deliver.json` (a `check` command, non-empty commands, positive timeouts) and runs none of the commands. `check journeys` starts the app when `.forger/journeys.json` names a `start`, waits for `ready`, runs each journey's command and stops the app, failing on a journey that exits non-zero; no journey named is a gap, not a pass. `check sandbox` tests the docker sandbox image against the image contract, one line per item, and exits 0 only when all pass. |
 | `contract` | Checks the result a slot's skill wrote against the slot's output contract. |
 | `eval` | Runs a slot's skill on the slot's cases and scores each result. |
-| `run-logged` | Runs a command, passes its output through and appends it to a log the verifier checks. |
+| `run-logged` | Runs a command (several arguments stay one argument each), passes its output through and appends it, with the folder it ran in, to a log the verifier checks; test result lines are always kept and a cut output is marked `truncated`. |
 | `hook` | The harness's tool-call hook: refuses a call that breaks the hook policy. |
 
 ### Setup, packs and skills
 
 | Command | What it does |
 |---|---|
-| `setup` | Installs the chosen packs into `.forger/` without overwriting, and records them in the lock file. |
+| `setup` | Installs the chosen packs into `.forger/` without overwriting, and records them in the lock file. Lists each runtime file git still tracks, with the `git rm --cached` command that stops tracking it; it runs none itself. |
 | `migrate` | Moves forger's files from the legacy layout to `.forger/`, or the state to the state branch. |
 | `packs` | Lists the available packs and which are installed; `--detect` suggests packs. |
 | `opinions` | Lists each installed opinion with its pack, rung and enforcing check. |

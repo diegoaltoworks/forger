@@ -25,6 +25,7 @@ export function loopLabels(intakeLabel: string): LabelSpec[] {
     {name: 'owner-review', color: '5319e7', description: 'Built and verified; the owner merges the PR'},
     {name: 'deferred', color: 'c5def5', description: 'Parked on purpose'},
     {name: 'needs-triage', color: 'ededed', description: 'Not yet looked at'},
+    {name: 'flaky-gate', color: 'e99695', description: 'A gate that failed and passed on a rerun; make its test deterministic'},
     {name: 'P0', color: 'b60205', description: 'Priority 0'},
     {name: 'P1', color: 'd93f0b', description: 'Priority 1'},
     {name: 'P2', color: 'fbca04', description: 'Priority 2'},

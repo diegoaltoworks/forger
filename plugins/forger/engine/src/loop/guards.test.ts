@@ -34,7 +34,16 @@ describe('guardsReport', () => {
     const files = ['a/budget.json', 'a/layout.e2e.spec.ts', 'a/other.test.ts', 'src/x.ts'];
     const text: Record<string, string> = {'a/layout.e2e.spec.ts': "expect(file).toBe('src/x.ts')", 'a/other.test.ts': 'nothing'};
     const r = guardsReport(['src/x.ts'], files, ['a/*.json'], ['**/*.test.*', '**/*.spec.*'], f => text[f]);
-    expect(r).toEqual({paths: ['src/x.ts'], guards: ['a/budget.json'], tests: ['a/layout.e2e.spec.ts']});
+    expect(r).toEqual({paths: ['src/x.ts'], guards: ['a/budget.json'], tests: ['a/layout.e2e.spec.ts'], journeys: []});
+  });
+
+  test('facts --guards lists a journey whose paths match a touched file', () => {
+    const journeys = [
+      {name: 'sign up', command: 'x', paths: ['src/auth/**']},
+      {name: 'checkout', command: 'y', paths: ['src/cart/**']},
+    ];
+    const r = guardsReport(['src/auth/login.ts'], [], [], [], () => '', journeys);
+    expect(r.journeys).toEqual(['sign up']);
   });
 });
 

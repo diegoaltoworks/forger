@@ -8,10 +8,13 @@ import {existsSync, readFileSync} from 'fs';
 import {join} from 'path';
 
 import {runArchCheckOutput} from './arch';
+import {runBudgetsCheck} from './budgets';
 import {runDecisionsCheck} from './decisions';
 import {runDocsCheck} from './docs';
 import {runGuardsCheck} from './guards';
 import {runHooksCheck} from './hooks';
+import {runDeliveryCheck} from './delivery';
+import {runJourneysCheck} from './journeys';
 import type {CommandRunner, Harness, SpecProvider} from '../ports';
 import {runSafetyCheckOutput} from './safety';
 import {runSpecDecision} from './spec';
@@ -75,6 +78,9 @@ export const CHECKS: Record<string, (ctx: CheckContext) => Finding[] | CheckOutp
   decisions: ctx => runDecisionsCheck(ctx.projectRoot, ctx.run),
   guards: ctx => runGuardsCheck(ctx.projectRoot, ctx.run),
   safety: ctx => runSafetyCheckOutput(ctx.projectRoot, ctx.run),
+  delivery: ctx => runDeliveryCheck(ctx.projectRoot),
+  journeys: ctx => runJourneysCheck(ctx.projectRoot, ctx.run),
+  budgets: ctx => runBudgetsCheck(ctx.projectRoot, ctx.run),
   tests: ctx => runTestsCheck(ctx.projectRoot, ctx.run),
   coverage: ctx => runCoverageCheck(ctx.projectRoot, ctx.run),
   structure: ctx => {

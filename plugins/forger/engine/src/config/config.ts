@@ -59,8 +59,8 @@ export interface WorkloopConfig {
   verifier: Tier | null;
   /**
    * What the engine runs in the verifier's throwaway copy of the PR head before the model starts.
-   * `setup` is a shell command; null uses the install step of `gates` (the leading `cd` and
-   * install segments), and nothing when the gates have none.
+   * `setup` is a shell command; "" runs nothing; null uses the install step of `gates` (the leading
+   * `cd` and install segments), else the frozen install for a lockfile at the root of the copy.
    */
   verify: {setup: string | null};
   limits: {

@@ -10,7 +10,10 @@ belongs in, naming the merged PRs. `check docs` fails on an Open row with no
 open issue, on a row that disagrees with the tracker, and on an entry section
 (a `###` heading).
 
-A PR that fixes a failure moves its row to Fixed itself, naming the PR. Its
+A PR that fixes a failure moves its row to Fixed itself, naming the PR. That
+holds for a row the PR adds for its own issue as much as for one it found in
+Open: once the branch has an open PR, `check docs` fails on an Open row whose
+only open issue is the branch's ticket, and `work catalogue --update` moves it. Its
 issue closes only when the PR merges, so on the branch `feat/issue-<n>` the
 check treats issue `<n>` as closed by the PR its Fixed row names; any other
 open issue in a Fixed row still fails.
@@ -85,3 +88,9 @@ the next `work catalogue --update` moves the row back to Open.
 | A design rule meets a layout guarantee only at CI | A worker builds to a design rule, a guarantee fails at CI, and the owner gets prose to untangle instead of options. | [#344](https://github.com/diegoaltoworks/forger/issues/344) - merged in [#353](https://github.com/diegoaltoworks/forger/pull/353) |
 | Screenshots that don't render in the `reviewer's client` | A screenshot link loads only in a signed-in browser and shows as a broken image in the app the owner reviews in. | [#332](https://github.com/diegoaltoworks/forger/issues/332) - merged in [#358](https://github.com/diegoaltoworks/forger/pull/358) |
 | Structure decays while every ticket passes | Each ticket passes its gates, and the tree as a whole drifts into flat folders, prefixes and leftovers. | [#362](https://github.com/diegoaltoworks/forger/issues/362), [#363](https://github.com/diegoaltoworks/forger/issues/363), [#364](https://github.com/diegoaltoworks/forger/issues/364), [#365](https://github.com/diegoaltoworks/forger/issues/365) - merged in [#371](https://github.com/diegoaltoworks/forger/pull/371), [#368](https://github.com/diegoaltoworks/forger/pull/368), [#373](https://github.com/diegoaltoworks/forger/pull/373), [#374](https://github.com/diegoaltoworks/forger/pull/374) |
+| A regression guard misses the next path | A fix comes with a guard test that lists the files it checks; the defect returns through a path the list does not name and the guard still passes. | [#425](https://github.com/diegoaltoworks/forger/issues/425) - merged in [#432](https://github.com/diegoaltoworks/forger/pull/432) |
+| A PR that fixes a catalogue failure leaves its row Open | A PR adds an Open row for its own issue, the check passes on the branch, and the merge closes the issue and fails the check on the base branch. | [#324](https://github.com/diegoaltoworks/forger/issues/324), [#437](https://github.com/diegoaltoworks/forger/issues/437) - merged in [#325](https://github.com/diegoaltoworks/forger/pull/325), [#439](https://github.com/diegoaltoworks/forger/pull/439) |
+| A flaky test reads as a broken ticket | A test that fails now and then fails the gates or the verifier, and iterations go into code that was fine. | [#429](https://github.com/diegoaltoworks/forger/issues/429) - merged in [#443](https://github.com/diegoaltoworks/forger/pull/443) |
+| A cut command log hides a passed test | A verifier runs several workspaces' tests in one command, the log keeps only the end of a long output, and a cited test that passed does not check out. | [#446](https://github.com/diegoaltoworks/forger/issues/446) - merged in [#448](https://github.com/diegoaltoworks/forger/pull/448) |
+| A worker writes its draft in the loop's checkout | A worker changes into the loop's own checkout and writes a draft there before working in its worktree; the draft stays as uncommitted changes and the engine runs it. | [#444](https://github.com/diegoaltoworks/forger/issues/444) - merged in [#450](https://github.com/diegoaltoworks/forger/pull/450) |
+| A merge is decided by an engine that carries a worker's unmerged draft | A worker's draft sat uncommitted in the engine's own checkout, and `verify` and `merge` ran from it as if nothing had changed. | [#445](https://github.com/diegoaltoworks/forger/issues/445) - merged in [#451](https://github.com/diegoaltoworks/forger/pull/451) |

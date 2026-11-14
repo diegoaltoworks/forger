@@ -81,6 +81,7 @@ takes the ticket out of the backlog; do not relabel the issue by hand.
   concurrent sessions skip it.
 
 ### 4. Implement
+- All work happens in your worktree: the loop's checkout is read by path and never entered or written.
 - If the issue has a `Satisfies:` line, read the context of each ID it names with
   `bun "${CLAUDE_PLUGIN_ROOT}/bin/work.ts" slice <ID...>` (exit 2: no spec provider installed; carry on).
 - Follow existing patterns - read the files the ticket names and match the code
@@ -106,6 +107,9 @@ takes the ticket out of the backlog; do not relabel the issue by hand.
   seam, in the `test_first` slot. Built-in: write the failing test, make it pass,
   then refactor.
 - Pure logic must be pure and tested as such.
+- A fix comes with a guard test, and the guard follows `testing.guard-finds-its-cases`:
+  it finds its cases by scanning the source for the pattern, never from a list of
+  today's files, and you show it failing on the code before the fix.
 
 ### 5. Quality gates (must all pass)
 Run the gate command from `workloop.config.json` (`gates`). Fix failures; do not
@@ -115,6 +119,11 @@ failing output, form one hypothesis and test it. If it is still red, signal `sto
 
 `check guards` is among the gates. Never lower a guard, skip a test or delete one to get
 green; when the change needs it, ask the owner, who records it with `decide`.
+
+A gate that fails on something your change did not touch is run once more with no
+change, never more. A pass on the rerun is a flaky gate: say so in the PR, and
+the engine files the ticket. A second failure is real. No test is skipped,
+weakened, retried inside the test tool or marked as allowed to fail to get past it.
 
 Read the gate's exit status, not its last lines: a gate piped into `tail` or
 chained with `;` reports success whatever happened. A failing gate stops the
@@ -151,9 +160,12 @@ Documentation is part of Definition of Done, every iteration:
 - Update `.forger/inbox/*.md` (clock -> check) for anything you finished.
 - When the ticket's issue is in the Open table of the failure catalogue
   (`docs/06-failure-catalogue.md`), move that row to the Fixed table in the
-  same PR, naming the PR once it is open, and push again before `verify`. On
-  the ticket's own branch `check docs` accepts the row while the issue is
-  still open; the merge closes it.
+  same PR, naming the PR once it is open, and push again before `verify`. A
+  row you add yourself for the ticket's own issue ends in Fixed too. Run
+  `work catalogue --update` to move it. Before the PR exists `check docs`
+  accepts the Open row; once it is open, `check docs` fails on it. On the
+  ticket's own branch a Fixed row is accepted while the issue is still open;
+  the merge closes it.
 
 ### 8. Commit + PR
 The PR body comes from the `pr_body` slot. Built-in: write it by
@@ -196,7 +208,9 @@ merges the PR. If `verify` does not pass, `handover` applies as for any ticket.
 finish, squash-merges only when all passed and `verify` recorded a passing
 verdict for the PR's current head (a later push makes it stale; `block` and
 `unclear` both refuse and name the criteria), and confirms the merge from the
-PR's state; it exits 1 when it refuses. When `verify` does not pass, run
+PR's state; it exits 1 when it refuses. When `verify` or `merge` refuses because the engine's source has
+uncommitted changes, the engine's checkout is not yours to repair: do not touch it, run `decline --reason blocked`
+with the refusal as the detail, and signal `stop`. When `verify` does not pass, run
 `handover --pr <pr> --json`: `move: "fix"` means make the open criteria decidable
 (a test, a command, a clearer assertion), push, and `verify` again;
 `move: "hand_over"` means the rounds are spent, the issue is now `needs-human`

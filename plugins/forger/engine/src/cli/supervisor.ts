@@ -4,8 +4,10 @@ import {join} from 'path';
 
 import {readBaseSync, decideHalt, pidAlive, viewLease, standingHalt, parseAllEvents, GhTrackerHalt, requiresVerifyStatus, handedOver, listRepoLabels, loopLabels, missingLabels, readAllVerdicts, verdictsHome, setAsideReasons} from '../loop';
 import {describeBlocked} from '../backlog';
+import {detectLayout} from '../config';
+import {gitignoreLines} from '../packs';
 import {engineStartLine, readEngineStart} from './detach';
-import {buildReport, formatReport, mergedInPeriod, orient as orientPlan, proposedAdrs, reportPeriod, uncausedClearItems, waitingIssues, ownerReviewPrs, OWNER_LABELS, type AdrText, type OwnerReviewPr, type MergedPrFact, type OwnerItem, type WaitingIssue} from '../supervisor';
+import {buildReport, formatReport, mergedInPeriod, orient as orientPlan, failedDeliveryItems, proposedAdrs, reportPeriod, uncausedClearItems, waitingIssues, ownerReviewPrs, OWNER_LABELS, type AdrText, type OwnerReviewPr, type MergedPrFact, type OwnerItem, type WaitingIssue} from '../supervisor';
 import {hooksGateProblems, hooksGateRefusal} from '../checks';
 import type {Command, CommandContext} from './command';
 import {harnessOfRoot} from './harness-of';
@@ -78,7 +80,7 @@ function supervise(which: 'orient' | 'report') {
     const lease = viewLease(ctx.stateStore.readLease(), new Date(), {host: hostname(), isAlive: pidAlive});
     const plan = orientPlan({
       lease,
-      baseSync: readBaseSync(ctx.run(), config.base_branch),
+      baseSync: readBaseSync(ctx.run(), config.base_branch, gitignoreLines(detectLayout(projectRoot).dir)),
       backlogAnomalies: ctx.backlog.report().anomalies,
       blockers: ctx.backlog.blocked().map(b => describeBlocked([b])),
       missingLabels: missing,
@@ -105,7 +107,7 @@ function supervise(which: 'orient' | 'report') {
     }
     const events = parseAllEvents(ctx.stateStore.readEvents());
     const out = which === 'orient' ? {...plan, engine_start: readEngineStart(ctx)} : buildReport({
-          ownerWaiting: [...ownerWaiting(ctx), ...uncausedClearItems(events)],
+          ownerWaiting: [...ownerWaiting(ctx), ...uncausedClearItems(events), ...failedDeliveryItems(events)],
           merged,
           period,
           status,
@@ -113,6 +115,7 @@ function supervise(which: 'orient' | 'report') {
           plan,
           haltKind: standingHalt(events)?.event ?? null,
           recovered: events.filter(e => e.event === 'recovered').map(e => `${e.ticket ?? 'no ticket'}: ${e.reason ?? 'recovered'} (${e.at})`),
+          flakyGates: events.filter(e => e.event === 'flaky_gate').map(e => e.reason ?? 'unnamed gate'),
           branch,
           baseBranch: config.base_branch,
           handedOver: handedOver(readAllVerdicts(verdictsHome(ctx.run(), projectRoot, config.paths.verdicts)), config.limits.maxVerifyRounds),

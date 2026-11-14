@@ -25,6 +25,8 @@ export interface VerifierInput {
   screenshots?: string[];
   /** Changed images the owner approved as baselines; `check ui` already holds them to the baseline, so they are not judged. */
   approved?: string[];
+  /** Whether a setup command ran in the copy; absent means none did. */
+  setupRan?: boolean;
   /** The command prefix that records a command in the copy's log; absent when no log is kept. */
   runLogged?: string;
   /** Citations of the previous round that did not check out, per criterion; present in the second round. */
@@ -41,10 +43,12 @@ export function buildVerifierInput(input: VerifierInput): string {
       : input.gate.checks;
   return [
     'You are the verifier. Decide, for each acceptance criterion below, whether the built result in the current directory meets it.',
-    'The current directory is a writable, disposable copy of the change with its dependencies installed: run the tests and the gates in it, and write whatever they need. It is thrown away afterwards, so nothing you write counts. Do not push, and do not change the pull request.',
+    input.setupRan
+      ? 'The current directory is a writable, disposable copy of the change with its dependencies installed: run the tests and the gates in it, and write whatever they need. It is thrown away afterwards, so nothing you write counts. Do not push, and do not change the pull request.'
+      : 'The current directory is a writable, disposable copy of the change. No setup ran in it, so its dependencies are not installed: a command that fails because a dependency is missing is "cannot_tell" with missing "infra", never "not_met". Run the tests and the gates in it, and write whatever they need. It is thrown away afterwards, so nothing you write counts. Do not push, and do not change the pull request.',
     'For each criterion answer "met", "not_met" or "cannot_tell". "met" and "not_met" need evidence: a file with line (kind "file", ref "path:line"), a command you ran (kind "command"), or a test name (kind "test", ref the name the run reported, "describe > test" for a test inside a describe). If you cannot tell, say cannot_tell; do not guess.',
     'The engine checks every piece of evidence against what it recorded in the copy: a file must exist and the line be in it, a test must appear passed in a recorded run, a command must be in the command log with exit 0, a screenshot must exist. A "met" whose evidence does not check out is turned into "cannot_tell". Every "cannot_tell" must carry "missing", one of: no_state (no screenshot or state shows it), no_test (no test covers it), no_data (nothing to observe it with), infra (the environment failed), ambiguous_criterion (the criterion cannot be decided as written); an answer without it is rejected.',
-    ...(input.runLogged ? [`Run every command you cite through ${input.runLogged} -- <command>, which records it; a command run any other way is not in the log. Cite the command exactly as you passed it.`] : []),
+    ...(input.runLogged ? [`Run every command you cite through ${input.runLogged} -- <command>, which records it; a command run any other way is not in the log. A cited command is matched on its folder and its words: a leading "cd FOLDER &&" or a sh -c or bash -c wrapper and the style of quoting do not matter, but the folder, the arguments and the exit code 0 do.`] : []),
     'Reply with one JSON object and nothing after it: {"verdict":[{"criterion":"c1","verdict":"met","evidence":[{"kind":"file","ref":"src/a.ts:10"}]},{"criterion":"c2","verdict":"cannot_tell","missing":"no_test","evidence":[]}]}. Judge every criterion exactly once, using the ids below.',
     ...(input.failedCitations && input.failedCitations.length > 0
       ? ['', '## Second round', 'Your previous answer cited evidence the engine could not confirm. Re-judge these criteria and fix or replace the citations:', ...input.failedCitations.map(f => `- ${f.criterion}: ${f.citations.join('; ')}`)]
@@ -115,6 +119,10 @@ export interface VerdictRecord {
   /** Why the output was rejected; empty when it was valid. */
   problems: string[];
   at: string;
+  /** The setup command that ran in the verifier's copy and where it came from; null when none ran. */
+  /** The copy's command log, kept beside this record when the verdict is not a pass or a citation did not check out; null when none was kept. */
+  commandLog?: string | null;
+  setup?: {command: string; source: 'configured' | 'gates' | 'lockfile'} | null;
 }
 
 export interface RecordSubject {

@@ -101,7 +101,7 @@ export async function main(argv: string[] = process.argv.slice(2), deps: CliDeps
     values,
     positionals,
     deps,
-    pluginRoot: resolve(import.meta.dir, '../../..'),
+    pluginRoot: deps.pluginRoot ?? resolve(import.meta.dir, '../../..'),
     installedSkills: deps.installedSkills ?? (() => listInstalledSkills(homedir(), process.cwd())),
     collectionRoots: deps.collectionRoots ?? (() => listCollectionRoots(homedir())),
   });

@@ -118,7 +118,8 @@ gets it at the next setup or update.
    seen again gets its new open issue added to its Fixed row. `work catalogue
    --update` moves a row to Fixed once every issue in it is closed by a merged
    PR, and back to Open when one is open. Rows stay. The PR that fixes a
-   failure moves its row to Fixed itself, so main never holds a stale row.
+   failure moves its row to Fixed itself, so main never holds a stale row;
+   this holds for a row the PR adds for its own issue too.
 
 ## Hygiene
 
@@ -195,6 +196,15 @@ names a merged PR. A pick-versus-built mismatch is a `picked` event whose ticket
 differs from the issue the iteration's PR closed. When the tracker cannot be
 read the section reports unknown rather than zero.
 
+`measure --opinions` reads the records `check` leaves in a worker and reports,
+for each installed opinion that has a check, the runs that failed, the tickets
+that failed and how each ended: fixed (the ticket's last run was clean and it
+merged), waived (the opinion's last record is a waiver) or still open. Opinions
+that never failed come last, which is where a rule that costs more than it
+catches shows up. It also counts, per section of the ticket template, the merged
+tickets that answered "none", so a section nobody uses is visible. With no
+records yet it says so and exits 0.
+
 `measure --report` folds these into the five-measure comparison report of
 ADR 0012, and `measure --diff A.json B.json` gives the per-measure delta between
 two saved reports.
@@ -225,6 +235,21 @@ Keep parallelism above 1 while merges per hour rise and the conflict rate stays
 low; otherwise set it back to 1 in the config. `/forger:retro` runs it to find a cause, writes a
 rule record with `retro rule`, and drafts an upstream issue with the evidence
 using `retro upstream`.
+
+## The way down
+
+The ladder only climbs unless something takes a rung away. An opinion is a
+candidate for demotion when its check never failed over at least `--min-merged`
+merged tickets (a clean record that long means it catches nothing the work does
+not already do), or when its failures ended waived more often than fixed (the
+check is being overruled more than it is obeyed). `retro demote --list` prints
+the candidates from the `measure --opinions` numbers.
+
+`retro demote --opinion <id>` prints an issue draft with those numbers as
+evidence and one proposal: one rung down, or removal for an opinion already on
+the lowest rung. It files nothing and changes no pack, waiver or baseline. The
+supervisor files the draft for the owner, and the owner decides each one.
+`/forger:retro` runs the list and reports the candidates.
 
 ## Cadence
 

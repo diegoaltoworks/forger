@@ -1,0 +1,9 @@
+{
+  "budgets": [
+    {
+      "name": "docs warnings",
+      "command": "bun plugins/forger/bin/work.ts check docs 2>&1 | grep -c \"^warning\" || true",
+      "direction": "down"
+    }
+  ]
+}

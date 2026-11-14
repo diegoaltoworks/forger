@@ -43,6 +43,7 @@ export const OWNED = [
   'testing.json',
   'safety.json',
   'ui.json',
+  'journeys.json',
   'coverage-baseline.json',
 ];
 

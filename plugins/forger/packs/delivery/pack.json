@@ -1,0 +1,16 @@
+{
+  "id": "delivery",
+  "version": "1.1.0",
+  "description": "The project's own commands to deploy, check and roll back a build after the merge: check delivery validates the file.",
+  "detect": [],
+  "files": [
+    {"source": "files/delivery.md", "target": ".forger/opinions/delivery.md"},
+    {"source": "files/deliver.json", "target": ".forger/deliver.json"}
+  ],
+  "opinions": [
+    {"id": "delivery.checked-after-merge", "rung": "check", "summary": "A delivery names a check command that exits 0 when the delivered build works; without one the file is a finding.", "check": "delivery"},
+    {"id": "delivery.project-commands", "rung": "rule", "summary": "Deploy, check and rollback are the project's own commands; forger holds no deploy logic and no credentials.", "check": null}
+  ],
+  "checks": ["delivery"],
+  "slots": []
+}

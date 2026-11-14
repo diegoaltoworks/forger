@@ -28,6 +28,22 @@ as another import extractor.
 The starter map ships with `src/core` and `src/shell`. Rewrite the globs to
 match your tree, and mark as core only the modules that really are pure.
 
+## Folders keep their shape
+
+A project may declare folders as bounded units in `.forger/architecture.json`
+(`"modules": {"paths": ["src/*"], "entry": "index.ts"}`, globs of folders). Two
+checks hold the structure in place:
+
+- `architecture.module-readme`: every declared folder has a `README.md` saying
+  what it owns and what it may import. A structure that only one tidy-up
+  explains decays; the README is where the next reader learns the boundary.
+- `architecture.public-entry`: code outside a declared folder imports it only
+  through its entry file. Imports within the folder are free. Reaching an
+  internal file couples the caller to details the folder is meant to be free to
+  change.
+
+Both are waivable by opinion id. Without a `modules` key neither rule applies.
+
 ## Parse, don't validate
 
 Outside input (files, flags, API responses) is parsed once at the boundary into
@@ -71,3 +87,10 @@ under `docs/adr/` in the same diff (`.forger/templates/adr.md` is the shape:
 context, decision, consequences, status). An ADR is superseded by a new one,
 never edited. `check decisions` enforces this by reading the diff against the
 base branch; a version bump or a removed dependency needs no ADR.
+
+## Decision numbers are unique
+
+Two tickets can each take the next free ADR number. `check decisions` reads
+the working tree, so two files under `docs/adr/` whose names start with the
+same number are one finding that names both, also after a branch takes in its
+base. Renumber the later record and its citations.

@@ -51,7 +51,7 @@ export interface IterationContext {
   emit(kind: EventKind, iteration: number, ticket: string | null, reason: string | null): void;
   halt(reason: string, kind?: TerminalEventKind): void;
   /** Runs after a merged ticket is recorded; the structure review trigger. */
-  afterMerge?(iteration: number): void;
+  afterMerge?(iteration: number, ticket: string | null): void;
   /** The pipeline plan for a ticket; absent or null leaves the run without one. */
   resolvePlan?(ticket: string | null): StoredPlan | null;
   /** Runs a probe command on the host; absent, probes are not run. */
@@ -164,7 +164,7 @@ export async function runIteration(
     model,
     workerCommand: ctx.config.worker_command,
     cwd: root,
-    env: workerEnv(attemptedTask, iteration, ctx.pluginRoot, deadline),
+    env: workerEnv(attemptedTask, iteration, ctx.pluginRoot, deadline, placement?.cwd),
     timeoutMinutes,
     killGraceSeconds,
     abort: placement?.abort,
@@ -301,7 +301,7 @@ async function completeConflict(ctx: IterationContext, claim: Claim, r: ReaskCon
     model: r.model,
     workerCommand: ctx.config.worker_command,
     cwd: r.root,
-    env: workerEnv(r.attemptedTask, r.iteration, ctx.pluginRoot, r.deadline),
+    env: workerEnv(r.attemptedTask, r.iteration, ctx.pluginRoot, r.deadline, r.root === ctx.projectRoot ? undefined : r.root),
     timeoutMinutes: r.timeoutMinutes,
     killGraceSeconds: r.killGraceSeconds,
     readOnly: true,
@@ -394,7 +394,7 @@ function settle(
   ctx.store.save(state);
   ctx.backlog.avoid(avoidedFootprints(state.set_aside_tasks));
 
-  if (outcome.merged && outcome.result === 'success') ctx.afterMerge?.(iteration);
+  if (outcome.merged && outcome.result === 'success') ctx.afterMerge?.(iteration, ticket);
 
   if (aside) {
     ctx.logger.log('WARN', `Iteration ${iteration} set ${aside.ticket} aside: ${aside.reason.split('\n')[0]}`);

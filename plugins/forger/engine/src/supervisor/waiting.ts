@@ -5,7 +5,7 @@
  */
 
 import type {TerminalEvent} from '../loop';
-import {reasonSummary, uncausedClears} from '../loop';
+import {failedDeliveries, reasonSummary, uncausedClears} from '../loop';
 import type {OwnerItem} from './supervisor';
 
 /** Issue labels that park a ticket until the owner decides. */
@@ -157,5 +157,14 @@ export function uncausedClearItems(events: TerminalEvent[]): OwnerItem[] {
     question: `A halt was cleared with no reason (${e.at}): ${e.reason ?? 'no error recorded'}`,
     recommendation: 'file the cause as an issue, or record that it was not a defect, so the failure is not lost',
     because: 'the halt label was removed by hand, or resume ran before it needed a reason, so the failure has no recorded cause',
+  }));
+}
+
+/** Every delivery that failed and that no later delivery has made good: the delivered build may be broken. */
+export function failedDeliveryItems(events: TerminalEvent[]): OwnerItem[] {
+  return failedDeliveries(events).map(pr => ({
+    question: `The delivery after PR #${pr} failed and no later delivery has passed`,
+    recommendation: 'fix what the P0 issue it filed describes, or roll the build back by hand if the pack has no rollback',
+    because: 'a merged change did not deploy or did not pass its check, so the running build may not be the merged one',
   }));
 }

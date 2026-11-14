@@ -17,8 +17,12 @@ export interface CliDeps {
   agent?: AgentRunner;
   /** Stands in for the store the loop's state is read from. */
   stateStore?: StateStore;
+  /** Stands in for the plugin folder the engine runs from. */
+  pluginRoot?: string;
   installedSkills?: () => string[];
   collectionRoots?: () => string[];
+  /** Starts this command again with the same arguments and returns its exit code; the real one spawns a child with the same stdio. */
+  restart?: () => number;
   /** Starts a command in a new session and returns its pid; the real one spawns a detached process. */
   spawnSession?: (argv: string[], cwd: string) => number;
 }

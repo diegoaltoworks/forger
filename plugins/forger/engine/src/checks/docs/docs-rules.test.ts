@@ -16,7 +16,24 @@ describe('nonAscii', () => {
 
 describe('email', () => {
   test('flags an address', () => {
-    expect(email('mail ' + 'someone' + '@' + 'example.com now')).toEqual(['someone' + '@' + 'example.com']);
+    expect(email('mail ' + 'someone' + '@' + 'corp.io now')).toEqual(['someone' + '@' + 'corp.io']);
+  });
+  test('an address under a reserved test domain is not a finding', () => {
+    const at = '@';
+    expect(email(`a${at}host.test b${at}x.example c${at}y.invalid d${at}z.localhost e${at}deep.sub.test f${at}localhost.test`)).toEqual([]);
+  });
+  test('an address under example.com, example.net or example.org is not a finding', () => {
+    const at = '@';
+    expect(email(`a${at}example.com b${at}example.net c${at}example.org d${at}mail.example.com E${at}EXAMPLE.ORG`)).toEqual([]);
+  });
+  test('an address under any other domain is still a finding', () => {
+    const at = '@';
+    expect(email(`a${at}gmail.com`)).toEqual([`a${at}gmail.com`]);
+  });
+  test('a host that only ends in the letters of a reserved name is still a finding', () => {
+    const at = '@';
+    const bad = [`a${at}notexample.com`, `b${at}myexample.org`, `c${at}contest`.concat('.io'), `d${at}host.attest`, `e${at}example.com.io`, `f${at}example.comx`];
+    expect(email(bad.join(' '))).toEqual(bad);
   });
   test('ignores scoped package names and bare at-signs', () => {
     expect(email('@types/bun and a @ b and @forger/engine')).toEqual([]);

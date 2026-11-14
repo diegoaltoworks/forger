@@ -1,0 +1,10 @@
+{
+  "journeys": [
+    {
+      "name": "greet a person by name",
+      "command": "test \"$(bun run --silent start Ada)\" = \"Hello, Ada!\"",
+      "paths": ["src/**"]
+    }
+  ],
+  "ready_seconds": 30
+}

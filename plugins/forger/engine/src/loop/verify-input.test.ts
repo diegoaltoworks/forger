@@ -89,3 +89,20 @@ describe('recordVerdict', () => {
     expect(r.problems.length).toBeGreaterThan(0);
   });
 });
+
+describe('buildVerifierInput setup', () => {
+  const base = {criteria, diff: 'd', gate: {checks: 'success' as const, failing_checks: []}};
+
+  test("the verifier's prompt says no setup ran when the copy has none", () => {
+    const text = buildVerifierInput(base);
+    expect(text).toContain('No setup ran');
+    expect(text).toContain('missing "infra", never "not_met"');
+    expect(text).not.toContain('with its dependencies installed');
+  });
+
+  test("the verifier's prompt says dependencies are installed when a setup ran", () => {
+    const text = buildVerifierInput({...base, setupRan: true});
+    expect(text).toContain('with its dependencies installed');
+    expect(text).not.toContain('No setup ran');
+  });
+});

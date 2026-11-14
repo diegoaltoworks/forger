@@ -1,7 +1,8 @@
 import {describe, expect, test} from 'bun:test';
 
-import {evidenceHolds, failedCitations, testNameMatches, testResults, type CopyRecord} from './evidence-check';
-import {loggedEnv, logLine, parseCommandLog} from './run-logged';
+import {EVIDENCE_DEMOTION} from './verdict';
+import {evidenceHolds, failedCitations, noteCutOutput, shellWords, testNameMatches, testResults, type CopyRecord} from './evidence-check';
+import {keepOutput, loggedEnv, logLine, parseCommandLog} from './run-logged';
 
 const output = ['(pass) the engine refuses a red merge [1.2ms]', '(pass) verify > classifyCriterion > a vague criterion fails [0.4ms]', '(fail) the engine names the head', 'ok 3 - tap style passes', 'not ok 4 - tap style fails'].join('\n');
 const record: CopyRecord = {
@@ -94,4 +95,85 @@ test('testNameMatches needs the last part to be the test itself', () => {
 
 test('a logged command runs without the switches that hide passed tests', () => {
   expect(loggedEnv({PATH: '/bin', CLAUDECODE: '1', REPL_ID: 'x', AGENT: '1', AI_AGENT: 'y', GONE: undefined})).toEqual({PATH: '/bin', AI_AGENT: 'y'});
+});
+
+describe('a cited command', () => {
+  const logged = (command: string, dir: string, exit = 0): CopyRecord => ({fileLines: () => null, commands: [{command, dir, exit, output: ''}]});
+  const cites = (rec: CopyRecord, ref: string) => evidenceHolds(rec, {kind: 'command', ref});
+
+  test('a command cited with a cd prefix checks out against the same command logged in that folder', () => {
+    expect(cites(logged('bun test src/a.test.ts', 'app'), 'cd app && bun test src/a.test.ts')).toBe(true);
+    expect(cites(logged('cd app && bun test', '.'), 'bun test')).toBe(false);
+  });
+
+  test('a command cited inside a sh -c or bash -c wrapper checks out against the logged command', () => {
+    expect(cites(logged('bun test -t "a b"', 'app'), `sh -c 'cd app && bun test -t "a b"'`)).toBe(true);
+    expect(cites(logged('bun test', '.'), `bash -c "bun test"`)).toBe(true);
+  });
+
+  test('a command cited with other quoting checks out against the logged command', () => {
+    expect(cites(logged(`bun test -t 'one two'`, '.'), 'bun test -t "one two"')).toBe(true);
+    expect(cites(logged(`bun test -t 'one two'`, '.'), 'bun test -t one two')).toBe(false);
+  });
+
+  test('a cited command that was logged in another folder does not check out', () => {
+    expect(cites(logged('bun test', 'app'), 'bun test')).toBe(false);
+    expect(cites(logged('bun test', 'app'), 'cd other && bun test')).toBe(false);
+  });
+
+  test('a cited command that exited non-zero does not check out', () => {
+    expect(cites(logged('bun test', 'app', 1), 'cd app && bun test')).toBe(false);
+  });
+
+  test('a log line without a folder means the root, and the folder survives parsing', () => {
+    expect(cites({fileLines: () => null, commands: parseCommandLog('{"command":"bun test","exit":0}\n')}, 'bun test')).toBe(true);
+    expect(parseCommandLog(logLine({command: 'x', exit: 0, output: '', dir: 'app'}))[0].dir).toBe('app');
+  });
+
+  test('shell words handle escapes and empty quotes', () => {
+    expect(shellWords(`a "b \\" c" '' d\\ e`)).toEqual(['a', 'b " c', '', 'd e']);
+  });
+});
+
+describe('output cut to the log limit', () => {
+  const filler = 'x'.repeat(100) + '\n';
+  const long = (lines: string[]) => lines.join('\n') + '\n' + filler.repeat(50);
+  const kept = (out: string) => {
+    const k = keepOutput(out, 1000);
+    return {commands: [{command: 'bun test', exit: 0, output: k.output, ...(k.truncated ? {truncated: true} : {})}], k};
+  };
+  const rec = (commands: CopyRecord['commands']): CopyRecord => ({fileLines: () => null, commands});
+
+  test('a passed test whose result line falls outside the output limit still checks out as evidence', () => {
+    const {commands, k} = kept(long(['(pass) early test [1ms]']));
+    expect(k.output.length).toBeLessThan(1200);
+    expect(evidenceHolds(rec(commands), {kind: 'test', ref: 'early test'})).toBe(true);
+  });
+
+  test('a failed test whose result line falls outside the output limit still fails its citation', () => {
+    const {commands} = kept(long(['(pass) early test', '(fail) early broken test']));
+    expect(evidenceHolds(rec(commands), {kind: 'test', ref: 'early broken test'})).toBe(false);
+  });
+
+  test('a record whose output was cut is marked truncated, and one within the limit is not', () => {
+    expect(kept(long(['(pass) a'])).k.truncated).toBe(true);
+    expect(keepOutput('short', 1000)).toEqual({output: 'short', truncated: false});
+    const run = parseCommandLog(logLine({command: 'x', exit: 0, output: 'o', truncated: true}))[0];
+    expect(run.truncated).toBe(true);
+  });
+
+  test('a cited test with no result in a log with a cut record is cannot_tell and the entry says the output was cut', () => {
+    const {commands} = kept(long(['(pass) other test']));
+    const entry = {criterion: '1', verdict: 'cannot_tell' as const, evidence: [{kind: 'test' as const, ref: 'missing test'}], demoted: `${EVIDENCE_DEMOTION}test missing test`};
+    expect(evidenceHolds(rec(commands), entry.evidence[0])).toBe(false);
+    const [noted] = noteCutOutput([entry], commands);
+    expect(noted.verdict).toBe('cannot_tell');
+    expect(noted.demoted).toContain('was cut');
+    expect(noteCutOutput([entry], [{command: 'x', exit: 0, output: ''}])[0].demoted).toBe(entry.demoted);
+  });
+
+  test('a log record with no truncated field parses as before', () => {
+    const [run] = parseCommandLog('{"command":"bun test","exit":0,"output":"(pass) a"}\n');
+    expect(run).toEqual({command: 'bun test', exit: 0, output: '(pass) a'});
+  });
 });

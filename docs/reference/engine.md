@@ -36,6 +36,12 @@ the `cause` or `not_a_defect`, and both are null when the halt label was removed
 by hand. `measure` counts clears with a cause, as not a defect and with no
 reason; `report` lists each uncaused clear under waiting on you.
 
+`verify` and `merge` refuse, and record `engine_changed`, when the engine's own source has uncommitted changes.
+
+A failed gate is run once more on the same head by `verify`; a pass records a
+`flaky_gate` event (the check and the failed tests in `reason`) and files one
+`flaky-gate` ticket, and `report` lists the flaky gates of the run.
+
 One engine works a repo at a time. `run` writes its pid to the lock file and
 refuses to start while that pid is alive; a lock whose pid is dead is taken
 over. If the previous engine died mid-iteration, the new one first closes that
@@ -56,6 +62,14 @@ whole-repo structure review from `.forger/templates/structure-review.md`, labell
 issue labelled `structure-review` is open no second one is filed, and a
 threshold of `0` turns its trigger off. Filing is the `file_tickets` action,
 which needs no approval.
+
+The safety pack has a second periodic review of the same shape, the access
+review. When `access_review.every_merged` in `.forger/safety.json` is above `0`
+(absent or `0` is off, and off is the default) and that many tickets have merged
+since the last `access_review_filed` event, the engine files one issue from
+`.forger/templates/access-review.md`, labelled `access-review` and with the
+intake label, and records `access_review_filed`. While an issue labelled
+`access-review` is open no second one is filed. Each kind keeps its own count.
 
 A ticket's `## Probe` section lists commands, each with its expected result in
 the forms of acceptance criteria. Before a worker starts, the engine runs each

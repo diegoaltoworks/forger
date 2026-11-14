@@ -40,9 +40,14 @@ Asked once, written down, refined later (see `05-refining-the-process.md`):
   needs no wait: a stop by SIGTERM or SIGINT releases the lease, and a lease left by a killed engine on this machine
   is taken over at once.
 - The base branch against its remote. The engine runs its own code from the loop's checkout, so a base branch
-  behind `origin/<base>` means every restart runs old code. `orient` lists it as an anomaly while no engine is
-  alive and names the fix (`git pull --ff-only origin <base>`); `run` refuses to start on a behind base branch in a
-  clean checkout and gives the same message.
+  behind `origin/<base>` means every restart runs old code. `orient` lists the gap as an anomaly while no engine is
+  alive and says `run` closes it. `run` fast-forwards the base branch before its first pick when the checkout is on
+  it, no other engine holds the lock, and the only uncommitted changes are the engine's runtime files (the ones
+  `setup` adds to `.gitignore`). It is fast-forward only: nothing is stashed, reset or discarded, and a checkout with
+  any other uncommitted change is left as it is; `orient` lists those changes as an anomaly by path, and then does
+  not say `run` brings the checkout up to date. When git refuses, `run` does not start and prints git's reason.
+  When the update changed files under the plugin the engine runs from, the engine starts itself again once with the
+  same arguments so that it runs the new code.
 - The hooks gate. A repository set up before a gate existed fails it on a clean base branch, and a worker would
   spend an iteration to find out. `orient` lists it as an anomaly and `run` refuses to start; both name the fix,
   `work.ts setup` in the repository, which keeps the config and adds what is missing. Commit what it writes.
@@ -129,12 +134,18 @@ the ticket, the rule and the command. It is a mid-run event: `events --json`
 lists it, and `await-event` and `watch` wake on it, but the run goes on. Report it; denials
 repeated on one ticket mean the ticket or the process tells the worker to do
 something it may not.
+`verify` and `merge` refuse when the engine they run from has uncommitted changes, and record `engine_changed`
+(a mid-run event, like `worker_denied`) with the ticket and the paths. The worker declines the ticket; the checkout
+is the owner's to repair.
 `verify` finds a PR's ticket from a `Closes #n` line in its body, then from a
 `feat/issue-<n>` branch (on a local tracker, `feat/<ticket-id>`). A PR the
 supervisor opens for itself carries `Closes #n` or an `## Acceptance` section of
 checkbox criteria in its body; one with neither is refused and cannot merge.
 A ticket whose verification ran out of rounds carries `needs-human`; The report's
 **Handed over** section (and `handover --list`) names it with the criteria at fault.
+When a verdict is not a pass, or a citation did not check out, `verify` keeps the
+verifier's command log beside the verdict record (the record's `commandLog` names
+it); it stays on the machine and is never posted to the tracker.
 
 ## 6. Sync
 
@@ -148,6 +159,7 @@ In plain words, in the owner's timezone:
 - **Merged** in the period, with what it means for a user. The period runs
   from the previous `report` (or `report --since DATE`).
 - **In progress**, the real branch.
+- **Flaky gates**: each gate that failed and passed on a rerun with no change (`flaky_gate` events), naming the check and the failed tests.
 - **Next.**
 - **Waiting on you**, each item with a recommendation: every open issue
   labelled `needs-info`, `needs-human` or `needs-triage`, every open PR labelled `owner-review` (with its link), every Proposed ADR,
@@ -191,8 +203,9 @@ improvise them:
   is clean, the base head on `origin`, and an issue's closing PR (or a PR on its
   own): whether it merged and its CI conclusion, `success`, `failure`,
   `pending` or `none` when the repo has no CI, read without touching the
-  working tree.
-- `report [--since DATE]`: the report sections from the same facts, including the tickets the
+  working tree. With the delivery pack, an issue also carries `delivery` for the PR that closed it:
+  `delivered`, `failed`, `rolled_back` or `null`.
+- `report [--since DATE]`: the report sections from the same facts, including a failed delivery under "waiting on you" until a later delivery passes, and including the tickets the
   worker declined, and the owner measures from `measure` (cost, rework, escaped
   defects, interventions).
 - `approval <action>`: who may do an action, from the table below.

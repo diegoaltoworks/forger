@@ -23,6 +23,8 @@ export interface WorkerFacts {
   currentBranch: string | null;
   /** The engine's own files, relative to the project root: a path at or under one is state. */
   statePaths: string[];
+  /** The worker's own worktree and the loop's checkout; set only when the engine started the worker in a worktree, which is what `leave-worktree` needs. */
+  worktree?: {path: string; loopRoot: string; cwd: string};
 }
 
 const ALLOW: HookDecision = {allow: true};
@@ -37,6 +39,8 @@ export function ruleMessage(rule: DefaultRule, baseBranch: string): string {
       return 'Refused: commit statuses and check runs are the engine\'s. `work verify --pr <n>` records the verdict and sets forger/verify.';
     case 'state-edit':
       return 'Refused: the engine\'s state under .forger/ (state, events, verdicts, HALT, lock) is written by the engine only. Use the work commands (`work decline`, `work verify`) instead.';
+    case 'leave-worktree':
+      return 'Refused: this path is in the loop\'s checkout, outside your worktree. All work happens in your worktree; read the loop\'s checkout by path, never enter or write it.';
   }
 }
 
@@ -216,18 +220,30 @@ export function isStatePath(path: string, statePaths: string[]): boolean {
 
 const WRITERS = new Set(['rm', 'mv', 'tee', 'truncate', 'touch', 'ln', 'unlink', 'shred', 'chmod', 'dd', 'install', 'rsync']);
 
-function breaksState(segment: Segment, statePaths: string[]): boolean {
-  if (segment.redirects.some(r => isStatePath(r, statePaths))) return true;
+/** Whether the segment writes to a path `target` accepts: a redirect, or a program that writes its operands. */
+function writesTo(segment: Segment, target: (path: string) => boolean): boolean {
+  if (segment.redirects.some(target)) return true;
   if (segment.words.length === 0) return false;
   const program = programName(segment.words[0]);
   const operands = segment.words.slice(1).filter(w => !w.startsWith('-'));
-  const target = (w: string): boolean => isStatePath(w.replace(/^of=/, ''), statePaths);
-  if (WRITERS.has(program)) return operands.some(target);
-  if (program === 'cp') return operands.length > 0 && target(operands[operands.length - 1]);
-  if ((program === 'sed' || program === 'perl') && segment.words.some(w => /^-[a-zA-Z]*i/.test(w) || w.startsWith('--in-place'))) return operands.some(target);
+  const operand = (w: string): boolean => target(w.replace(/^of=/, ''));
+  if (WRITERS.has(program)) return operands.some(operand);
+  if (program === 'cp') return operands.length > 0 && operand(operands[operands.length - 1]);
+  if ((program === 'sed' || program === 'perl') && segment.words.some(w => /^-[a-zA-Z]*i/.test(w) || w.startsWith('--in-place'))) return operands.some(operand);
   const git = gitArgs(segment.words);
-  if (git && ['rm', 'mv', 'checkout', 'restore', 'add'].includes(git.args[0])) return git.args.slice(1).some(target);
+  if (git && ['rm', 'mv', 'checkout', 'restore', 'add'].includes(git.args[0])) return git.args.slice(1).some(operand);
   return false;
+}
+
+function breaksState(segment: Segment, statePaths: string[]): boolean {
+  return writesTo(segment, p => isStatePath(p, statePaths));
+}
+
+/** A path at or under the loop's checkout and not at or under the worker's worktree; one the shell would expand cannot be read, so it is not outside. */
+function isOutside(path: string, cwd: string, w: NonNullable<WorkerFacts['worktree']>): boolean {
+  if (UNRESOLVABLE.test(path)) return false;
+  const p = resolve(cwd, path);
+  return within(p, w.loopRoot) && !within(p, w.path);
 }
 
 const EDIT_TOOLS = new Set(['Edit', 'Write', 'MultiEdit', 'NotebookEdit']);
@@ -246,20 +262,32 @@ export function commandOf(call: ToolCall): string | null {
 /** The worker's hook: the first rule the call breaks, in policy order, or allow. */
 export function decideWorker(policy: HookPolicy, call: ToolCall, facts: WorkerFacts): HookDecision {
   const refuse = (rule: DefaultRule, command: string): HookDecision => ({allow: false, rule, message: ruleMessage(rule, facts.baseBranch), command});
+  const leave = policy.rules.includes('leave-worktree') ? facts.worktree : undefined;
   if (EDIT_TOOLS.has(call.tool_name)) {
     const path = inputPath(call.tool_input);
+    if (path !== null && leave && isOutside(path, leave.cwd, leave)) return refuse('leave-worktree', `${call.tool_name} ${path}`);
     if (path !== null && policy.rules.includes('state-edit') && isStatePath(path, facts.statePaths)) return refuse('state-edit', `${call.tool_name} ${path}`);
     return ALLOW;
   }
   const command = commandOf(call);
   if (command === null) return ALLOW;
+  let cwd = leave?.cwd ?? '';
   for (const segment of segments(command)) {
     const words = segment.words;
+    let wandered = false;
+    if (leave) {
+      if (words[0] === 'cd' || words[0] === 'pushd') {
+        if (words[1] !== undefined && isOutside(words[1], cwd, leave)) wandered = true;
+        else if (words[1] !== undefined && !UNRESOLVABLE.test(words[1])) cwd = resolve(cwd, words[1]);
+      } else wandered = writesTo(segment, p => isOutside(p, cwd, leave));
+    }
     for (const rule of policy.rules) {
       const broken =
-        rule === 'state-edit'
-          ? breaksState(segment, facts.statePaths)
-          : words.length > 0 && (rule === 'merge' ? breaksMerge(words) : rule === 'push-base' ? breaksPush(words, facts) : breaksStatus(words));
+        rule === 'leave-worktree'
+          ? wandered
+          : rule === 'state-edit'
+            ? breaksState(segment, facts.statePaths)
+            : words.length > 0 && (rule === 'merge' ? breaksMerge(words) : rule === 'push-base' ? breaksPush(words, facts) : breaksStatus(words));
       if (broken) return refuse(rule, command);
     }
     const joined = words.join(' ');

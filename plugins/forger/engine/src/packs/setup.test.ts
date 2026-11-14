@@ -5,7 +5,7 @@ import {join, resolve} from 'path';
 
 import {claudeHarness, codexHarness, copilotHarness, opencodeHarness} from '../adapters';
 import {sha256} from './packs';
-import {gitignoreLines, mergeGitignore, relocatableGates, renderConfig, runSetup, withCheck} from './setup';
+import {gitignoreLines, mergeGitignore, relocatableGates, renderConfig, runSetup, trackedRuntimeFiles, formatTrackedRuntime, withCheck} from './setup';
 
 const PLUGIN_ROOT = resolve(import.meta.dir, '../../..');
 const dirs: string[] = [];
@@ -235,5 +235,25 @@ describe('relocatableGates', () => {
   test('leaves a relative or variable form alone', () => {
     expect(relocatableGates('bun plugins/forger/bin/work.ts check')).toBe('bun plugins/forger/bin/work.ts check');
     expect(relocatableGates('bun "$FORGER_PLUGIN_ROOT/bin/work.ts" check')).toBe('bun "$FORGER_PLUGIN_ROOT/bin/work.ts" check');
+  });
+});
+
+describe('tracked runtime files', () => {
+  test('setup reports a runtime file that git tracks and names the command that stops tracking it', () => {
+    const root = emptyProject();
+    const commands: string[] = [];
+    const tracked = trackedRuntimeFiles(root, c => {
+      commands.push(c);
+      return '.forger/checks.jsonl\n';
+    });
+    expect(tracked).toEqual(['.forger/checks.jsonl']);
+    expect(formatTrackedRuntime(tracked)).toEqual(['! git tracks .forger/checks.jsonl; stop tracking it and keep the file with: git rm --cached .forger/checks.jsonl']);
+    expect(commands.every(c => c.startsWith('git ls-files'))).toBe(true);
+  });
+  test('setup reports nothing when no runtime file is tracked', () => {
+    const root = emptyProject();
+    expect(trackedRuntimeFiles(root, () => '')).toEqual([]);
+    expect(trackedRuntimeFiles(root, () => { throw new Error('not a repository'); })).toEqual([]);
+    expect(formatTrackedRuntime([])).toEqual([]);
   });
 });

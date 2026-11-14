@@ -59,6 +59,7 @@ The import rules of `check arch` and `check structure` read JavaScript and TypeS
 
 - `check --json` runs everything and reports per check, plus the stale waivers. `/forger:retro` reads it for the waiver list.
 - `check docs` runs the docs check alone, with `.forger/waivers.json` applied as the full `check` applies it: the writing rules always, and, when the `docs` pack is installed, the content rules below.
+- `base.nothing-personal` reports every email address except one under a host reserved for documentation and testing (RFC 2606, RFC 6761): `example.com`, `example.net`, `example.org` and their subdomains, and any host under `.test`, `.example`, `.invalid` or `.localhost`. There is no switch for this; a project that wants those addresses reported lists the domains in its denylist.
 - `setup` appends `check` to the gates as `bun "$FORGER_PLUGIN_ROOT/bin/work.ts" check`. The committed line holds no machine path: the engine exports `FORGER_PLUGIN_ROOT`, the root of the plugin it runs from, to the worker that runs the gates, so the same gates work on any machine. Outside the engine, export the variable yourself before running the gates. `setup --upgrade` rewrites an older absolute check command to this form.
 
 ## The docs pack
@@ -80,7 +81,7 @@ Read the table as a list of ways docs rot quietly. Code spans and fences are nev
 
 ## The architecture pack
 
-The `architecture` pack holds the architecture forger is built on: pure decisions with I/O at the edges, every external system behind a port, parse at the boundary, fail loud, one source of truth per fact, and deep modules. Two of its opinions are enforced: `architecture.dependency-rule` by `check arch`, and `architecture.decisions-recorded` by `check decisions`.
+The `architecture` pack holds the architecture forger is built on: pure decisions with I/O at the edges, every external system behind a port, parse at the boundary, fail loud, one source of truth per fact, and deep modules. Three of its opinions are enforced: `architecture.dependency-rule` by `check arch`, and `architecture.decisions-recorded` and `architecture.decision-numbers-unique` by `check decisions`.
 
 ```mermaid
 flowchart LR
@@ -99,7 +100,7 @@ A layer may always import itself, and files outside every layer, packages and bu
 
 ### Decisions leave an ADR behind
 
-`check decisions` reads the working tree and branch against the merge-base with the configured base branch. A dependency added to a manifest (`package.json` today; another manifest is another entry behind the manifest-reader interface), or any change to `.forger/architecture.json`, needs a new or changed Markdown file under `docs/adr/` in the same diff. A version bump or a removed dependency is classified and needs no ADR. The pack ships an ADR template with context, decision, consequences and status; an accepted ADR is superseded by a new one, never edited. Like every opinion, it is waivable in `.forger/waivers.json`. A base branch that cannot be resolved is an error, never a pass.
+`check decisions` reads the working tree and branch against the merge-base with the configured base branch. A dependency added to a manifest (`package.json` today; another manifest is another entry behind the manifest-reader interface), or any change to `.forger/architecture.json`, needs a new or changed Markdown file under `docs/adr/` in the same diff. A version bump or a removed dependency is classified and needs no ADR. The pack ships an ADR template with context, decision, consequences and status; an accepted ADR is superseded by a new one, never edited. Like every opinion, it is waivable in `.forger/waivers.json`. A base branch that cannot be resolved is an error, never a pass. `architecture.decision-numbers-unique` reads the working tree, not the diff: two files under `docs/adr/` whose names start with the same number are one finding that names both, so a branch that holds both after it takes in the base fails.
 
 The decision to use packs is [ADR 0003](adr/0003-opinion-packs.md).
 
@@ -119,17 +120,43 @@ The `safety` pack holds principle 9 (data in production is sacred) and the never
 
 The two path lists, and the optional `audit_command` (the project's own audit, whose flags choose the severity it fails at), live in `.forger/safety.json`. The audit needs the network, so it runs in `check` and unit tests use recorded output. A finding names the file, line and pattern and never prints the match, so a report does not spread the secret it found. The other two opinions, frozen lockfiles in the gates and destructive commands listed in the process gotchas, are rules kept by judgement. Like `check decisions`, the check reads the working tree and branch against the merge-base with the configured base branch, and an unresolvable base is an error, never a pass.
 
+## The journeys pack
+
+The `journeys` pack is opt-in (nothing detects it). Units and screens can pass while the app cannot do what it is for, so `.forger/journeys.json` names the few things a person must be able to do, each as `{name, command, paths}`: `command` exercises the journey against a running build and exits non-zero when it fails, and `paths` are the globs of the code it runs through. An optional `start` brings the app up for the whole run, `ready` exits 0 once it is up (polled for up to `ready_seconds`), and the app is stopped afterwards even when a journey fails. `check journeys` enforces two opinions:
+
+| Opinion | What the check flags |
+|---|---|
+| `journeys.named` | no journey is named; a gap, so the check reads `unmeasured`, never a pass |
+| `journeys.pass` | a journey's command exits non-zero or cannot start, or the app cannot start or is not ready; the finding names the journey and the end of its output |
+
+An entry missing its name, command or paths is a config error that names the entry. `facts --guards <path>...` lists the journeys whose paths match, so the planner names them under Guards.
+
+## The delivery pack
+
+The `delivery` pack is opt-in (nothing detects it). A merge says the code is green, not that the delivered build works, so `.forger/deliver.json` names the project's own commands: a required `check` that exits 0 when the delivered build works (typically the journeys run against the delivered address), an optional `deploy` and an optional `rollback`, and `timeout_seconds`, an object keyed by step of positive numbers. Forger holds no deploy logic and no credentials, and nothing here runs before the merge (ADR 0022). `check delivery` validates the file and runs none of the commands:
+
+| Opinion | What the check flags |
+|---|---|
+| `delivery.checked-after-merge` | the file has no `check` command, a command that is not a non-empty string, or a timeout that is not a positive number |
+
+`delivery.project-commands` is a rule kept by judgement: the commands are the project's own, and forger holds no deploy logic or credentials.
+
+A delivery plans as deploy then check; for a failed step the plan names the rollback when one is configured, else nothing follows.
+
+The pack's `delivery.md` carries a worked example of a smoke check: wait until the delivered address reports the merged commit, then request each public address and fail on a status outside 2xx.
+
 ## The testing pack
 
-The `testing` pack holds the testing habits the engine itself relies on. Three of its opinions are enforced, each under its own opinion id so a waiver can target one:
+The `testing` pack holds the testing habits the engine itself relies on. Four of its opinions are enforced, each under its own opinion id so a waiver can target one:
 
 | Opinion | Check | What it flags |
 |---|---|---|
 | `testing.fix-with-test` | `check tests` | a branch with a `fix:` commit that adds or changes no file matching `test_paths` |
 | `testing.no-network` | `check tests` | a unit test file that imports a library named in `network_modules`; files under `integration_paths` are exempt |
 | `testing.coverage-ratchet` | `check coverage` | line coverage below the generated baseline, or no baseline yet |
+| `testing.budget-ratchet` | `check budgets` | a number printed by a budget command worse than its recorded one, output that is not a number, or a failing command; a budget with no recorded number is a gap |
 
-The globs and library list live in `.forger/testing.json`, with the path of the lcov report the project's test command writes and the path of the baseline. The baseline is a generated file: `check coverage --update` creates it or raises it, and never lowers it, so the number lives only there and a deliberate drop is a recorded waiver. A missing or empty coverage report is an error, never a pass. The other opinions (tables for the pure core, fixtures for adapters, tests named for behaviour) are rules kept by judgement. Like `check decisions`, `check tests` reads commits and the working tree against the merge-base with the configured base branch.
+The globs and library list live in `.forger/testing.json`, with the path of the lcov report the project's test command writes and the path of the baseline. The baseline is a generated file: `check coverage --update` creates it or raises it, and never lowers it, so the number lives only there and a deliberate drop is a recorded waiver. A missing or empty coverage report is an error, never a pass. `.forger/budgets.json` lists `{name, command, direction}` for any other number a project wants held (`direction` is `down` when smaller is better, `up` otherwise); the sample is an empty list. `check budgets --update` records new and better numbers in `.forger/budgets-baseline.json` and refuses a worse one, and the baseline is a guard file, so `check guards` fails a diff that loosens it. The other opinions (tables for the pure core, fixtures for adapters, tests named for behaviour, and `testing.guard-finds-its-cases`: a regression guard scans the source for the pattern instead of naming today's files, and is shown failing before the fix) are rules kept by judgement. Like `check decisions`, `check tests` reads commits and the working tree against the merge-base with the configured base branch.
 
 Setup, detection and this pack's coverage advice are tested against the sample projects in `test/fixtures/`, which CI runs through `setup`, the gates and `check` (see its README).
 

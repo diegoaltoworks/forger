@@ -5,17 +5,18 @@
  * sits here behind the injected runner and agent.
  */
 
-import {existsSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync} from 'fs';
+import {existsSync, mkdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync} from 'fs';
 import {join} from 'path';
 
 import type {Tier} from '../config';
 import type {AgentRunner, CapturingRunner, CommandRunner, SpecReport} from '../ports';
 import {BASELINE_MANIFEST, parseBaselines, withoutBaseline, type BaselineManifest} from '../ui';
 import {issueNumber} from './decline';
-import {ciConfigured, PR_FIELDS, parsePr} from './pr-checks';
-import {decideGatesGreen, fromGatesCommand, isGatesGreen, stillPending} from './gates-green';
+import {ciConfigured, failingChecks, PR_FIELDS, parsePr} from './pr-checks';
+import {alreadyRerun, markRerun, rerunFailedJobs, rerunMarker, failedTests, type FlakyGate} from './flaky-gate';
+import {decideGatesGreen, fromGatesCommand, type GatesGreen, isGatesGreen, stillPending} from './gates-green';
 import {mergeEntries, partitionCriteria} from './mechanical';
-import {evidenceHolds, failedCitations, SCREENSHOTS_DIR, type CommandRun, type CopyRecord} from './evidence-check';
+import {evidenceHolds, failedCitations, noteCutOutput, SCREENSHOTS_DIR, type CommandRun, type CopyRecord} from './evidence-check';
 import {parseCommandLog} from './run-logged';
 import {EVIDENCE_DEMOTION, parseCriteria, parseUiStates, reduceVerdict, type CheckedEntry, type Criterion} from './verdict';
 import {buildVerifierInput, recordVerdict, type VerdictRecord} from './verify-input';
@@ -32,7 +33,7 @@ export interface VerifyOptions {
   /** Where the disposable checkout is made: under the state directory, never the system temp folder. */
   tmpDir: string;
   tier: Tier;
-  /** The shell command that installs dependencies in the copy; null when there is nothing to install. */
+  /** `verify.setup` as configured: a shell command, "" for no setup, null to use the gates' install step, else the lockfile's. */
   setup: string | null;
   model: string;
   /** The command the harness is asked to run; it carries the verifier's prompt. */
@@ -50,6 +51,10 @@ export interface VerifyOptions {
   gates?: string;
   /** How long "Gates green" waits for unfinished checks before it is cannot_tell; 0 or absent does not wait. */
   checksTimeoutMs?: number;
+  /** Told when no setup ran in the copy, so the cause and the fix reach the operator. */
+  warn?: (message: string) => void;
+  /** Told when a gate failed and then passed on a rerun with no change; records and tickets it. */
+  onFlaky?: (flaky: FlakyGate) => void;
   pollMs?: number;
   sleep?: (ms: number) => Promise<void>;
   now?: () => Date;
@@ -91,11 +96,43 @@ export function installStep(gates: string): string | null {
   return at === -1 ? null : parts.slice(0, at + 1).join(' && ');
 }
 
-/** What runs in the verifier's copy before the model starts: the configured command, else the gates' install step. Pure. */
-export function setupCommand(setup: string | null | undefined, gates: string): string | null {
-  const configured = setup?.trim();
-  return configured ? configured : installStep(gates);
+/** Where the setup command that ran came from. */
+export type SetupSource = 'configured' | 'gates' | 'lockfile';
+
+export interface SetupChoice {
+  command: string;
+  source: SetupSource;
 }
+
+/** The frozen install for each lockfile at the root of a copy, in the order they are looked for. */
+export const LOCKFILE_INSTALLS: readonly {file: string; command: string}[] = [
+  {file: 'bun.lock', command: 'bun install --frozen-lockfile'},
+  {file: 'bun.lockb', command: 'bun install --frozen-lockfile'},
+  {file: 'package-lock.json', command: 'npm ci'},
+  {file: 'pnpm-lock.yaml', command: 'pnpm install --frozen-lockfile'},
+  {file: 'yarn.lock', command: 'yarn install --frozen-lockfile'},
+  {file: 'uv.lock', command: 'uv sync --frozen'},
+  {file: 'Cargo.lock', command: 'cargo fetch --locked'},
+];
+
+/**
+ * What runs in the verifier's copy before the model starts: the configured command, else the gates'
+ * install step, else the frozen install for a lockfile at the root of the copy. A configured empty
+ * string turns setup off. Pure; `hasFile` says whether a file exists at the root of the copy.
+ */
+export function chooseSetup(setup: string | null | undefined, gates: string, hasFile: (name: string) => boolean): SetupChoice | null {
+  if (setup !== null && setup !== undefined) {
+    const configured = setup.trim();
+    return configured ? {command: configured, source: 'configured'} : null;
+  }
+  const step = installStep(gates);
+  if (step) return {command: step, source: 'gates'};
+  const found = LOCKFILE_INSTALLS.find(l => hasFile(l.file));
+  return found ? {command: found.command, source: 'lockfile'} : null;
+}
+
+export const NO_SETUP_WARNING =
+  "verify: no setup ran in the verifier's copy: verify.setup is unset, the gates name no install step and the copy has no recognised lockfile at its root; put one in verify.setup in .forger/workloop.config.json";
 
 /** The verifier could not be set up to run: an infrastructure fault, never a verdict on the ticket's criteria. */
 export class VerifyInfraError extends Error {
@@ -107,6 +144,11 @@ export class VerifyInfraError extends Error {
 
 export function verdictFile(dir: string, pr: number, head: string): string {
   return join(dir, `pr-${pr}-${head}.json`);
+}
+
+/** Where a non-pass verdict's command log is kept: beside the verdict record, same name. */
+export function commandLogFile(dir: string, pr: number, head: string): string {
+  return verdictFile(dir, pr, head).replace(/\.json$/, '.commands.jsonl');
 }
 
 function shellQuote(s: string): string {
@@ -149,35 +191,68 @@ export function copyRecord(root: string, commands: CommandRun[]): CopyRecord {
 }
 
 /** Decides each "Gates green" criterion from the head's CI checks, waiting for unfinished ones; the verifier model never sees it. */
-async function decideGates(run: CommandRunner, opts: VerifyOptions, criteria: Criterion[], rollup: unknown, base: string | undefined, dir: string): Promise<CheckedEntry[]> {
+async function decideGates(run: CommandRunner, opts: VerifyOptions, criteria: Criterion[], rollup: unknown, base: string | undefined, dir: string, head: string): Promise<CheckedEntry[]> {
   const ci = base ? ciConfigured(run, base) : false;
   const pollMs = opts.pollMs ?? 10_000;
   const sleep = opts.sleep ?? (ms => new Promise<void>(r => setTimeout(r, ms)));
-  const entries: CheckedEntry[] = [];
-  for (const c of criteria) {
-    let current = rollup;
-    let result = decideGatesGreen(c, current, ci);
+  const marker = rerunMarker(opts.verdictsDir, opts.pr, head);
+  const read = () => withoutVerifyStatus((JSON.parse(run(`gh pr view ${opts.pr} --json statusCheckRollup`)) as {statusCheckRollup?: unknown}).statusCheckRollup);
+  const wait = async (c: Criterion, start: GatesGreen, startRollup: unknown): Promise<{result: GatesGreen; rollup: unknown}> => {
+    let current = startRollup;
+    let result = start;
     for (let waited = 0; result.state === 'pending' && waited < (opts.checksTimeoutMs ?? 0); waited += pollMs) {
       await sleep(pollMs);
-      const fresh = JSON.parse(run(`gh pr view ${opts.pr} --json statusCheckRollup`)) as {statusCheckRollup?: unknown};
-      current = withoutVerifyStatus(fresh.statusCheckRollup);
+      current = read();
       result = decideGatesGreen(c, current, ci);
+    }
+    return {result, rollup: current};
+  };
+  const entries: CheckedEntry[] = [];
+  for (const c of criteria) {
+    let {result, rollup: current} = await wait(c, decideGatesGreen(c, rollup, ci), rollup);
+    if (result.state === 'decided' && result.entry.verdict === 'not_met' && failingChecks(current).length > 0 && !alreadyRerun(marker)) {
+      const failed = failingChecks(current);
+      markRerun(marker);
+      const rerun = rerunFailedJobs(run, head);
+      if (!rerun.started) {
+        result = {state: 'decided', entry: {...result.entry, evidence: [...result.entry.evidence, {kind: 'ci', ref: `rerun not started: ${rerun.why}`}]}};
+      } else {
+        await sleep(pollMs);
+        const fresh = read();
+        const again = await wait(c, decideGatesGreen(c, fresh, ci), fresh);
+        if (again.result.state === 'decided' && again.result.entry.verdict === 'met') {
+          opts.onFlaky?.({pr: opts.pr, head, check: failed.join(', '), tests: rerun.tests});
+          result = {state: 'decided', entry: {...again.result.entry, evidence: [...again.result.entry.evidence, {kind: 'ci', ref: `${failed.join(', ')}: failed, then passed on a rerun with no change`}]}};
+        } else if (again.result.state === 'decided') {
+          result = {state: 'decided', entry: {...again.result.entry, evidence: [...again.result.entry.evidence, {kind: 'ci', ref: 'failed again on a rerun with no change'}]}};
+        } else result = again.result;
+      }
     }
     if (result.state === 'decided') entries.push(result.entry);
     else if (result.state === 'pending') entries.push(stillPending(c));
-    else {
-      let passed = true;
-      if (opts.gates) {
-        try {
-          run(`cd ${shellQuote(dir)} && ${opts.gates}`);
-        } catch {
-          passed = false;
-        }
-      }
-      entries.push(opts.gates ? fromGatesCommand(c, opts.gates, passed) : stillPending(c));
-    }
+    else entries.push(await gatesCommandEntry(run, opts, c, dir, head, marker));
   }
   return entries;
+}
+
+/** A repository without CI: the gates command in the copy, and once more when it fails. */
+async function gatesCommandEntry(run: CommandRunner, opts: VerifyOptions, c: Criterion, dir: string, head: string, marker: string): Promise<CheckedEntry> {
+  if (!opts.gates) return stillPending(c);
+  const attempt = (): string | null => {
+    try {
+      run(`cd ${shellQuote(dir)} && ${opts.gates}`);
+      return null;
+    } catch (e) {
+      return (e as Error).message;
+    }
+  };
+  const first = attempt();
+  if (first === null) return fromGatesCommand(c, opts.gates, true);
+  if (alreadyRerun(marker)) return fromGatesCommand(c, opts.gates, false);
+  markRerun(marker);
+  if (attempt() !== null) return fromGatesCommand(c, opts.gates, false);
+  opts.onFlaky?.({pr: opts.pr, head, check: 'the gates command', tests: failedTests(first)});
+  return {...fromGatesCommand(c, opts.gates, true), evidence: [{kind: 'command', ref: opts.gates}, {kind: 'command', ref: 'failed, then passed on a rerun with no change'}]};
 }
 
 export async function verifyPr(run: CommandRunner, agent: AgentRunner, opts: VerifyOptions): Promise<VerifyResult> {
@@ -205,14 +280,16 @@ export async function verifyPr(run: CommandRunner, agent: AgentRunner, opts: Ver
     outOfSpace(e);
   }
   const log = `${dir}.commands.jsonl`;
-  const runLogged = opts.runLogged ? `${opts.runLogged} --file ${shellQuote(log)}` : undefined;
+  const runLogged = opts.runLogged ? `${opts.runLogged} --file ${shellQuote(log)} --root ${shellQuote(dir)}` : undefined;
   try {
     run(`git worktree add --detach ${shellQuote(dir)} ${head}`);
-    if (opts.setup) {
+    const setup = chooseSetup(opts.setup, opts.gates ?? '', name => existsSync(join(dir, name)));
+    if (!setup && opts.setup === null) opts.warn?.(NO_SETUP_WARNING);
+    if (setup) {
       try {
-        run(`cd ${shellQuote(dir)} && ${opts.setup}`);
+        run(`cd ${shellQuote(dir)} && ${setup.command}`);
       } catch (e) {
-        throw new VerifyInfraError(`setup failed in the verifier's copy (${opts.setup}): ${(e as Error).message}`);
+        throw new VerifyInfraError(`setup failed in the verifier's copy (${setup.command}): ${(e as Error).message}`);
       }
     }
     let report: SpecReport | null = null;
@@ -227,19 +304,19 @@ export async function verifyPr(run: CommandRunner, agent: AgentRunner, opts: Ver
     const approved = changed.filter(c => !screenshots.includes(c));
     const unseen = changed.length === 0 ? uiStates : [];
     const gateCriteria = criteria.filter(isGatesGreen);
-    const gatesDecided = gateCriteria.length > 0 ? await decideGates(run, opts, gateCriteria, withoutVerifyStatus(view.statusCheckRollup), view.baseRefName, dir) : [];
+    const gatesDecided = gateCriteria.length > 0 ? await decideGates(run, opts, gateCriteria, withoutVerifyStatus(view.statusCheckRollup), view.baseRefName, dir, head) : [];
     const {mechanical: specDecided, remaining: toJudge} = partitionCriteria(criteria.filter(c => !gateCriteria.includes(c)), report);
     const mechanical = [...gatesDecided, ...specDecided, ...unseenStates(unseen)];
     const remaining = toJudge.filter(c => !unseen.includes(c));
     const subject = {pr: opts.pr, head, ticket, verifier: opts.model, at: (opts.now?.() ?? new Date()).toISOString()};
     if (remaining.length === 0) {
-      return writeRecord(opts, {...subject, verifier: 'spec-check', ...mergeEntries(criteria, mechanical, []), problems: []});
+      return writeRecord(opts, setup, log, {...subject, verifier: 'spec-check', ...mergeEntries(criteria, mechanical, []), problems: []});
     }
     const diff = run(`gh pr diff ${opts.pr}`);
     const gate = {checks: pr.checks, failing_checks: pr.failing_checks};
     const ask = async (criteriaAsked: Criterion[], failed?: {criterion: string; citations: string[]}[]) => {
       const result = await agent.run({
-        prompt: buildVerifierInput({criteria: criteriaAsked, decided: gateCriteria, diff, gate, screenshots, approved, runLogged, failedCitations: failed}),
+        prompt: buildVerifierInput({criteria: criteriaAsked, decided: gateCriteria, diff, gate, setupRan: Boolean(setup), screenshots, approved, runLogged, failedCitations: failed}),
         sessionId: opts.sessionId,
         tier: opts.tier,
         model: opts.model,
@@ -250,9 +327,11 @@ export async function verifyPr(run: CommandRunner, agent: AgentRunner, opts: Ver
         timeoutMinutes: opts.timeoutMinutes,
         killGraceSeconds: opts.killGraceSeconds,
       });
-      const record = copyRecord(dir, existsSync(log) ? parseCommandLog(readFileSync(log, 'utf-8')) : []);
+      const commands = existsSync(log) ? parseCommandLog(readFileSync(log, 'utf-8')) : [];
+      const record = copyRecord(dir, commands);
       const holds = (e: Parameters<typeof evidenceHolds>[1]) => evidenceHolds(record, e);
-      return {holds, judged: recordVerdict(subject, criteriaAsked, result.output, holds)};
+      const judged = recordVerdict(subject, criteriaAsked, result.output, holds);
+      return {holds, judged: {...judged, entries: noteCutOutput(judged.entries, commands)}};
     };
     const first = await ask(remaining);
     let judged = first.judged;
@@ -266,7 +345,7 @@ export async function verifyPr(run: CommandRunner, agent: AgentRunner, opts: Ver
         judged = {...judged, decision: reduceVerdict(judged.entries)};
       }
     }
-    return writeRecord(opts, {...judged, ...mergeEntries(criteria, mechanical, judged.entries), problems: judged.problems});
+    return writeRecord(opts, setup, log, {...judged, ...mergeEntries(criteria, mechanical, judged.entries), problems: judged.problems});
   } catch (e) {
     return outOfSpace(e);
   } finally {
@@ -292,8 +371,17 @@ export function dropCheckout(run: CommandRunner, dir: string): void {
   }
 }
 
-function writeRecord(opts: VerifyOptions, record: VerdictRecord): VerifyResult {
+function writeRecord(opts: VerifyOptions, setup: SetupChoice | null, log: string, base: VerdictRecord): VerifyResult {
   mkdirSync(opts.verdictsDir, {recursive: true});
+  const kept = commandLogFile(opts.verdictsDir, base.pr, base.head);
+  const unchecked = base.entries.some(e => e.demoted?.startsWith(EVIDENCE_DEMOTION));
+  let commandLog: string | null = null;
+  rmSync(kept, {force: true});
+  if ((base.decision !== 'pass' || unchecked) && existsSync(log)) {
+    renameSync(log, kept);
+    commandLog = kept;
+  }
+  const record: VerdictRecord = {...base, setup, commandLog};
   writeFileSync(verdictFile(opts.verdictsDir, record.pr, record.head), JSON.stringify(record, null, 2) + '\n');
   if (opts.trackerKind !== 'github' || !opts.capture) return record;
   return {...record, status: setVerifyStatus(opts.capture, record.head, record.decision)};

@@ -6,6 +6,7 @@
  * I/O lives in guards-check.ts.
  */
 
+import {isWorse, type BudgetDirection} from '../budgets/budgets';
 import {globToRegExp, type Finding} from '../waivers';
 
 export const GUARDS_OPINION = 'base.guards-hold';
@@ -68,6 +69,27 @@ export function loosened(file: string, before: string, after: string): Finding[]
       opinion: GUARDS_OPINION,
       detail: `${name} changed from ${old} to ${to} (${why}); ${PROCEED}`,
     });
+  }
+  return findings;
+}
+
+/**
+ * Numbers of the budgets baseline that went the loosening way: the direction
+ * comes from the budget's own entry, not from the name. A budget with no known
+ * direction, or a removed number, counts as loosened.
+ */
+export function loosenedBudgets(file: string, before: string, after: string, directions: Record<string, BudgetDirection>): Finding[] {
+  const was = numbersOf(before);
+  const now = numbersOf(after);
+  const findings: Finding[] = [];
+  for (const [name, old] of was) {
+    const value = now.get(name);
+    const dir = Object.hasOwn(directions, name) ? directions[name] : undefined;
+    if (value === old) continue;
+    if (value !== undefined && dir !== undefined && !isWorse(dir, value, old)) continue;
+    const to = value === undefined ? 'removed' : String(value);
+    const why = dir === undefined ? 'its direction is unknown, so a change counts as loosening' : dir === 'down' ? 'a smaller number is better and it went up' : 'a larger number is better and it went down';
+    findings.push({file, line: 1, rule: 'guard-loosened', opinion: GUARDS_OPINION, detail: `${name} changed from ${old} to ${to} (${why}); ${PROCEED}`});
   }
   return findings;
 }

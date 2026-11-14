@@ -78,4 +78,26 @@ describe('runGuardsCheck', () => {
     const out = runGuardsCheck(root, git({diff: 'M\ta.test.ts', untracked: 'n.test.ts', patch}));
     expect(out.map(f => [f.file, f.line])).toEqual([['a.test.ts', 1], ['n.test.ts', 2]]);
   });
+
+  describe('the budgets baseline', () => {
+    const BB = '.forger/budgets-baseline.json';
+    const budgets = JSON.stringify({budgets: [{name: 'bundle', command: 'size', direction: 'down'}, {name: 'speed', command: 'fps', direction: 'up'}]});
+    const base = {[BB]: '{"bundle": 100, "speed": 60}', '.forger/budgets.json': budgets};
+    const at = (now: string) => runGuardsCheck(repo({[BB]: now, '.forger/budgets.json': budgets}), git({diff: `M\t${BB}`, base}));
+
+    test('the budgets baseline is a guard file', () => {
+      const out = at('{"bundle": 120, "speed": 60}');
+      expect(out.map(f => f.file)).toEqual([BB]);
+      expect(out[0].detail).toContain('from 100 to 120');
+    });
+
+    test('a number moving the good way, by its own direction, passes', () => {
+      expect(at('{"bundle": 90, "speed": 70}')).toEqual([]);
+    });
+
+    test('direction up fails a smaller number and a removed budget fails', () => {
+      expect(at('{"bundle": 100, "speed": 50}')).toHaveLength(1);
+      expect(at('{"bundle": 100}')).toHaveLength(1);
+    });
+  });
 });

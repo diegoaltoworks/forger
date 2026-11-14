@@ -14,7 +14,8 @@ import type {CommandRunner} from '../../ports';
 import {BASELINE_MANIFEST} from '../../ui';
 import {mergeBase, parseNameStatus} from '../decisions';
 import type {Finding} from '../waivers';
-import {addedLines, decisionsText, deletedFile, loosened, matches, skipsIn, withoutDecided} from './guards';
+import {BUDGETS_BASELINE_PATH, BUDGETS_PATH, directionsOf, parseBudgets} from '../budgets/budgets';
+import {addedLines, decisionsText, deletedFile, loosened, loosenedBudgets, matches, skipsIn, withoutDecided} from './guards';
 
 function jsonOf(projectRoot: string, rel: string): Record<string, unknown> | null {
   const file = forgerPath(projectRoot, rel);
@@ -32,6 +33,7 @@ function guardGlobs(projectRoot: string): string[] {
   if (configured) return configured;
   const baseline = jsonOf(projectRoot, '.forger/testing.json')?.coverage_baseline;
   const out: string[] = typeof baseline === 'string' ? [baseline] : [];
+  if (existsSync(forgerPath(projectRoot, BUDGETS_PATH))) out.push(BUDGETS_BASELINE_PATH);
   if (jsonOf(projectRoot, '.forger/ui.json') !== null) out.push(BASELINE_MANIFEST);
   return out;
 }
@@ -49,6 +51,20 @@ export function decisionsOfBranch(run: CommandRunner): string {
   } catch {
     return '';
   }
+}
+
+/** The direction of each budget as the base branch had it, else as the tree has it: a diff cannot flip a direction to excuse a number. */
+function budgetDirections(projectRoot: string, run: CommandRunner, mb: string) {
+  const read = (text: () => string) => {
+    try {
+      return directionsOf(parseBudgets(text()));
+    } catch {
+      return {};
+    }
+  };
+  const file = forgerPath(projectRoot, BUDGETS_PATH);
+  const onDisk = existsSync(file) ? read(() => readFileSync(file, 'utf-8')) : {};
+  return {...onDisk, ...read(() => run(`git show ${mb}:${BUDGETS_PATH}`))};
 }
 
 export function runGuardsCheck(projectRoot: string, run: CommandRunner): Finding[] {
@@ -71,7 +87,10 @@ export function runGuardsCheck(projectRoot: string, run: CommandRunner): Finding
       continue;
     }
     if (!existsSync(disk)) continue;
-    if (isGuard && c.status === 'modified') findings.push(...loosened(c.path, run(`git show ${mb}:${c.path}`), readFileSync(disk, 'utf-8')));
+    if (isGuard && c.status === 'modified') {
+      const [before, after] = [run(`git show ${mb}:${c.path}`), readFileSync(disk, 'utf-8')];
+      findings.push(...(c.path === BUDGETS_BASELINE_PATH ? loosenedBudgets(c.path, before, after, budgetDirections(projectRoot, run, mb)) : loosened(c.path, before, after)));
+    }
     if (isTest) {
       const lines =
         c.status === 'added'

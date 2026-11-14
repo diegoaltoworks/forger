@@ -63,6 +63,10 @@ hand merge and push to the base branch, in the way each harness documents:
 a plugin for OpenCode, a hook file for Codex and Copilot. In Codex, trust the
 project and review the hook with `/hooks`.
 
+If git already tracks one of the engine's runtime files, setup (and `setup --upgrade`)
+names it with the `git rm --cached` command that stops tracking it and keeps the
+file. Setup never runs that command.
+
 ```
 bun ~/forger/plugins/forger/bin/work.ts setup --harness opencode    # OpenCode
 bun ~/forger/plugins/forger/bin/work.ts setup --harness codex    # Codex
@@ -110,6 +114,14 @@ the source tree's shape under a check; setup records the structure that already
 exists as a baseline so the repository starts green and only improves, and it
 prints any boundary groups it derived from your workspaces so you can widen them.
 
+In a repository with no source file, setup also copies the default starter: a
+Bun and TypeScript skeleton with a pure `src/core/`, a `src/shell/`, tests, a CI
+workflow and one journey. It sets the gates to the starter's own and installs
+the `architecture`, `testing` and `journeys` packs configured for those folders.
+`--starter NAME` picks a starter by name (an unknown name lists the available
+ones) and `--no-starter` copies none. A repository that already has source
+files gets no starter, and setup never overwrites a file the starter also ships.
+
 With a GitHub tracker it also creates the intake label. To create it by hand:
 
 ```
@@ -134,6 +146,13 @@ The planner reads the repository, asks you numbered questions, each with a
 recommendation, and then writes a plan doc and the tickets. On GitHub each
 ticket is an issue with the `ready-for-agent` label. It ends with the goal and
 the tickets it created, in build order.
+
+The first time, it also writes a product brief to `docs/product.md`: who the app
+is for, the few things they must be able to do, how success shows and what is
+out. Setup installs the template as `.forger/templates/product.md` and never
+writes the brief itself. Every ticket then says which of those journeys it
+serves, or that it is upkeep. `work.ts facts --product` prints the brief and
+what is missing from it.
 
 ## 🚀 5. Start the loop
 

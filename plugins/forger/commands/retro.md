@@ -34,6 +34,7 @@ words, or the failure, with its date and where it was seen. Do not paraphrase.
   worker's session transcript and CI's logs. Name each layer (worker, skill,
   engine, platform) and do not stop at the first plausible cause.
 - For friction, list every place it recurred.
+- `work retro demote --list`: opinions that do not earn their place. Report the candidates; for one the owner wants pursued, `work retro demote --opinion <id>` prints the issue draft. The owner decides each demotion.
 
 ## 3. Choose the form
 

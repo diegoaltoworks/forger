@@ -2,15 +2,25 @@ import {findHarness, guardRefusal} from '../adapters';
 import {watchRepos} from './multi';
 import {harnessOfRoot} from './harness-of';
 import {hooksGateProblems, hooksGateRefusal} from '../checks';
-import {behindBaseRefusal, parseHaltClear, readBaseSync, RESUME_FORMS} from '../loop';
+import {spawnSync} from 'child_process';
+import {relative} from 'path';
+import {fastForwardRefusal, parseHaltClear, planBaseSync, readBaseSync, RESUME_FORMS, touchesPlugin} from '../loop';
+import {detectLayout} from '../config';
+import {gitignoreLines} from '../packs';
 import {detachEngine, engineStartLine, readEngineStart} from './detach';
 import type {Command} from './command';
+
+/** The marker keeps the child from restarting itself again: one restart only. */
+function restartSelf(): number {
+  const child = spawnSync(process.argv[0], process.argv.slice(1), {stdio: 'inherit', env: {...process.env, FORGER_RESTARTED: '1'}});
+  return child.status ?? 1;
+}
 
 export const run: Command = {
   name: 'run',
   needs: 'loop',
   flags: ['iterations', 'continuous', 'detach'],
-  help: `  run [N]          Run N iterations (default: 1)
+  help: `  run [N]          Run N iterations (default: 1); first fast-forwards a base branch that is behind its remote
   run --continuous Run until all tasks complete
   run --continuous --detach
                    Start the engine so it outlives this session: a container with a restart policy under the docker sandbox, else a new session`,
@@ -28,11 +38,22 @@ export const run: Command = {
       process.exitCode = 1;
       return;
     }
-    const stale = behindBaseRefusal(readBaseSync(run(), config.base_branch), config.base_branch);
-    if (stale) {
-      console.error(`Not starting: ${stale}.`);
-      process.exitCode = 1;
-      return;
+    const base = config.base_branch;
+    const sync = readBaseSync(run(), base, gitignoreLines(detectLayout(projectRoot).dir));
+    if (planBaseSync(sync, runner.statusReport().runner.alive) === 'fast-forward') {
+      const before = ctx.capture()('git rev-parse HEAD').stdout.trim();
+      const merged = ctx.capture()(`git merge --ff-only origin/${base}`);
+      if (merged.exitCode !== 0) {
+        console.error(`Not starting: ${fastForwardRefusal(base, merged.stderr || merged.stdout)}.`);
+        process.exitCode = 1;
+        return;
+      }
+      const changed = ctx.capture()(`git diff --name-only ${before} HEAD`).stdout;
+      if (!values.detach && process.env.FORGER_RESTARTED !== '1' && touchesPlugin(changed, relative(projectRoot, pluginRoot))) {
+        console.log(`${base} moved the plugin the engine runs from; starting again on the new code`);
+        process.exitCode = (ctx.deps.restart ?? restartSelf)();
+        return;
+      }
     }
     if (values.detach) {
       detachEngine(ctx);

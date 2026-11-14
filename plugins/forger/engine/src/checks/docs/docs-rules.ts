@@ -98,7 +98,11 @@ const HEADING_EMOJI = /^(#{2,6}\s+)\p{Extended_Pictographic}\uFE0F?(?=\s)/u;
 export const nonAscii: LineRule = line =>
   [...new Set(line.replace(HEADING_EMOJI, '$1').match(NON_ASCII) ?? [])].map(codePoint);
 
-export const email: LineRule = line => line.match(EMAIL) ?? [];
+/** RFC 2606 and RFC 6761: hosts that can never be a real person's mailbox. */
+const RESERVED_HOST = /(?:^|\.)(?:example\.(?:com|net|org)|[^.]+\.(?:test|example|invalid|localhost)|(?:test|example|invalid|localhost))$/i;
+
+export const email: LineRule = line =>
+  (line.match(EMAIL) ?? []).filter(address => !RESERVED_HOST.test(address.slice(address.lastIndexOf('@') + 1)));
 
 export const homePath: LineRule = line => line.match(HOME_PATH) ?? [];
 

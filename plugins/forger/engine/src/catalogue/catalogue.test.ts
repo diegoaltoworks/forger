@@ -1,7 +1,7 @@
 import {describe, expect, test} from 'bun:test';
 
 import {checkCatalogue, factsOnMerge, parseCatalogue, ticketsOf, updateCatalogue, type TicketFacts} from './catalogue';
-import {branchTicket, factFromIssue, parseFacts, trackerFacts} from './tracker';
+import {branchPr, branchTicket, factFromIssue, parseFacts, trackerFacts} from './tracker';
 
 const facts = (o: Record<number, number | 'closed' | 'open'>): TicketFacts =>
   new Map(
@@ -165,5 +165,52 @@ describe('tracker facts', () => {
   test('a failing tracker gives null, and no tickets need no call', () => {
     expect(trackerFacts(() => { throw new Error('no gh'); }, [5])).toBeNull();
     expect(trackerFacts(() => { throw new Error('unused'); }, [])).toEqual(new Map());
+  });
+});
+
+describe('an Open row on its own ticket branch', () => {
+  const own = doc([openRow('A', 6)], []);
+  test('an Open row whose only open issue is the branch\'s ticket fails the docs check once the branch has an open PR', () => {
+    const found = checkCatalogue(own, facts({6: 'open'}), 6, 12);
+    expect(found.map(p => p.rule)).toEqual(['catalogue-open-own-ticket']);
+    expect(found[0].detail).toContain('catalogue --update');
+    expect(found[0].detail).toContain('"A"');
+  });
+  test('an Open row whose only open issue is the branch\'s ticket passes the docs check before the branch has a PR', () => {
+    expect(checkCatalogue(own, facts({6: 'open'}), 6, null)).toEqual([]);
+  });
+  test('an Open row that links another open issue passes the docs check on the branch', () => {
+    const two = doc([`| A | hangs | ${I(6)}, ${I(7)} |`], []);
+    expect(checkCatalogue(two, facts({6: 'open', 7: 'open'}), 6, 12)).toEqual([]);
+  });
+  test('without facts only the structure is checked', () => {
+    expect(checkCatalogue(own, null, 6, 12)).toEqual([]);
+  });
+  test('catalogue --update on a ticket\'s branch moves the row that ticket closes to Fixed, naming the branch\'s open PR', () => {
+    const f = factsOnMerge(own, facts({6: 'open'}), 6, 12);
+    const out = updateCatalogue(own, f);
+    expect(parseCatalogue(out).fixed.map(r => [r.tickets, r.prs])).toEqual([[[6], [12]]]);
+    expect(parseCatalogue(out).open).toEqual([]);
+    expect(checkCatalogue(out, facts({6: 'open'}), 6, 12)).toEqual([]);
+  });
+  test('the update leaves a row with another open issue in Open', () => {
+    const two = doc([`| A | hangs | ${I(6)}, ${I(7)} |`], []);
+    expect(updateCatalogue(two, factsOnMerge(two, facts({6: 'open', 7: 'open'}), 6, 12))).toBe(two);
+  });
+  test('a Fixed row whose open issue is another ticket still fails', () => {
+    expect(checkCatalogue(doc([], [fixedRow('B', 6, 9)]), facts({6: 'open'}), 7, 12).map(p => p.rule)).toEqual(['catalogue-stale-status']);
+  });
+});
+
+describe('branchPr', () => {
+  const prs = JSON.stringify([{number: 12, headRefName: 'feat/issue-6', headRefOid: 'abc'}]);
+  const run = (branch: string) => (cmd: string) => (cmd.startsWith('git branch') ? branch : cmd.startsWith('git rev-parse') ? 'abc\n' : prs);
+  test('finds the open PR by branch name or, detached, by head commit', () => {
+    expect(branchPr(run('feat/issue-6\n'))).toBe(12);
+    expect(branchPr(run(''))).toBe(12);
+    expect(branchPr(run('feat/issue-7\n'))).toBeNull();
+  });
+  test('is null when gh fails', () => {
+    expect(branchPr(() => { throw new Error('no gh'); })).toBeNull();
   });
 });

@@ -22,23 +22,24 @@ export type TerminalEventKind = (typeof TERMINAL_EVENTS)[number];
 
 /**
  * Facts about the run that are not terminal: the pick, an approval asked, a
- * halt a person cleared and each attempt at a slot's output contract, a PR left open for the owner (`reason` carries the PR) and a ticket handed back by a failed probe (`reason` carries the command and its result), a ticket set aside after a worker's stop (`reason` carries why), a ticket merged (the count a structure review is due by) and a structure review filed (`reason` carries why). They
+ * halt a person cleared and each attempt at a slot's output contract, a PR left open for the owner (`reason` carries the PR) and a ticket handed back by a failed probe (`reason` carries the command and its result), a ticket set aside after a worker's stop (`reason` carries why), a ticket merged (the count a structure review is due by) and a structure review or an access review filed (`reason` carries why), a gate that failed and passed on a rerun with no change (`reason` starts with the PR and names the check and the failed tests), and the outcome of a delivery after a merge (`reason` starts with the PR, as `PR #n: ...`). They
  * share the file, but the terminal readers (`readEvents`, `awaitEvent`) skip
  * them, so a watcher never wakes on one.
  * `reason` carries the detail: the action and its authority for an approval,
  * the cleared halt's reason for a clear, the previous holder for a lease
  * takeover, the slot, attempt and problems for a contract attempt.
  */
-export const RECORDED_EVENTS = ['picked', 'approval_asked', 'halt_cleared', 'lease_takeover', 'contract_attempt', 'owner_review', 'probe_failed', 'merged', 'structure_review_filed', 'set_aside'] as const;
+export const RECORDED_EVENTS = ['picked', 'approval_asked', 'halt_cleared', 'lease_takeover', 'contract_attempt', 'owner_review', 'probe_failed', 'merged', 'structure_review_filed', 'access_review_filed', 'set_aside', 'delivered', 'delivery_failed', 'rolled_back', 'rollback_failed', 'flaky_gate'] as const;
 
 export type RecordedEventKind = (typeof RECORDED_EVENTS)[number];
 
 /**
  * Mid-run facts a watcher wakes on while the run continues: a worker's call
  * the hook refused (`reason` carries the rule and the refused command) and a
- * halt the engine recovered by itself (`reason` carries the check that passed).
+ * halt the engine recovered by itself (`reason` carries the check that passed),
+ * and a `verify` or `merge` refused because the engine's source had uncommitted changes (`reason` carries the command and the paths).
  */
-export const MIDRUN_EVENTS = ['worker_denied', 'recovered'] as const;
+export const MIDRUN_EVENTS = ['worker_denied', 'recovered', 'engine_changed'] as const;
 
 export type MidrunEventKind = (typeof MIDRUN_EVENTS)[number];
 

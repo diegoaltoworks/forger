@@ -24,6 +24,8 @@ const IDENTITY_EMAIL = ['fixture', 'example.invalid'].join('@');
 interface FixtureConfig {
   gates?: string;
   prepare?: string;
+  /** The project has no source file: setup copies a starter and its gates stand. */
+  starter?: boolean;
 }
 
 function sh(command: string, cwd: string, env: Record<string, string>) {
@@ -112,6 +114,7 @@ function runFixture(name: string): string[] {
       detected,
       coverage: result.coverage,
       reportWritten,
+      starter: config.starter,
     })) {
       problems.push(`#${f.issue}: ${f.message}`);
     }

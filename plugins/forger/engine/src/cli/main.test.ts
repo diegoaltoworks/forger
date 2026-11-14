@@ -425,11 +425,11 @@ describe('setup --json', () => {
     const root = realpathSync(mkdtempSync(join(tmpdir(), 'forger-cli-setup-')));
     dirs.push(root);
     process.chdir(root);
-    const first = JSON.parse(await capture(['setup', '--json', '--gates', 'make test', '--tracker', 'local']));
+    const first = JSON.parse(await capture(['setup', '--json', '--no-starter', '--gates', 'make test', '--tracker', 'local']));
     expect(first.files.map((f: {action: string}) => f.action)).not.toContain('kept');
     const config = JSON.parse(readFileSync(join(root, '.forger', 'workloop.config.json'), 'utf-8'));
     expect(config.tracker.kind).toBe('local');
-    const second = JSON.parse(await capture(['setup', '--json']));
+    const second = JSON.parse(await capture(['setup', '--json', '--no-starter']));
     expect(second.files.map((f: {action: string}) => f.action)).not.toContain('written');
   });
 
@@ -445,7 +445,7 @@ describe('setup --json', () => {
     const settings = readFileSync(join(root, '.claude', 'settings.json'), 'utf-8');
     expect(JSON.parse(settings).permissions).toEqual({allow: ['Bash(ls)']});
     expect(JSON.parse(settings).hooks.PreToolUse[0].hooks[0].command).toBe(HOOK_COMMAND_LINE);
-    expect(JSON.parse(readFileSync(join(root, '.forger', 'hooks.json'), 'utf-8')).rules).toEqual(['merge', 'push-base', 'status-write', 'state-edit']);
+    expect(JSON.parse(readFileSync(join(root, '.forger', 'hooks.json'), 'utf-8')).rules).toEqual(['merge', 'push-base', 'status-write', 'state-edit', 'leave-worktree']);
     const second = JSON.parse(await capture(['setup', '--json']));
     expect(second.files).toContainEqual({path: '.claude/settings.json', action: 'kept'});
     expect(readFileSync(join(root, '.claude', 'settings.json'), 'utf-8')).toBe(settings);
@@ -504,8 +504,44 @@ describe('setup with the testing pack', () => {
     const root = realpathSync(mkdtempSync(join(tmpdir(), 'forger-cli-setup-')));
     dirs.push(root);
     process.chdir(root);
-    const out = JSON.parse(await capture(['setup', '--json', '--tracker', 'local']));
+    const out = JSON.parse(await capture(['setup', '--json', '--no-starter', '--tracker', 'local']));
     expect(out.next_steps).toBeUndefined();
+  });
+});
+
+describe('setup starter', () => {
+  function empty(): string {
+    const root = realpathSync(mkdtempSync(join(tmpdir(), 'forger-cli-starter-')));
+    dirs.push(root);
+    process.chdir(root);
+    return root;
+  }
+
+  test('an empty repository gets the default starter, its gates and its coverage advice', async () => {
+    const root = empty();
+    const out = JSON.parse(await capture(['setup', '--json', '--tracker', 'local']));
+    expect(out.starter).toBe('bun-typescript');
+    expect(existsSync(join(root, 'src', 'core', 'greet.ts'))).toBe(true);
+    expect(out.coverage.gates_write_report).toBe(true);
+  });
+
+  test('--no-starter leaves an empty repository without a skeleton', async () => {
+    const root = empty();
+    const out = JSON.parse(await capture(['setup', '--json', '--no-starter', '--tracker', 'local']));
+    expect(out.starter).toBeUndefined();
+    expect(existsSync(join(root, 'package.json'))).toBe(false);
+    expect(existsSync(join(root, 'src'))).toBe(false);
+  });
+
+  test('an unknown starter name is an error that lists the names', async () => {
+    const root = empty();
+    const err = spyOn(console, 'error').mockImplementation(() => {});
+    await capture(['setup', '--json', '--starter', 'nope', '--tracker', 'local']);
+    expect(err.mock.calls.join(' ')).toContain('bun-typescript');
+    err.mockRestore();
+    expect(process.exitCode).toBe(1);
+    process.exitCode = 0;
+    expect(existsSync(join(root, '.forger'))).toBe(false);
   });
 });
 
@@ -716,7 +752,7 @@ describe('hooks gate before a worker starts', () => {
 
   test('orient reports a failing hooks gate as an anomaly', async () => {
     process.chdir(olderInstall());
-    const out = JSON.parse(await capture(['orient', '--json'], () => 'main'));
+    const out = JSON.parse(await capture(['orient', '--json'], cmd => (cmd.startsWith('git status') ? '' : 'main')));
     expect(out.anomalies.join(' ')).toContain('run `work.ts setup`');
   });
 
@@ -751,23 +787,9 @@ describe('supervisor commands', () => {
     const out = JSON.parse(await capture(['orient', '--json'], run));
     expect(out.anomalies.join(' ')).toContain('2 commit(s) behind origin/main');
   });
-  test('run refuses on a behind, clean base branch and names the fix', async () => {
-    process.chdir(projectWith({a: {status: 'not_started', priority: 'P0'}}));
-    const run: CommandRunner = cmd => (cmd.startsWith('git rev-list') ? '2' : '');
-    const err: string[] = [];
-    const orig = console.error;
-    console.error = (m: string) => void err.push(String(m));
-    try {
-      await capture(['run'], run);
-    } finally {
-      console.error = orig;
-      process.exitCode = 0;
-    }
-    expect(err.join('\n')).toContain('git pull --ff-only origin main');
-  });
   test('orient starts a runner when work remains and none is alive', async () => {
     process.chdir(projectWith({a: {status: 'not_started', priority: 'P0'}}));
-    const out = JSON.parse(await capture(['orient', '--json'], () => 'main'));
+    const out = JSON.parse(await capture(['orient', '--json'], cmd => (cmd.startsWith('git status') ? '' : 'main')));
     expect(out.action).toBe('start');
     expect(out.anomalies).toEqual([]);
   });
@@ -778,7 +800,7 @@ describe('supervisor commands', () => {
       cmd === 'git branch --show-current' ? 'main' : cmd.startsWith('gh issue view') ? '{"state":"OPEN","closedByPullRequestsReferences":[]}' : '';
     const out = JSON.parse(await capture(['facts', '--json', '--issue', '4'], run));
     expect(out.branch).toBe('main');
-    expect(out.issue).toEqual({number: 4, state: 'OPEN', closing_pr: null});
+    expect(out.issue).toEqual({number: 4, state: 'OPEN', closing_pr: null, delivery: null});
   });
 
   test('facts --guards prints the guard files and the tests that name a path, with --json as data', async () => {
@@ -789,8 +811,25 @@ describe('supervisor commands', () => {
     process.chdir(root);
     const run: CommandRunner = cmd => (cmd === 'git ls-files' ? '.forger/cov.json\nsrc/layout.spec.ts\nsrc/app.ts\n' : '');
     const out = JSON.parse(await capture(['facts', '--json', '--guards', 'src/app.ts'], run));
-    expect(out).toEqual({paths: ['src/app.ts'], guards: ['.forger/cov.json'], tests: ['src/layout.spec.ts']});
+    expect(out).toEqual({paths: ['src/app.ts'], guards: ['.forger/cov.json'], tests: ['src/layout.spec.ts'], journeys: []});
     expect(await capture(['facts', '--guards', 'src/app.ts'], run)).toContain('src/layout.spec.ts');
+  });
+
+  test('facts --product reports present false when there is no brief', async () => {
+    process.chdir(projectWith({a: {status: 'not_started'}}));
+    expect(JSON.parse(await capture(['facts', '--product', '--json']))).toEqual({present: false});
+  });
+
+  test('facts --product prints the parsed brief and what is missing', async () => {
+    const root = projectWith({a: {status: 'not_started'}});
+    mkdirSync(join(root, 'docs'));
+    writeFileSync(join(root, 'docs/product.md'), '## Who it is for\n\nCooks.\n\n## What they must be able to do\n\n- Plan a meal\n');
+    process.chdir(root);
+    const out = JSON.parse(await capture(['facts', '--product', '--json']));
+    expect(out.present).toBe(true);
+    expect(out.who).toBe('Cooks.');
+    expect(out.journeys).toEqual(['Plan a meal']);
+    expect(out.problems).toEqual(['missing section "## How success shows"', 'missing section "## Out"']);
   });
 
   test('merge refuses a PR with a failing check and exits 1, without merging', async () => {
@@ -935,6 +974,58 @@ describe('measure and retro', () => {
     const run: CommandRunner = () => JSON.stringify([{headBranch: 'feat/alpha-ticket', event: 'pull_request'}]);
     const out = JSON.parse(await capture(['measure', '--json'], run));
     expect(out.tickets).toEqual([{ticket: 'alpha_ticket', runs: 1, seconds: 90, budget_cap_usd: 20, cost_usd: null, ci_rounds: 1}]);
+  });
+
+  test('measure --opinions with no records file exits 0 and says nothing is recorded', async () => {
+    const root = projectWith({});
+    process.chdir(root);
+    process.exitCode = 0;
+    const out = await capture(['measure', '--opinions'], () => '[]');
+    expect(out).toContain('nothing is recorded yet');
+    expect(Number(process.exitCode ?? 0)).toBe(0);
+  });
+
+  test('measure --opinions prints the failures of each opinion with a check, as JSON', async () => {
+    const root = projectWith({});
+    writeFileSync(join(root, '.forger/checks.jsonl'), JSON.stringify({at: 't', ticket: 'issue-1', iteration: 1, opinion: 'x.y', check: 'docs', failed: 1, waived: 0}) + '\n');
+    process.chdir(root);
+    const out = JSON.parse(await capture(['measure', '--opinions', '--json'], () => '[]'));
+    expect(out.recorded).toBe(true);
+    expect(out.opinions).toEqual([]);
+  });
+
+  const demoteRun: CommandRunner = cmd => (cmd.includes('gh pr list') ? JSON.stringify([{closingIssuesReferences: [{number: 1}, {number: 2}]}]) : '[]');
+
+  function demoteProject(): void {
+    const root = projectWith({});
+    mkdirSync(join(root, '.forger'), {recursive: true});
+    writeFileSync(join(root, '.forger/forger.lock.json'), JSON.stringify({packs: [{id: 'safety', version: '1', files: []}]}));
+    writeFileSync(join(root, '.forger/checks.jsonl'), JSON.stringify({at: 't', ticket: 'issue-9', iteration: 1, opinion: 'safety.secrets', check: 'safety', failed: 1, waived: 0}) + '\n');
+    process.chdir(root);
+  }
+
+  test('retro demote --list and --opinion name a check that never failed over enough merged tickets', async () => {
+    demoteProject();
+    const run = demoteRun;
+    const list = JSON.parse(await capture(['retro', 'demote', '--list', '--json', '--min-merged', '2'], run));
+    expect(list.candidates.map((c: {opinion: string}) => c.opinion)).toContain('safety.data-forward');
+    expect(list.candidates.map((c: {opinion: string}) => c.opinion)).not.toContain('safety.secrets');
+    const draft = JSON.parse(await capture(['retro', 'demote', '--opinion', 'safety.data-forward', '--json', '--min-merged', '2'], run));
+    expect(draft.body).toContain('safety.data-forward');
+  });
+
+  test('retro demote refuses an opinion that is not a candidate and prints its numbers', async () => {
+    demoteProject();
+    const run = demoteRun;
+    process.exitCode = 0;
+    const errors: string[] = [];
+    const orig = console.error;
+    console.error = (m: string) => errors.push(m);
+    await capture(['retro', 'demote', '--opinion', 'safety.secrets', '--min-merged', '2'], run);
+    console.error = orig;
+    expect(errors.join('')).toContain('safety.secrets (rung check): failed on 1 ticket(s)');
+    expect(process.exitCode).toBe(1);
+    process.exitCode = 0;
   });
 
   test('measure --json carries the session cost beside the cap, unknown without a transcript', async () => {

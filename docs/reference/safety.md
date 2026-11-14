@@ -16,3 +16,13 @@ diff that lowers a minimum, raises a maximum, changes a number whose direction
 the key name does not give, deletes a guard or test file, or adds a skip to a
 test. The owner records the change with `decide <n>`; naming the file in the
 ticket's Decisions section lets that file through.
+
+## Access is reviewed
+
+No check can decide who may read or change whose data. With the safety pack, set
+`access_review.every_merged` in `.forger/safety.json` and the loop files one
+access review after that many merges, unless one is still open. The reviewer
+lists every route, handler or command that touches stored data, whose data it
+is, and the test that shows another person is refused, then files a ticket per
+missing test or refusal. `0`, or leaving it out, is off. The opinion is
+`safety.access-reviewed`.
