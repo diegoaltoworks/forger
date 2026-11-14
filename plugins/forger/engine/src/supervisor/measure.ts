@@ -162,6 +162,8 @@ export interface MeasureInputs {
   iterations: IterationRecord[];
   budgets: BudgetRecord[];
   events: TerminalEvent[];
+  /** Every record in the events file, of any kind; a run with one of them is covered. Absent: `events` decides. */
+  records?: {iteration: number}[];
   /** The `halt_cleared` events; absent reads as none. */
   clears?: TerminalEvent[];
   ciRuns: CiRun[];
@@ -321,7 +323,7 @@ export function computeMeasures(inputs: MeasureInputs): Measures {
     merged: {tickets: rework.merged},
     rework: {redone_tickets: rework.redone},
     owner_interventions: {total: Object.values(interventions).reduce((a, b) => a + b, 0), by_event: interventions},
-    interventions_unknown: eventsGap(windowed, inputs.events),
+    interventions_unknown: eventsGap(windowed, inputs.records ?? inputs.events),
     halt_clears: haltClearCounts((inputs.clears ?? []).filter(e => first === null || e.iteration >= first)),
     change_rework: inputs.changes === undefined ? null : computeRework(inputs.changes),
     journeys: inputs.journeys === undefined || inputs.changes === undefined ? null : computeJourneyShare(inputs.changes.prs.map(p => ({number: p.number, files: [...new Set([...p.ranges, ...(p.replaced ?? [])].map(r => r.file))]})), inputs.journeys),

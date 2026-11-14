@@ -52,7 +52,7 @@ describe('buildComparisonReport', () => {
         {headBranch: 'feat/a', event: 'pull_request'},
         {headBranch: 'feat/b', event: 'pull_request'},
       ],
-      events: [ev('halted'), ev('completed'), ev('merged_red')],
+      events: [ev('halted', 1), ev('completed', 2), ev('merged_red', 3)],
     });
     expect(buildComparisonReport(m)).toEqual({
       tickets_merged: 2,
@@ -61,6 +61,26 @@ describe('buildComparisonReport', () => {
       rework: {ci_extra_rounds: 2, blocked_prs: 0, rerun_after_conflict: 0, redone_tickets: 0},
       owner_interventions: {total: 2, by_event: {halted: 1, merged_red: 1}},
     });
+  });
+});
+
+describe('owner interventions coverage', () => {
+  const runs = [it(1, 'a', 'completed'), it(2, 'b', 'completed')];
+
+  test('a run with only picked and merged records is covered and reports zero owner interventions', () => {
+    const m = computeMeasures({...base, iterations: runs, events: [], records: [ev('picked', 1), ev('merged', 1), ev('picked', 2), ev('merged', 2)]});
+    expect(m.interventions_unknown).toBeNull();
+    expect(buildComparisonReport(m).owner_interventions).toEqual({total: 0, by_event: {}});
+  });
+
+  test('a run with no record of any kind is still reported as unknown', () => {
+    const m = computeMeasures({...base, iterations: runs, events: [], records: [ev('picked', 1), ev('merged', 1)]});
+    expect(m.interventions_unknown).toContain('1 of 2');
+  });
+
+  test('the comparison report carries the reason when owner interventions are unknown', () => {
+    const m = computeMeasures({...base, iterations: runs, events: [ev('halted', 1)]});
+    expect(buildComparisonReport(m).owner_interventions).toEqual({total: null, by_event: {}, unknown_reason: m.interventions_unknown as string});
   });
 });
 
@@ -93,5 +113,12 @@ describe('diffReports', () => {
     expect(d.tickets_merged.delta).toBe(0);
     expect(d.failure_causes.timeout.delta).toBe(0);
     expect(d.cost_per_merged_ticket.delta).toBe(0);
+  });
+
+  test('the diff of two reports gives no delta for owner interventions when either is unknown', () => {
+    const known = report(1, 1, {}, 1);
+    const unknown = {...known, owner_interventions: {total: null, by_event: {}, unknown_reason: 'gap'}};
+    expect(diffReports(known, unknown).owner_interventions.total).toEqual({a: 1, b: null, delta: null});
+    expect(diffReports(unknown, known).owner_interventions.total).toEqual({a: null, b: 1, delta: null});
   });
 });
