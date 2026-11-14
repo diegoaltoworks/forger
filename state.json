@@ -220,7 +220,10 @@
       "ticket": "issue-457",
       "pid": null,
       "session_id": "a64982fc-52ac-4b0d-a240-6cdda710f625",
-      "snapshot": null,
+      "snapshot": {
+        "baseSha": "",
+        "reflogLength": 1
+      },
       "started_at": "2026-11-14T07:38:05.852Z",
       "plan": {
         "stages": [
