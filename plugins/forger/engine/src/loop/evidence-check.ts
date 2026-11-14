@@ -6,7 +6,7 @@
 
 import {isAbsolute, join, normalize} from 'path';
 
-import type {Evidence} from './verdict';
+import {EVIDENCE_DEMOTION, type Evidence} from './verdict';
 
 /** One command run in the verifier's copy through `run-logged`, with its exit code and output. */
 export interface CommandRun {
@@ -15,6 +15,8 @@ export interface CommandRun {
   output: string;
   /** The folder it ran in, relative to the root of the copy; a log written without it means the root. */
   dir?: string;
+  /** Set when the output was cut to the limit; the test result lines are kept whole all the same. */
+  truncated?: boolean;
 }
 
 export interface CopyRecord {
@@ -26,7 +28,7 @@ export interface CopyRecord {
 
 export const SCREENSHOTS_DIR = 'docs/screenshots/';
 
-const TEST_LINE = /^\s*(?:\((pass|fail)\)|(ok|not ok)\b(?:\s+\d+\s+-)?)\s+(.+?)(?:\s+\[[\d.]+m?s\])?\s*$/;
+export const TEST_LINE = /^\s*(?:\((pass|fail)\)|(ok|not ok)\b(?:\s+\d+\s+-)?)\s+(.+?)(?:\s+\[[\d.]+m?s\])?\s*$/;
 
 /** Each test the recorded runs reported, with whether it passed. Reads bun's `(pass) name` and TAP's `ok N - name`. */
 export function testResults(commands: CommandRun[]): {name: string; passed: boolean}[] {
@@ -156,4 +158,12 @@ export function evidenceHolds(record: CopyRecord, e: Evidence): boolean {
 /** The citations of an entry that do not check out, as "kind ref". */
 export function failedCitations(evidence: Evidence[], holds: (e: Evidence) => boolean): string[] {
   return evidence.filter(e => !holds(e)).map(e => `${e.kind} ${(e.ref ?? '').trim()}`.trim());
+}
+
+export const CUT_NOTE = ' (a command output in the log was cut to its limit; run the cited test file by itself)';
+
+/** Entries demoted over a test citation say so when a record in the log was cut, since the result may be what was dropped. */
+export function noteCutOutput<E extends {demoted?: string; evidence?: Evidence[]}>(entries: E[], commands: CommandRun[]): E[] {
+  if (!commands.some(c => c.truncated)) return entries;
+  return entries.map(e => (e.demoted?.startsWith(EVIDENCE_DEMOTION) && (e.evidence ?? []).some(x => x.kind === 'test') ? {...e, demoted: e.demoted + CUT_NOTE} : e));
 }

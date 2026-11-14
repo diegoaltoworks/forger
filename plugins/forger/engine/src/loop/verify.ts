@@ -16,7 +16,7 @@ import {ciConfigured, failingChecks, PR_FIELDS, parsePr} from './pr-checks';
 import {alreadyRerun, markRerun, rerunFailedJobs, rerunMarker, failedTests, type FlakyGate} from './flaky-gate';
 import {decideGatesGreen, fromGatesCommand, type GatesGreen, isGatesGreen, stillPending} from './gates-green';
 import {mergeEntries, partitionCriteria} from './mechanical';
-import {evidenceHolds, failedCitations, SCREENSHOTS_DIR, type CommandRun, type CopyRecord} from './evidence-check';
+import {evidenceHolds, failedCitations, noteCutOutput, SCREENSHOTS_DIR, type CommandRun, type CopyRecord} from './evidence-check';
 import {parseCommandLog} from './run-logged';
 import {EVIDENCE_DEMOTION, parseCriteria, parseUiStates, reduceVerdict, type CheckedEntry, type Criterion} from './verdict';
 import {buildVerifierInput, recordVerdict, type VerdictRecord} from './verify-input';
@@ -327,9 +327,11 @@ export async function verifyPr(run: CommandRunner, agent: AgentRunner, opts: Ver
         timeoutMinutes: opts.timeoutMinutes,
         killGraceSeconds: opts.killGraceSeconds,
       });
-      const record = copyRecord(dir, existsSync(log) ? parseCommandLog(readFileSync(log, 'utf-8')) : []);
+      const commands = existsSync(log) ? parseCommandLog(readFileSync(log, 'utf-8')) : [];
+      const record = copyRecord(dir, commands);
       const holds = (e: Parameters<typeof evidenceHolds>[1]) => evidenceHolds(record, e);
-      return {holds, judged: recordVerdict(subject, criteriaAsked, result.output, holds)};
+      const judged = recordVerdict(subject, criteriaAsked, result.output, holds);
+      return {holds, judged: {...judged, entries: noteCutOutput(judged.entries, commands)}};
     };
     const first = await ask(remaining);
     let judged = first.judged;
