@@ -9,7 +9,7 @@ import {existsSync, readFileSync} from 'fs';
 
 import type {WorkloopConfig} from '../config';
 import {forgerPath} from '../config';
-import type {CommandRunner} from '../ports';
+import type {Tracker} from '../ports';
 import {defaultGuards, type GuardSources} from './guards';
 import {checkTicketCriteria, type CriterionOptions, type TicketCheck} from './criteria';
 import {leaveQueue, type DeclineTarget} from './decline-io';
@@ -48,7 +48,7 @@ export interface Refusal {
  * failure on one ticket is reported and leaves it queued.
  */
 export function refuseUncheckable(
-  run: CommandRunner,
+  tracker: Tracker,
   target: DeclineTarget,
   tickets: Array<{id: string; body: string | null}>,
   options: CriterionOptions,
@@ -61,7 +61,7 @@ export function refuseUncheckable(
     const check = checkTicketCriteria(t.body, options);
     if (check.ok) continue;
     try {
-      leaveQueue(run, target, {ticket: t.id, reason: 'unclear', detail: refusalDetail(check), at: now()});
+      leaveQueue(tracker, target, {ticket: t.id, reason: 'unclear', detail: refusalDetail(check), at: now()});
       refused.push({ticket: t.id, problems: check.problems});
     } catch (e) {
       errors.push(`${t.id}: ${(e as Error).message}`);

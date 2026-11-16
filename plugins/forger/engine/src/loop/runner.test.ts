@@ -1003,7 +1003,7 @@ describe('AutomationRunner pre-pick refusal', () => {
       gitRunner: cmd => (commands.push(cmd), cmd.includes('--json labels') ? 'needs-info\n' : ''),
     });
     await runner.refuseUncheckable();
-    expect(commands.some(c => c.includes('gh issue edit 1') && c.includes('--add-label needs-info') && c.includes("--remove-label 'ready-for-agent'"))).toBe(true);
+    expect(commands.some(c => c.includes('gh issue edit 1') && c.includes("--add-label 'needs-info'") && c.includes("--remove-label 'ready-for-agent'"))).toBe(true);
     expect(commands.some(c => c.includes('gh issue comment 1') && c.includes('It feels nice'))).toBe(true);
     expect(commands.some(c => / 2( |$)/.test(c) && c.startsWith('gh issue'))).toBe(false);
     const state = runner['store'].load();
@@ -1062,7 +1062,7 @@ describe('a ticket Probe', () => {
     const {runner, root, calls, tracker} = probed('- `measure` prints a number of at least 40', () => ({stdout: '32', stderr: '', exitCode: 0}));
     await runner.runIteration(1);
     expect(calls).toHaveLength(0);
-    expect(tracker).toContain('gh issue edit 5 --add-label needs-human');
+    expect(tracker).toContain("gh issue edit 5 --add-label 'needs-human'");
     const comment = tracker.find(c => c.startsWith('gh issue comment 5'))!;
     expect(comment).toContain('`measure`');
     expect(comment).toContain('prints a number of at least 40');
@@ -1108,7 +1108,7 @@ describe('AutomationRunner on a conflict stop', () => {
   test('a conflict stop sets the ticket aside, labels it and posts the options', async () => {
     const r = await run([block('B')]);
     expect(r.prompts).toHaveLength(1);
-    expect(r.commands.some(c => c.includes('gh issue edit 5 --add-label needs-human'))).toBe(true);
+    expect(r.commands.some(c => c.includes("gh issue edit 5 --add-label 'needs-human'"))).toBe(true);
     expect(r.commands.some(c => c.startsWith('gh issue comment 5') && c.includes('Answer with: decide 5'))).toBe(true);
     expect(r.state.status).toBe('set-aside');
     expect(r.state.set_aside_tasks.map((e: {ticket: string}) => e.ticket)).toEqual(['issue-5']);
@@ -1118,13 +1118,13 @@ describe('AutomationRunner on a conflict stop', () => {
     const r = await run([block('C'), block('A')]);
     expect(r.prompts).toHaveLength(2);
     expect(r.prompts[1]).toContain('recommend "C" names no listed option');
-    expect(r.commands.some(c => c.includes('--add-label needs-human'))).toBe(true);
+    expect(r.commands.some(c => c.includes("--add-label 'needs-human'"))).toBe(true);
   });
 
   test('a block incomplete twice is an ordinary stop: set aside with the reason, no options', async () => {
     const r = await run([block('C'), block('C')]);
     expect(r.prompts).toHaveLength(2);
-    expect(r.commands.some(c => c.includes('--add-label needs-human'))).toBe(true);
+    expect(r.commands.some(c => c.includes("--add-label 'needs-human'"))).toBe(true);
     expect(r.commands.some(c => c.startsWith('gh issue comment 5') && c.includes('Reason:') && !c.includes('Options:'))).toBe(true);
     expect(r.state.status).toBe('set-aside');
   });
@@ -1215,7 +1215,7 @@ describe('AutomationRunner on a worker stop', () => {
     expect(state.consecutive_failures).toBe(0);
     expect(state.set_aside_tasks.map((e: {ticket: string; reason: string}) => [e.ticket, e.reason])).toEqual([['issue-5', 'needs a key']]);
     expect(existsSync(join(root, '.forger', 'HALT'))).toBe(false);
-    expect(commands).toContain('gh issue edit 5 --add-label needs-human');
+    expect(commands).toContain("gh issue edit 5 --add-label 'needs-human'");
     expect(commands.some(c => c.startsWith('gh issue comment 5') && c.includes('needs a key'))).toBe(true);
     const recorded = readFileSync(join(root, '.forger', 'events.jsonl'), 'utf-8');
     expect(recorded).toContain('"event":"set_aside"');

@@ -5,7 +5,7 @@
  * it, and the issue silently drops out of the queue.
  */
 
-import type {CommandRunner} from '../ports';
+import type {Tracker} from '../ports';
 
 export const NEEDS_INFO_LABEL = 'needs-info';
 
@@ -42,28 +42,18 @@ export function missingLabels(declared: LabelSpec[], existing: string[]): LabelS
   return declared.filter(l => !have.has(l.name.toLowerCase()));
 }
 
-function lines(output: string): string[] {
-  return output.split('\n').map(l => l.trim()).filter(l => l !== '');
+export function listRepoLabels(tracker: Tracker): string[] {
+  return tracker.repoLabels();
 }
 
-export function listRepoLabels(run: CommandRunner): string[] {
-  return lines(run('gh label list --limit 1000 --json name --jq ".[].name"'));
-}
-
-export function listIssueLabels(run: CommandRunner, issue: number): string[] {
-  return lines(run(`gh issue view ${issue} --json labels --jq ".labels[].name"`));
-}
-
-function shellQuote(s: string): string {
-  return `'${s.replace(/'/g, `'\\''`)}'`;
+export function listIssueLabels(tracker: Tracker, issue: number): string[] {
+  return tracker.labels(issue);
 }
 
 /** Creates each missing loop label; returns the names it created. */
-export function ensureLabels(run: CommandRunner, intakeLabel: string): string[] {
-  const missing = missingLabels(loopLabels(intakeLabel), listRepoLabels(run));
-  for (const l of missing) {
-    run(`gh label create ${shellQuote(l.name)} --color ${l.color} --description ${shellQuote(l.description)}`);
-  }
+export function ensureLabels(tracker: Tracker, intakeLabel: string): string[] {
+  const missing = missingLabels(loopLabels(intakeLabel), listRepoLabels(tracker));
+  for (const l of missing) tracker.apply({kind: 'createLabel', name: l.name, color: l.color, description: l.description});
   return missing.map(l => l.name);
 }
 

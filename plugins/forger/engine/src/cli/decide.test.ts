@@ -97,8 +97,26 @@ describe('decide', () => {
     } finally {
       log.mockRestore();
     }
-    expect(commands).toContain('gh issue edit 7 --remove-label needs-human');
+    expect(commands).toContain("gh issue edit 7 --remove-label 'needs-human'");
     expect(commands.some(c => c.startsWith('gh issue edit 7 --add-label') && c.includes('ready-for-agent'))).toBe(true);
+  });
+
+  test("decide takes who decided from the tracker's account", async () => {
+    project(null);
+    const commands: string[] = [];
+    const run: CommandRunner = cmd => {
+      commands.push(cmd);
+      if (cmd.startsWith('gh api user')) return 'another-owner\n';
+      return cmd.includes('--json body') ? '## What\n' : '';
+    };
+    const log = spyOn(console, 'log').mockImplementation(() => {});
+    try {
+      await main(['decide', '7', 'go'], {run});
+    } finally {
+      log.mockRestore();
+    }
+    expect(commands).toContain('gh api user --jq .login');
+    expect(commands.some(c => c.startsWith('gh issue edit 7 --body') && c.includes('another-owner: go'))).toBe(true);
   });
 
   test('decide on a ticket the loop did not set aside leaves its labels alone', async () => {

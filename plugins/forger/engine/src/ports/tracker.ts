@@ -59,6 +59,9 @@ export interface Tracker {
   list(query: TicketQuery): TicketSummary[];
   /** The labels the repository has. */
   repoLabels(): string[];
+  /** The account the tracker acts as, such as the login that records a decision. */
+  account(): string;
+  account(how: WholeResult): CommandResult;
   /** Applies a write and returns what the tracker answered, such as the address of a filed ticket. */
   apply(write: TrackerWrite): string;
   apply(write: TrackerWrite, how: WholeResult): CommandResult;

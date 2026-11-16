@@ -1,6 +1,7 @@
 import {describe, expect, test} from 'bun:test';
 
 import {terminalEvent} from '../events';
+import {githubCommand} from '../../tracker';
 import {answerCommands, reasonSummary, setAsideComment, setAsideReasons} from './reasons';
 
 describe('setAsideReasons', () => {
@@ -21,7 +22,13 @@ describe('setAsideReasons', () => {
 
 describe('answering a ticket set aside', () => {
   test('removes needs-human and restores the intake label', () => {
-    expect(answerCommands(7, 'ready-for-agent')).toEqual(["gh issue edit 7 --remove-label needs-human", "gh issue edit 7 --add-label 'ready-for-agent'"]);
+    expect(answerCommands(7, 'ready-for-agent').map(githubCommand)).toEqual(["gh issue edit 7 --remove-label 'needs-human'", "gh issue edit 7 --add-label 'ready-for-agent'"]);
+  });
+  test("the owner's answer is two writes: needs-human removed and the intake label added", () => {
+    expect(answerCommands(7, 'ready-for-agent')).toEqual([
+      {kind: 'labels', ticket: 7, add: [], remove: ['needs-human']},
+      {kind: 'labels', ticket: 7, add: ['ready-for-agent'], remove: []},
+    ]);
   });
   test('the comment carries the reason and the answer line', () => {
     const c = setAsideComment(7, 'needs a key');

@@ -8,10 +8,11 @@ configured kind into a tracker. A read is a method and a write is data.
 - `github-command.ts` - the `gh` command of each read and of each write.
   One function quotes a label, a title or a text. Pure.
 - `github-tracker.ts` - `githubTracker`, the port over the two command
-  functions a command gets. A call takes the plain one unless the caller asks
+  functions a command gets; it also answers the account it acts as. A call takes the plain one unless the caller asks
   for the whole result.
 - `open.ts` - `openTracker`, the tracker for a config's kind. Every kind reads
-  GitHub; the kinds differ in where the backlog is.
+  GitHub; the kinds differ in where the backlog is. The loop opens one and
+  hands it to what hands a ticket back.
 
 ## Entry point
 

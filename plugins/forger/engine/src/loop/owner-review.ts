@@ -5,6 +5,10 @@
  * halt the loop. Pure over ticket text and ticket ids.
  */
 
+import type {TrackerWrite} from '../ports';
+
+type LabelWrite = Extract<TrackerWrite, {kind: 'labels'}>;
+
 export const OWNER_REVIEW_LABEL = 'owner-review';
 
 export type MergeMode = 'when green' | 'owner reviews';
@@ -40,12 +44,12 @@ export function issueOfTicket(ticket: string | null): number | null {
   return m ? Number(m[1]) : null;
 }
 
-/** The commands that mark a PR and its issue as waiting for the owner. */
-export function ownerReviewLabelCommands(pr: number, issue: number | null): string[] {
-  return [
-    `gh pr edit ${pr} --add-label ${OWNER_REVIEW_LABEL}`,
-    ...(issue === null ? [] : [`gh issue edit ${issue} --add-label ${OWNER_REVIEW_LABEL}`]),
-  ];
+/** What an owner review marks: the pull request on the code host, as a command, and the issue on the tracker, as a write. */
+export function ownerReviewLabelCommands(pr: number, issue: number | null): {pullRequest: string; issue: LabelWrite | null} {
+  return {
+    pullRequest: `gh pr edit ${pr} --add-label ${OWNER_REVIEW_LABEL}`,
+    issue: issue === null ? null : {kind: 'labels', ticket: issue, add: [OWNER_REVIEW_LABEL], remove: []},
+  };
 }
 
 export interface OwnerMergeSettlement {

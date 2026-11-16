@@ -1,3 +1,4 @@
+import {openTracker} from '../tracker';
 import {ensureLabels, requireVerifyStatus, VERIFY_STATUS_CONTEXT, type RequireOutcome} from '../loop';
 import {forgerPath, loadConfig} from '../config';
 import {flavourRef, loadFlavour} from '../pipeline';
@@ -29,9 +30,10 @@ interface LabelOutcome {
 /** GitHub repositories only; a failure (no gh, no remote) is reported, not fatal, since the files are already installed. */
 function createLabels(ctx: CommandContext): LabelOutcome {
   const config = loadConfig(setupRoot(ctx));
-  if (config.tracker.kind !== 'github') return {created: []};
+  const tracker = openTracker(config, ctx.run(), ctx.capture());
+  if (tracker.queue !== 'tracker') return {created: []};
   try {
-    return {created: ensureLabels(ctx.run(), config.tracker.label)};
+    return {created: ensureLabels(tracker, config.tracker.label)};
   } catch (e) {
     return {created: [], error: `could not create the loop labels: ${(e as Error).message}`};
   }

@@ -14,6 +14,7 @@ export const githubRead = {
   state: (n: number): string => `gh issue view ${n} --json state,closedByPullRequestsReferences`,
   lastComment: (n: number): string => `gh issue view ${n} --json comments --jq ".comments[-1].body // empty"`,
   exists: (n: number): string => `gh issue view ${n} --json number`,
+  account: (): string => 'gh api user --jq .login',
   repoLabels: (): string => 'gh label list --limit 1000 --json name --jq ".[].name"',
   list: (q: TicketQuery): string => {
     const label = q.label === undefined ? '' : ` --label ${quote(q.label)}`;

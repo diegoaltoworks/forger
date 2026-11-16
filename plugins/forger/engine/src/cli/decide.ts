@@ -1,10 +1,6 @@
 import {answerCommands, appendDecision, decisionEntry, haltedOnIssue, parseAllEvents, setAsideReasons, standingHalt} from '../loop';
 import type {Command} from './command';
 
-function quote(s: string): string {
-  return `'${s.replace(/'/g, `'\\''`)}'`;
-}
-
 function refuse(message: string): void {
   console.error(`decide: ${message}`);
   process.exitCode = 1;
@@ -24,23 +20,23 @@ export const decide: Command = {
     const text = (positionals[2] ?? '').trim();
     if (!/^#?\d+$/.test(raw) || text === '') return refuse('usage: decide <issue-number> "<text>"');
     const issue = parseInt(raw.replace(/^#/, ''), 10);
-    if (config.tracker.kind !== 'github') return refuse('decisions are recorded on a GitHub issue; the tracker is not github');
-    const run = ctx.capture();
-    const view = run(`gh issue view ${issue} --json body --jq .body`);
+    const tracker = ctx.tracker();
+    if (tracker.queue !== 'tracker') return refuse('decisions are recorded on a GitHub issue; the tracker is not github');
+    const view = tracker.text(issue, {whole: true});
     if (view.exitCode !== 0) return refuse(`#${issue} is not an issue in the tracker`);
-    const who = run('gh api user --jq .login');
+    const who = tracker.account({whole: true});
     const login = who.exitCode === 0 ? who.stdout.trim() : '';
     if (login === '') return refuse('cannot tell who is deciding; gh api user returned no login');
     const date = new Date().toISOString().slice(0, 10);
     const body = appendDecision(view.stdout, decisionEntry(text, login, date));
-    const edit = run(`gh issue edit ${issue} --body ${quote(body)}`);
+    const edit = tracker.apply({kind: 'body', ticket: issue, body}, {whole: true});
     if (edit.exitCode !== 0) return refuse(`could not update #${issue}`);
     const events = parseAllEvents(stateStore.readEvents());
     const halt = standingHalt(events);
     const wasSetAside = setAsideReasons(events).has(issue);
     let requeued = false;
     if (wasSetAside) {
-      requeued = answerCommands(issue, config.tracker.label).every(c => run(c).exitCode === 0);
+      requeued = answerCommands(issue, config.tracker.label).every(w => tracker.apply(w, {whole: true}).exitCode === 0);
       if (!requeued) console.error(`decide: recorded the decision, but could not return #${issue} to the queue; relabel it by hand`);
     }
     const cleared = haltedOnIssue(halt, issue);

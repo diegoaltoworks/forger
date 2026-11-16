@@ -11,7 +11,7 @@ import {writeFileSync} from 'fs';
 
 import type {Backlog, Footprint} from '../backlog';
 import {resolveModel, type WorkloopConfig} from '../config';
-import type {AgentRunner, CommandRunner, ProbeRunner} from '../ports';
+import type {AgentRunner, CommandRunner, ProbeRunner, Tracker} from '../ports';
 import {parseClaim, type Claim} from './claim';
 import {conflictComment, conflictReask, parseConflict, type Conflict} from './conflict';
 import {avoidedFootprints, setAsideComment, setAsideOnTracker, setAsideUpdate, type SetAsideEntry} from './aside';
@@ -46,6 +46,8 @@ export interface IterationContext {
   logger: Logger;
   outputDir: string;
   gitRunner: CommandRunner;
+  /** The tracker the loop's hand-backs go through. */
+  tracker: Tracker;
   agent: AgentRunner;
   uuid: () => string;
   refreshBacklog(): Promise<void>;
@@ -273,9 +275,9 @@ function handBackProbe(ctx: IterationContext, iteration: number, ticket: string 
   const issue = issueOfTicket(ticket);
   ctx.logger.log('WARN', `Probe \`${failed.probe.command}\` failed for ${ticket}: ${actualOf(failed.result)}`);
   ctx.emit('probe_failed', iteration, ticket, `\`${failed.probe.command}\` expected ${failed.probe.expected}; got ${actualOf(failed.result)}`);
-  if (issue === null || ctx.config.tracker.kind !== 'github') return;
+  if (issue === null || ctx.tracker.queue !== 'tracker') return;
   try {
-    probeHandBack(ctx.gitRunner, issue, probeFailureComment(failed), ctx.config.tracker.label);
+    probeHandBack(ctx.tracker, issue, probeFailureComment(failed), ctx.config.tracker.label);
   } catch (e) {
     ctx.halt(`Infrastructure error (probe): could not hand ${ticket} back: ${e instanceof Error ? e.message : String(e)}`);
   }
@@ -325,18 +327,24 @@ async function completeConflict(ctx: IterationContext, claim: Claim, r: ReaskCon
 /** Labels the issue needs-human and posts the reason or the options; a tracker failure is logged, the ticket is set aside either way. */
 function handToOwnerOnStop(ctx: IterationContext, ticket: string | null, reason: string, conflict: Conflict | undefined): void {
   const issue = issueOfTicket(ticket);
-  if (issue === null || ctx.config.tracker.kind !== 'github') return;
+  if (issue === null || ctx.tracker.queue !== 'tracker') return;
   const comment = conflict ? conflictComment(issue, conflict) : setAsideComment(issue, reason);
-  for (const problem of setAsideOnTracker(ctx.gitRunner, issue, comment, conflict !== undefined)) ctx.logger.log('WARN', problem);
+  for (const problem of setAsideOnTracker(ctx.tracker, issue, comment, conflict !== undefined)) ctx.logger.log('WARN', problem);
 }
 
 /** Marks the PR and its issue, records the event and remembers the ticket; label failures are logged, not fatal. */
 function handToOwner(ctx: IterationContext, iteration: number, ticket: string | null, pr: number): void {
-  for (const command of ownerReviewLabelCommands(pr, issueOfTicket(ticket))) {
+  const marks = ownerReviewLabelCommands(pr, issueOfTicket(ticket));
+  const attempts: Array<[string, () => void]> = [[marks.pullRequest, () => void ctx.gitRunner(marks.pullRequest)]];
+  if (marks.issue) {
+    const write = marks.issue;
+    attempts.push([`the ${write.kind} write on #${write.ticket}`, () => void ctx.tracker.apply(write)]);
+  }
+  for (const [what, attempt] of attempts) {
     try {
-      ctx.gitRunner(command);
+      attempt();
     } catch (e) {
-      ctx.logger.log('WARN', `Could not run \`${command}\`: ${e instanceof Error ? e.message : String(e)}`);
+      ctx.logger.log('WARN', `Could not run \`${what}\`: ${e instanceof Error ? e.message : String(e)}`);
     }
   }
   ctx.emit('owner_review', iteration, ticket, `PR #${pr}`);

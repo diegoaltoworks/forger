@@ -93,7 +93,7 @@ function supervise(which: 'orient' | 'report') {
     if (config.tracker.kind === 'github') {
       requiresVerify = requiresVerifyStatus(ctx.capture(), config.base_branch);
       try {
-        missing = missingLabels(loopLabels(config.tracker.label), listRepoLabels(ctx.run())).map(l => l.name);
+        missing = missingLabels(loopLabels(config.tracker.label), listRepoLabels(ctx.tracker())).map(l => l.name);
       } catch {
         missing = undefined;
       }

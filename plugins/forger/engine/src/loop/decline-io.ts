@@ -1,19 +1,15 @@
 /**
  * Declining as a side effect: write the record the engine reads, and take the
- * ticket out of the queue. On GitHub the issue swaps the intake label for
+ * ticket out of the queue. In a tracker the issue swaps the intake label for
  * `needs-info` and gets the detail as a comment; a file backlog marks the
- * ticket `needs_info`. Every tracker call goes through the injected runner.
+ * ticket `needs_info`. Every tracker call goes through the injected tracker.
  */
 
 import {existsSync, readFileSync, unlinkSync, writeFileSync} from 'fs';
 
-import type {CommandRunner} from '../ports';
+import type {Tracker, TrackerWrite} from '../ports';
 import {declineRelabelProblems, listIssueLabels, NEEDS_INFO_LABEL} from './labels';
 import {issueNumber, parseDeclineRecord, type DeclineRecord} from './decline';
-
-function shellQuote(s: string): string {
-  return `'${s.replace(/'/g, `'\\''`)}'`;
-}
 
 export function writeDeclineRecord(file: string, record: DeclineRecord): void {
   writeFileSync(file, JSON.stringify(record, null, 2));
@@ -27,28 +23,27 @@ export function clearDeclineRecord(file: string): void {
   if (existsSync(file)) unlinkSync(file);
 }
 
-/** The commands that relabel a declined issue and say why; pure. */
-export function githubDeclineCommands(issue: number, intakeLabel: string, record: DeclineRecord): string[] {
+/** The writes that relabel a declined issue and say why; pure. */
+export function githubDeclineCommands(issue: number, intakeLabel: string, record: DeclineRecord): TrackerWrite[] {
   const comment = `The loop declined this ticket (${record.reason}).\n\n${record.detail}\n\nEdit the issue to answer this, then relabel it ${intakeLabel}.`;
   return [
-    `gh issue edit ${issue} --remove-label ${shellQuote(intakeLabel)} --add-label ${NEEDS_INFO_LABEL}`,
-    `gh issue comment ${issue} --body ${shellQuote(comment)}`,
+    {kind: 'labels', ticket: issue, add: [NEEDS_INFO_LABEL], remove: [intakeLabel]},
+    {kind: 'comment', ticket: issue, body: comment},
   ];
 }
 
 export interface DeclineTarget {
-  trackerKind: 'github' | 'local' | 'none';
   intakeLabel: string;
   backlogFile: string;
 }
 
 /** Takes the ticket out of the queue. Returns what it did, for the command's output. */
-export function leaveQueue(run: CommandRunner, target: DeclineTarget, record: DeclineRecord): string {
-  if (target.trackerKind === 'github') {
+export function leaveQueue(tracker: Tracker, target: DeclineTarget, record: DeclineRecord): string {
+  if (tracker.queue === 'tracker') {
     const issue = issueNumber(record.ticket);
     if (issue === null) throw new Error(`"${record.ticket}" is not an issue-<n> ticket, so there is no issue to relabel`);
-    for (const cmd of githubDeclineCommands(issue, target.intakeLabel, record)) run(cmd);
-    const problems = declineRelabelProblems(listIssueLabels(run, issue), target.intakeLabel);
+    for (const write of githubDeclineCommands(issue, target.intakeLabel, record)) tracker.apply(write);
+    const problems = declineRelabelProblems(listIssueLabels(tracker, issue), target.intakeLabel);
     if (problems.length > 0) {
       throw new Error(`issue #${issue} was not relabelled: ${problems.join('; ')} (does the label exist? run setup)`);
     }

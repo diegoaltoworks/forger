@@ -27,8 +27,8 @@ export const decline: Command = {
     let done: string;
     try {
       done = leaveQueue(
-        ctx.run(),
-        {trackerKind: config.tracker.kind, intakeLabel: config.tracker.label, backlogFile: join(projectRoot, config.paths.backlog)},
+        ctx.tracker(),
+        {intakeLabel: config.tracker.label, backlogFile: join(projectRoot, config.paths.backlog)},
         record
       );
     } catch (e) {

@@ -9,7 +9,22 @@ The engine asks a tracker about a ticket through the `Tracker` port
 `docs/adr/0023-the-tracker-is-a-port-with-an-adapter-per-kind.md`. Reads are
 methods; a write is data (`TrackerWrite`) that one method applies. The port
 also says whether the backlog is in the tracker or in a file, so a caller does
-not compare the kind.
+not compare the kind, and names the account it acts as, which is who a recorded
+decision is attributed to.
+
+What a hand-back does is decided once, as writes, and each tracker says how:
+
+- a decline is a label change (intake label out, `needs-info` in) and a comment;
+- a hand-over, a failed probe and a ticket set aside are the `needs-human` label
+  and a comment, and the first two then take the intake label off;
+- the owner's answer is two writes, `needs-human` removed and then the intake
+  label added, so the first can hold when the second fails;
+- an owner review marks the issue with a label write; the pull request is on the
+  code host and keeps its own `gh pr edit` command;
+- `setup` creates the labels a repository lacks with label-creating writes.
+
+A function that applies these reads the ticket's labels back through the same
+tracker to check the label held.
 
 The GitHub adapter lives in `plugins/forger/engine/src/tracker/`. `openTracker`
 gives it for every kind, since a ticket named by a number is read from GitHub
