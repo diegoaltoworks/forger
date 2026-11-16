@@ -54,7 +54,7 @@ every command prints one warning naming `migrate`, which moves them to `.forger/
 
 Run `/forger:setup`. It copies the templates into `.forger/` (never
 overwriting), asks for the gates command and base branch, decides the tracker,
-creates the `ready-for-agent` label, and gitignores the per-run state.
+creates the `ready-for-agent` label, and gitignores the per-run state. When it writes the config it records the base branch it finds: `--base-branch` wins, then the default branch of the remote (`origin/HEAD`), then the current branch, then the template's. Only the local repository is read, the output says which of the four it used, and a config that exists keeps its base branch.
 
 Then fill in `.forger/process.md` - the project's rules and **gotchas**. The
 worker treats these as enforced. Run `/forger:plan` to generate the
