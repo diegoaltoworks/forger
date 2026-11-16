@@ -6,7 +6,7 @@
 
 import {conflictAnswer, behindBaseAnomaly, dirtyCheckoutAnomaly, type BaseSync, missingVerifyStatusAnomaly, type LeaseView, openLabel, recommendationFor, type HandedOver, type StatusReport} from '../loop';
 import type {Measures} from './measure';
-import {type Period} from './waiting';
+import {processChangeLine, type Period, type ProcessChanges} from './waiting';
 import {buildReportMeasures, formatReportMeasures, type ReportMeasures} from './report-measures';
 
 export type OrientAction = 'surface_halt' | 'attach' | 'start' | 'nothing_to_do';
@@ -155,6 +155,8 @@ export interface ReportInputs {
   recovered?: string[];
   /** Gates that failed and passed on a rerun with no change, one line each. */
   flakyGates?: string[];
+  /** The process changes since the last comparison; absent or null leaves the section out. */
+  processChanges?: ProcessChanges | null;
   /** What merged in the period; absent when the tracker could not be read. */
   merged?: string[];
   period?: Period;
@@ -173,6 +175,8 @@ export interface Report {
   next: string[];
   waiting_on_owner: OwnerItem[];
   measures: ReportMeasures | null;
+  /** Null when the repository does not hold the engine, has no record, or the read failed. */
+  process_changes: ProcessChanges | null;
 }
 
 export function buildReport(i: ReportInputs): Report {
@@ -216,6 +220,7 @@ export function buildReport(i: ReportInputs): Report {
     next: s.next_pick ? [s.next_pick] : [],
     waiting_on_owner: waiting,
     measures: i.measures === undefined ? null : buildReportMeasures(i.measures),
+    process_changes: i.processChanges ?? null,
   };
 }
 
@@ -245,6 +250,7 @@ export function formatReport(r: Report): string {
     '',
     '**Waiting on you**',
     ...list(r.waiting_on_owner.map(o => `${o.question} - I recommend ${o.recommendation}, because ${o.because}.`)),
+    ...(r.process_changes === null ? [] : ['', '**Process changes since the last comparison**', ...list(r.process_changes.changes.map(processChangeLine))]),
     ...(r.measures === null ? [] : ['', '**Measures**', ...formatReportMeasures(r.measures)]),
   ].join('\n');
 }

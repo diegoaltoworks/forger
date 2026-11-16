@@ -168,3 +168,102 @@ export function failedDeliveryItems(events: TerminalEvent[]): OwnerItem[] {
     because: 'a merged change did not deploy or did not pass its check, so the running build may not be the merged one',
   }));
 }
+
+export interface Comparison {
+  /** Full commit of the engine the later replay ran on. */
+  engine: string;
+  /** Full commit of the engine the earlier replay ran on. */
+  baseline: string;
+  at: string;
+}
+
+export type ComparisonsRead = {ok: true; entries: Comparison[]} | {ok: false; problems: string[]};
+
+/** The text of `.forger/comparisons.json`: its list, oldest first, or the problems that make it unreadable. */
+export function readComparisons(text: string): ComparisonsRead {
+  let raw: unknown;
+  try {
+    raw = JSON.parse(text);
+  } catch {
+    return {ok: false, problems: ['it is not JSON']};
+  }
+  if (!Array.isArray(raw)) return {ok: false, problems: ['it is not a list']};
+  const problems: string[] = [];
+  const entries: Comparison[] = [];
+  raw.forEach((e: unknown, i) => {
+    const o = typeof e === 'object' && e !== null ? (e as Record<string, unknown>) : {};
+    const bad = ['engine', 'baseline', 'at'].filter(k => typeof o[k] !== 'string' || (o[k] as string).trim() === '');
+    for (const k of bad) problems.push(`entry ${i + 1} has no ${k} as a non-empty string`);
+    if (bad.length === 0) entries.push({engine: o.engine as string, baseline: o.baseline as string, at: o.at as string});
+  });
+  return problems.length > 0 ? {ok: false, problems} : {ok: true, entries};
+}
+
+/** The commit the next comparison starts from: the engine of the last entry; null with no entry. */
+export function lastComparedCommit(entries: Comparison[]): string | null {
+  return entries.length === 0 ? null : entries[entries.length - 1].engine;
+}
+
+export interface ProcessChange {
+  commit: string;
+  /** The PR number when the subject ends in `(#<n>)`, else null. */
+  pr: number | null;
+  subject: string;
+}
+
+/** Git log lines (`<commit><tab><subject>`, oldest first) as process changes. */
+export function processChangesFromLog(log: string): ProcessChange[] {
+  return log
+    .split('\n')
+    .filter(l => l.trim() !== '')
+    .map(l => {
+      const tab = l.indexOf('\t');
+      const commit = tab < 0 ? l.trim() : l.slice(0, tab).trim();
+      const subject = tab < 0 ? '' : l.slice(tab + 1).trim();
+      const pr = /\(#(\d+)\)$/.exec(subject);
+      return {commit, pr: pr === null ? null : Number(pr[1]), subject};
+    });
+}
+
+export interface ProcessChanges {
+  since: string;
+  changes: ProcessChange[];
+}
+
+/** What the report knows of the process changes: unread, no record, a record git cannot use, or the changes. */
+export type ProcessChangesRead =
+  | {kind: 'unread'}
+  | {kind: 'no_record'}
+  | {kind: 'problems'; problems: string[]}
+  | {kind: 'changes'; value: ProcessChanges};
+
+/** The line of a change in the report: `#<pr> <subject>`, or the short commit and the subject without a PR number. */
+export function processChangeLine(c: ProcessChange): string {
+  return c.pr === null ? `${c.commit.slice(0, 8)} ${c.subject}` : `#${c.pr} ${c.subject}`;
+}
+
+/** The items a read of the process changes puts under "waiting on you". */
+export function processChangeItems(read: ProcessChangesRead): OwnerItem[] {
+  if (read.kind === 'unread') return [];
+  if (read.kind === 'no_record') {
+    return [{
+      question: 'No comparison of two replays is recorded for this engine',
+      recommendation: 'run two replays and record the first comparison in `.forger/comparisons.json` by PR',
+      because: 'without a record the report cannot say which process changes no comparison has covered',
+    }];
+  }
+  if (read.kind === 'problems') {
+    return [{
+      question: `The process changes since the last comparison could not be read: ${read.problems.join('; ')}`,
+      recommendation: 'fix `.forger/comparisons.json`, or fetch the commit it names, then ask for the report again',
+      because: 'the record or the history it points at is unusable, so the list may be incomplete',
+    }];
+  }
+  const {since, changes} = read.value;
+  if (changes.length === 0) return [];
+  return [{
+    question: `${changes.length} process change${changes.length === 1 ? ' has' : 's have'} merged since the last comparison, which ran on ${since}`,
+    recommendation: 'run a replay with the engine at the base branch head, compare it with the last one through `measure --diff`, and record the comparison',
+    because: 'a process change is assumed to help until two replays are compared',
+  }];
+}

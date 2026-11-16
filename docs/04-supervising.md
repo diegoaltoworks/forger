@@ -166,7 +166,13 @@ In plain words, in the owner's timezone:
 - **Waiting on you**, each item with a recommendation: every open issue
   labelled `needs-info`, `needs-human` or `needs-triage`, every open PR labelled `owner-review` (with its link), every Proposed ADR,
   and a halt or anomaly. The recommendation is the one the text states, else
-  the report says the text makes none.
+  the report says the text makes none. In a repository that holds the engine, a
+  process change merged since the last recorded comparison of two replays adds
+  one item that recommends a replay, and a repository with no record is told to
+  record a first comparison.
+- **Process changes since the last comparison**: the changes to the engine's
+  packs, templates and commands since the record in `.forger/comparisons.json`,
+  oldest first. Left out where the repository does not hold the engine.
 
 Interrupt at once for a halt, a timeout or anything that touches production.
 When the backlog empties, stop the cadence with a final list of owner items.
@@ -208,7 +214,7 @@ improvise them:
   working tree. With the delivery pack, an issue also carries `delivery` for the PR that closed it:
   `delivered`, `failed`, `rolled_back` or `null`.
 - `report [--since DATE]`: the report sections from the same facts, including a failed delivery under "waiting on you" until a later delivery passes, and including the tickets the
-  worker declined, and the owner measures from `measure` (cost, rework, escaped
+  worker declined, the process changes since the last comparison, and the owner measures from `measure` (cost, rework, escaped
   defects, interventions).
 - `approval <action>`: who may do an action, from the table below.
 - `critique --pr N [--threshold high|medium|low] [--force] [--json]`: after a

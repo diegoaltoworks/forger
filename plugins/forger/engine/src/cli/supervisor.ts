@@ -1,13 +1,13 @@
 import {hostname} from 'os';
 import {existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync} from 'fs';
-import {join} from 'path';
+import {join, relative, isAbsolute} from 'path';
 
 import {readBaseSync, decideHalt, pidAlive, viewLease, standingHalt, parseAllEvents, GhTrackerHalt, requiresVerifyStatus, handedOver, listRepoLabels, loopLabels, missingLabels, readAllVerdicts, verdictsHome, setAsideReasons} from '../loop';
 import {describeBlocked} from '../backlog';
-import {detectLayout} from '../config';
+import {detectLayout, forgerPath} from '../config';
 import {gitignoreLines} from '../packs';
 import {engineStartLine, readEngineStart} from './detach';
-import {buildReport, formatReport, mergedInPeriod, orient as orientPlan, failedDeliveryItems, proposedAdrs, reportPeriod, uncausedClearItems, waitingIssues, ownerReviewPrs, OWNER_LABELS, type AdrText, type OwnerReviewPr, type MergedPrFact, type OwnerItem, type WaitingIssue} from '../supervisor';
+import {buildReport, formatReport, mergedInPeriod, orient as orientPlan, failedDeliveryItems, proposedAdrs, reportPeriod, uncausedClearItems, waitingIssues, ownerReviewPrs, OWNER_LABELS, lastComparedCommit, processChangeItems, processChangesFromLog, readComparisons, type ProcessChangesRead, type AdrText, type OwnerReviewPr, type MergedPrFact, type OwnerItem, type WaitingIssue} from '../supervisor';
 import {hooksGateProblems, hooksGateRefusal} from '../checks';
 import type {Command, CommandContext} from './command';
 import {harnessOfRoot} from './harness-of';
@@ -45,6 +45,27 @@ function ownerWaiting(ctx: CommandContext): OwnerItem[] {
     out.push(...proposedAdrs(adrs));
   }
   return out;
+}
+
+const PROCESS_FOLDERS = ['packs', 'templates', 'commands'];
+
+/** The process changes merged since the last recorded comparison; unread when the checkout does not hold the engine. */
+function readProcessChanges(ctx: CommandContext): ProcessChangesRead {
+  const rel = relative(ctx.projectRoot, ctx.pluginRoot);
+  if (rel === '' || rel.startsWith('..') || isAbsolute(rel)) return {kind: 'unread'};
+  const file = forgerPath(ctx.projectRoot, '.forger/comparisons.json');
+  if (!existsSync(file)) return {kind: 'no_record'};
+  const record = readComparisons(readFileSync(file, 'utf-8'));
+  if (!record.ok) return {kind: 'problems', problems: record.problems.map(p => `.forger/comparisons.json: ${p}`)};
+  const since = lastComparedCommit(record.entries);
+  if (since === null) return {kind: 'no_record'};
+  const folders = PROCESS_FOLDERS.map(f => `'${join(rel, f)}'`).join(' ');
+  try {
+    const log = ctx.run()(`git log --first-parent --reverse --format=%H%x09%s ${since}..origin/${ctx.config.base_branch} -- ${folders}`);
+    return {kind: 'changes', value: {since, changes: processChangesFromLog(log)}};
+  } catch {
+    return {kind: 'problems', problems: [`git cannot read the commits since ${since}; this checkout may not have it`]};
+  }
 }
 
 function haltReasonOf(file: string | null, tracker: {label: boolean; reason: string | null}): string | null {
@@ -106,8 +127,10 @@ function supervise(which: 'orient' | 'report') {
       }
     }
     const events = parseAllEvents(ctx.stateStore.readEvents());
+    const processChanges = which === 'report' ? readProcessChanges(ctx) : ({kind: 'unread'} as ProcessChangesRead);
     const out = which === 'orient' ? {...plan, engine_start: readEngineStart(ctx)} : buildReport({
-          ownerWaiting: [...ownerWaiting(ctx), ...uncausedClearItems(events), ...failedDeliveryItems(events)],
+          ownerWaiting: [...ownerWaiting(ctx), ...uncausedClearItems(events), ...failedDeliveryItems(events), ...processChangeItems(processChanges)],
+          processChanges: processChanges.kind === 'changes' ? processChanges.value : null,
           merged,
           period,
           status,
@@ -142,7 +165,7 @@ export const report: Command = {
   name: 'report',
   needs: 'none',
   flags: ['json', 'since', 'from', 'repos'],
-  help: '  report [--json] [--since DATE] [--from local|branch] [--repos PATH,PATH]  One report across the loops at those paths, every item tagged by repository. Merged since the last report (or --since), in progress (real branch), next, waiting on the owner (needs-info, needs-human, needs-triage issues and Proposed ADRs); cost per merged ticket, rework rate, escaped defects, owner interventions',
+  help: '  report [--json] [--since DATE] [--from local|branch] [--repos PATH,PATH]  One report across the loops at those paths, every item tagged by repository. Merged since the last report (or --since), in progress (real branch), next, waiting on the owner (needs-info, needs-human, needs-triage issues and Proposed ADRs); cost per merged ticket, rework rate, escaped defects, owner interventions; the process changes (packs, templates, commands) merged since the last recorded comparison of two replays',
   run(ctx) {
     if (ctx.values.repos !== undefined) return reportRepos(ctx);
     void ctx.runner;

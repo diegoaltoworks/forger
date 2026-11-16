@@ -78,10 +78,10 @@ waits for. The owner's decisions are recorded in the last section.
   given the go-ahead to create the fresh copy of the sample repository.
 - **A2. Compare two replays.** Exists: `measure --report` writes the comparison
   report of a run and `measure --diff` compares two. Nothing to build.
-- **A3. A process change carries its replay.** A PR that changes a default
-  pack, a ticket template or a command's instructions names the comparison of
-  two replays in its body; `check` warns when it does not. **Ready** once A1
-  has run.
+- **A3. A process change is listed until a replay covers it.** `report` lists
+  the changes to the engine's packs, templates and commands merged since the
+  last recorded comparison of two replays, and asks the owner for a replay. The
+  comparisons are recorded in `.forger/comparisons.json`. Built.
 
 ### B. Opinions that earn their place
 
@@ -196,6 +196,9 @@ waits for. The owner's decisions are recorded in the last section.
 - **Forger acts after the merge**, opt-in, through the project's own commands,
   with rollback only when one is configured (C3).
 - **The first replay may create its copy of the sample repository** (A1).
+- **A process change is reported, not warned about** (A3). A replay is run by
+  the supervisor on the owner's word, so the report asks for it; `check` does
+  not warn on a PR. The supervisor records each comparison by PR.
 - **More harnesses wait** for one app that people use
   ([#275](https://github.com/diegoaltoworks/forger/issues/275)).
 

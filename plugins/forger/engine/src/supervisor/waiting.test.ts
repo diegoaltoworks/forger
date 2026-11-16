@@ -1,7 +1,7 @@
 import {describe, expect, test} from 'bun:test';
 
 import {terminalEvent} from '../loop';
-import {mergedInPeriod, ownerReviewPrs, proposedAdrs, recommendationFrom, reportPeriod, failedDeliveryItems, uncausedClearItems, waitingIssues} from './waiting';
+import {lastComparedCommit, processChangeItems, processChangeLine, processChangesFromLog, readComparisons, mergedInPeriod, ownerReviewPrs, proposedAdrs, recommendationFrom, reportPeriod, failedDeliveryItems, uncausedClearItems, waitingIssues} from './waiting';
 
 describe('recommendationFrom', () => {
   test('the paragraph under a Recommendation heading', () => {
@@ -107,5 +107,57 @@ describe('failedDeliveryItems', () => {
     const failed = {event: 'delivery_failed', at: 't', iteration: 1, ticket: 'issue-1', reason: 'PR #5: check failed'} as never;
     expect(failedDeliveryItems([failed])[0].question).toContain('PR #5');
     expect(failedDeliveryItems([failed, {event: 'delivered', at: 't', iteration: 2, ticket: 'issue-2', reason: 'PR #6: ok'} as never])).toEqual([]);
+  });
+});
+
+describe('process changes since the last comparison', () => {
+  const sha = 'a'.repeat(40);
+  const entry = (engine: string) => ({engine, baseline: 'b'.repeat(40), at: '2026-11-01'});
+
+  test('a log line reads as a process change with its PR number, or with none', () => {
+    expect(processChangesFromLog(`${sha}\tfeat: a pack (#12)\n\n${'c'.repeat(40)}\tdirect commit`)).toEqual([
+      {commit: sha, pr: 12, subject: 'feat: a pack (#12)'},
+      {commit: 'c'.repeat(40), pr: null, subject: 'direct commit'},
+    ]);
+    expect(processChangeLine({commit: 'c'.repeat(40), pr: null, subject: 'x'})).toBe('cccccccc x');
+  });
+
+  test('the last entry of the comparisons record names the commit to compare from', () => {
+    const read = readComparisons(JSON.stringify([entry('1'.repeat(40)), entry('2'.repeat(40))]));
+    expect(read.ok && lastComparedCommit(read.entries)).toBe('2'.repeat(40));
+    expect(lastComparedCommit([])).toBeNull();
+  });
+
+  test('a comparisons record that is not a list of engine, baseline and date is read as its problems', () => {
+    expect(readComparisons('nope')).toEqual({ok: false, problems: ['it is not JSON']});
+    expect(readComparisons('{}')).toEqual({ok: false, problems: ['it is not a list']});
+    const r = readComparisons(JSON.stringify([{engine: 'x', baseline: '', at: 5}]));
+    expect(r).toEqual({ok: false, problems: ['entry 1 has no baseline as a non-empty string', 'entry 1 has no at as a non-empty string']});
+  });
+
+  test('process changes since the last comparison put one item under waiting on you that recommends a replay', () => {
+    const items = processChangeItems({kind: 'changes', value: {since: sha, changes: processChangesFromLog(`${'c'.repeat(40)}\tfeat: x (#3)\n${'d'.repeat(40)}\tfeat: y (#4)`)}});
+    expect(items).toHaveLength(1);
+    expect(items[0].question).toContain('2 process changes have merged');
+    expect(items[0].question).toContain(sha);
+    expect(items[0].recommendation).toContain('measure --diff');
+    expect(items[0].because).toContain('assumed to help');
+  });
+
+  test('no item is added when no process change has merged since the last comparison', () => {
+    expect(processChangeItems({kind: 'changes', value: {since: sha, changes: []}})).toEqual([]);
+    expect(processChangeItems({kind: 'unread'})).toEqual([]);
+  });
+
+  test('a repository that holds the engine and has no comparisons record is told to record a first comparison', () => {
+    const items = processChangeItems({kind: 'no_record'});
+    expect(items).toHaveLength(1);
+    expect(items[0].recommendation).toContain('.forger/comparisons.json');
+  });
+
+  test('an unreadable record becomes one item with its problems', () => {
+    const items = processChangeItems({kind: 'problems', problems: ['it is not a list']});
+    expect(items).toHaveLength(1);
+    expect(items[0].question).toContain('it is not a list');
   });
 });

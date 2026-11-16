@@ -215,6 +215,14 @@ counts those tickets. The budget cap is not part of it.
 
 The report also carries `worker_commands`, the runs by where the worker's commands came from, as `{from_engine, not_recorded}`. A report saved before it has none, and `measure --diff` does not compare it. A period in which a run took other commands than the engine's gets no report: it would measure two versions at once.
 
+A comparison of two replays is recorded in `.forger/comparisons.json`, a list,
+oldest first, of `{engine, baseline, at}`: the full commit of the engine the later
+replay ran on, the full commit the earlier one ran on, and the date. The
+supervisor adds an entry by PR after it has run `measure --diff`. `report` then
+lists the changes to the engine's `packs`, `templates` and `commands` folders
+merged since the `engine` of the last entry, and asks the owner for a replay; it
+says so when no comparison is recorded.
+
 `report` shows the owner four of these without the retro detail: cost per merged
 ticket (the mean over tickets whose cost is known, with how many are unknown),
 the rework rate, escaped defects and owner interventions, all from `measure`.

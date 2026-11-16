@@ -1654,3 +1654,83 @@ describe('setup --upgrade runs the checks after it wrote something', () => {
     expect(out).toMatch(/^(installed|written|install)/m);
   });
 });
+
+describe('report process changes', () => {
+  const engineSha = 'e'.repeat(40);
+  function engineProject(record: string | null): {root: string; calls: string[]; run: CommandRunner} {
+    const root = projectWith({a: {status: 'not_started'}});
+    mkdirSync(join(root, 'plugins', 'forger'), {recursive: true});
+    if (record !== null) writeFileSync(join(root, '.forger', 'comparisons.json'), record);
+    const calls: string[] = [];
+    const run: CommandRunner = cmd => {
+      calls.push(cmd);
+      if (cmd.startsWith('git log')) {
+        if (engineSha === 'e'.repeat(40) && record?.includes('missing')) throw new Error('bad revision');
+        return `${'1'.repeat(40)}\tfeat: a pack (#7)\n${'2'.repeat(40)}\tdirect`;
+      }
+      return cmd.startsWith('git branch') ? 'main' : '[]';
+    };
+    return {root, calls, run};
+  }
+  const record = JSON.stringify([{engine: engineSha, baseline: 'b'.repeat(40), at: '2026-11-01'}]);
+  const withEngine = (root: string, run: CommandRunner, argv: string[]) => {
+    process.chdir(root);
+    return main(argv, {run, pluginRoot: join(root, 'plugins', 'forger')});
+  };
+  async function report(root: string, run: CommandRunner): Promise<any> {
+    const lines: string[] = [];
+    const spy = spyOn(console, 'log').mockImplementation((...a: unknown[]) => void lines.push(a.join(' ')));
+    try {
+      await withEngine(root, run, ['report', '--json']);
+    } finally {
+      spy.mockRestore();
+    }
+    return JSON.parse(lines.join('\n'));
+  }
+
+  test('report asks git for the first-parent commits that touch the engine\'s packs, templates and commands since the recorded commit', async () => {
+    const {root, calls, run} = engineProject(record);
+    const out = await report(root, run);
+    const log = calls.find(c => c.startsWith('git log')) as string;
+    expect(log).toContain('--first-parent');
+    expect(log).toContain(`${engineSha}..origin/main`);
+    for (const f of ['packs', 'templates', 'commands']) expect(log).toContain(`plugins/forger/${f}`);
+    expect(out.process_changes.changes.map((c: {pr: number | null}) => c.pr)).toEqual([7, null]);
+    expect(out.waiting_on_owner.some((i: {question: string}) => i.question.includes('2 process changes'))).toBe(true);
+  });
+
+  test('a repository that holds the engine and has no record is told to record a first comparison', async () => {
+    const {root, calls, run} = engineProject(null);
+    const out = await report(root, run);
+    expect(out.process_changes).toBeNull();
+    expect(calls.some(c => c.startsWith('git log'))).toBe(false);
+    expect(JSON.stringify(out.waiting_on_owner)).toContain('.forger/comparisons.json');
+  });
+
+  test('report in a repository that does not hold the engine reads no record and adds no process changes', async () => {
+    const root = projectWith({a: {status: 'not_started'}});
+    writeFileSync(join(root, '.forger', 'comparisons.json'), record);
+    const calls: string[] = [];
+    process.chdir(root);
+    const lines: string[] = [];
+    const spy = spyOn(console, 'log').mockImplementation((...a: unknown[]) => void lines.push(a.join(' ')));
+    try {
+      await main(['report', '--json'], {run: c => (calls.push(c), c.startsWith('git branch') ? 'main' : '[]'), pluginRoot: join(tmpdir(), 'elsewhere')});
+    } finally {
+      spy.mockRestore();
+    }
+    const out = JSON.parse(lines.join('\n'));
+    expect(out.process_changes).toBeNull();
+    expect(calls.some(c => c.startsWith('git log'))).toBe(false);
+    expect(JSON.stringify(out.waiting_on_owner)).not.toContain('comparison');
+  });
+
+  test('a record that names a commit the checkout does not have becomes one item, and the report still prints', async () => {
+    const {root, run} = engineProject(JSON.stringify([{engine: engineSha, baseline: 'b', at: 'x', note: 'missing'}]));
+    const out = await report(root, run);
+    expect(out.process_changes).toBeNull();
+    const items = out.waiting_on_owner.filter((i: {question: string}) => i.question.includes('process changes'));
+    expect(items).toHaveLength(1);
+    expect(items[0].question).toContain(engineSha);
+  });
+});

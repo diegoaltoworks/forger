@@ -200,3 +200,22 @@ describe('report flaky gates', () => {
     expect(formatReport(r)).toContain('**Flaky gates**\n- PR #5: test (clock > reads the wall clock)');
   });
 });
+
+describe('the process changes section', () => {
+  const plan = orient({...base, status: status()});
+  test('the report lists the process changes in their own section, oldest first, and leaves the section out when there are none to read', () => {
+    const changes = [
+      {commit: 'a'.repeat(40), pr: 3, subject: 'feat: first (#3)'},
+      {commit: 'b'.repeat(40), pr: null, subject: 'second'},
+    ];
+    const r = buildReport({status: status(), plan, branch: 'main', baseBranch: 'main', processChanges: {since: 'c'.repeat(40), changes}});
+    expect(r.process_changes?.changes).toEqual(changes);
+    const text = formatReport(r);
+    expect(text).toContain('**Process changes since the last comparison**\n- #3 feat: first (#3)\n- bbbbbbbb second');
+    const none = buildReport({status: status(), plan, branch: 'main', baseBranch: 'main'});
+    expect(none.process_changes).toBeNull();
+    expect(formatReport(none)).not.toContain('Process changes');
+    const empty = formatReport(buildReport({status: status(), plan, branch: 'main', baseBranch: 'main', processChanges: {since: 'c', changes: []}}));
+    expect(empty).toContain('**Process changes since the last comparison**\n- none');
+  });
+});
