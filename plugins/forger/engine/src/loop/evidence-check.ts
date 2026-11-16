@@ -28,15 +28,46 @@ export interface CopyRecord {
 
 export const SCREENSHOTS_DIR = 'docs/screenshots/';
 
-export const TEST_LINE = /^\s*(?:\((pass|fail)\)|(ok|not ok)\b(?:\s+\d+\s+-)?)\s+(.+?)(?:\s+\[[\d.]+m?s\])?\s*$/;
+const TEST_LINE = /^\s*(?:\((pass|fail)\)|(ok|not ok)\b(?:\s+\d+\s+-)?)\s+(.+?)(?:\s+\[[\d.]+m?s\])?\s*$/;
+const TAP_SKIPPED = /\s#\s*(?:skip|todo)\b/i;
+const VITEST_LINE = /^\s*([\u2713\u00d7\u2717\u2193])\s+(.+?)(?:\s+\d+(?:\.\d+)?m?s)?\s*$/;
+const VITEST_FILE_COUNT = /\(\d+ tests?\b[^)]*\)$/;
+const PLAYWRIGHT_LINE = /^\s*([\u2713\u2718-])\s+\d+\s+(?:\[[^\]]*\]\s+)?\u203a\s+(.+?)(?:\s+\(\d+(?:\.\d+)?m?s\))?\s*$/;
+// eslint-disable-next-line no-control-regex
+const ANSI = /\u001b\[[0-9;?]*[ -/]*[@-~]/g;
 
-/** Each test the recorded runs reported, with whether it passed. Reads bun's `(pass) name` and TAP's `ok N - name`. */
+/**
+ * The one test a line reports, or null when it reports none. Reads bun's
+ * `(pass) name`, TAP's `ok N - name`, vitest's one line per test and Playwright's
+ * `list` line, colour codes removed. A skipped test and a vitest file line are
+ * no result.
+ */
+export function readResultLine(raw: string): {name: string; passed: boolean} | null {
+  const line = raw.replace(ANSI, '');
+  const pw = PLAYWRIGHT_LINE.exec(line);
+  if (pw) {
+    if (pw[1] === '-') return null;
+    const parts = pw[2].split(' \u203a ').map(p => p.trim());
+    parts[0] = parts[0].replace(/:\d+(?::\d+)?$/, '');
+    return {name: parts.join(' > '), passed: pw[1] === '\u2713'};
+  }
+  const tap = TEST_LINE.exec(line);
+  if (tap) {
+    if (TAP_SKIPPED.test(tap[3])) return null;
+    return {name: tap[3], passed: tap[1] === 'pass' || tap[2] === 'ok'};
+  }
+  const vt = VITEST_LINE.exec(line);
+  if (vt && vt[1] !== '\u2193' && !VITEST_FILE_COUNT.test(vt[2])) return {name: vt[2], passed: vt[1] === '\u2713'};
+  return null;
+}
+
+/** Each test the recorded runs reported, with whether it passed. */
 export function testResults(commands: CommandRun[]): {name: string; passed: boolean}[] {
   const out: {name: string; passed: boolean}[] = [];
   for (const c of commands) {
     for (const line of c.output.split(/\r?\n/)) {
-      const m = TEST_LINE.exec(line);
-      if (m) out.push({name: m[3], passed: m[1] === 'pass' || m[2] === 'ok'});
+      const r = readResultLine(line);
+      if (r) out.push(r);
     }
   }
   return out;

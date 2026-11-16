@@ -177,3 +177,58 @@ describe('output cut to the log limit', () => {
     expect(run).toEqual({command: 'bun test', exit: 0, output: '(pass) a'});
   });
 });
+
+describe('vitest and Playwright result lines', () => {
+  const pw = (mark: string, rest = '3 [Mobile Chrome] \u203a tests/e2e/house.spec.ts:94:3 \u203a the House screen \u203a Rooms are grouped (1.2s)') => `  ${mark}  ${rest}`;
+  const res = (out: string) => testResults([{command: 'x', exit: 0, output: out}]);
+  const rec = (out: string): CopyRecord => ({fileLines: () => null, commands: [{command: 'x', exit: 0, output: out}]});
+
+  test('testResults reads a vitest line as the test it names, passed or failed', () => {
+    expect(res(' \u2713 tests/a.test.ts > group > keeps rooms 0ms\n \u00d7 tests/a.test.ts > group > breaks 1.5s\n \u2717 b > c')).toEqual([
+      {name: 'tests/a.test.ts > group > keeps rooms', passed: true},
+      {name: 'tests/a.test.ts > group > breaks', passed: false},
+      {name: 'b > c', passed: false},
+    ]);
+  });
+
+  test('testResults reads a Playwright list line without its number, project, position and time', () => {
+    expect(res(pw('\u2713'))).toEqual([{name: 'tests/e2e/house.spec.ts > the House screen > Rooms are grouped', passed: true}]);
+    expect(res(pw('\u2718', '4 \u203a tests/e2e/h.spec.ts:1:1 \u203a x \u203a y (30ms)'))).toEqual([{name: 'tests/e2e/h.spec.ts > x > y', passed: false}]);
+  });
+
+  test('a vitest file line is not a test result', () => {
+    expect(res(' \u2713 tests/a.test.ts (5 tests) 3ms\n \u2713 tests/b.test.ts (5 tests | 1 skipped) 3ms')).toEqual([]);
+  });
+
+  test('a skipped test is not a result in TAP, vitest or Playwright output', () => {
+    expect(res(['ok 3 - name # SKIP', 'ok 4 - name # skip because', 'not ok 5 - name # TODO later', ' \u2193 a > b', pw('-')].join('\n'))).toEqual([]);
+  });
+
+  test('a result line with colour codes reads the same as one without', () => {
+    const esc = '\u001b';
+    expect(res(`${esc}[32m \u2713${esc}[39m a > b ${esc}[2m0ms${esc}[22m`)).toEqual(res(' \u2713 a > b 0ms'));
+    expect(res(`${esc}[32m${pw('\u2713')}${esc}[39m`)).toEqual(res(pw('\u2713')));
+    expect(res(`${esc}[31mnot ok 2 - t${esc}[0m`)).toEqual([{name: 't', passed: false}]);
+    expect(res(`${esc}[32m(pass) t${esc}[0m`)).toEqual([{name: 't', passed: true}]);
+  });
+
+  test('a vitest test cited as describe > test checks out when it passed', () => {
+    expect(evidenceHolds(rec(' \u2713 tests/a.test.ts > group > keeps rooms 0ms'), {kind: 'test', ref: 'group > keeps rooms'})).toBe(true);
+  });
+
+  test('a Playwright test that failed in one project does not check out', () => {
+    const out = [pw('\u2713', '1 [chromium] \u203a t.spec.ts:1:1 \u203a s \u203a does it (1s)'), pw('\u2718', '2 [webkit] \u203a t.spec.ts:1:1 \u203a s \u203a does it (1s)')].join('\n');
+    expect(evidenceHolds(rec(out), {kind: 'test', ref: 's > does it'})).toBe(false);
+  });
+
+  test('a TAP test marked skipped does not check out as evidence', () => {
+    expect(evidenceHolds(rec('ok 3 - the thing # SKIP'), {kind: 'test', ref: 'the thing'})).toBe(false);
+  });
+
+  test('a cut output keeps vitest and Playwright result lines', () => {
+    const out = [' \u2713 a.test.ts > early 0ms', pw('\u2713', '1 \u203a t.spec.ts:1:1 \u203a late (1s)'), ' \u2193 skipped one'].join('\n') + '\n' + ('x'.repeat(100) + '\n').repeat(50);
+    const k = keepOutput(out, 1000);
+    expect(k.truncated).toBe(true);
+    expect(res(k.output).map(r => r.name)).toEqual(['a.test.ts > early', 't.spec.ts > late']);
+  });
+});

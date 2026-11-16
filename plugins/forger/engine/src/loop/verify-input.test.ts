@@ -24,6 +24,13 @@ describe('buildVerifierInput', () => {
     expect(text).toContain('"describe > test" for a test inside a describe');
   });
 
+  test('the verifier is told to print one line per test', () => {
+    expect(text).toContain('one line per test');
+    expect(text).toContain('verbose reporter');
+    expect(text).toContain('list reporter');
+    expect(text).toContain('skipped is not evidence');
+  });
+
   test('has no way to carry the PR body, the commit messages or a transcript', () => {
     expect(buildVerifierInput.length).toBe(1);
     expect(text).not.toContain('Closes #');
