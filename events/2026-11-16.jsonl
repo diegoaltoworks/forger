@@ -29,3 +29,4 @@
 {"event":"worker_denied","at":"2026-11-16T19:54:52.067Z","iteration":242,"ticket":"issue-496","reason":"other-engine: verify from /home/diego/work/forger/.forger/worktrees/issue-496/plugins/forger"}
 {"event":"worker_denied","at":"2026-11-16T19:54:59.166Z","iteration":242,"ticket":"issue-496","reason":"other-engine: merge from /home/diego/work/forger/.forger/worktrees/issue-496/plugins/forger"}
 {"event":"worker_denied","at":"2026-11-16T19:55:46.085Z","iteration":241,"ticket":"issue-483","reason":"other-engine: verify from /home/diego/work/forger/.forger/worktrees/issue-483/plugins/forger"}
+{"event":"worker_denied","at":"2026-11-16T19:55:49.855Z","iteration":241,"ticket":"issue-483","reason":"other-engine: merge from /home/diego/work/forger/.forger/worktrees/issue-483/plugins/forger"}
