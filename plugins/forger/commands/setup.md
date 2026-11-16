@@ -67,18 +67,7 @@ that), the report has a `tracked_runtime` list and a line naming the file and
 
 ## Upgrading
 
-When `.forger/forger.lock.json` already exists, the repo is set up and the job is
-an upgrade, not an install:
-```
-bun "${FORGER_PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT}}/bin/work.ts" setup --upgrade --json
-```
-The tool classifies each installed file by comparing the lock, the disk and the
-pack: untouched files take the new version, refined files are kept, new files are
-installed, and nothing is deleted. Relay the report. For each path in `review`:
-a `conflict` has the pack's version beside it as `<file>.upstream` - show the
-difference and ask the owner whether to merge, keep theirs or take the pack's;
-a `removed` or `deleted` file only needs mentioning. Once the owner has decided,
-delete the `.upstream` file. Do not decide a conflict yourself.
+When `.forger/forger.lock.json` already exists, the repo is set up: point the owner at `/forger:update`, which carries the repository through an update. `setup --upgrade --json` is the command behind it.
 
 When the upgrade wrote a file or added a pack it then runs the checks. The result
 carries `failing_checks`, each `{check, findings}`: a check that fails after the

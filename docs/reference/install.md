@@ -20,6 +20,8 @@ claude plugin marketplace update forger
 claude plugin update forger@forger
 ```
 
+Then, in each repository that is set up, with no engine alive there, run `/forger:update` (`forger-update` in the other harnesses). It upgrades the install on a branch and lands it by pull request.
+
 ### 🧰 Without Claude Code
 
 OpenCode, Codex and Copilot need no plugin. Clone the repository once and run

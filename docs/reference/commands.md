@@ -17,6 +17,7 @@ typing `/forger` in the harness surfaces the set.
 | `/forger:setup` | **Onboarding** - scaffold `.forger/`, pick the tracker, and create the intake label. Idempotent; never overwrites. |
 | `/forger:plan` | **Interactive planner** - grounds itself in the repo, scopes the session, interviews you in rounds, then crystallises a plan doc, tracker issues and queued tickets. Needs a human to answer. |
 | `/forger:work` | **Supervisor** - start (or attach to) the loop, watch it, report on completion or halt. Idempotent: "start it, or show me where it's at." Never implements. |
+| `/forger:update` | **Updater** - carry a set-up repository through an update of forger: upgrade the install, settle conflicts with you, land the files by pull request and see `check` pass. Refuses while an engine is alive; never starts the loop. |
 
 ### Machine-internal
 
