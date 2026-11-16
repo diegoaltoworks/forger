@@ -10,7 +10,7 @@ The worker's hard boundaries (no hand merge, no commit status written by the wor
 
 ## Decision
 
-Setup installs the same hook command in the mechanism each harness documents. The hook reads the harness's payload shape and exits 2 to refuse, which every mechanism below treats as a denial or turns into one.
+Setup installs the same hook command in the mechanism each harness documents. The hook reads the harness's payload shape and exits 2 to refuse, which every mechanism below treats as a denial or turns into one. A hook that cannot run (a wrong path, a missing `bun`, a kill) refuses a worker's call too: the installed line, and the OpenCode plugin for what a shell cannot report, turn any status other than 0 and 2 into a refusal when the session is a worker. Any other session is told it is not guarded and the call goes through.
 
 | Harness | Mechanism | File setup writes | Source |
 |---|---|---|---|

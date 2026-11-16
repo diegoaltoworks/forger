@@ -7,6 +7,7 @@ import {existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync} from 'f
 import {dirname, join} from 'path';
 
 import {DEFAULT_PACKS, LOCK_PATH, loadPacks, mergeLock, parseLock, renderLock, selectPacks, sha256, type Lock, type LockedFile} from './packs';
+import {hookCommandLine} from '../hooks';
 import type {CommandRunner, Harness} from '../ports';
 import {installStarter, withStarterPacks, type StarterManifest} from './starter';
 import {finishStructure, formatStructureSetup, type StructureSetup} from './structure-defaults';
@@ -81,8 +82,8 @@ export const PLUGIN_ROOT_VAR = 'FORGER_PLUGIN_ROOT'; // same name as loop/worker
 /** The check command the gates end with: it names the variable, so the committed line holds no machine path. */
 export const CHECK_COMMAND = 'bun "$' + PLUGIN_ROOT_VAR + '/bin/work.ts" check';
 
-/** The hook command the committed harness settings hold: it names the variable, so the file works on every clone. */
-export const HOOK_COMMAND_LINE = 'bun "$' + PLUGIN_ROOT_VAR + '/bin/work.ts" hook';
+/** The hook command the committed harness settings hold: it names the variable, so the file works on every clone, and it refuses a worker's call when the hook cannot run. */
+export const HOOK_COMMAND_LINE = hookCommandLine('bun "$' + PLUGIN_ROOT_VAR + '/bin/work.ts" hook');
 
 const ABSOLUTE_CHECK = /\bbun\s+"?[/~][^\s"]*\/bin\/work\.ts"?\s+check\b/g;
 
@@ -182,7 +183,7 @@ function installCommands(projectRoot: string, pluginRoot: string, harness: Harne
 }
 
 /** The harness's hook settings with forger's hook added; a settings file that already runs it is kept. */
-function installHook(projectRoot: string, harness: Harness): SetupEntry[] {
+export function installHook(projectRoot: string, harness: Harness): SetupEntry[] {
   if (!harness.hooks) return [];
   const target = join(projectRoot, harness.hooks.path);
   const existing = existsSync(target) ? readFileSync(target, 'utf-8') : null;

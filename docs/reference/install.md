@@ -67,6 +67,6 @@ only where they are absent, installs the default `process.md`, the ticket, PR,
 work order, report, retro and rule templates and the hook policy
 (`.forger/hooks.json`), adds the docs check to the gates, installs the harness's
 guard (a hook or plugin, in the mechanism that harness documents, see [Adapters](adapters.md)) that refuses a worker's hand merge, base-branch or forced push, status
-write and state edit, and gitignores the per-run state. Create the label with
+write and state edit, and gitignores the per-run state. The hook line refuses a worker's call when the hook cannot run. `setup --upgrade` replaces the earlier hook line (the bare `work.ts hook` command) with it and reports the settings file as written; a project's own hook line is kept, and `check hooks` fails on it until it fails closed or a waiver covers it. Commit the changed settings file to the base branch: until then `check hooks` fails and `run` starts no worker. Create the label with
 `gh label create ready-for-agent`.
 

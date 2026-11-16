@@ -94,7 +94,7 @@ export const setup: Command = {
     const {values, pluginRoot, installedSkills} = ctx;
     if (values.upgrade) {
       try {
-        const upgrade = runUpgrade(setupRoot(ctx), pluginRoot, c => ctx.run()(c));
+        const upgrade = runUpgrade(setupRoot(ctx), pluginRoot, c => ctx.run()(c), harnessOfRoot(setupRoot(ctx)));
         const unread = unreadChecks(setupRoot(ctx), pluginRoot, c => ctx.run()(c));
         const tracked = trackedRuntimeFiles(setupRoot(ctx), c => ctx.run()(c));
         let checks: UpgradeChecks | undefined;

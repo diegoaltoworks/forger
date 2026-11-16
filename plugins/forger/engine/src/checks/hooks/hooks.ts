@@ -3,7 +3,7 @@
  * by the harness hook. A project fails when its policy is missing or broken,
  * when it drops one of the default rules (a waiver on `base.worker-hooks`
  * records who approved that), or when the harness's settings do not run the
- * hook. Pure over the texts handed in.
+ * hook or run it through a line that fails open. Pure over the texts handed in.
  */
 
 import {droppedRules, HOOKS_POLICY_PATH, parseHookPolicy} from '../../hooks';
@@ -14,6 +14,8 @@ export const WORKER_HOOKS_OPINION = 'base.worker-hooks';
 export interface HookSettings {
   path: string;
   installed: boolean;
+  /** False when the settings run the hook through a line that lets a call through when the hook cannot run. */
+  failsClosed?: boolean;
 }
 
 export function hookFindings(policyText: string | null, settings: HookSettings | null): Finding[] {
@@ -29,5 +31,8 @@ export function hookFindings(policyText: string | null, settings: HookSettings |
     }
   }
   if (settings && !settings.installed) out.push(finding(settings.path, 'hook-missing', "the harness's settings do not run `work.ts hook`; run setup"));
+  if (settings?.installed && settings.failsClosed === false) {
+    out.push(finding(settings.path, 'hook-fails-open', 'the hook line lets a call go through when the hook cannot run; run `setup --upgrade` and commit the changed settings file'));
+  }
   return out;
 }

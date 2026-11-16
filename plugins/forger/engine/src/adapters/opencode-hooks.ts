@@ -5,6 +5,7 @@
  * stops the call. The file is forger's own, so installing writes it whole.
  */
 
+import {EARLIER_HOOK_LINE, HOOK_LINE_MARK} from '../hooks';
 import type {HarnessHooks} from '../ports';
 import {HOOK_COMMAND} from './claude-hooks';
 
@@ -18,6 +19,7 @@ export function opencodePlugin(command: string): string {
 
 const TOOLS = ${JSON.stringify(TOOL_NAMES)};
 const COMMAND = ${JSON.stringify(command)};
+let warned = false;
 
 export const ForgerGuard = async ({directory}) => ({
   'tool.execute.before': async (input, output) => {
@@ -26,7 +28,14 @@ export const ForgerGuard = async ({directory}) => ({
     const args = output.args ?? {};
     const tool_input = {...args, ...(args.filePath ? {file_path: args.filePath} : {})};
     const run = spawnSync(COMMAND, {shell: true, cwd: directory, input: JSON.stringify({tool_name: name, tool_input, cwd: directory}), encoding: 'utf-8'});
-    if (run.status === 2) throw new Error(run.stderr.trim() || 'forger refused this call');
+    if (run.status === 2) throw new Error((run.stderr ?? '').trim() || 'forger refused this call');
+    if (run.status === 0) return;
+    const why = run.error ? run.error.message : run.signal ? 'killed by ' + run.signal : 'status ' + run.status;
+    if (process.env.FORGER_ROLE === 'worker') throw new Error('${HOOK_LINE_MARK} (' + why + '); this call is refused');
+    if (!warned) {
+      warned = true;
+      console.warn('${HOOK_LINE_MARK} (' + why + '); this session is not guarded');
+    }
   },
 });
 `;
@@ -35,5 +44,6 @@ export const ForgerGuard = async ({directory}) => ({
 export const opencodeHooks: HarnessHooks = {
   path: OPENCODE_PLUGIN,
   installed: settings => settings !== null && settings.includes('ForgerGuard') && HOOK_COMMAND.test(settings.replace(/\\"/g, '"')),
-  install: (settings, command) => (opencodeHooks.installed(settings) ? (settings as string) : opencodePlugin(command)),
+  failsClosed: settings => settings !== null && settings.includes(HOOK_LINE_MARK),
+  install: (settings, command) => (opencodeHooks.installed(settings) && !(settings as string).includes(`COMMAND = ${JSON.stringify(EARLIER_HOOK_LINE)}`) ? (settings as string) : opencodePlugin(command)),
 };

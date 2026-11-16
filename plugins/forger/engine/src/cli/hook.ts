@@ -113,12 +113,18 @@ export const hook: Command = {
   help: `  hook             The harness's PreToolUse hook: reads the tool call as JSON on stdin and exits 2
                    with what to do instead when the call breaks .forger/hooks.json (a worker) or, while
                    an engine is alive, changes git state in the loop's checkout (anyone else).
-                   A worker's refusal is recorded as a worker_denied event`,
+                   A worker's refusal is recorded as a worker_denied event. A worker's call the hook cannot
+                   read is refused too; the harness's hook line also refuses a worker's call when the hook
+                   cannot run`,
   run() {
     let input: HookInput;
     try {
       input = JSON.parse(readFileSync(0, 'utf-8')) as HookInput;
     } catch {
+      if (workerIdentity(process.env)) {
+        console.error('forger hook: the tool call was not JSON, so it cannot be judged; the call is refused');
+        process.exitCode = 2;
+      }
       return;
     }
     const result = runHook(input, process.env, realHookIo);

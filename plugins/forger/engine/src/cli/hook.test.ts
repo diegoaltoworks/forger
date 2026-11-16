@@ -128,3 +128,18 @@ describe('the checks file', () => {
     expect(statePaths(loadConfig(root))).toContain('.forger/checks.jsonl');
   });
 });
+
+describe('the hook command with a payload it cannot read', () => {
+  const entry = join(import.meta.dir, '../../../bin/work.ts');
+  const hookWith = (env: Record<string, string>) => Bun.spawnSync(['bun', entry, 'hook'], {env: {PATH: process.env.PATH ?? '', ...env}, stdin: Buffer.from('not json'), cwd: tmpdir()});
+
+  test('a worker\'s hook call with a payload that is not JSON is refused', () => {
+    const r = hookWith({FORGER_ROLE: 'worker', FORGER_TICKET: 'issue-7', FORGER_ITERATION: '1'});
+    expect(r.exitCode).toBe(2);
+    expect(r.stderr.toString()).toContain('not JSON');
+  });
+
+  test('a payload that is not JSON passes outside a worker', () => {
+    expect(hookWith({}).exitCode).toBe(0);
+  });
+});

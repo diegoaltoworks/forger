@@ -2,6 +2,7 @@ import {describe, expect, test} from 'bun:test';
 import {readdirSync, readFileSync} from 'node:fs';
 import {join} from 'node:path';
 
+import {closedHookLine} from '../hooks';
 import type {AgentRunOptions} from '../ports';
 import {claudeHarness} from './claude';
 import {codexHarness} from './codex';
@@ -122,7 +123,7 @@ describe('hooks', () => {
   const command = 'bun /plug/bin/work.ts hook';
   test('claude installs the hook into empty settings and reads it back', () => {
     const text = claudeHooks.install(null, command);
-    expect(JSON.parse(text)).toEqual({hooks: {PreToolUse: [{matcher: HOOK_MATCHER, hooks: [{type: 'command', command}]}]}});
+    expect(JSON.parse(text)).toEqual({hooks: {PreToolUse: [{matcher: HOOK_MATCHER, hooks: [{type: 'command', command: closedHookLine(command)}]}]}});
     expect(claudeHooks.installed(text)).toBe(true);
     expect(claudeHooks.installed(null)).toBe(false);
   });
@@ -131,7 +132,7 @@ describe('hooks', () => {
     const after = JSON.parse(claudeHooks.install(before, command));
     expect(after.model).toBe('x');
     expect(after.hooks.Stop).toEqual([]);
-    expect(after.hooks.PreToolUse.map((e: {hooks: Array<{command: string}>}) => e.hooks[0].command)).toEqual(['lint', command]);
+    expect(after.hooks.PreToolUse.map((e: {hooks: Array<{command: string}>}) => e.hooks[0].command)).toEqual(['lint', closedHookLine(command)]);
   });
   test('settings that already run the hook, by any path, are returned unchanged', () => {
     const own = JSON.stringify({hooks: {PreToolUse: [{matcher: 'Bash', hooks: [{type: 'command', command: 'bun "$CLAUDE_PROJECT_DIR"/plugins/forger/bin/work.ts hook'}]}]}});

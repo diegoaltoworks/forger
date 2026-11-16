@@ -67,6 +67,8 @@ export interface HarnessHooks {
   path: string;
   /** Whether the settings text already runs forger's hook. */
   installed(settings: string | null): boolean;
-  /** The settings with forger's hook command added; text that already runs it comes back unchanged. */
+  /** Whether the settings run the hook only through a line that refuses a worker's call when the hook cannot run. */
+  failsClosed(settings: string | null): boolean;
+  /** The settings with forger's hook command added; text that already runs it comes back unchanged, except a hook command that is exactly the earlier line, which gets the new line in its place. */
   install(settings: string | null, command: string): string;
 }
