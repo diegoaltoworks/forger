@@ -214,6 +214,8 @@ loop with the command and the paths in the reason, counts no failure, stall or d
 any decline the worker recorded. The ticket keeps its label and its open PR, and the run after the resume picks it
 again. An engine outside a git work tree, as an installed plugin is, is not checked.
 
+Before that look, `verify` and `merge` check which engine they run from. A worker whose `FORGER_PLUGIN_ROOT` names another engine than the one running the command (links resolved) is refused with exit 1: no verdict, no status, no merge and no tracker call. The refusal prints the same command through the engine that started the worker, and is recorded as a `worker_denied` event under the rule `other-engine`. It halts nothing and declines nothing: the worker runs the printed command. A session with no worker role is never refused by it.
+
 The same hook guards the supervisor: a call made without the worker role,
 while an engine holds the lock, may not run a state-changing git command
 (`checkout`, `switch`, `reset`, `stash`, `pull`, `merge`, `commit`, `rebase`

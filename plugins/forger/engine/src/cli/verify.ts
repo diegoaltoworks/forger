@@ -1,10 +1,42 @@
+import {realpathSync} from 'fs';
 import {join} from 'path';
 import {randomUUID} from 'crypto';
 
 import {agentFor, execCapture, findHarness, sandboxFor, sandboxSite, slcrProvider} from '../adapters';
 import {resolveModel} from '../config';
-import {awaitCleanEngine, engineChangedMessage, engineChanges, eventLine, flakyReason, loopRootOf, terminalEvent, ticketFlaky, verdictsHome, verifierTier, verifyPr, workerIdentity, type VerifyResult} from '../loop';
+import {awaitCleanEngine, engineChangedMessage, engineChanges, eventLine, flakyReason, loopRootOf, otherEngine, otherEngineMessage, otherEngineReason, otherEngineRun, terminalEvent, ticketFlaky, verdictsHome, verifierTier, verifyPr, workerIdentity, type VerifyResult} from '../loop';
 import type {Command, CommandContext} from './command';
+
+const realOrAsWritten = (path: string): string => {
+  try {
+    return realpathSync(path);
+  } catch {
+    return path;
+  }
+};
+
+/**
+ * Refuses `verify` or `merge` run by a worker from another engine than the one that started it:
+ * sets exit 1, records `worker_denied` and prints the command to run. True when it refused.
+ */
+export function refuseOtherEngine(ctx: CommandContext, command: 'verify' | 'merge'): boolean {
+  const env = ctx.deps.env ?? process.env;
+  const found = otherEngine(env, ctx.pluginRoot, realOrAsWritten);
+  if (!found) return false;
+  const worker = workerIdentity(env);
+  const args = [`--pr ${ctx.values.pr}`, ...(ctx.values.json ? ['--json'] : [])];
+  const run = otherEngineRun(command, args, found.startedBy);
+  try {
+    ctx.stateStore.appendEvent(eventLine(terminalEvent('worker_denied', worker?.iteration ?? 0, worker?.ticket ?? null, otherEngineReason(command, found.engine))), new Date());
+  } catch (e) {
+    console.error(`${command}: the refusal was not recorded: ${(e as Error).message}`);
+  }
+  process.exitCode = 1;
+  const reason = otherEngineMessage(command, found, run);
+  if (ctx.values.json) console.log(JSON.stringify({refused: 'other_engine', engine: found.engine, started_by: found.startedBy, run, reason}));
+  else console.error(reason);
+  return true;
+}
 
 /**
  * Refuses a decision made from an engine whose source still has uncommitted
@@ -14,7 +46,7 @@ export async function refuseChangedEngine(ctx: CommandContext, command: 'verify'
   const sleep = ctx.deps.sleep ?? ((ms: number) => new Promise<void>(r => setTimeout(r, ms)));
   const paths = await awaitCleanEngine(() => engineChanges(ctx.run(), ctx.pluginRoot), sleep, ctx.config.limits.engineChangedWaitSeconds);
   if (paths.length === 0) return false;
-  const worker = workerIdentity(process.env);
+  const worker = workerIdentity(ctx.deps.env ?? process.env);
   try {
     ctx.stateStore.appendEvent(eventLine(terminalEvent('engine_changed', worker?.iteration ?? 0, worker?.ticket ?? null, `${command}: ${paths.join(', ')}`)), new Date());
   } catch (e) {
@@ -70,7 +102,9 @@ export const verify: Command = {
                    from the head's CI checks, waiting up to the timeout for unfinished ones. A verdict that is not a pass
                    keeps the copy's command log beside the verdict record (commandLog in the JSON).
                    Refuses (exit 1, no verdict, no status) when the engine's own source has uncommitted changes
-                   that outlast limits.engineChangedWaitSeconds`,
+                   that outlast limits.engineChangedWaitSeconds.
+                   A worker that runs it from another engine than the one that started it is refused too
+                   (exit 1, worker_denied recorded, the command to run is printed)`,
   async run(ctx) {
     const {values} = ctx;
     const pr = parseInt((values.pr as string | undefined) ?? '', 10);
@@ -79,7 +113,7 @@ export const verify: Command = {
       process.exitCode = 1;
       return;
     }
-    if (await refuseChangedEngine(ctx, 'verify')) return;
+    if (refuseOtherEngine(ctx, 'verify') || (await refuseChangedEngine(ctx, 'verify'))) return;
     try {
       const record = await verifyOne(ctx, pr);
       if (record.decision !== 'pass') process.exitCode = 1;

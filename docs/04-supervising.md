@@ -138,6 +138,7 @@ something it may not. `measure` counts them by rule and by ticket (`worker_denia
 (a mid-run event, like `worker_denied`) with the ticket and the paths. They wait `limits.engineChangedWaitSeconds` for the changes to go first. The worker stops without declining, and
 the loop halts naming the command and the paths; the ticket is not set aside. Commit or discard the changes in the
 engine's checkout, then resume.
+`verify` and `merge` also refuse a worker that runs them from another engine than the one that started it (for example the copy inside its own worktree), and record that as a `worker_denied` event under the rule `other-engine`. The loop goes on: the refusal prints the command to run through the starting engine. `measure` counts it with the hook's denials.
 `verify` finds a PR's ticket from a `Closes #n` line in its body, then from a
 `feat/issue-<n>` branch (on a local tracker, `feat/<ticket-id>`). A PR the
 supervisor opens for itself carries `Closes #n` or an `## Acceptance` section of

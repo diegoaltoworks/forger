@@ -4,7 +4,10 @@
  * verdict or a merge would come from code nobody reviewed, so both refuse.
  */
 
+import {join} from 'path';
+
 import type {CommandRunner} from '../ports';
+import {PLUGIN_ROOT_VAR, WORKER_ROLE_VAR} from './worker-env';
 
 const quote = (s: string): string => `'${s.replace(/'/g, `'\\''`)}'`;
 
@@ -63,4 +66,37 @@ export function engineChangedHalt(events: {event: string; iteration: number; tic
   const hit = events.filter(e => e.event === 'engine_changed' && e.iteration === iteration && e.ticket === ticket).pop();
   if (!hit) return null;
   return `${hit.reason ?? 'verify or merge'} was refused: the engine's checkout has uncommitted changes. Commit or discard the changes in the engine's checkout, then resume. "${ticket ?? 'the ticket'}" is not set aside and keeps its label and its open PR.`;
+}
+
+export interface OtherEngine {
+  /** The root of the engine that started the worker. */
+  startedBy: string;
+  /** The root the command runs from. */
+  engine: string;
+}
+
+/**
+ * Whether a worker runs a command from an engine other than the one that started it:
+ * the role is `worker`, the starting engine's root is named, and it resolves to a
+ * different place than the root this process runs from. Null for any other session.
+ */
+export function otherEngine(env: Record<string, string | undefined>, pluginRoot: string, resolve: (path: string) => string): OtherEngine | null {
+  const startedBy = env[PLUGIN_ROOT_VAR];
+  if (env[WORKER_ROLE_VAR] !== 'worker' || !startedBy) return null;
+  return resolve(startedBy) === resolve(pluginRoot) ? null : {startedBy, engine: pluginRoot};
+}
+
+/** The command a worker should run instead: the same one through the engine that started it. */
+export function otherEngineRun(command: string, args: string[], startedBy: string): string {
+  return `bun ${quote(join(startedBy, 'bin', 'work.ts'))} ${[command, ...args].join(' ')}`;
+}
+
+/** What a `verify` or `merge` run from another engine says. */
+export function otherEngineMessage(command: string, found: OtherEngine, run: string): string {
+  return `${command}: refused. This command ran from ${found.engine}, not from the engine that started this worker (${found.startedBy}), and a verdict or a merge from another engine does not count. Run it through that engine instead: ${run}. This is no reason to stop or to decline the ticket`;
+}
+
+/** The reason recorded on the `worker_denied` event for such a refusal. */
+export function otherEngineReason(command: string, engine: string): string {
+  return `other-engine: ${command} from ${engine}`;
 }

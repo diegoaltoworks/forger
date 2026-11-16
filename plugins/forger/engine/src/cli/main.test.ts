@@ -29,13 +29,13 @@ function projectWith(
   return root;
 }
 
-async function capture(argv: string[], run?: CommandRunner, installedSkills?: () => string[], collectionRoots?: () => string[]): Promise<string> {
+async function capture(argv: string[], run?: CommandRunner, installedSkills?: () => string[], collectionRoots?: () => string[], env?: Record<string, string | undefined>): Promise<string> {
   const lines: string[] = [];
   const spy = spyOn(console, 'log').mockImplementation((...args: unknown[]) => {
     lines.push(args.join(' '));
   });
   try {
-    await main(argv, {run, installedSkills, collectionRoots});
+    await main(argv, {run, installedSkills, collectionRoots, env});
   } finally {
     spy.mockRestore();
   }
@@ -843,7 +843,7 @@ describe('supervisor commands', () => {
         : '';
     };
     try {
-      const out = JSON.parse(await capture(['merge', '--pr', '9', '--json'], run));
+      const out = JSON.parse(await capture(['merge', '--pr', '9', '--json'], run, undefined, undefined, {}));
       expect(out).toEqual({pr: 9, merged: false, checks: 'failure', failing_checks: ['gates'], reason: 'failing checks: gates'});
       expect(process.exitCode).toBe(1);
       expect(calls.some(c => c.startsWith('gh pr merge'))).toBe(false);

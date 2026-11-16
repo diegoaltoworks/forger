@@ -44,7 +44,7 @@ reason; `report` lists each uncaused clear under waiting on you.
 
 The engine records at each pick where the worker's commands come from, in the `commands` field of the `picked` event: `engine` when the harness loads the plugin from the engine's root for the session, or every command file `setup` installs for it is in the project and equal to what this engine's `setup` would write; `other` when one is missing or differs. An event written by an earlier engine has no field. `measure --json` reports `worker_commands` as `{from_engine, other_tickets, not_recorded}`, the last being runs with no `picked` event or one without `commands`; the readable output prints one line for it. `measure --report` prints no report and exits 1, naming the tickets, when a run in the period had `other`; otherwise the report carries `worker_commands` as `{from_engine, not_recorded}`. A run with no record is never counted under `from_engine`.
 
-`verify` and `merge` refuse, and record `engine_changed`, when the engine's own source still has uncommitted changes after waiting `limits.engineChangedWaitSeconds`. The loop halts on that event and sets no ticket aside.
+`verify` and `merge` refuse a worker running them from another engine than the one that started it, and record `worker_denied` under the rule `other-engine`; they also refuse, and record `engine_changed`, when the engine's own source still has uncommitted changes after waiting `limits.engineChangedWaitSeconds`. The loop halts on that event and sets no ticket aside.
 
 A failed gate is run once more on the same head by `verify`; a pass records a
 `flaky_gate` event (the check and the failed tests in `reason`) and files one
