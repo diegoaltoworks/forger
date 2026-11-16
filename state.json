@@ -225,7 +225,10 @@
       "ticket": "issue-473",
       "pid": null,
       "session_id": "adadc37f-db1a-4ab6-8910-207f58a5f441",
-      "snapshot": null,
+      "snapshot": {
+        "baseSha": "",
+        "reflogLength": 1
+      },
       "started_at": "2026-11-16T07:38:31.326Z",
       "plan": {
         "stages": [
