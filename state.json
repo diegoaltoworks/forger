@@ -233,7 +233,10 @@
       "ticket": "issue-485",
       "pid": null,
       "session_id": "14120509-271b-4ac7-96e9-f3cb10d9af1a",
-      "snapshot": null,
+      "snapshot": {
+        "baseSha": "",
+        "reflogLength": 1
+      },
       "started_at": "2026-11-16T20:09:07.315Z",
       "plan": {
         "stages": [
