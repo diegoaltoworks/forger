@@ -26,12 +26,12 @@ the next `work catalogue --update` moves the row back to Open.
 
 | Failure | What it looks like | Issue |
 |---|---|---|
+| Test evidence in vitest and Playwright runs never checks out | The verifier's passed tests are cited by name, the engine reads no result line of either tool, and every `met` becomes `cannot_tell`; a skipped TAP test reads as passed. | [#481](https://github.com/diegoaltoworks/forger/issues/481) |
 
 ## Fixed
 
 | Failure | What it looked like | Fixed by |
 |---|---|---|
-| Test evidence in vitest and Playwright runs never checks out | The verifier's passed tests are cited by name, the engine reads no result line of either tool, and every `met` becomes `cannot_tell`; a skipped TAP test reads as passed. | [#481](https://github.com/diegoaltoworks/forger/issues/481) |
 | A worker hangs and the timeout never fires | A worker waits on a pattern that matches itself and runs for hours past its timeout. | before tickets were tracked |
 | A run that merged counts as a failure | A worker merges, then times out writing its summary, and the run counts as a failure. | before tickets were tracked |
 | An early stop signal halts a run that merged | A stop tag printed mid-run halts a run that went on to merge. | before tickets were tracked |
