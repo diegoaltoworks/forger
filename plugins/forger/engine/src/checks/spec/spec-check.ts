@@ -4,6 +4,7 @@
  * the pure decision. An unreadable issue is a gap, not a pass.
  */
 
+import {githubTracker} from '../../tracker';
 import {SpecOutputError, type CommandRunner, type SpecProvider, type SpecReport} from '../../ports';
 import {SPEC_FILE, absentSpecProvider, decideSpec, issueFromBranch, parseSatisfies, type SpecDecision} from './spec';
 
@@ -11,7 +12,7 @@ function namedRequirements(run: CommandRunner): string[] | null {
   try {
     const issue = issueFromBranch(run('git branch --show-current'));
     if (issue === null) return null;
-    return parseSatisfies(run(`gh issue view ${issue} --json body --jq .body`));
+    return parseSatisfies(githubTracker(run).text(Number(issue)));
   } catch {
     return null;
   }

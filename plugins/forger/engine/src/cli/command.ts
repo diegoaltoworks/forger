@@ -8,7 +8,7 @@
 import type {Backlog} from '../backlog';
 import type {WorkloopConfig} from '../config';
 import type {AutomationRunner} from '../loop';
-import type {AgentRunner, CapturingRunner, CommandRunner, StateStore} from '../ports';
+import type {AgentRunner, CapturingRunner, CommandRunner, StateStore, Tracker} from '../ports';
 import type {FlagName, Values} from './flags';
 
 export interface CliDeps {
@@ -47,6 +47,8 @@ export interface CommandContext {
   run(): CommandRunner;
   /** The same runner keeping stderr and the exit code, for a caller that must tell a refusal from an empty answer. */
   capture(): CapturingRunner;
+  /** The tracker for the configured kind, over the runners above. */
+  tracker(): Tracker;
   readonly projectRoot: string;
   readonly config: WorkloopConfig;
   /** Where the state record and events are read from: files beside the engine, or with `--from branch` the state branch of a clone. */

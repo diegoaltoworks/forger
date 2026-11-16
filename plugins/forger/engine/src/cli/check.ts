@@ -39,6 +39,7 @@ import type {CommandRunner, Harness} from '../ports';
 import {UiInfrastructureError} from '../ports';
 import {harnessOfRoot} from './harness-of';
 import {loopRootOf, realHookIo} from './hook';
+import {githubTracker} from '../tracker';
 import type {Command} from './command';
 import {specProvider} from './spec-provider';
 
@@ -123,7 +124,7 @@ export const check: Command = {
       }
       let body: string;
       try {
-        body = ctx.run()(`gh issue view ${n} --json body --jq .body`);
+        body = githubTracker(ctx.run()).text(n);
       } catch (e) {
         console.error(`check ticket: could not read issue #${n}: ${(e as Error).message}`);
         process.exitCode = 1;

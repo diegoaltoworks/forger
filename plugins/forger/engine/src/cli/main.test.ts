@@ -7,7 +7,7 @@ import {claudeHooks, execRunner, gitStateStore} from '../adapters';
 import {renderHookPolicy} from '../hooks';
 import {HOOK_COMMAND_LINE} from '../packs';
 import {eventLine, terminalEvent} from '../loop';
-import {findProjectRoot, main} from './main';
+import {contextFor, findProjectRoot, main} from './main';
 import type {CommandRunner} from '../ports';
 
 const dirs: string[] = [];
@@ -1732,5 +1732,22 @@ describe('report process changes', () => {
     const items = out.waiting_on_owner.filter((i: {question: string}) => i.question.includes('process changes'));
     expect(items).toHaveLength(1);
     expect(items[0].question).toContain(engineSha);
+  });
+});
+
+describe('the command context tracker', () => {
+  test("a command's tracker runs through the runner the command was handed", () => {
+    const root = projectWith({}, {kind: 'local'});
+    process.chdir(root);
+    const seen: string[] = [];
+    const run: CommandRunner = cmd => {
+      seen.push(cmd);
+      return 'body text';
+    };
+    const ctx = contextFor({values: {} as never, positionals: [], deps: {run}, pluginRoot: root, installedSkills: () => [], collectionRoots: () => []});
+    const tracker = ctx.tracker();
+    expect(tracker.text(3)).toBe('body text');
+    expect(tracker.queue).toBe('file');
+    expect(seen).toEqual(['gh issue view 3 --json body --jq .body']);
   });
 });

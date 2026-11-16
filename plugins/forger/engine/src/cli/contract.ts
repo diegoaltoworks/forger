@@ -3,6 +3,7 @@ import {join} from 'path';
 
 import {parseCriteria, appendEvent, checkVerdict, terminalEvent, validatePrBody, type Evidence, type VerdictEntry} from '../loop';
 import {attemptReason, CONTRACT_FOR_SLOT, contractForSlot, CONTRACT_NAMES, NO_FACTS, onContractFailure, TEST_FILE, validateContract, type ContractFacts, type ContractName} from '../pipeline';
+import {githubTracker} from '../tracker';
 import type {Command, CommandContext} from './command';
 
 function lines(out: string): string[] {
@@ -11,8 +12,7 @@ function lines(out: string): string[] {
 
 function criteriaFor(ctx: CommandContext, issue: number | null): ContractFacts['criteria'] {
   if (issue === null) return [];
-  const body = (JSON.parse(ctx.run()(`gh issue view ${issue} --json body`)) as {body?: string}).body ?? '';
-  return parseCriteria(body);
+  return parseCriteria(githubTracker(ctx.run()).facts(issue).body);
 }
 
 function factsFor(ctx: CommandContext, issue: number | null): ContractFacts {

@@ -10,6 +10,7 @@ import {existsSync, readFileSync} from 'fs';
 import {join} from 'path';
 
 import {forgerPath, loadConfig} from '../../config';
+import {githubTracker} from '../../tracker';
 import type {CommandRunner} from '../../ports';
 import {BASELINE_MANIFEST} from '../../ui';
 import {mergeBase, parseNameStatus} from '../decisions';
@@ -47,7 +48,7 @@ export function decisionsOfBranch(run: CommandRunner): string {
   const issue = /^feat\/issue-(\d+)/.exec(run('git rev-parse --abbrev-ref HEAD').trim())?.[1];
   if (!issue) return '';
   try {
-    return decisionsText(run(`gh issue view ${issue} --json body --jq .body`));
+    return decisionsText(githubTracker(run).text(Number(issue)));
   } catch {
     return '';
   }

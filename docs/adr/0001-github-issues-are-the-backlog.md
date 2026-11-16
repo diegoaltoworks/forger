@@ -6,3 +6,5 @@ The engine reads the backlog through one interface with two implementations: Git
 
 - `backlog.md` is dropped: the issue list is the human view.
 - The engine needs `gh` and network access to select work in the default mode; the file implementation keeps it working offline.
+
+Amended: the tracker the engine reads and writes tickets through is a port with an adapter per kind (`0023-the-tracker-is-a-port-with-an-adapter-per-kind.md`); the Backlog interface stays the port for selection.
