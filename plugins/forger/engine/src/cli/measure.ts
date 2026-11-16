@@ -10,7 +10,7 @@ import {join} from 'path';
 import {parseAllEvents, parseEvents, loopRootOf, readAllVerdicts, readSchedule, verdictsHome} from '../loop';
 import {LOCK_PATH, listOpinions, loadPacks, parseLock} from '../packs';
 import {computeNoneSections, computeOpinionFailures, formatNoneSections, formatOpinionFailures, sectionNames, type FailureRecord} from '../supervisor';
-import {buildComparisonReport, DEFAULT_PRICES, mergePrices, sessionCostUsd, type PriceTable, type Measures, computeMeasures, diffReports, parseDiffRanges, parseReplacedRanges, picksToPrs, DEFAULT_REWORK_WINDOW, type MergedPr, type TrackerIssue, type ReworkInputs, type ComparisonReport, formatMeasures, parseBudgets, parseIterationLog, type CiRun, type IterationRecord, type OpinionFailures} from '../supervisor';
+import {buildComparisonReport, MixedCommandsError, DEFAULT_PRICES, mergePrices, sessionCostUsd, type PriceTable, type Measures, computeMeasures, diffReports, parseDiffRanges, parseReplacedRanges, picksToPrs, DEFAULT_REWORK_WINDOW, type MergedPr, type TrackerIssue, type ReworkInputs, type ComparisonReport, formatMeasures, parseBudgets, parseIterationLog, type CiRun, type IterationRecord, type OpinionFailures} from '../supervisor';
 import type {Rung} from '../packs';
 import type {Command, CommandContext} from './command';
 
@@ -119,6 +119,7 @@ export function gatherMeasures(ctx: CommandContext): Measures {
     records: allEvents,
     clears: allEvents.filter(e => e.event === 'halt_cleared'),
     denials: allEvents.filter(e => e.event === 'worker_denied'),
+    picks: picked,
     ciRuns,
     last: values.last === undefined ? null : parseInt(values.last, 10),
   });
@@ -137,10 +138,10 @@ export const measure: Command = {
                    Serves the app and, for each element the selector matches, reports its text width against the width available, and whether it wraps or is clipped,
                    at each viewport (and each locale of ui.json) at a text scale of 100% and 200%. The worst case is first (exit 1 when any wraps or is clipped; exit 2 when the app cannot be served).
                    --text fills the element with the longest string of a translation file (JSON of any nesting, else one string per line) first
-                   Runs, failures by cause, time, budget cap, cost from the session transcripts (unknown without one; prices in .forger/prices.json override the defaults) and CI rounds per ticket; merges per hour by parallelism, conflicts, rework, redone tickets, owner interventions, and the calls the worker's hook refused, by rule and by ticket.
+                   Runs, failures by cause, time, budget cap, cost from the session transcripts (unknown without one; prices in .forger/prices.json override the defaults) and CI rounds per ticket; merges per hour by parallelism, conflicts, rework, redone tickets, owner interventions, and the calls the worker's hook refused, by rule and by ticket, and the runs by where the worker's commands came from.
                    Rework and escaped defects per merged PR: a later merge within --window N merges (default 5) that touches its lines or reverts it, bug issues naming it, and picks that differ from the issue the PR closed.
                    --from branch reads the state record and events from the state branch of a clone; iteration logs and transcripts stay on the engine's machine and are reported as not on this machine.
-                   --report prints the five-measure comparison report as JSON; --diff prints the per-measure delta between two saved reports (A is the baseline)`,
+                   --report prints the five-measure comparison report as JSON, and refuses (exit 1, naming the tickets) when a run's worker took other commands than the engine's; --diff prints the per-measure delta between two saved reports (A is the baseline)`,
   async run(ctx) {
     const {values, projectRoot, config, positionals} = ctx;
     if (values.opinions) return measureOpinions(ctx);
@@ -154,7 +155,13 @@ export const measure: Command = {
     }
     const measures = gatherMeasures(ctx);
     if (values.report) {
-      console.log(JSON.stringify(buildComparisonReport(measures)));
+      try {
+        console.log(JSON.stringify(buildComparisonReport(measures)));
+      } catch (e) {
+        if (!(e instanceof MixedCommandsError)) throw e;
+        console.error(e.message);
+        process.exitCode = 1;
+      }
       return;
     }
     console.log(values.json ? JSON.stringify(measures) : formatMeasures(measures));

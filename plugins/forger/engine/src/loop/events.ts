@@ -57,7 +57,11 @@ export interface TerminalEvent {
   not_a_defect?: string | null;
   /** On `halt_cleared` by `decide`: the owner's answer, which cleared the halt. */
   decision?: string | null;
+  /** On `picked`: where the worker's commands come from, as the engine decided at the pick. An event from an earlier engine has none. */
+  commands?: 'engine' | 'other';
 }
+
+export type EventExtra = Pick<TerminalEvent, 'cause' | 'not_a_defect' | 'decision' | 'commands'>;
 
 export function terminalEvent(
   event: EventKind,
@@ -65,7 +69,7 @@ export function terminalEvent(
   ticket: string | null,
   reason: string | null,
   now: Date = new Date(),
-  extra: Pick<TerminalEvent, 'cause' | 'not_a_defect' | 'decision'> = {}
+  extra: EventExtra = {}
 ): TerminalEvent {
   return {event, at: now.toISOString(), iteration, ticket, reason, ...extra};
 }

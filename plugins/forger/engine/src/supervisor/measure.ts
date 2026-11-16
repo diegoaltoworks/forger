@@ -56,6 +56,15 @@ export interface WorkerDenials {
   by_ticket: Record<string, number>;
 }
 
+export interface WorkerCommands {
+  /** Runs whose pick recorded the engine's own commands. */
+  from_engine: number;
+  /** The tickets of runs whose pick recorded other commands; each makes the period a mix of two versions. */
+  other_tickets: string[];
+  /** Runs with no `picked` event, or one without `commands`. Never counted under `from_engine`. */
+  not_recorded: number;
+}
+
 export interface Measures {
   window: {last: number | null; iterations: number};
   runs: {total: number; ok: number; failed: number; by_cause: Record<string, number>};
@@ -84,6 +93,8 @@ export interface Measures {
   halt_clears: HaltClearCounts;
   /** Calls the worker's hook refused in the window, by rule and by ticket; null when the events file does not cover the window (see `interventions_unknown`). */
   worker_denials: WorkerDenials | null;
+  /** Where the commands of the window's runs came from, as the engine recorded at each pick. */
+  worker_commands: WorkerCommands;
   /** Rework and escaped defects over merged PRs (ADR 0013); null when the tracker could not be read. */
   change_rework: ReworkMeasures | null;
   /** Merged PRs that changed a journey against upkeep; null without a journeys file or a readable tracker. */
@@ -174,6 +185,8 @@ export interface MeasureInputs {
   records?: {iteration: number}[];
   /** The `halt_cleared` events; absent reads as none. */
   clears?: TerminalEvent[];
+  /** The `picked` events; absent reads as none, so every run is not recorded. */
+  picks?: TerminalEvent[];
   /** The `worker_denied` events; absent reads as none. */
   denials?: TerminalEvent[];
   ciRuns: CiRun[];
@@ -286,6 +299,18 @@ export function workerDenials(denials: TerminalEvent[], first: number | null): W
   return out;
 }
 
+/** Each run in the window by what its pick recorded of where the worker's commands came from. */
+export function workerCommands(runs: IterationRecord[], picks: TerminalEvent[]): WorkerCommands {
+  const out: WorkerCommands = {from_engine: 0, other_tickets: [], not_recorded: 0};
+  for (const it of runs) {
+    const commands = picks.find(e => e.event === 'picked' && e.iteration === it.iteration)?.commands;
+    if (commands === 'engine') out.from_engine += 1;
+    else if (commands === 'other') out.other_tickets.push(it.ticket ?? `iteration ${it.iteration}`);
+    else out.not_recorded += 1;
+  }
+  return out;
+}
+
 export function computeMeasures(inputs: MeasureInputs): Measures {
   const sorted = [...inputs.iterations].sort((a, b) => a.iteration - b.iteration);
   const windowed = inputs.last === null ? sorted : sorted.slice(-Math.max(inputs.last, 0));
@@ -351,6 +376,7 @@ export function computeMeasures(inputs: MeasureInputs): Measures {
     owner_interventions: {total: Object.values(interventions).reduce((a, b) => a + b, 0), by_event: interventions},
     interventions_unknown: gap,
     worker_denials: gap === null ? workerDenials(inputs.denials ?? [], first) : null,
+    worker_commands: workerCommands(windowed, inputs.picks ?? []),
     halt_clears: haltClearCounts((inputs.clears ?? []).filter(e => first === null || e.iteration >= first)),
     change_rework: inputs.changes === undefined ? null : computeRework(inputs.changes),
     journeys: inputs.journeys === undefined || inputs.changes === undefined ? null : computeJourneyShare(inputs.changes.prs.map(p => ({number: p.number, files: [...new Set([...p.ranges, ...(p.replaced ?? [])].map(r => r.file))]})), inputs.journeys),
@@ -381,6 +407,11 @@ function formatWorkerDenials(m: Measures): string {
   return `worker denials: ${m.worker_denials.total} (${rules})`;
 }
 
+function formatWorkerCommands(c: WorkerCommands): string {
+  const other = c.other_tickets.length === 0 ? 'none' : `${c.other_tickets.length} (${[...new Set(c.other_tickets)].join(', ')})`;
+  return `worker commands: from the engine ${c.from_engine}, other ${other}, not recorded ${c.not_recorded}`;
+}
+
 export function formatMeasures(m: Measures): string {
   const causes = Object.entries(m.runs.by_cause).map(([k, v]) => `${k} ${v}`).join(', ');
   const lines = [
@@ -390,6 +421,7 @@ export function formatMeasures(m: Measures): string {
     ...formatParallel(m.parallel),
     `merged tickets: ${m.merged.tickets}, redone ${m.rework.redone_tickets}, owner interventions ${m.interventions_unknown === null ? m.owner_interventions.total : `unknown (${m.interventions_unknown})`}`,
     formatWorkerDenials(m),
+    formatWorkerCommands(m.worker_commands),
     ...formatHaltClears(m.halt_clears),
     ...(m.change_rework === null ? ['rework and escaped defects: unknown'] : formatRework(m.change_rework)),
     ...(m.journeys === null ? [] : [formatJourneyShare(m.journeys)]),

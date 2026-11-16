@@ -28,7 +28,7 @@ import {conflictAfterAttempt, folderMapFrom, inWorktree} from './parallel';
 import {worktreeWorkspace, type WorkspaceSandbox} from './worktree-workspace';
 import {pidAlive, RunnerLock} from './lock';
 import {criterionOptions, refuseUncheckable} from './ticket-check';
-import {eventLine, parseAllEvents, terminalEvent, type EventKind, type TerminalEvent, type TerminalEventKind} from './events';
+import {eventLine, parseAllEvents, terminalEvent, type EventExtra, type EventKind, type TerminalEvent, type TerminalEventKind} from './events';
 import {UNCAUSED, type HaltClearWhy} from './halt-clear';
 import {appendSchedule} from './schedule-log';
 import {buildStatus, type StatusReport} from './status-report';
@@ -76,6 +76,8 @@ export interface RunnerDeps {
   resolvePlan?: (ticket: string | null) => StoredPlan | null;
   /** The plugin the engine runs from; workers get it as `FORGER_PLUGIN_ROOT`, which the committed gates name. */
   pluginRoot?: string;
+  /** Where a worker started in `root` takes its commands from; omitted, a pick records none. */
+  workerCommands?: (root: string) => 'engine' | 'other';
 }
 
 /** How often a parallel loop looks for a finished worker or a HALT when none has finished. */
@@ -167,7 +169,7 @@ export class AutomationRunner {
       agent: this.agent,
       uuid: this.uuid,
       refreshBacklog: () => this.refreshBacklog(),
-      emit: (kind, iteration, ticket, reason) => this.emit(kind, iteration, ticket, reason),
+      emit: (kind, iteration, ticket, reason, extra) => this.emit(kind, iteration, ticket, reason, extra),
       halt: (reason, kind) => this.halt(reason, kind),
       afterMerge: (iteration, ticket) => {
         this.fileReviews(iteration);
@@ -177,6 +179,7 @@ export class AutomationRunner {
       resolvePlan: deps.resolvePlan,
       probeRunner: deps.probeRunner,
       pluginRoot: deps.pluginRoot,
+      workerCommands: deps.workerCommands,
     };
   }
 
@@ -221,7 +224,7 @@ export class AutomationRunner {
     if (refused.length > 0) await this.refreshBacklog();
   }
 
-  private emit(kind: EventKind, iteration: number, ticket: string | null, reason: string | null, extra: Pick<TerminalEvent, 'cause' | 'not_a_defect' | 'decision'> = {}): void {
+  private emit(kind: EventKind, iteration: number, ticket: string | null, reason: string | null, extra: EventExtra = {}): void {
     const now = new Date();
     this.stateStore.appendEvent(eventLine(terminalEvent(kind, iteration, ticket, reason, now, extra)), now);
   }

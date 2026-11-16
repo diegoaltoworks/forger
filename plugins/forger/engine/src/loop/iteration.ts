@@ -16,7 +16,7 @@ import {parseClaim, type Claim} from './claim';
 import {conflictComment, conflictReask, parseConflict, type Conflict} from './conflict';
 import {avoidedFootprints, setAsideComment, setAsideOnTracker, setAsideUpdate, type SetAsideEntry} from './aside';
 import {engineChangedHalt} from './engine-changed';
-import type {EventKind, TerminalEventKind} from './events';
+import type {EventExtra, EventKind, TerminalEventKind} from './events';
 import {declineUpdate, type DeclineEntry} from './decline';
 import {clearDeclineRecord, readDeclineRecord} from './decline-io';
 import type {AutomationState} from './state';
@@ -49,7 +49,7 @@ export interface IterationContext {
   agent: AgentRunner;
   uuid: () => string;
   refreshBacklog(): Promise<void>;
-  emit(kind: EventKind, iteration: number, ticket: string | null, reason: string | null): void;
+  emit(kind: EventKind, iteration: number, ticket: string | null, reason: string | null, extra?: EventExtra): void;
   halt(reason: string, kind?: TerminalEventKind): void;
   /** Runs after a merged ticket is recorded; the structure review trigger. */
   afterMerge?(iteration: number, ticket: string | null): void;
@@ -61,6 +61,8 @@ export interface IterationContext {
   events?(): {event: string; iteration: number; ticket: string | null; reason: string | null}[];
   /** Exported to the worker, whose gates name it. */
   pluginRoot?: string;
+  /** Where a worker started in `root` takes its commands from; absent, a pick records none. */
+  workerCommands?(root: string): 'engine' | 'other';
 }
 
 /**
@@ -119,7 +121,7 @@ export async function runIteration(
   const plan = ctx.resolvePlan?.(attemptedTask) ?? null;
   updateRun(state, sessionId, {ticket: attemptedTask, plan});
   ctx.store.save(state);
-  if (attemptedTask) ctx.emit('picked', iteration, attemptedTask, null);
+  if (attemptedTask) ctx.emit('picked', iteration, attemptedTask, null, ctx.workerCommands ? {commands: ctx.workerCommands(root)} : undefined);
 
   // Read before the run: a worker that hands the ticket over takes it out of the queue, and its text with it.
   const ownBody = attemptedTask ? ctx.backlog.body(attemptedTask) : null;

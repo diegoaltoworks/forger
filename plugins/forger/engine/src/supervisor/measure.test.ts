@@ -303,6 +303,23 @@ describe('measures carry the journey share', () => {
   });
 });
 
+describe('worker commands', () => {
+  const run = (iteration: number) => parseIterationLog(log({iteration, ticket: `issue-${iteration}`})) as IterationRecord;
+  const pick = (iteration: number, commands?: 'engine' | 'other') => ({...terminalEvent('picked', iteration, `issue-${iteration}`, null), ...(commands ? {commands} : {})});
+  const base = {budgets: [], ciRuns: [], events: [], last: null};
+
+  test('measure counts the period\'s runs by where the worker\'s commands came from', () => {
+    const m = computeMeasures({...base, iterations: [run(1), run(2), run(3)], picks: [pick(1, 'engine'), pick(2, 'other'), pick(3, 'engine')]});
+    expect(m.worker_commands).toEqual({from_engine: 2, other_tickets: ['issue-2'], not_recorded: 0});
+    expect(formatMeasures(m)).toContain('worker commands: from the engine 2, other 1 (issue-2), not recorded 0');
+  });
+
+  test('a run whose pick has no commands field counts as not recorded', () => {
+    const m = computeMeasures({...base, iterations: [run(1), run(2)], picks: [pick(1)]});
+    expect(m.worker_commands).toEqual({from_engine: 0, other_tickets: [], not_recorded: 2});
+  });
+});
+
 describe('worker denials', () => {
   const run = (iteration: number) => parseIterationLog(log({iteration, ticket: `issue-${iteration}`})) as IterationRecord;
   const ev = (name: 'worker_denied' | 'completed', iteration: number, reason: string | null = null) => terminalEvent(name, iteration, `issue-${iteration}`, reason);

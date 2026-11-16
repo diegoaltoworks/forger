@@ -47,6 +47,8 @@ Three things, each a command and not a procedure someone follows:
 - **The CI-native mode**, once it exists, runs its first scheduled supervisor and dispatched worker here before it touches any other repository.
 - **A replayed request set.** The requests in section 1 are stored as data in the sample repository. A pure function turns the set into the issues to file, in order, with their `Blocked by` set. To compare two forger versions, a fresh copy of the repository is created at the same starting commit, the requests are filed, and the loop runs to the end of the set under each version. The comparison is by the measures in section 4, never by reading transcripts.
 
+  A replay's workers take their commands from the version under test. The engine records at each pick whether they did, and `measure --report` refuses a period with a run that took other commands, naming its tickets; a run with no record is counted as not recorded in the report, so a baseline saved by an earlier engine stays usable and says so.
+
 ## 4. The measures that make it evidence
 
 All measures already exist or are small additions to `measure`, so none is collected by hand:

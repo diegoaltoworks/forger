@@ -5,7 +5,7 @@ import {join, resolve} from 'path';
 
 import {claudeHarness, codexHarness, copilotHarness, opencodeHarness} from '../adapters';
 import {sha256} from './packs';
-import {gitignoreLines, mergeGitignore, relocatableGates, renderConfig, runSetup, trackedRuntimeFiles, formatTrackedRuntime, withCheck} from './setup';
+import {gitignoreLines, mergeGitignore, relocatableGates, renderConfig, runSetup, trackedRuntimeFiles, formatTrackedRuntime, withCheck, workerCommandsSource} from './setup';
 
 const PLUGIN_ROOT = resolve(import.meta.dir, '../../..');
 const dirs: string[] = [];
@@ -161,6 +161,30 @@ describe('runSetup', () => {
     const root = emptyProject();
     expect(() => runSetup(root, PLUGIN_ROOT, {packs: ['nope']})).toThrow('Unknown pack: nope');
     expect(existsSync(join(root, '.forger'))).toBe(false);
+  });
+});
+
+describe('workerCommandsSource', () => {
+  const read = (files: Record<string, string>) => (p: string) => files[p.slice('/p/'.length)] ?? null;
+  const installed = () => {
+    const root = emptyProject();
+    runSetup(root, PLUGIN_ROOT, {harness: codexHarness});
+    return root;
+  };
+
+  test('a harness that loads the plugin for the session gives engine', () => {
+    expect(workerCommandsSource(claudeHarness, PLUGIN_ROOT, '/p', read({}))).toBe('engine');
+  });
+
+  test('installed command files equal to the engine\'s packaging give engine', () => {
+    expect(workerCommandsSource(codexHarness, PLUGIN_ROOT, installed())).toBe('engine');
+  });
+
+  test('a missing or different installed command file gives other', () => {
+    const root = installed();
+    expect(workerCommandsSource(codexHarness, PLUGIN_ROOT, emptyProject())).toBe('other');
+    writeFileSync(join(root, codexHarness.commandPath('auto-ticket') as string), 'an older copy');
+    expect(workerCommandsSource(codexHarness, PLUGIN_ROOT, root)).toBe('other');
   });
 });
 

@@ -658,6 +658,15 @@ describe('AutomationRunner single runner', () => {
     expect(picked).toEqual([expect.objectContaining({iteration: 1, ticket: 'the_ticket', reason: null})]);
   });
 
+  test('the picked event carries where the worker\'s commands come from', async () => {
+    const {root} = runnerWith(fail);
+    const roots: string[] = [];
+    await runnerIn(root, {workerCommands: (r: string) => (roots.push(r), 'other')}).runIteration(1);
+    const picked = allEventsOf(root).filter(e => e.event === 'picked');
+    expect(picked).toEqual([expect.objectContaining({iteration: 1, ticket: 'the_ticket', commands: 'other'})]);
+    expect(roots).toEqual([root]);
+  });
+
   test('clearing a halt records who cleared what', () => {
     const {runner, root} = runnerWith(fail);
     runner.halt('by hand');

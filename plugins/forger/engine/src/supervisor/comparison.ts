@@ -15,6 +15,8 @@ export interface ComparisonReport {
   cost_unknown_tickets: number;
   rework: {ci_extra_rounds: number; blocked_prs: number; rerun_after_conflict: number; redone_tickets: number};
   owner_interventions: {total: number | null; by_event: Record<string, number>; unknown_reason?: string};
+  /** The period's runs by where the worker's commands came from; absent in a report saved before it. `not_recorded` runs are not counted in `from_engine`. */
+  worker_commands?: {from_engine: number; not_recorded: number};
 }
 
 export interface Delta {
@@ -32,7 +34,15 @@ export interface ReportDiff {
   owner_interventions: {total: Delta; by_event: Record<string, Delta>};
 }
 
+/** Raised for a period that ran other commands than the engine's: its report would measure two versions. */
+export class MixedCommandsError extends Error {
+  constructor(readonly tickets: string[]) {
+    super(`no report: the worker's commands for ${[...new Set(tickets)].join(', ')} were not the engine's, so the period measures more than one version`);
+  }
+}
+
 export function buildComparisonReport(m: Measures): ComparisonReport {
+  if (m.worker_commands.other_tickets.length > 0) throw new MixedCommandsError(m.worker_commands.other_tickets);
   const unknown = m.tickets.filter(t => t.cost_usd === null).length;
   const spend = m.tickets.reduce((a, t) => a + (t.cost_usd ?? 0), 0);
   return {
@@ -50,6 +60,7 @@ export function buildComparisonReport(m: Measures): ComparisonReport {
       m.interventions_unknown === null
         ? {total: m.owner_interventions.total, by_event: {...m.owner_interventions.by_event}}
         : {total: null, by_event: {}, unknown_reason: m.interventions_unknown},
+    worker_commands: {from_engine: m.worker_commands.from_engine, not_recorded: m.worker_commands.not_recorded},
   };
 }
 
