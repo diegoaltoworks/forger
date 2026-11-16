@@ -228,7 +228,10 @@
       "ticket": "issue-480",
       "pid": null,
       "session_id": "4723db43-b162-4fd1-aecb-9e50f85ee9e2",
-      "snapshot": null,
+      "snapshot": {
+        "baseSha": "",
+        "reflogLength": 1
+      },
       "started_at": "2026-11-16T19:16:48.946Z",
       "plan": {
         "stages": [
