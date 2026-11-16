@@ -14,3 +14,4 @@
 {"event":"picked","at":"2026-11-16T19:16:58.112Z","iteration":238,"ticket":"issue-480","reason":null,"commands":"engine"}
 {"event":"worker_denied","at":"2026-11-16T19:17:38.908Z","iteration":238,"ticket":"issue-480","reason":"leave-worktree: cd /home/diego/work/forger/plugins/forger/engine/src 2>/dev/null; cd /home/diego/work/forger/.forger/worktrees/issue-480/plugins/forger/engine/src; sed -n 825,855p cli/main.test.ts; grep -n \"async function capture\\|function capture\" -A12 cli/main.test.ts | head -30; grep -rln \"'verify'\\|'merge'\" --include=*.test.ts . ; grep -n \"engine-changed\\|engineChanged\" loop/*.test.ts | head -3"}
 {"event":"worker_denied","at":"2026-11-16T19:22:57.204Z","iteration":238,"ticket":"issue-480","reason":"other-engine: verify from /home/diego/work/forger/.forger/worktrees/issue-480/plugins/forger"}
+{"event":"merged","at":"2026-11-16T19:27:10.378Z","iteration":238,"ticket":"issue-480","reason":null}
