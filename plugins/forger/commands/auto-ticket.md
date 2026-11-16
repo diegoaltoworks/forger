@@ -27,7 +27,7 @@ Some steps below are skill slots: the project may plug an installed skill into
 each. The pipeline says which slots run in which stage and what fills each:
 
 ```
-bun "${CLAUDE_PLUGIN_ROOT}/bin/work.ts" pipeline --json --stage <id> --issue <n>
+bun "${FORGER_PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT}}/bin/work.ts" pipeline --json --stage <id> --issue <n>
 ```
 
 Ask for the stage you are in: `build` (steps 4 and 5), `review` and `risk` (step 6), `pr` (step 8).
@@ -36,7 +36,7 @@ For a slot, read `invoke`. `skill`: invoke the skill named in `target`. `file`:
 read the file at `target` and follow it. `builtin`: do the step yourself as written
 here, as you also do when the tool fails. A slot with `on` runs only when that
 event happens. Start every step whose `invoke` is `skill` or `file` with the `preamble` of
-`bun "${CLAUDE_PLUGIN_ROOT}/bin/work.ts" skills --json`, verbatim, and never
+`bun "${FORGER_PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT}}/bin/work.ts" skills --json`, verbatim, and never
 invoke a skill listed in its `forbid`. Never name or choose a skill yourself.
 
 ## Read first (in order)
@@ -69,7 +69,7 @@ prompt says there is no workable ticket, signal `stop`.
 
 Build it or decline it. If the ticket is blocked on something only a human can
 supply, is too large for one iteration, or is unclear, run
-`bun "${CLAUDE_PLUGIN_ROOT}/bin/work.ts" decline --ticket <id> --reason blocked|too-large|unclear --detail "<what the owner must change>" --json`,
+`bun "${FORGER_PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT}}/bin/work.ts" decline --ticket <id> --reason blocked|too-large|unclear --detail "<what the owner must change>" --json`,
 then signal `stop` and say which and why. The command records the decline and
 takes the ticket out of the backlog; do not relabel the issue by hand.
 
@@ -83,7 +83,7 @@ takes the ticket out of the backlog; do not relabel the issue by hand.
 ### 4. Implement
 - All work happens in your worktree: the loop's checkout is read by path and never entered or written.
 - If the issue has a `Satisfies:` line, read the context of each ID it names with
-  `bun "${CLAUDE_PLUGIN_ROOT}/bin/work.ts" slice <ID...>` (exit 2: no spec provider installed; carry on).
+  `bun "${FORGER_PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT}}/bin/work.ts" slice <ID...>` (exit 2: no spec provider installed; carry on).
 - Follow existing patterns - read the files the ticket names and match the code
   around them. `files` and `reuse` are hints, not a contract; the code is.
 - **Respect every gotcha in `process.md`.** Those are the repo's hard
@@ -170,7 +170,7 @@ Documentation is part of Definition of Done, every iteration:
 ### 8. Commit + PR
 The PR body comes from the `pr_body` slot. Built-in: write it by
 `docs/03-tickets.md`. Whatever the slot wrote, save it to a file and run
-`bun "${CLAUDE_PLUGIN_ROOT}/bin/work.ts" pr-body --file <file> --issue <n> --section "<title>" --fix --json`
+`bun "${FORGER_PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT}}/bin/work.ts" pr-body --file <file> --issue <n> --section "<title>" --fix --json`
 (one `--section` per review section the ticket names); open the PR only when it
 reports `ok`.
 
@@ -192,8 +192,8 @@ git push -u origin feat/<ticket-id>     # FIRST - do not defer this
 gh pr create --title "feat: <summary>" --body "<what + how + gate results>
 
 Closes #<issue>" --base <base-branch>
-bun "${CLAUDE_PLUGIN_ROOT}/bin/work.ts" verify --pr <pr> --json
-bun "${CLAUDE_PLUGIN_ROOT}/bin/work.ts" merge --pr <pr> --json
+bun "${FORGER_PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT}}/bin/work.ts" verify --pr <pr> --json
+bun "${FORGER_PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT}}/bin/work.ts" merge --pr <pr> --json
 git checkout <base-branch> && git pull
 ```
 **Read the ticket's `## Merge` section first.** Missing, or `when green`, means

@@ -1,4 +1,6 @@
 import {describe, expect, test} from 'bun:test';
+import {readdirSync, readFileSync} from 'node:fs';
+import {join} from 'node:path';
 
 import type {AgentRunOptions} from '../ports';
 import {claudeHarness} from './claude';
@@ -6,6 +8,7 @@ import {codexHarness} from './codex';
 import {copilotHarness} from './copilot';
 import {hostSandbox} from './host-sandbox';
 import {agentFor, findHarness, HARNESSES} from './harnesses';
+import {packageAsSkill} from './skill-package';
 import {opencodeCommandName, opencodeHarness, stripClaudeFrontmatter} from './opencode';
 
 const noGit = () => ({stdout: '', stderr: '', exitCode: 1});
@@ -49,6 +52,29 @@ describe('packaging', () => {
     expect(opencodeHarness.packageCommand(source, '/plug')).toBe('---\ndescription: d\n---\n\nrun bun "/plug/bin/work.ts" and /plug\n');
   });
   test('text without frontmatter is unchanged', () => expect(stripClaudeFrontmatter('hello')).toBe('hello'));
+});
+
+describe('the engine root an engine call names', () => {
+  const commandsDir = join(import.meta.dir, '../../../commands');
+  const preferred = '${FORGER_PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT}}';
+  const call = `bun "${preferred}/bin/work.ts" status`;
+  test('every engine call in a command file prefers the engine\'s root', () => {
+    const files = readdirSync(commandsDir).filter((f) => f.endsWith('.md'));
+    expect(files.length).toBeGreaterThan(0);
+    const bad: string[] = [];
+    for (const f of files) {
+      readFileSync(join(commandsDir, f), 'utf8').split('\n').forEach((line, i) => {
+        if (/\$\{?CLAUDE_PLUGIN_ROOT\}?\/bin\/work\.ts/.test(line.replaceAll(preferred, ''))) bad.push(`${f}:${i + 1}`);
+      });
+    }
+    expect(bad).toEqual([]);
+  });
+  test('opencode packages an engine call that prefers the engine\'s root', () => {
+    expect(opencodeHarness.packageCommand(call, '/plug')).toBe('bun "${FORGER_PLUGIN_ROOT:-/plug}/bin/work.ts" status');
+  });
+  test('a skill harness packages an engine call that prefers the engine\'s root', () => {
+    expect(packageAsSkill(call, '/plug', 'forger-x')).toContain('bun "${FORGER_PLUGIN_ROOT:-/plug}/bin/work.ts" status');
+  });
 });
 
 describe('registry', () => {

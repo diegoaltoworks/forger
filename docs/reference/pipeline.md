@@ -60,7 +60,7 @@ An overlay key that names no stage, or any other key, is reported under
 Every slot leaves a result in a named shape, and `contract` checks it:
 
 ```bash
-bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts contract --slot review --file <path> [--issue N] [--ticket ID --attempt N] --json
+bun ${FORGER_PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT}}/bin/work.ts contract --slot review --file <path> [--issue N] [--ticket ID --attempt N] --json
 ```
 
 It prints `{ok, problems}` (plus `next` when not ok) and exits 1 unless the
