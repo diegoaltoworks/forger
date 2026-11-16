@@ -1,6 +1,7 @@
 import {describe, expect, test} from 'bun:test';
 
 import type {CommandRunner} from '../ports';
+import {githubCommand, githubTracker} from '../tracker';
 import {handedOver, handoverComment, nextMove, openLabel, repeatedCannotTell} from './handover';
 import {handOver, handoverCommands} from './handover-io';
 import type {Judgement} from './verdict';
@@ -73,9 +74,16 @@ describe('handing over', () => {
   });
 
   test('commands label, comment and quote safely', () => {
-    const cmds = handoverCommands(9, "it's");
-    expect(cmds[0]).toBe('gh issue edit 9 --add-label needs-human');
+    const cmds = handoverCommands(9, "it's").map(githubCommand);
+    expect(cmds[0]).toBe("gh issue edit 9 --add-label 'needs-human'");
     expect(cmds[1]).toBe(`gh issue comment 9 --body 'it'\\''s'`);
+  });
+
+  test('a hand-over is two writes: the needs-human label and the comment', () => {
+    expect(handoverCommands(9, 'why')).toEqual([
+      {kind: 'labels', ticket: 9, add: ['needs-human'], remove: []},
+      {kind: 'comment', ticket: 9, body: 'why'},
+    ]);
   });
 
   test('runs through the runner, labels, comments, leaves the queue', () => {
@@ -84,19 +92,19 @@ describe('handing over', () => {
       calls.push(cmd);
       return cmd.includes('--json labels') ? 'needs-human\nready-for-agent\n' : '';
     };
-    expect(handOver(run, h, texts, 'ready-for-agent')).toContain('#9');
-    expect(calls[0]).toContain('--add-label needs-human');
+    expect(handOver(githubTracker(run), h, texts, 'ready-for-agent')).toContain('#9');
+    expect(calls[0]).toContain("--add-label 'needs-human'");
     expect(calls[1]).toContain('gh issue comment 9');
     expect(calls[calls.length - 1]).toBe(`gh issue edit 9 --remove-label 'ready-for-agent'`);
   });
 
   test('throws when the label did not land', () => {
     const run: CommandRunner = () => '';
-    expect(() => handOver(run, h, texts, 'ready-for-agent')).toThrow(/not labelled/);
+    expect(() => handOver(githubTracker(run), h, texts, 'ready-for-agent')).toThrow(/not labelled/);
   });
 
   test('a non-issue ticket cannot be handed over', () => {
-    expect(() => handOver(() => '', {...h, ticket: 'local-1'}, texts, 'x')).toThrow(/not an issue/);
+    expect(() => handOver(githubTracker(() => ''), {...h, ticket: 'local-1'}, texts, 'x')).toThrow(/not an issue/);
   });
 });
 

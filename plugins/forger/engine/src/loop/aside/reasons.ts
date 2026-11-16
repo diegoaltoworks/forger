@@ -3,6 +3,7 @@
  * Pure over the recorded events.
  */
 
+import type {TrackerWrite} from '../../ports';
 import type {TerminalEvent} from '../events';
 import {issueNumber} from '../decline';
 import {NEEDS_HUMAN_LABEL} from '../handover-io';
@@ -23,9 +24,12 @@ export function reasonSummary(reason: string): string {
   return reason.split('\n').find(l => l.trim() !== '')?.trim() ?? reason;
 }
 
-/** The commands that return an answered ticket to the queue. */
-export function answerCommands(issue: number, intakeLabel: string): string[] {
-  return [`gh issue edit ${issue} --remove-label ${NEEDS_HUMAN_LABEL}`, `gh issue edit ${issue} --add-label '${intakeLabel.replace(/'/g, `'\\''`)}'`];
+/** The writes that return an answered ticket to the queue: one removes needs-human, the next adds the intake label. */
+export function answerCommands(issue: number, intakeLabel: string): TrackerWrite[] {
+  return [
+    {kind: 'labels', ticket: issue, add: [], remove: [NEEDS_HUMAN_LABEL]},
+    {kind: 'labels', ticket: issue, add: [intakeLabel], remove: []},
+  ];
 }
 
 /** The comment that tells the owner why a plain stop set the ticket aside. */

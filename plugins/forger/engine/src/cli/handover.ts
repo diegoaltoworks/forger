@@ -41,10 +41,11 @@ export const handover: Command = {
         const h = handedOver(records, max)[0];
         const texts: Record<string, string> = {};
         const issue = issueNumber(h.ticket);
-        if (config.tracker.kind === 'github' && issue !== null) {
-          for (const c of parseCriteria(ctx.run()(`gh issue view ${issue} --json body --jq .body`))) texts[c.id] = c.text;
+        const tracker = ctx.tracker();
+        if (tracker.queue === 'tracker' && issue !== null) {
+          for (const c of parseCriteria(tracker.text(issue))) texts[c.id] = c.text;
         }
-        handed = handOver(ctx.run(), h, texts, config.tracker.label);
+        handed = handOver(tracker, h, texts, config.tracker.label);
       } catch (e) {
         console.error(`handover: ${(e as Error).message}`);
         process.exitCode = 1;

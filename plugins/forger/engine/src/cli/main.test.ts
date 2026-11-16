@@ -1294,7 +1294,7 @@ describe('decline', () => {
     const run: CommandRunner = cmd => (calls.push(cmd), cmd.startsWith('gh issue view') ? 'needs-info' : '');
     const out = JSON.parse(await capture(['decline', '--ticket', 'issue-5', '--reason', 'unclear', '--detail', 'which API?', '--json'], run));
     expect(out.declined).toMatchObject({ticket: 'issue-5', reason: 'unclear', detail: 'which API?'});
-    expect(calls[0]).toContain('gh issue edit 5 --remove-label');
+    expect(calls[0]).toContain("gh issue edit 5 --add-label 'needs-info' --remove-label 'ready-for-agent'");
     expect(JSON.parse(readFileSync(join(root, '.forger', 'declined.json'), 'utf-8')).ticket).toBe('issue-5');
   });
 
@@ -1382,7 +1382,7 @@ describe('handover', () => {
     } finally {
       process.exitCode = 0;
     }
-    expect(calls.some(c => c.includes('--add-label needs-human'))).toBe(true);
+    expect(calls.some(c => c.includes("--add-label 'needs-human'"))).toBe(true);
     expect(calls.find(c => c.includes('issue comment'))).toContain('it works');
     const list = JSON.parse(await capture(['handover', '--list', '--json']));
     expect(list).toHaveLength(1);

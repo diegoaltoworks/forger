@@ -30,6 +30,7 @@ export function githubTracker(run: CommandRunner, capture: CapturingRunner = cap
     exists: n => call(githubRead.exists(n), {whole: true}).exitCode === 0,
     list: q => JSON.parse(call(githubRead.list(q))) as Array<{number: number; title: string}>,
     repoLabels: () => lines(call(githubRead.repoLabels())),
+    account: ((how?: WholeResult) => (how ? call(githubRead.account(), how) : call(githubRead.account()))) as Tracker['account'],
     apply: ((write: TrackerWrite, how?: WholeResult) => (how ? call(githubCommand(write), how) : call(githubCommand(write)))) as Tracker['apply'],
   };
 }

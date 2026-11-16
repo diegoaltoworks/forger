@@ -1,5 +1,6 @@
 import {describe, expect, test} from 'bun:test';
 
+import {githubCommand} from '../tracker';
 import {issueOfTicket, mergeMode, ownerReviewLabelCommands, ownerReviewRefusal, settleOwnerMerges} from './owner-review';
 import {decideOutcome, type RunFacts} from './outcome';
 import {backlogFromIssues, backlogReport} from '../backlog';
@@ -65,11 +66,16 @@ describe('the owner-review outcome', () => {
 
 describe('handing a PR to the owner', () => {
   test('labels the PR and the issue', () => {
-    expect(ownerReviewLabelCommands(9, issueOfTicket('issue-5'))).toEqual([
-      'gh pr edit 9 --add-label owner-review',
-      'gh issue edit 5 --add-label owner-review',
-    ]);
-    expect(ownerReviewLabelCommands(9, issueOfTicket('other'))).toHaveLength(1);
+    const marks = ownerReviewLabelCommands(9, issueOfTicket('issue-5'));
+    expect(marks.pullRequest).toBe('gh pr edit 9 --add-label owner-review');
+    expect(marks.issue && githubCommand(marks.issue)).toBe("gh issue edit 5 --add-label 'owner-review'");
+    expect(ownerReviewLabelCommands(9, issueOfTicket('other')).issue).toBeNull();
+  });
+  test('owner review labels the issue through the tracker and the pull request on the code host', () => {
+    expect(ownerReviewLabelCommands(9, 5)).toEqual({
+      pullRequest: 'gh pr edit 9 --add-label owner-review',
+      issue: {kind: 'labels', ticket: 5, add: ['owner-review'], remove: []},
+    });
   });
 });
 

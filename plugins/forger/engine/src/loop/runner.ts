@@ -11,7 +11,8 @@ import {join} from 'path';
 
 import {forgerPath, resolveModel, type WorkloopConfig} from '../config';
 import {describeBlocked, pick, schedule, startDecision, type Backlog, type FolderMap, type Schedulable} from '../backlog';
-import {capturing, type AgentRunner, type CapturingRunner, type CommandRunner, type ProbeRunner, type StateStore} from '../ports';
+import {capturing, type AgentRunner, type CapturingRunner, type CommandRunner, type ProbeRunner, type StateStore, type Tracker} from '../ports';
+import {openTracker} from '../tracker';
 import {type AutomationState, currentTicket, LoopStore} from './state';
 import type {TrackerHalt} from './halt-tracker';
 import {Logger, colors} from './logger';
@@ -121,6 +122,7 @@ export class AutomationRunner {
   private sleep: (ms: number) => Promise<void>;
   private iteration: IterationContext;
   private gitCapture: CapturingRunner;
+  private tracker: Tracker;
   private folderMap: FolderMap | undefined;
   private leaseSettings: LeaseSettings | undefined;
   private leaseLost = false;
@@ -146,6 +148,7 @@ export class AutomationRunner {
 
     this.gitRunner = deps.gitRunner;
     this.gitCapture = deps.gitCapture ?? capturing(deps.gitRunner);
+    this.tracker = openTracker(config, this.gitRunner, this.gitCapture);
     this.folderMap = deps.folderMap;
     this.leaseSettings = deps.lease;
     this.onSignal = deps.onSignal ?? ((signal, handler) => void process.on(signal, handler));
@@ -166,6 +169,7 @@ export class AutomationRunner {
       logger: this.logger,
       outputDir: this.outputDir,
       gitRunner: this.gitRunner,
+      tracker: this.tracker,
       agent: this.agent,
       uuid: this.uuid,
       refreshBacklog: () => this.refreshBacklog(),
@@ -215,10 +219,10 @@ export class AutomationRunner {
 
   /** Takes workable tickets whose criteria cannot be checked out of the queue before a pick. GitHub only: a local ticket has no text. */
   async refuseUncheckable(): Promise<void> {
-    if (this.config.tracker.kind !== 'github') return;
+    if (this.tracker.queue !== 'tracker') return;
     const tickets = this.backlog.candidates().map(c => ({id: c.id, body: this.backlog.body(c.id)}));
-    const target = {trackerKind: this.config.tracker.kind, intakeLabel: this.config.tracker.label, backlogFile: join(this.projectRoot, this.config.paths.backlog)};
-    const {refused, errors} = refuseUncheckable(this.gitRunner, target, tickets, criterionOptions(this.projectRoot, this.config));
+    const target = {intakeLabel: this.config.tracker.label, backlogFile: join(this.projectRoot, this.config.paths.backlog)};
+    const {refused, errors} = refuseUncheckable(this.tracker, target, tickets, criterionOptions(this.projectRoot, this.config));
     for (const r of refused) this.logger.log('WARN', `Refused ${r.ticket}: ${r.problems.join('; ')}`);
     for (const e of errors) this.logger.log('ERROR', `Could not refuse ${e}`);
     if (refused.length > 0) await this.refreshBacklog();

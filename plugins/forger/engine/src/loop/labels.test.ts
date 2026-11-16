@@ -1,8 +1,9 @@
 import {describe, expect, test} from 'bun:test';
 
-import {declineRelabelProblems, ensureLabels, loopLabels, missingLabels} from './labels';
+import {declineRelabelProblems, ensureLabels, listIssueLabels, listRepoLabels, loopLabels, missingLabels} from './labels';
 import {leaveQueue} from './decline-io';
 import type {DeclineRecord} from './decline';
+import {githubTracker} from '../tracker';
 
 /** A fake GitHub: repository labels, one issue's labels, and an `add-label` that refuses unknown labels like gh does. */
 export function fakeGithub(repoLabels: string[], issueLabels: string[]) {
@@ -18,11 +19,11 @@ export function fakeGithub(repoLabels: string[], issueLabels: string[]) {
       return '';
     }
     if (cmd.startsWith('gh issue view')) return [...issue].join('\n');
-    const edit = /^gh issue edit \d+ --remove-label '([^']+)' --add-label (\S+)/.exec(cmd);
+    const edit = /^gh issue edit \d+ --add-label '([^']+)' --remove-label '([^']+)'/.exec(cmd);
     if (edit) {
-      if (!repo.has(edit[2])) throw new Error(`'${edit[2]}' not found`);
-      issue.delete(edit[1]);
-      issue.add(edit[2]);
+      if (!repo.has(edit[1])) throw new Error(`'${edit[1]}' not found`);
+      issue.delete(edit[2]);
+      issue.add(edit[1]);
     }
     return '';
   };
@@ -30,7 +31,7 @@ export function fakeGithub(repoLabels: string[], issueLabels: string[]) {
 }
 
 const record: DeclineRecord = {ticket: 'issue-7', reason: 'blocked', detail: 'needs a key', at: 't'};
-const target = {trackerKind: 'github' as const, intakeLabel: 'ready-for-agent', backlogFile: ''};
+const target = {intakeLabel: 'ready-for-agent', backlogFile: ''};
 
 describe('loopLabels', () => {
   test('declares the intake label, the status labels, priorities and efforts once', () => {
@@ -46,10 +47,10 @@ describe('loopLabels', () => {
 describe('ensureLabels', () => {
   test('creates the missing labels, then creates nothing on a second run', () => {
     const gh = fakeGithub(['go', 'P0'], []);
-    const first = ensureLabels(gh.run, 'go');
+    const first = ensureLabels(githubTracker(gh.run), 'go');
     expect(first).toContain('needs-info');
     expect(first).not.toContain('go');
-    expect(ensureLabels(gh.run, 'go')).toEqual([]);
+    expect(ensureLabels(githubTracker(gh.run), 'go')).toEqual([]);
   });
 });
 
@@ -63,17 +64,31 @@ describe('declineRelabelProblems', () => {
   });
 });
 
+describe('the loop labels through the tracker', () => {
+  test("the loop's labels are read and created through the tracker", () => {
+    const gh = fakeGithub(['go'], ['go', 'needs-human']);
+    const tracker = githubTracker(gh.run);
+    expect(listRepoLabels(tracker)).toEqual(['go']);
+    expect(listIssueLabels(tracker, 4)).toEqual(['go', 'needs-human']);
+    expect(ensureLabels(tracker, 'go')).toContain('needs-info');
+    expect(gh.calls).toContain('gh label list --limit 1000 --json name --jq ".[].name"');
+    expect(gh.calls).toContain('gh issue view 4 --json labels --jq ".labels[].name"');
+    expect(gh.calls.some(c => c.startsWith("gh label create 'needs-info' --color fbca04"))).toBe(true);
+    expect([...gh.repo]).toContain('needs-info');
+  });
+});
+
 describe('leaveQueue verifies its relabel', () => {
   test('fails and names the label when adding it fails', () => {
     const gh = fakeGithub(['ready-for-agent'], ['ready-for-agent']);
-    expect(() => leaveQueue(gh.run, target, record)).toThrow();
+    expect(() => leaveQueue(githubTracker(gh.run), target, record)).toThrow();
   });
   test('fails and names the label when the read-back disagrees', () => {
     const run = (cmd: string): string => (cmd.startsWith('gh issue view') ? 'ready-for-agent' : '');
-    expect(() => leaveQueue(run, target, record)).toThrow('needs-info');
+    expect(() => leaveQueue(githubTracker(run), target, record)).toThrow('needs-info');
   });
   test('succeeds once the label exists', () => {
     const gh = fakeGithub(['ready-for-agent', 'needs-info'], ['ready-for-agent']);
-    expect(leaveQueue(gh.run, target, record)).toBe('issue #7 relabelled needs-info');
+    expect(leaveQueue(githubTracker(gh.run), target, record)).toBe('issue #7 relabelled needs-info');
   });
 });
