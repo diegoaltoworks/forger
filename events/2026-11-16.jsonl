@@ -11,3 +11,4 @@
 {"event":"worker_denied","at":"2026-11-16T08:07:50.198Z","iteration":237,"ticket":"issue-475","reason":"leave-worktree: cd /home/diego/work/forger/.forger/tmp && python3 -c \"\nimport json\nfor l in open('verify-479-kVPi5E.commands.jsonl'):\n  d=json.loads(l); print({k:v for k,v in d.items() if k not in ('stdout','stderr','output')})\""}
 {"event":"merged","at":"2026-11-16T08:08:48.871Z","iteration":237,"ticket":"issue-475","reason":null}
 {"event":"completed","at":"2026-11-16T08:09:10.302Z","iteration":237,"ticket":null,"reason":null}
+{"event":"picked","at":"2026-11-16T19:16:58.112Z","iteration":238,"ticket":"issue-480","reason":null,"commands":"engine"}
