@@ -4,7 +4,7 @@
  * ran. Pure parsing; the file I/O sits in the CLI command and in `verify`.
  */
 
-import {TEST_LINE, type CommandRun} from './evidence-check';
+import {readResultLine, type CommandRun} from './evidence-check';
 
 export function logLine(run: CommandRun): string {
   return JSON.stringify(run) + '\n';
@@ -17,7 +17,7 @@ export function logLine(run: CommandRun): string {
  */
 export function keepOutput(output: string, max: number): {output: string; truncated: boolean} {
   if (output.length <= max) return {output, truncated: false};
-  const results = output.slice(0, -max).split(/\r?\n/).filter(l => TEST_LINE.test(l));
+  const results = output.slice(0, -max).split(/\r?\n/).filter(l => readResultLine(l) !== null);
   return {output: [...results, ''].join('\n') + output.slice(-max), truncated: true};
 }
 

@@ -279,7 +279,7 @@ code and output to a log the engine owns. It clears the variables under which a
 test tool prints failures only, so a passed test shows in the log. Output past the log's limit is cut, but every test result line is kept and the record says `truncated`; a demoted test citation says so when a record was cut. Every
 citation is then checked against what the engine recorded in the copy: a `file`
 exists and the line is within it, a `test` appears in a recorded run and passed
-(cited as the run reported it, or as `describe > test` with the enclosing
+(the run's result lines are read in four forms: bun's `(pass) name`, TAP's `ok N - name`, a vitest line per test and a Playwright `list` line, colour codes removed; a vitest file line names no test, and a skipped test never counts; cited as the run reported it, or as `describe > test` with the enclosing
 describes in order and the last part the test's own name), a `command` is in the
 log with exit 0 (matched on the folder it ran in and its shell words, so a leading
 `cd <folder> &&`, a `sh -c` or `bash -c` wrapper and the style of quoting do not
