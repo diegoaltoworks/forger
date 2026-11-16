@@ -202,7 +202,13 @@ file as `worker_denied`, with the ticket, the rule and the refused command. A
 project adds rules of its own in `deny` (an id, a regular expression over each
 simple command, and the message). The defaults ship on: a policy may drop one,
 but `check hooks` fails until a waiver on `base.worker-hooks` records who
-approved it, and it fails too when the harness's settings do not run the hook.
+approved it, and it fails too when the harness's settings do not run the hook, or run it through a line that lets a call go
+through when the hook cannot run (`hook-fails-open`, fixed by `setup --upgrade`).
+
+A hook that cannot run is not a hook that allows. The line `setup` installs passes the hook's exit status 0 and 2 through, and
+for any other status (a wrong engine path, no `bun`, a kill) refuses the call when the session is a worker, and says the
+session is not guarded and lets the call through otherwise. A payload the hook cannot read as JSON is refused for a worker
+too. A session the engine did not start is guarded only when its environment sets `FORGER_PLUGIN_ROOT` to the engine.
 
 `verify` and `merge` look at the engine they were loaded from before anything else. When its source is in a git
 work tree and has an uncommitted change (a changed tracked file, or a new file git does not ignore), they look again every few seconds while it has

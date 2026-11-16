@@ -14,6 +14,8 @@ an engine is alive, it refuses state-changing git in the loop's checkout.
   wrappers (`env`, `sudo`, `bash -c`, `eval`) and redirects resolved. Pure.
 - `policy.ts` - `.forger/hooks.json`: the default rules, a project's own deny
   rules, and the defaults a policy drops. Pure.
+- `line.ts` - the line a harness runs for the hook, which refuses a worker's call when the
+  hook cannot run. Pure.
 - `decide.ts` - the worker's and the supervisor's decision over a tool call.
   Pure.
 

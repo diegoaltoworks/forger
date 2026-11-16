@@ -15,6 +15,7 @@ function read(path: string): string | null {
 /** A harness with no hooks forger can install has no settings to check. */
 export function runHooksCheck(projectRoot: string, harness?: Harness): Finding[] {
   const hooks = harness?.hooks ?? null;
-  const settings = hooks ? {path: hooks.path, installed: hooks.installed(read(join(projectRoot, hooks.path)))} : null;
+  const text = hooks ? read(join(projectRoot, hooks.path)) : null;
+  const settings = hooks ? {path: hooks.path, installed: hooks.installed(text), failsClosed: hooks.failsClosed(text)} : null;
   return hookFindings(read(join(projectRoot, HOOKS_POLICY_PATH)), settings);
 }

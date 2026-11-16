@@ -49,3 +49,29 @@ describe('runHooksCheck', () => {
     }
   });
 });
+
+describe('a hook line that fails open', () => {
+  const open = {path: '.claude/settings.json', installed: true, failsClosed: false};
+
+  test('check hooks reports a hook line that fails open, and a waiver covers it', () => {
+    const findings = hookFindings(renderHookPolicy(), open);
+    expect(findings.map(f => f.rule)).toEqual(['hook-fails-open']);
+    expect(findings[0].detail).toContain('setup --upgrade');
+    const waiver = {opinion: WORKER_HOOKS_OPINION, path: '.claude/settings.json', reason: 'this project guards another way', approved_by: 'the owner'};
+    expect(applyWaivers(findings, [waiver]).violations).toEqual([]);
+    expect(hookFindings(renderHookPolicy(), {...open, failsClosed: true})).toEqual([]);
+  });
+
+  test('runHooksCheck reads a project\'s own open line from its settings', () => {
+    const root = mkdtempSync(join(tmpdir(), 'forger-hooks-'));
+    try {
+      mkdirSync(join(root, '.forger'));
+      mkdirSync(join(root, '.claude'));
+      writeFileSync(join(root, '.forger', 'hooks.json'), renderHookPolicy());
+      writeFileSync(join(root, '.claude', 'settings.json'), JSON.stringify({hooks: {PreToolUse: [{hooks: [{type: 'command', command: 'bun x/work.ts hook'}]}]}}));
+      expect(runHooksCheck(root, claudeHarness).map(f => f.rule)).toEqual(['hook-fails-open']);
+    } finally {
+      rmSync(root, {recursive: true, force: true});
+    }
+  });
+});

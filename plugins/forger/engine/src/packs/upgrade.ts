@@ -10,9 +10,9 @@ import {dirname, join} from 'path';
 
 import {DEFAULT_PACKS, LOCK_PATH, loadPacks, parseLock, renderLock, sha256, type Lock, type LockedFile, type LockedPack} from './packs';
 import {forgerPath, loadConfig} from '../config';
-import {relocatableGates} from './setup';
+import {installHook, relocatableGates} from './setup';
 import {finishStructure, formatStructureSetup, type StructureSetup} from './structure-defaults';
-import type {CommandRunner} from '../ports';
+import type {CommandRunner, Harness} from '../ports';
 import {newerFlavour, parseFlavourRef, shippedFlavour} from '../pipeline';
 
 export type UpgradeAction =
@@ -66,6 +66,8 @@ export interface UpgradeResult {
   /** Default packs the lock did not hold and this run installed. */
   added: string[];
   structure?: StructureSetup;
+  /** Set when the harness's settings file existed and its hook command was brought to the line that fails closed. */
+  hook?: {path: string; action: 'written' | 'kept'};
   /** Files the owner has to decide about. */
   review: string[];
 }
@@ -106,7 +108,7 @@ function relocateGates(projectRoot: string): boolean {
   return true;
 }
 
-export function runUpgrade(projectRoot: string, pluginRoot: string, run?: CommandRunner): UpgradeResult {
+export function runUpgrade(projectRoot: string, pluginRoot: string, run?: CommandRunner, harness?: Harness): UpgradeResult {
   const lockPath = forgerPath(projectRoot, LOCK_PATH);
   if (!existsSync(lockPath)) throw new Error(`${LOCK_PATH} not found: run setup before upgrading`);
   const lock = parseLock(readFileSync(lockPath, 'utf-8'));
@@ -164,14 +166,17 @@ export function runUpgrade(projectRoot: string, pluginRoot: string, run?: Comman
     ? finishStructure(projectRoot, files.some(f => f.path === '.forger/structure.json' && f.action === 'install'), run)
     : undefined;
 
+  const hook = harness?.hooks && existsSync(join(projectRoot, harness.hooks.path)) ? installHook(projectRoot, harness)[0] : undefined;
+
   const review = files.filter(f => f.action === 'conflict' || f.action === 'removed' || f.action === 'deleted').map(f => f.path);
-  return {files, review, added: missing, ...(structure ? {structure} : {}), ...(flavour ? {flavour} : {}), ...(relocated ? {gates: 'rewritten' as const} : {})};
+  return {files, review, added: missing, ...(structure ? {structure} : {}), ...(flavour ? {flavour} : {}), ...(relocated ? {gates: 'rewritten' as const} : {}), ...(hook ? {hook} : {})};
 }
 
 export function formatUpgrade(result: UpgradeResult): string {
   const lines = result.files.filter(f => f.action !== 'unchanged').map(f => `${f.action.padEnd(14)} ${f.path}${f.upstreamFile ? ` (pack version in ${f.upstreamFile})` : ''}`);
   lines.unshift(...result.added.map(id => `added          pack ${id}`));
   if (result.structure) lines.push(...formatStructureSetup(result.structure));
+  if (result.hook?.action === 'written') lines.push(`written        ${result.hook.path} (the hook line now refuses a worker's call when the hook cannot run; commit it to the base branch)`);
   if (result.gates) lines.push('rewritten      gates in the config now name the plugin by variable');
   if (result.flavour) lines.push(`flavour        ${result.flavour.name}@${result.flavour.available} is available (config pins @${result.flavour.pinned}); change "flavour" in the config to take it`);
   return lines.length === 0 ? 'already up to date' : lines.join('\n');
@@ -189,7 +194,7 @@ const WRITING_ACTIONS: UpgradeAction[] = ['install', 'take-upstream', 'conflict'
 
 /** An upgrade that wrote no file and added no pack cannot have changed what a check sees. */
 export function upgradeChangedFiles(result: UpgradeResult): boolean {
-  return result.added.length > 0 || result.files.some(f => WRITING_ACTIONS.includes(f.action));
+  return result.added.length > 0 || result.hook?.action === 'written' || result.files.some(f => WRITING_ACTIONS.includes(f.action));
 }
 
 /** Only a failed check counts; a waived or unmeasured one is not a new failure. */

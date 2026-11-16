@@ -4,6 +4,7 @@ import {tmpdir} from 'os';
 import {join} from 'path';
 
 import {findHarness, guardRefusal, HARNESSES} from './harnesses';
+import {HOOK_COMMAND_LINE} from '../packs';
 import {opencodePlugin} from './opencode-hooks';
 
 const command = 'bun /p/bin/work.ts hook';
@@ -50,5 +51,56 @@ describe('the guard', () => {
       expect(row).toContain(h.hooks!.path);
       expect(row).toMatch(/https:\/\/\S+/);
     }
+  });
+});
+
+describe('the guard when the hook cannot run', () => {
+  /** Loads a plugin whose command is `shell`, in a process environment that holds exactly `role`. */
+  async function guardFor(shell: string, role: string | undefined) {
+    const dir = mkdtempSync(join(tmpdir(), 'forger-guard-'));
+    const plugin = join(dir, `guard-${Math.random().toString(36).slice(2)}.mjs`);
+    writeFileSync(plugin, opencodePlugin(shell));
+    const before = process.env.FORGER_ROLE;
+    if (role === undefined) delete process.env.FORGER_ROLE;
+    else process.env.FORGER_ROLE = role;
+    const guard = await (await import(plugin)).ForgerGuard({directory: dir});
+    const restore = () => (before === undefined ? delete process.env.FORGER_ROLE : (process.env.FORGER_ROLE = before));
+    return {call: () => guard['tool.execute.before']({tool: 'bash'}, {args: {command: 'ls'}}) as Promise<void>, restore};
+  }
+
+  test('the opencode plugin throws for a worker when the hook cannot run', async () => {
+    for (const shell of ['exit 7', `sh -c 'kill -9 $$'`, 'no-such-command-forger-482']) {
+      const {call, restore} = await guardFor(shell, 'worker');
+      try {
+        await expect(call()).rejects.toThrow('forger hook could not run');
+      } finally {
+        restore();
+      }
+    }
+  });
+
+  test('the opencode plugin warns once outside a worker and lets the call through', async () => {
+    const {call, restore} = await guardFor('exit 7', undefined);
+    const warnings: string[] = [];
+    const original = console.warn;
+    console.warn = (...a: unknown[]) => void warnings.push(a.join(' '));
+    try {
+      await call();
+      await call();
+    } finally {
+      console.warn = original;
+      restore();
+    }
+    expect(warnings).toHaveLength(1);
+    expect(warnings[0]).toContain('this session is not guarded');
+  });
+
+  test('the hook every harness installs fails closed', () => {
+    for (const h of HARNESSES) {
+      const hooks = h.hooks!;
+      expect(hooks.failsClosed(hooks.install(null, HOOK_COMMAND_LINE))).toBe(true);
+      expect(hooks.failsClosed(null)).toBe(false);
+    }
+    expect(findHarness('claude').hooks!.failsClosed(findHarness('claude').hooks!.install(null, 'bun /p/bin/work.ts hook'))).toBe(true);
   });
 });

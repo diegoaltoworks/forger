@@ -119,6 +119,14 @@ without lease, no edit of the engine's state, and the read-only rule for the loo
 | `codex` | `PreToolUse` hook in `.codex/hooks.json`; trust the project and review the hook with `/hooks` | not yet |
 | `copilot` | `preToolUse` hook in `.github/hooks/forger.json` | not yet |
 
+A hook that cannot run (a wrong engine path, no `bun`, a killed process) must not leave the guard inert. The line `setup`
+installs runs `work.ts hook` and decides on its exit status: 0 and 2 pass through as they are, and any other status refuses the
+call when `FORGER_ROLE` is `worker` (the engine sets it for every worker) and otherwise prints that the session is not guarded
+and lets the call through. The OpenCode plugin decides the same way in its own code, for a command that could not be started or
+was killed, and warns once per plugin life outside a worker. A session the engine did not start is guarded only when its
+environment sets `FORGER_PLUGIN_ROOT` to the engine. `check hooks` reports a settings file whose hook line does not fail
+closed as `hook-fails-open`; a waiver on `base.worker-hooks` covers it.
+
 A harness with no way to refuse a call is unguarded. `run` refuses to start with it unless the config sets
 `allow_unguarded: true`. No shipped harness is unguarded.
 

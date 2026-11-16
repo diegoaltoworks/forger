@@ -3,8 +3,10 @@ import {mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync, existsSync}
 import {tmpdir} from 'os';
 import {join} from 'path';
 
+import {claudeHarness} from '../adapters';
+import {EARLIER_HOOK_LINE} from '../hooks';
 import {LOCK_PATH, sha256} from './packs';
-import {classify, runUpgrade, type Hashes} from './upgrade';
+import {classify, runUpgrade, upgradeChangedFiles, type Hashes} from './upgrade';
 
 describe('classify', () => {
   const table: Array<[string, Hashes, string]> = [
@@ -141,5 +143,22 @@ describe('the base pack hooks policy', () => {
     const result = runUpgrade(project, join(import.meta.dir, '../../..'));
     expect(result.files).toContainEqual(expect.objectContaining({path: '.forger/hooks.json', action: 'take-upstream'}));
     expect(JSON.parse(readFileSync(join(project, '.forger/hooks.json'), 'utf-8')).rules).toContain('leave-worktree');
+  });
+});
+
+describe('setup --upgrade and the earlier hook line', () => {
+  test('replaces the earlier hook line in an existing settings file and leaves an absent one alone', () => {
+    const project = tmp();
+    mkdirSync(join(project, '.forger'), {recursive: true});
+    writeFileSync(join(project, LOCK_PATH), JSON.stringify({packs: []}));
+    const upgraded = plugin('1.0.0', {});
+    expect(runUpgrade(project, upgraded, undefined, claudeHarness).hook).toBeUndefined();
+    mkdirSync(join(project, '.claude'));
+    writeFileSync(join(project, '.claude/settings.json'), JSON.stringify({hooks: {PreToolUse: [{matcher: 'Bash', hooks: [{type: 'command', command: EARLIER_HOOK_LINE}]}]}}));
+    const result = runUpgrade(project, upgraded, undefined, claudeHarness);
+    expect(result.hook).toEqual({path: '.claude/settings.json', action: 'written'});
+    expect(upgradeChangedFiles(result)).toBe(true);
+    expect(claudeHarness.hooks!.failsClosed(readFileSync(join(project, '.claude/settings.json'), 'utf-8'))).toBe(true);
+    expect(runUpgrade(project, upgraded, undefined, claudeHarness).hook?.action).toBe('kept');
   });
 });

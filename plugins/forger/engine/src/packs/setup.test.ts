@@ -4,8 +4,9 @@ import {tmpdir} from 'os';
 import {join, resolve} from 'path';
 
 import {claudeHarness, codexHarness, copilotHarness, opencodeHarness} from '../adapters';
+import {EARLIER_HOOK_LINE} from '../hooks';
 import {sha256} from './packs';
-import {findBaseBranch, formatSetup, gitignoreLines, mergeGitignore, relocatableGates, renderConfig, runSetup, trackedRuntimeFiles, formatTrackedRuntime, withCheck, workerCommandsSource} from './setup';
+import {findBaseBranch, formatSetup, gitignoreLines, mergeGitignore, relocatableGates, renderConfig, runSetup, HOOK_COMMAND_LINE, trackedRuntimeFiles, formatTrackedRuntime, withCheck, workerCommandsSource} from './setup';
 
 const PLUGIN_ROOT = resolve(import.meta.dir, '../../..');
 const dirs: string[] = [];
@@ -332,5 +333,49 @@ describe('the base branch setup records', () => {
     const root = emptyProject();
     const out = formatSetup(runSetup(root, PLUGIN_ROOT, {run: git({[HEAD]: 'work'})}));
     expect(out).toContain('base    work (current)');
+  });
+});
+
+describe('setup and the earlier hook line', () => {
+  const FILES: Record<string, string> = {claude: '.claude/settings.json', codex: '.codex/hooks.json', copilot: '.github/hooks/forger.json', opencode: '.opencode/plugins/forger-guard.js'};
+  const harnesses = {claude: claudeHarness, codex: codexHarness, copilot: copilotHarness, opencode: opencodeHarness};
+
+  function earlier(id: string): string {
+    const hooks = harnesses[id as keyof typeof harnesses].hooks!;
+    if (id === 'copilot') return JSON.stringify({version: 1, hooks: {preToolUse: [{type: 'command', bash: EARLIER_HOOK_LINE, timeoutSec: 30}]}}, null, 2) + '\n';
+    if (id === 'opencode') return hooks.install(null, EARLIER_HOOK_LINE).replace(/\n    if \(run\.status === 0\)[\s\S]*?\n  \},/, '\n  },').replace('let warned = false;\n', '');
+    return JSON.stringify({keep: 1, hooks: {PreToolUse: [{matcher: 'Bash', hooks: [{type: 'command', command: EARLIER_HOOK_LINE}]}]}}, null, 2) + '\n';
+  }
+
+  function setup(id: string, text: string): {root: string; entry: string | undefined} {
+    const root = emptyProject();
+    mkdirSync(join(root, FILES[id].split('/').slice(0, -1).join('/')), {recursive: true});
+    writeFileSync(join(root, FILES[id]), text);
+    const result = runSetup(root, PLUGIN_ROOT, {harness: harnesses[id as keyof typeof harnesses]});
+    return {root, entry: result.files.find(f => f.path === FILES[id])?.action};
+  }
+
+  test('setup replaces the earlier hook line and keeps a project\'s own line', () => {
+    for (const id of Object.keys(FILES)) {
+      const {root, entry} = setup(id, earlier(id));
+      const text = readFileSync(join(root, FILES[id]), 'utf-8');
+      expect(entry).toBe('written');
+      expect(text).toContain('forger hook could not run');
+      expect(harnesses[id as keyof typeof harnesses].hooks!.failsClosed(text)).toBe(true);
+      if (id === 'claude' || id === 'codex') expect(JSON.parse(text).keep).toBe(1);
+      const again = runSetup(root, PLUGIN_ROOT, {harness: harnesses[id as keyof typeof harnesses]});
+      expect(again.files.find(f => f.path === FILES[id])?.action).toBe('kept');
+    }
+    const own = JSON.stringify({hooks: {PreToolUse: [{matcher: 'Bash', hooks: [{type: 'command', command: 'bun "$CLAUDE_PROJECT_DIR"/x/work.ts hook'}]}]}}, null, 2) + '\n';
+    const kept = setup('claude', own);
+    expect(kept.entry).toBe('kept');
+    expect(readFileSync(join(kept.root, FILES.claude), 'utf-8')).toBe(own);
+    expect(claudeHarness.hooks!.failsClosed(own)).toBe(false);
+  });
+
+  test('a fresh install writes the line that fails closed', () => {
+    const root = emptyProject();
+    runSetup(root, PLUGIN_ROOT, {harness: claudeHarness});
+    expect(JSON.parse(readFileSync(join(root, FILES.claude), 'utf-8')).hooks.PreToolUse[0].hooks[0].command).toBe(HOOK_COMMAND_LINE);
   });
 });

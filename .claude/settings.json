@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bun \"$CLAUDE_PROJECT_DIR\"/plugins/forger/bin/work.ts hook"
+            "command": "bun \"$CLAUDE_PROJECT_DIR\"/plugins/forger/bin/work.ts hook; forger_status=$?; case $forger_status in 0|2) exit $forger_status;; esac; if [ \"$FORGER_ROLE\" = worker ]; then echo \"forger hook could not run (status $forger_status); this call is refused\" >&2; exit 2; fi; echo \"forger hook could not run (status $forger_status); this session is not guarded\" >&2; exit $forger_status"
           }
         ]
       }
