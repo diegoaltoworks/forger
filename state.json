@@ -224,7 +224,10 @@
       "ticket": "issue-472",
       "pid": null,
       "session_id": "cc1ce47d-2bc6-4e0d-b9e3-e510ec07321d",
-      "snapshot": null,
+      "snapshot": {
+        "baseSha": "",
+        "reflogLength": 1
+      },
       "started_at": "2026-11-16T07:25:45.970Z",
       "plan": {
         "stages": [
