@@ -238,6 +238,28 @@ describe('runSetup layout and harness', () => {
   }
 });
 
+describe('the update command', () => {
+  test('setup writes the update command where a harness reads its commands', () => {
+    for (const harness of [opencodeHarness, codexHarness, copilotHarness]) {
+      const root = emptyProject();
+      const rel = harness.commandPath('update');
+      expect(rel).not.toBeNull();
+      const result = runSetup(root, PLUGIN_ROOT, {harness});
+      expect(result.files.find(f => f.path === rel)?.action).toBe('written');
+      expect(existsSync(join(root, rel as string))).toBe(true);
+    }
+  });
+
+  test('the update command reads whether an engine is alive before it upgrades', () => {
+    const lines = readFileSync(join(PLUGIN_ROOT, 'commands/update.md'), 'utf-8').split('\n');
+    const orient = lines.findIndex(l => l.includes('orient --json'));
+    const upgrade = lines.findIndex(l => l.includes('setup --upgrade'));
+    expect(orient).toBeGreaterThanOrEqual(0);
+    expect(upgrade).toBeGreaterThan(orient);
+    expect(lines.some(l => l.includes('attach'))).toBe(true);
+  });
+});
+
 describe('setup --harness', () => {
   const START = ['setup', 'plan', 'work'];
   for (const harness of [claudeHarness, opencodeHarness, codexHarness, copilotHarness]) {
