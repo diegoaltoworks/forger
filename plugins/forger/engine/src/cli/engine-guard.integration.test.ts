@@ -32,7 +32,7 @@ function setup(wait = 0): {root: string; engine: string} {
   return {root, engine};
 }
 
-async function call(argv: string[], engine: string, sleep?: (ms: number) => Promise<void>): Promise<{calls: string[]; out: string}> {
+async function call(argv: string[], engine: string, sleep?: (ms: number) => Promise<void>, env: Record<string, string | undefined> = {}): Promise<{calls: string[]; out: string}> {
   const calls: string[] = [];
   const run: CommandRunner = cmd => {
     if (cmd.startsWith('git -C ')) return sh(cmd);
@@ -43,7 +43,7 @@ async function call(argv: string[], engine: string, sleep?: (ms: number) => Prom
   const log = spyOn(console, 'log').mockImplementation((...a: unknown[]) => void lines.push(a.join(' ')));
   const err = spyOn(console, 'error').mockImplementation((...a: unknown[]) => void lines.push(a.join(' ')));
   try {
-    await main(argv, {run, pluginRoot: engine, ...(sleep ? {sleep} : {})});
+    await main(argv, {run, pluginRoot: engine, env, ...(sleep ? {sleep} : {})});
   } finally {
     log.mockRestore();
     err.mockRestore();
@@ -76,13 +76,7 @@ describe('verify and merge from a changed engine', () => {
   test('the refusal is recorded as an engine_changed event that names the paths', async () => {
     const {root, engine} = setup();
     writeFileSync(join(engine, 'a.ts'), 'draft\n');
-    const saved = {...process.env};
-    Object.assign(process.env, workerEnv('issue-7', 3));
-    try {
-      await call(['merge', '--pr', '9'], engine);
-    } finally {
-      process.env = saved;
-    }
+    await call(['merge', '--pr', '9'], engine, undefined, {...workerEnv('issue-7', 3), FORGER_PLUGIN_ROOT: engine});
     expect(events(root)).toMatchObject([{event: 'engine_changed', ticket: 'issue-7', iteration: 3, reason: 'merge: engine/a.ts'}]);
   });
 
@@ -126,5 +120,49 @@ describe('verify and merge from a changed engine', () => {
     expect(out).toContain('engine/a.ts');
     expect(calls).toEqual([]);
     expect(events(root)).toMatchObject([{event: 'engine_changed', reason: 'verify: engine/a.ts'}]);
+  });
+});
+
+describe('verify and merge from another engine', () => {
+  const started = '/nonexistent/engine';
+  const asWorker = (extra: Record<string, string> = {}) => ({...workerEnv('issue-7', 3, started), ...extra});
+
+  test('verify from another engine records no verdict and prints the command to run', async () => {
+    const {root, engine} = setup();
+    const {calls, out} = await call(['verify', '--pr', '9', '--json'], engine, undefined, asWorker());
+    expect(process.exitCode).toBe(1);
+    expect(calls).toEqual([]);
+    expect(existsSync(join(root, '.forger', 'verdicts'))).toBe(false);
+    expect(JSON.parse(out)).toMatchObject({refused: 'other_engine', engine, started_by: started, run: `bun '${started}/bin/work.ts' verify --pr 9 --json`});
+  });
+
+  test('merge from another engine calls no tracker command and exits 1', async () => {
+    const {engine} = setup();
+    const {calls, out} = await call(['merge', '--pr', '9'], engine, undefined, asWorker());
+    expect(process.exitCode).toBe(1);
+    expect(calls).toEqual([]);
+    expect(out).toContain(`bun '${started}/bin/work.ts' merge --pr 9`);
+  });
+
+  test('the refusal from another engine is recorded as worker_denied under the rule other-engine', async () => {
+    const {root, engine} = setup();
+    await call(['merge', '--pr', '9'], engine, undefined, asWorker());
+    expect(events(root)).toMatchObject([{event: 'worker_denied', ticket: 'issue-7', iteration: 3, reason: `other-engine: merge from ${engine}`}]);
+  });
+
+  test('another engine is refused before the look for uncommitted changes and records no engine_changed', async () => {
+    const {root, engine} = setup(60);
+    writeFileSync(join(engine, 'a.ts'), 'draft\n');
+    const pauses: number[] = [];
+    await call(['verify', '--pr', '9'], engine, async ms => void pauses.push(ms), asWorker());
+    expect(pauses).toEqual([]);
+    expect(events(root).map(e => e.event)).toEqual(['worker_denied']);
+  });
+
+  test('a worker on the engine that started it goes on to the command', async () => {
+    const {root, engine} = setup();
+    const {calls} = await call(['merge', '--pr', '9'], engine, undefined, {...workerEnv('issue-7', 3, engine)});
+    expect(calls.some(c => c.startsWith('gh pr'))).toBe(true);
+    expect(existsSync(join(root, '.forger', 'events.jsonl'))).toBe(false);
   });
 });

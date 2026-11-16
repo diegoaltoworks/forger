@@ -1,11 +1,11 @@
 import {issueOfTicket, mergePr, mergeMode, verdictsHome, workerIdentity} from '../loop';
 import type {CommandRunner} from '../ports';
 import type {Command} from './command';
-import {refuseChangedEngine} from './verify';
+import {refuseChangedEngine, refuseOtherEngine} from './verify';
 
 /** The ticket body of the worker calling `merge`; null when the caller is no worker or the issue cannot be read. */
-function workerTicketBody(run: CommandRunner): string | null {
-  const issue = issueOfTicket(workerIdentity(process.env)?.ticket ?? null);
+function workerTicketBody(run: CommandRunner, env: Record<string, string | undefined>): string | null {
+  const issue = issueOfTicket(workerIdentity(env)?.ticket ?? null);
   if (issue === null) return null;
   try {
     return run(`gh issue view ${issue} --json body --jq .body`);
@@ -21,7 +21,8 @@ export const merge: Command = {
   help: `  merge --pr N [--json] [--timeout S]
                    Wait for every check on the PR to finish, squash-merge only if all passed
                    (exit 1 when it refuses: the ticket says owner reviews, a failed check, still pending at the timeout,
-                   or no passing verify verdict for the PR head, or uncommitted changes in the engine's own source that outlast limits.engineChangedWaitSeconds)`,
+                   or no passing verify verdict for the PR head, or uncommitted changes in the engine's own source that outlast limits.engineChangedWaitSeconds,
+                   or a worker running it from another engine than the one that started it: worker_denied is recorded and the command to run is printed)`,
   async run(ctx) {
     const {values, config} = ctx;
     const pr = parseInt((values.pr as string | undefined) ?? '', 10);
@@ -30,13 +31,13 @@ export const merge: Command = {
       process.exitCode = 1;
       return;
     }
-    if (await refuseChangedEngine(ctx, 'merge')) return;
+    if (refuseOtherEngine(ctx, 'merge') || (await refuseChangedEngine(ctx, 'merge'))) return;
     const r = await mergePr(ctx.run(), {
       pr,
       baseBranch: config.base_branch,
       verdictsDir: verdictsHome(ctx.run(), ctx.projectRoot, config.paths.verdicts),
       timeoutMs: parseInt(values.timeout as string, 10) * 1000,
-      mode: mergeMode(workerTicketBody(ctx.run())),
+      mode: mergeMode(workerTicketBody(ctx.run(), ctx.deps.env ?? process.env)),
     });
     if (!r.merged) process.exitCode = 1;
     console.log(values.json ? JSON.stringify(r) : r.merged ? `PR #${r.pr} merged, checks ${r.checks}` : `PR #${r.pr} not merged: ${r.reason}`);

@@ -79,7 +79,7 @@ $ bun ${FORGER_PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT}}/bin/work.ts status --json
 | `pr-body` | Checks a PR body keeps its closing line and the ticket's review sections. |
 | `facts` | Reads the branch, the issue, its closing PR and a PR's CI conclusion, changing nothing. `--guards <path>...` lists the guard files and the test files that name any of the paths. `--product` prints the parsed product brief (`docs/product.md`: who it is for, the journeys, how success shows, what is out, and the `problems` where a section is missing or empty), or `{"present": false}` when there is none. |
 | `verify` | Runs a fresh-context verifier on a PR's head and records its verdict per criterion; "Gates green" is decided from the head's CI checks, not by the model. |
-| `merge` | Waits for every check, then squash-merges only a passing, verified PR. |
+| `merge` | Waits for every check, then squash-merges only a passing, verified PR. A worker running it (or `verify`) from another engine than the one that started it is refused and given the command to run. |
 | `handover` | After a failed verify, says the next move or hands the ticket to the owner. |
 | `critique` | Runs a critic on a change the audience sees and files its findings as tickets. |
 | `approval` | Says who may do an action: alone, alone and report, the owner or never. |

@@ -19,6 +19,8 @@ export interface CliDeps {
   stateStore?: StateStore;
   /** Stands in for the plugin folder the engine runs from. */
   pluginRoot?: string;
+  /** Stands in for the process environment a command reads the worker's identity from. */
+  env?: Record<string, string | undefined>;
   /** Stands in for the pause between two looks at the engine's checkout. */
   sleep?: (ms: number) => Promise<void>;
   installedSkills?: () => string[];
