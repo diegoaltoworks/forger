@@ -20,3 +20,4 @@
 {"event":"worker_denied","at":"2026-11-16T19:35:59.405Z","iteration":239,"ticket":"issue-481","reason":"other-engine: verify from /home/diego/work/forger/.forger/worktrees/issue-481/plugins/forger"}
 {"event":"merged","at":"2026-11-16T19:40:58.109Z","iteration":239,"ticket":"issue-481","reason":null}
 {"event":"structure_review_filed","at":"2026-11-16T19:41:10.625Z","iteration":239,"ticket":null,"reason":"25 tickets merged since the last review (every_merged 25)"}
+{"event":"picked","at":"2026-11-16T19:41:39.396Z","iteration":240,"ticket":"issue-482","reason":null,"commands":"engine"}
