@@ -20,6 +20,8 @@ them, and the folder `cli/` hands the implementations in.
 - `state-store.ts` - `StateStore`, where the state record, the event log and
   the lease live (ADR 0015). Also `LeaseClaim`, the answer to asking for the
   lease. Types only.
+- `tracker.ts` - `Tracker`, what the engine asks of a tracker about a ticket,
+  and `TrackerWrite`, a write as data. Types only.
 
 ## Entry point
 

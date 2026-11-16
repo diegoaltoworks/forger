@@ -1,5 +1,6 @@
 import {issueOfTicket, mergePr, mergeMode, verdictsHome, workerIdentity} from '../loop';
 import type {CommandRunner} from '../ports';
+import {githubTracker} from '../tracker';
 import type {Command} from './command';
 import {refuseChangedEngine, refuseOtherEngine} from './verify';
 
@@ -8,7 +9,7 @@ function workerTicketBody(run: CommandRunner, env: Record<string, string | undef
   const issue = issueOfTicket(workerIdentity(env)?.ticket ?? null);
   if (issue === null) return null;
   try {
-    return run(`gh issue view ${issue} --json body --jq .body`);
+    return githubTracker(run).text(issue);
   } catch {
     return null;
   }

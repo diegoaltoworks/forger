@@ -16,6 +16,7 @@ import {detectLayout, isProjectRoot, legacyWarning, loadConfig, resolveProjectRo
 import {AutomationRunner, DEFAULT_LEASE_TTL_SECONDS, GhTrackerHalt, type LeaseSettings} from '../loop';
 import {capturing, type StateStore} from '../ports';
 import {listCollectionRoots, listInstalledSkills, workerCommandsSource} from '../packs';
+import {openTracker} from '../tracker';
 import {STAGES, type CliDeps, type CommandContext, type Stage} from './command';
 import {FLAGS} from './flags';
 import {openBacklog} from './open-backlog';
@@ -42,7 +43,7 @@ function leaseSettingsFor(config: WorkloopConfig): LeaseSettings | undefined {
   return {self: `${hostname()}:${process.pid}:${crypto.randomUUID().slice(0, 8)}`, host: hostname(), ttlSeconds: DEFAULT_LEASE_TTL_SECONDS};
 }
 
-function contextFor(base: Pick<CommandContext, 'values' | 'positionals' | 'deps' | 'pluginRoot' | 'installedSkills' | 'collectionRoots'>): CommandContext {
+export function contextFor(base: Pick<CommandContext, 'values' | 'positionals' | 'deps' | 'pluginRoot' | 'installedSkills' | 'collectionRoots'>): CommandContext {
   let root: string | undefined;
   let config: WorkloopConfig | undefined;
   let backlog: Backlog | undefined;
@@ -52,6 +53,7 @@ function contextFor(base: Pick<CommandContext, 'values' | 'positionals' | 'deps'
     ...base,
     run: () => base.deps.run ?? execRunner(ctx.projectRoot),
     capture: () => (base.deps.run ? capturing(base.deps.run) : execCapture(ctx.projectRoot)),
+    tracker: () => openTracker(ctx.config, ctx.run(), ctx.capture()),
     get projectRoot() {
       return (root ??= findProjectRoot());
     },

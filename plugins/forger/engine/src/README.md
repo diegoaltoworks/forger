@@ -9,6 +9,7 @@ import a folder, not its files.
 | [`cli/`](cli/README.md) | The entry point, the command registry and one file per command group; the composition root |
 | [`loop/`](loop/README.md) | The engine's outer loop, one iteration, state, lock, events, outcome, prompt, claim, infra errors, status |
 | [`backlog/`](backlog/README.md) | The Backlog interface and its GitHub and file adapters |
+| [`tracker/`](tracker/README.md) | The Tracker port's GitHub adapter, and the tracker for a config's kind |
 | [`catalogue/`](catalogue/README.md) | The failure catalogue's Open and Fixed tables, and the tracker facts that move a row between them |
 | [`checks/`](checks/README.md) | The umbrella `check`, waivers, the CI summary, and one folder per check |
 | [`intent/`](intent/README.md) | Classifying a planning request as product or creative |

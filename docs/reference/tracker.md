@@ -2,6 +2,21 @@
 
 How the engine reads GitHub Issues as the backlog.
 
+## The port and its adapters
+
+The engine asks a tracker about a ticket through the `Tracker` port
+(`plugins/forger/engine/src/ports/tracker.ts`), recorded in
+`docs/adr/0023-the-tracker-is-a-port-with-an-adapter-per-kind.md`. Reads are
+methods; a write is data (`TrackerWrite`) that one method applies. The port
+also says whether the backlog is in the tracker or in a file, so a caller does
+not compare the kind.
+
+The GitHub adapter lives in `plugins/forger/engine/src/tracker/`. `openTracker`
+gives it for every kind, since a ticket named by a number is read from GitHub
+whatever the kind; `local` and `none` differ in where the backlog is. A command
+reaches the tracker through its context's `tracker()`. Selection stays with the
+`Backlog` interface, and pull requests stay on the code host.
+
 ## Tracker: GitHub Issues
 
 With `tracker.kind` `github`, the issues are the backlog (see

@@ -4,15 +4,15 @@ import {parseFootprint} from '../backlog';
 import {forgerPath} from '../config';
 import {LOCK_PATH, loadPresets, parseLock} from '../packs';
 import {loadDefinition, loadFlavour, loadOverlay, issueOfTicket, NO_TICKET, resolvePipeline, storedPlan, type PipelinePlan, type StoredPlan, type TicketFacts} from '../pipeline';
+import {githubTracker} from '../tracker';
 import type {Command, CommandContext} from './command';
 
 function ticketFacts(ctx: CommandContext, issue: number): TicketFacts {
-  const out = ctx.run()(`gh issue view ${issue} --json labels,body`);
-  const data = JSON.parse(out) as {labels?: Array<{name: string}>; body?: string};
+  const data = githubTracker(ctx.run()).facts(issue);
   return {
     id: `issue-${issue}`,
-    labels: (data.labels ?? []).map(l => l.name),
-    paths: parseFootprint(data.body ?? '')?.paths ?? [],
+    labels: data.labels,
+    paths: parseFootprint(data.body)?.paths ?? [],
     packs: [],
   };
 }

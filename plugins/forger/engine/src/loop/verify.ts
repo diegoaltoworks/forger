@@ -10,6 +10,7 @@ import {join} from 'path';
 
 import type {Tier} from '../config';
 import type {AgentRunner, CapturingRunner, CommandRunner, SpecReport} from '../ports';
+import {githubTracker} from '../tracker';
 import {BASELINE_MANIFEST, parseBaselines, withoutBaseline, type BaselineManifest} from '../ui';
 import {issueNumber} from './decline';
 import {ciConfigured, failingChecks, PR_FIELDS, parsePr} from './pr-checks';
@@ -162,7 +163,7 @@ function criteriaFor(run: CommandRunner, opts: VerifyOptions, ticket: string): {
   if (opts.trackerKind === 'github') {
     const issue = issueNumber(ticket);
     if (issue === null) throw new Error(`"${ticket}" is not an issue-<n> ticket`);
-    const body = run(`gh issue view ${issue} --json body --jq .body`);
+    const body = githubTracker(run).text(issue);
     return {criteria: parseCriteria(body), uiStates: parseUiStates(body)};
   }
   const data = JSON.parse(readFileSync(opts.backlogFile, 'utf-8')) as {features?: Record<string, {acceptance_criteria?: string[]}>};

@@ -5,3 +5,4 @@ export * from './harness';
 export * from './spec';
 export * from './state-store';
 export * from './sandbox';
+export * from './tracker';
