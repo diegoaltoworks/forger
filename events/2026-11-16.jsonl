@@ -38,3 +38,4 @@
 {"event":"worker_denied","at":"2026-11-16T20:14:01.149Z","iteration":243,"ticket":"issue-485","reason":"other-engine: merge from /home/diego/work/forger/.forger/worktrees/issue-485/plugins/forger"}
 {"event":"merged","at":"2026-11-16T20:17:18.460Z","iteration":243,"ticket":"issue-485","reason":null}
 {"event":"picked","at":"2026-11-16T20:17:53.453Z","iteration":244,"ticket":"issue-486","reason":null,"commands":"engine"}
+{"event":"worker_denied","at":"2026-11-16T20:27:23.484Z","iteration":244,"ticket":"issue-486","reason":"merge: bun plugins/forger/bin/work.ts rebase --ticket issue-486 --json 2>&1 | tail -1; gh pr merge 500 --squash 2>&1 | tail -2; gh pr view 500 --json state"}
