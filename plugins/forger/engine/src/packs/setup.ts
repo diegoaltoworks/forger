@@ -41,6 +41,36 @@ export interface SetupResult {
   structure?: StructureSetup;
   /** The starter copied, when one was. */
   starter?: string;
+  /** The base branch the config written now records; absent when the config was kept. */
+  base_branch?: BaseBranch;
+}
+
+export interface BaseBranch {
+  name: string;
+  from: 'flag' | 'remote' | 'current' | 'default';
+}
+
+const TEMPLATE_BASE_BRANCH = 'main';
+
+function gitAnswer(run: CommandRunner, command: string): string | null {
+  try {
+    const out = run(command).trim();
+    return out === '' ? null : out;
+  } catch {
+    return null;
+  }
+}
+
+/** The base branch for a config `setup` writes, and where the name came from. Reads the local repository only. */
+export function findBaseBranch(flag: string | undefined, run: CommandRunner | undefined, templateBranch: string = TEMPLATE_BASE_BRANCH): BaseBranch {
+  if (flag) return {name: flag, from: 'flag'};
+  if (run) {
+    const remote = gitAnswer(run, 'git symbolic-ref --short refs/remotes/origin/HEAD');
+    if (remote?.startsWith('origin/') && remote.length > 'origin/'.length) return {name: remote.slice('origin/'.length), from: 'remote'};
+    const current = gitAnswer(run, 'git symbolic-ref --short HEAD');
+    if (current) return {name: current, from: 'current'};
+  }
+  return {name: templateBranch, from: 'default'};
 }
 
 const CHECK_MARKER = /\bwork\.ts\s+check\b|\bcheck docs\b/;
@@ -174,11 +204,14 @@ export function runSetup(projectRoot: string, pluginRoot: string, opts: SetupOpt
 
   // First, so the starter's own journeys and files stand and the packs' empty defaults are kept.
   const files: SetupEntry[] = starter ? installStarter(projectRoot, pluginRoot, starter) : [];
+  let baseBranch: BaseBranch | undefined;
   files.push({
     path: `${FORGER_DIR}/${CONFIG_FILE}`,
-    action: writeIfAbsent(forgerPath(projectRoot, `${FORGER_DIR}/${CONFIG_FILE}`), () =>
-      renderConfig(read('workloop.config.json'), {...opts, gates: opts.gates ?? starter?.gates}, CHECK_COMMAND)
-    ),
+    action: writeIfAbsent(forgerPath(projectRoot, `${FORGER_DIR}/${CONFIG_FILE}`), () => {
+      const template = read('workloop.config.json');
+      baseBranch = findBaseBranch(opts.baseBranch, opts.run, (JSON.parse(template) as {base_branch?: string}).base_branch);
+      return renderConfig(template, {...opts, gates: opts.gates ?? starter?.gates, baseBranch: baseBranch.name}, CHECK_COMMAND);
+    }),
   });
   const installs = packs.map(({manifest, dir}) => {
     const written: LockedFile[] = [];
@@ -213,13 +246,14 @@ export function runSetup(projectRoot: string, pluginRoot: string, opts: SetupOpt
   const ignorePath = join(projectRoot, '.gitignore');
   const merged = mergeGitignore(existsSync(ignorePath) ? readFileSync(ignorePath, 'utf-8') : '', gitignoreLines(detectLayout(projectRoot).dir));
   if (merged.added.length > 0) writeFileSync(ignorePath, merged.text);
-  return {files, gitignore: {added: merged.added, kept: merged.kept}, ...(structure ? {structure} : {}), ...(starter ? {starter: starter.name} : {})};
+  return {files, gitignore: {added: merged.added, kept: merged.kept}, ...(structure ? {structure} : {}), ...(starter ? {starter: starter.name} : {}), ...(baseBranch ? {base_branch: baseBranch} : {})};
 }
 
 export function formatSetup(result: SetupResult, offeredPresets: string[] = []): string {
   const lines = result.files.map(f => `${f.action.padEnd(7)} ${f.path}`);
   lines.push(...result.gitignore.added.map(l => `ignored ${l}`));
   if (result.starter) lines.push(`starter  ${result.starter}`);
+  if (result.base_branch) lines.push(`base    ${result.base_branch.name} (${result.base_branch.from})`);
   if (result.structure) lines.push(...formatStructureSetup(result.structure));
   lines.push(...offeredPresets.map(p => `flavour available: ${p} (setup --flavour ${p})`));
   return lines.join('\n');

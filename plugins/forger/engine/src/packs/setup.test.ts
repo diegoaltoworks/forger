@@ -5,7 +5,7 @@ import {join, resolve} from 'path';
 
 import {claudeHarness, codexHarness, copilotHarness, opencodeHarness} from '../adapters';
 import {sha256} from './packs';
-import {gitignoreLines, mergeGitignore, relocatableGates, renderConfig, runSetup, trackedRuntimeFiles, formatTrackedRuntime, withCheck, workerCommandsSource} from './setup';
+import {findBaseBranch, formatSetup, gitignoreLines, mergeGitignore, relocatableGates, renderConfig, runSetup, trackedRuntimeFiles, formatTrackedRuntime, withCheck, workerCommandsSource} from './setup';
 
 const PLUGIN_ROOT = resolve(import.meta.dir, '../../..');
 const dirs: string[] = [];
@@ -285,5 +285,52 @@ describe('tracked runtime files', () => {
     expect(trackedRuntimeFiles(root, () => '')).toEqual([]);
     expect(trackedRuntimeFiles(root, () => { throw new Error('not a repository'); })).toEqual([]);
     expect(formatTrackedRuntime([])).toEqual([]);
+  });
+});
+
+describe('the base branch setup records', () => {
+  const git = (answers: Record<string, string>) => (cmd: string): string => {
+    const hit = Object.keys(answers).find(k => cmd.includes(k));
+    if (hit === undefined) throw new Error('git failed');
+    return answers[hit] + '\n';
+  };
+  const REMOTE = 'refs/remotes/origin/HEAD';
+  const HEAD = 'symbolic-ref --short HEAD';
+  const configOf = (root: string) => JSON.parse(readFileSync(join(root, '.forger/workloop.config.json'), 'utf-8')) as {base_branch: string};
+
+  test("the base branch is the remote's default branch when the remote names one", () => {
+    expect(findBaseBranch(undefined, git({[REMOTE]: 'origin/trunk', [HEAD]: 'work'}))).toEqual({name: 'trunk', from: 'remote'});
+  });
+  test('the base branch is the current branch when the remote names no default', () => {
+    expect(findBaseBranch(undefined, git({[HEAD]: 'work'}))).toEqual({name: 'work', from: 'current'});
+    expect(findBaseBranch(undefined, git({[REMOTE]: 'trunk', [HEAD]: 'work'}))).toEqual({name: 'work', from: 'current'});
+  });
+  test("the base branch is the template's when git gives neither", () => {
+    expect(findBaseBranch(undefined, git({}))).toEqual({name: 'main', from: 'default'});
+    expect(findBaseBranch(undefined, () => '\n')).toEqual({name: 'main', from: 'default'});
+    expect(findBaseBranch(undefined, undefined)).toEqual({name: 'main', from: 'default'});
+  });
+  test('the base-branch flag wins over what git says', () => {
+    expect(findBaseBranch('dev', git({[REMOTE]: 'origin/trunk'}))).toEqual({name: 'dev', from: 'flag'});
+  });
+  test('setup records the base branch it found in the config it writes', () => {
+    const root = emptyProject();
+    const result = runSetup(root, PLUGIN_ROOT, {run: git({[REMOTE]: 'origin/trunk'})});
+    expect(result.base_branch).toEqual({name: 'trunk', from: 'remote'});
+    expect(configOf(root).base_branch).toBe('trunk');
+  });
+  test('a config that exists keeps its base branch', () => {
+    const root = emptyProject();
+    mkdirSync(join(root, '.forger'));
+    writeFileSync(join(root, '.forger/workloop.config.json'), JSON.stringify({base_branch: 'mine'}));
+    const result = runSetup(root, PLUGIN_ROOT, {run: git({[REMOTE]: 'origin/trunk'})});
+    expect(configOf(root).base_branch).toBe('mine');
+    expect(result.base_branch).toBeUndefined();
+    expect(formatSetup(result)).not.toContain('base ');
+  });
+  test('setup prints the base branch and where it came from', () => {
+    const root = emptyProject();
+    const out = formatSetup(runSetup(root, PLUGIN_ROOT, {run: git({[HEAD]: 'work'})}));
+    expect(out).toContain('base    work (current)');
   });
 });

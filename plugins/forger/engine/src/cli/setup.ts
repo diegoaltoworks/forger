@@ -77,6 +77,8 @@ export const setup: Command = {
                    It installs forger's tool-call hook into the harness's project settings, keeping
                    a settings file that already runs it.
                    It also lists each runtime file git tracks, with the git rm --cached command that stops tracking it; it runs none.
+                   When it writes the config it records the base branch: --base-branch wins, then the remote's default branch,
+                   then the current branch, then the template's; it prints which one it used. A config that exists is kept.
                    --flavour NAME records the flavour (shipped or in .forger/flavours/) the config picks skills with;
                    --preset NAME is the same
                    --harness H sets the harness (claude, opencode, codex, copilot) and installs its commands
