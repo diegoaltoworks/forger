@@ -31,6 +31,7 @@ the next `work catalogue --update` moves the row back to Open.
 
 | Failure | What it looked like | Fixed by |
 |---|---|---|
+| A worker runs another copy of the engine | A worker's instructions came from an installed plugin, so its `verify` and `merge` ran from a different forger than the engine that started it. | #472 |
 | A worker hangs and the timeout never fires | A worker waits on a pattern that matches itself and runs for hours past its timeout. | before tickets were tracked |
 | A run that merged counts as a failure | A worker merges, then times out writing its summary, and the run counts as a failure. | before tickets were tracked |
 | An early stop signal halts a run that merged | A stop tag printed mid-run halts a run that went on to merge. | before tickets were tracked |

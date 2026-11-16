@@ -27,7 +27,7 @@ Some steps below are skill slots: the project may plug an installed skill into
 each. The pipeline says which slots run in which stage and what fills each:
 
 ```
-bun "${CLAUDE_PLUGIN_ROOT}/bin/work.ts" pipeline --json --stage <id>
+bun "${FORGER_PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT}}/bin/work.ts" pipeline --json --stage <id>
 ```
 
 The stage is `intake`: it holds the slots of steps 2b to 5.
@@ -36,7 +36,7 @@ For a slot, read `invoke`. `skill`: invoke the skill named in `target`. `file`:
 read the file at `target` and follow it. `builtin`: do the step yourself as written
 here, as you also do when the tool fails. A slot with `on` runs only when that
 event happens. Start every step whose `invoke` is `skill` or `file` with the `preamble` of
-`bun "${CLAUDE_PLUGIN_ROOT}/bin/work.ts" skills --json`, verbatim, and never
+`bun "${FORGER_PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT}}/bin/work.ts" skills --json`, verbatim, and never
 invoke a skill listed in its `forbid`. Never name or choose a skill yourself.
 
 ## 1. Ground yourself (before asking anything)
@@ -68,7 +68,7 @@ anchors the interview.
 
 ## 1b. The product brief
 
-Run `bun "${CLAUDE_PLUGIN_ROOT}/bin/work.ts" facts --product` and read the brief
+Run `bun "${FORGER_PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT}}/bin/work.ts" facts --product` and read the brief
 it prints: who the app is for, the journeys they must be able to do, how
 success shows and what is out.
 
@@ -95,7 +95,7 @@ This scope bounds step 3: "nothing left to decide" means nothing left to decide
 Classify the request with the tool, passing the owner's words in `--request`:
 
 ```
-bun "${CLAUDE_PLUGIN_ROOT}/bin/work.ts" intent --request "<the owner's words>" --json
+bun "${FORGER_PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT}}/bin/work.ts" intent --request "<the owner's words>" --json
 ```
 
 `intent: "product"`: skip the rest of this step. `intent: "creative"`: tell the
@@ -130,7 +130,7 @@ brief leaves open (watch versus play, palette, tone), each runnable by opening
 one HTML file, under `docs/progress/prototype/`. Check the result:
 
 ```
-bun "${CLAUDE_PLUGIN_ROOT}/bin/work.ts" contract --slot prototype --file <path> --json
+bun "${FORGER_PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT}}/bin/work.ts" contract --slot prototype --file <path> --json
 ```
 
 Show the owner every concept and let them pick one, or a mix of named parts;

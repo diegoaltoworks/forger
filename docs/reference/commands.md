@@ -32,10 +32,10 @@ the harness processes the engine spawns, each running
 
 ## The engine CLI
 
-Run every command from the repository root, so the engine finds `.forger/`. Inside a harness the engine is at `${CLAUDE_PLUGIN_ROOT}/bin/work.ts`; from a clone it is at `<clone>/plugins/forger/bin/work.ts`. Most commands take `--json` for machine-readable output.
+Run every command from the repository root, so the engine finds `.forger/`. Inside a harness a command file names every engine call as `${FORGER_PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT}}/bin/work.ts`: a worker an engine started runs that engine (the engine exports its own root as `FORGER_PLUGIN_ROOT`), any other session runs the plugin's own at `${CLAUDE_PLUGIN_ROOT}/bin/work.ts`; from a clone it is at `<clone>/plugins/forger/bin/work.ts`. Most commands take `--json` for machine-readable output.
 
 ```
-$ bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts status --json
+$ bun ${FORGER_PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT}}/bin/work.ts status --json
 ```
 
 `work.ts --help` lists every command with its flags. The tables name each command and its main argument only.

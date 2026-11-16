@@ -21,7 +21,7 @@ show me where it's already at."
 Read `.forger/workloop.config.json` in the current repo. If it is missing, tell
 the user this repo is not set up yet and point them at `/forger:setup` - then
 stop. Every command below runs from the repo root as
-`bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts <command>`; call it `work` here.
+`bun ${FORGER_PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT}}/bin/work.ts <command>`; call it `work` here.
 
 ## 1. Orient from facts
 

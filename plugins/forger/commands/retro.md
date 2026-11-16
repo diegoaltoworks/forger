@@ -9,7 +9,7 @@ allowed-tools: Bash(*), Read, Write, Edit, Grep, Glob
 Refine the process from one signal. The method is `docs/05-refining-the-process.md`;
 this command walks it with tools doing the counting and the writing. Judgement
 stays here (the cause, the rung); numbers and files come from commands. Run
-every command from the repo root as `bun ${CLAUDE_PLUGIN_ROOT}/bin/work.ts <command>`;
+every command from the repo root as `bun ${FORGER_PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT}}/bin/work.ts <command>`;
 call it `work`.
 
 Run `work pipeline --json --stage retro` and read the `retro` slot. `skill` or `file`: invoke it

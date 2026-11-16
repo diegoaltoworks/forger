@@ -28,7 +28,7 @@ know:
 
 Then ask about skills. List the flavours whose skill collection is installed:
 ```
-bun "${CLAUDE_PLUGIN_ROOT}/bin/work.ts" skills --presets --json
+bun "${FORGER_PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT}}/bin/work.ts" skills --presets --json
 ```
 For each one, offer to use it as the flavour; an empty list means ask
 nothing. When two or more are listed, also offer the `mixed` flavour, which takes the
@@ -37,7 +37,7 @@ slots by hand later in `.forger/workloop.config.json`.
 
 Then ask about packs. List the ones the repo's own facts call for:
 ```
-bun "${CLAUDE_PLUGIN_ROOT}/bin/work.ts" packs --detect --json
+bun "${FORGER_PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT}}/bin/work.ts" packs --detect --json
 ```
 Each entry carries the rules that matched. Recommend those packs and say why in
 the owner's terms; an empty list means ask nothing. The owner chooses, and the
@@ -46,7 +46,7 @@ chosen ids go to `--packs` below, after `base`.
 ## 2. Install
 
 ```
-bun "${CLAUDE_PLUGIN_ROOT}/bin/work.ts" setup --json --gates "<gates>" --base-branch "<branch>" --tracker "<kind>" [--flavour "<name>"] [--packs "base,<chosen>"]
+bun "${FORGER_PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT}}/bin/work.ts" setup --json --gates "<gates>" --base-branch "<branch>" --tracker "<kind>" [--flavour "<name>"] [--packs "base,<chosen>"]
 ```
 
 In a repository with no source file the tool also copies the default starter (a
@@ -70,7 +70,7 @@ that), the report has a `tracked_runtime` list and a line naming the file and
 When `.forger/forger.lock.json` already exists, the repo is set up and the job is
 an upgrade, not an install:
 ```
-bun "${CLAUDE_PLUGIN_ROOT}/bin/work.ts" setup --upgrade --json
+bun "${FORGER_PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT}}/bin/work.ts" setup --upgrade --json
 ```
 The tool classifies each installed file by comparing the lock, the disk and the
 pack: untouched files take the new version, refined files are kept, new files are
