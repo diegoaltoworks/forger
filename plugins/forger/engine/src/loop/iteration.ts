@@ -171,6 +171,7 @@ export async function runIteration(
     timeoutMinutes,
     killGraceSeconds,
     abort: placement?.abort,
+    pluginRoot: ctx.pluginRoot,
   });
   const duration = Math.round((Date.now() - startTime) / 1000);
   // The worker changes ticket statuses while it runs; this read also serves
@@ -310,6 +311,7 @@ async function completeConflict(ctx: IterationContext, claim: Claim, r: ReaskCon
     timeoutMinutes: r.timeoutMinutes,
     killGraceSeconds: r.killGraceSeconds,
     readOnly: true,
+    pluginRoot: ctx.pluginRoot,
   });
   const second = parseClaim(again.output);
   const parsed = second.conflictBlock === undefined ? null : parseConflict(second.conflictBlock);

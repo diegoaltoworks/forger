@@ -72,4 +72,23 @@ describe('the agent', () => {
     expect(started).toHaveLength(1);
     expect(started[0]).toMatchObject({command: 'claude', cwd: '/fake', timeoutMs: 60000, graceMs: 2000, input: 'p'});
   });
+
+  test('a worker in a container loads the plugin from the copy in the container', async () => {
+    const started: SandboxStart[] = [];
+    const container: Sandbox = {
+      id: 'docker',
+      pluginRoot: '/opt/forger',
+      prepare: r => ({ok: true, ticket: r.ticket, path: '/fake'}),
+      cleanup: () => null,
+      start: spec => {
+        started.push(spec);
+        return {result: Promise.resolve({exitCode: 0, signal: null, output: '', timedOut: false}), end: () => {}};
+      },
+    };
+    await agentFor(claudeHarness, {}, container).run({
+      prompt: 'p', sessionId: 's', tier: {model: 'standard', budget: 5}, model: 'sonnet', workerCommand: 'forger:auto-ticket',
+      cwd: '/fake', timeoutMinutes: 1, killGraceSeconds: 2, pluginRoot: '/host/plugin',
+    });
+    expect(started[0].args.slice(-2)).toEqual(['--plugin-dir', '/opt/forger']);
+  });
 });

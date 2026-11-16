@@ -38,6 +38,8 @@ export interface VerifyOptions {
   model: string;
   /** The command the harness is asked to run; it carries the verifier's prompt. */
   verifierCommand: string;
+  /** The engine's plugin root, given to the verifier's session. */
+  pluginRoot?: string;
   timeoutMinutes: number;
   killGraceSeconds: number;
   sessionId: string;
@@ -324,6 +326,7 @@ export async function verifyPr(run: CommandRunner, agent: AgentRunner, opts: Ver
         cwd: dir,
         readOnly: true,
         ref: `pull/${opts.pr}/head`,
+        pluginRoot: opts.pluginRoot,
         timeoutMinutes: opts.timeoutMinutes,
         killGraceSeconds: opts.killGraceSeconds,
       });

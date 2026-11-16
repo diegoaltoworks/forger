@@ -41,6 +41,7 @@ export function verifyOne(ctx: CommandContext, pr: number): Promise<VerifyResult
     setup: config.verify.setup,
     model: resolveModel(tier.model, config.models),
     verifierCommand: 'forger:verify',
+    pluginRoot: ctx.pluginRoot,
     timeoutMinutes: config.limits.timeoutMinutes,
     killGraceSeconds: config.limits.killGraceSeconds,
     gates: config.gates,

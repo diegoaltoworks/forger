@@ -16,6 +16,7 @@ export const copilotHarness: Harness = {
   id: 'copilot',
   credentials: {api_key: [], subscription: 'COPILOT_GITHUB_TOKEN', howTo: 'create a fine-grained personal access token with the Copilot Requests permission and export it as COPILOT_GITHUB_TOKEN'},
   usage: 'none',
+  sessionPlugin: false,
   spawn({prompt, model, workerCommand}) {
     return {
       command: 'copilot',

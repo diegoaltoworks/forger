@@ -135,6 +135,21 @@ describe('AutomationRunner worker environment', () => {
     expect(calls[0].env?.FORGER_ROLE).toBe('worker');
     expect('FORGER_WORKTREE' in (calls[0].env ?? {})).toBe(false);
   });
+
+  test("the worker's session is started with the engine's plugin root", async () => {
+    const root = mkdtempSync(join(tmpdir(), 'forger-runner-'));
+    dirs.push(root);
+    const calls: AgentRunOptions[] = [];
+    const config = mergeConfig({});
+    const runner = new AutomationRunner(root, config, backlogFrom(() => backlog, config), {
+      stateStore: localStateFor(root, config),
+      agent: {run: async opts => (calls.push(opts), {exitCode: 0, signal: null, output: '', timedOut: false})},
+      gitRunner: sceneRunner({}, () => calls.length > 0),
+      pluginRoot: '/opt/plugin',
+    });
+    await runner.runIteration(1);
+    expect(calls[0].pluginRoot).toBe('/opt/plugin');
+  });
 });
 
 describe('AutomationRunner spend limit', () => {

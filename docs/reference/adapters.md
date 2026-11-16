@@ -20,6 +20,12 @@ there is one model mapping and several harnesses, named here and nowhere else in
   (frontmatter, plugin root) and never copies their text per harness. OpenCode takes a model as
   `provider/model`, so map the roles under `models` to such ids.
 
+  Where a session takes forger's commands from differs by harness. Claude Code loads the engine's own plugin
+  directory for the session (`--plugin-dir`), so a worker, a verifier, a critic and an eval run the commands of
+  the engine's root and never change what the harness has installed for the person's own sessions; in a
+  `docker` container the directory is the copy in the container. OpenCode, Codex and Copilot have no such
+  option: their sessions read the command files `setup` installed into the project.
+
 - **Sandbox.** Where a worker's process runs, and with what limits, sits behind a `Sandbox` seam beside
   `Harness`, with `host` and `docker` backends shipped and a later `remote` backend proposed. See
   [ADR 0019](../adr/0019-workers-run-in-a-sandbox-behind-an-adapter.md) and the [Sandbox](#sandbox) section.

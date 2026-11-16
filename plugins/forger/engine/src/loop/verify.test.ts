@@ -75,6 +75,14 @@ describe('verifyPr', () => {
     expect(f.prompts[0]).not.toContain(PR_BODY);
   });
 
+  test("the verifier's session is started with the engine's plugin root", async () => {
+    const f = fixture();
+    const seen: string[] = [];
+    const out = JSON.stringify({verdict: []});
+    const inner = f.agentSaying(out);
+    await verifyPr(f.run, {run: o => (seen.push(o.pluginRoot ?? ''), inner.run(o))}, {...f.opts, pluginRoot: '/engine/plugin'});
+    expect(seen).toEqual(['/engine/plugin']);
+  });
   test('invalid output is recorded cannot_tell for every criterion', async () => {
     const f = fixture();
     const record = await verifyPr(f.run, f.agentSaying('all good!'), f.opts);

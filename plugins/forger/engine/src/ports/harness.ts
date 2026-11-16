@@ -45,6 +45,8 @@ export interface Harness {
   spentUsd?(output: string, price?: ModelPrice): number | null;
   /** The worker's own words, decoded from a structured output stream, when the harness prints one. */
   plainText?(output: string): string;
+  /** Whether the harness loads forger's plugin from a directory for one session, and so takes its commands from the engine's root and not from files `setup` wrote. */
+  sessionPlugin: boolean;
   /** How the worker is started headless for one iteration. */
   spawn(opts: AgentRunOptions): SpawnSpec;
   /**

@@ -31,6 +31,14 @@ describe('spawn', () => {
       input: 'do the ticket',
     });
   });
+  test("claude loads the plugin from the engine's root for the session", () => {
+    const args = claudeHarness.spawn({...opts, pluginRoot: '/engine/plugin'}).args;
+    expect(args.slice(-2)).toEqual(['--plugin-dir', '/engine/plugin']);
+  });
+  test('only the harness with its own plugin system loads a plugin for the session', () => {
+    expect(HARNESSES.filter(h => h.sessionPlugin).map(h => h.id)).toEqual(['claude']);
+    for (const h of [opencodeHarness, codexHarness, copilotHarness]) expect(h.spawn({...opts, pluginRoot: '/engine/plugin'}).args).not.toContain('--plugin-dir');
+  });
   test('opencode runs the worker command with the prompt as its argument', () => {
     expect(opencodeHarness.spawn({...opts, model: 'anthropic/sonnet'})).toEqual({
       command: 'opencode',

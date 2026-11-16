@@ -39,7 +39,7 @@ export function agentFor(harness: Harness, prices: Record<string, ModelPrice>, s
       return kinds.size === 1 ? [...kinds][0] : 'partial';
     },
     async run(opts) {
-      const spec = harness.spawn(opts);
+      const spec = harness.spawn(opts.pluginRoot && sandbox.pluginRoot ? {...opts, pluginRoot: sandbox.pluginRoot} : opts);
       const engineLimit = spendLimitOf(harness, opts.model, prices) === 'engine';
       const price = Object.prototype.hasOwnProperty.call(prices, opts.model) ? prices[opts.model] : undefined;
       const result = await sandbox.start({
