@@ -61,6 +61,7 @@ export function dockerSandbox(git: CapturingRunner, options: DockerSandboxOption
 
   return {
     id: 'docker',
+    pluginRoot: PLUGIN_COPY,
     prepare(request) {
       const image = ensureImage();
       if ('error' in image) return {ok: false, ticket: request.ticket, error: image.error};

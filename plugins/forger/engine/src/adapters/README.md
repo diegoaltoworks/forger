@@ -25,9 +25,12 @@ world, and is tested against real processes.
 - `playwright.ts` - the `Screenshotter`, `Recorder` and `AccessibilityAuditor`
   ports over the project's own Playwright. It resolves Playwright from the
   project. Forger never depends on it.
-- `claude.ts`, `opencode.ts`, `codex.ts`, `copilot.ts` - the shipped `Harness` adapters. A harness is
-  another file here implementing the same interface; its spawn arguments and
-  install paths are pure and table-tested.
+- `claude.ts`, `opencode.ts`, `codex.ts`, `copilot.ts` - the shipped `Harness` adapters.
+  A harness is another file here implementing the same interface.
+  Its spawn arguments and install paths are pure.
+  Each is table-tested.
+  `sessionPlugin` says whether the harness loads the engine's plugin from a directory for one session.
+  Only `claude` does; the others read the files `setup` installed.
 - `skill-package.ts` - repackages a command as a repository skill, for the harnesses that load skills.
 - `slcr.ts` - the `SpecProvider` over the `slcr` binary. It runs `check --format json`,
   `query` and `slice` through the command port. The base side is the base

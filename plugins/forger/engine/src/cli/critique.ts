@@ -65,6 +65,7 @@ export const critique: Command = {
           tier,
           model: resolveModel(tier.model, config.models),
           critiqueCommand: 'forger:critique',
+          pluginRoot: ctx.pluginRoot,
           timeoutMinutes: config.limits.timeoutMinutes,
           killGraceSeconds: config.limits.killGraceSeconds,
           sessionId: randomUUID(),

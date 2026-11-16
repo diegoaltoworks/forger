@@ -84,6 +84,7 @@ export const evalCommand: Command = {
           cwd: dir,
           timeoutMinutes: 15,
           killGraceSeconds: 10,
+          pluginRoot: ctx.pluginRoot,
         });
         scores.push(scoreCase(slot, c, existsSync(out) ? readFileSync(out, 'utf-8') : null));
       } finally {

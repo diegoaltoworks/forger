@@ -44,6 +44,8 @@ export interface RunningWorker {
 
 export interface Sandbox {
   id: string;
+  /** Where a worker started here finds the engine's plugin, when that is not the engine's own path (a container's copy). */
+  pluginRoot?: string;
   prepare(request: WorkspaceRequest): Workspace;
   start(spec: SandboxStart): RunningWorker;
   /** Removes the workspace; `dropBranch` also drops the ticket's branch. Returns why it failed, or null. */

@@ -37,6 +37,8 @@ export interface CritiqueOptions {
   model: string;
   /** The command the harness is asked to run; it carries the critic's prompt. */
   critiqueCommand: string;
+  /** The engine's plugin root, given to the critic's session. */
+  pluginRoot?: string;
   timeoutMinutes: number;
   killGraceSeconds: number;
   sessionId: string;
@@ -92,6 +94,7 @@ export async function critiquePr(run: CommandRunner, agent: AgentRunner, tracker
         tier: opts.tier,
         model: opts.model,
         workerCommand: opts.critiqueCommand,
+        pluginRoot: opts.pluginRoot,
         cwd: dir,
         timeoutMinutes: opts.timeoutMinutes,
         killGraceSeconds: opts.killGraceSeconds,

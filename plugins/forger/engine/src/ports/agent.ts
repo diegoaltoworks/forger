@@ -40,6 +40,8 @@ export interface AgentRunOptions {
   readOnly?: boolean;
   /** A ref of origin (`pull/<n>/head`) the sandbox checks out instead of the ticket branch. */
   ref?: string;
+  /** The engine's plugin root; a harness that loads a plugin for one session loads this one, so the worker's commands are the engine's own. */
+  pluginRoot?: string;
 }
 
 /**

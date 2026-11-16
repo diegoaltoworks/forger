@@ -31,6 +31,7 @@ export const opencodeHarness: Harness = {
   usage: 'cost',
   spentUsd: opencodeSpentUsd,
   plainText: opencodeText,
+  sessionPlugin: false,
   spawn({prompt, model, workerCommand, sessionId}) {
     return {
       command: 'opencode',

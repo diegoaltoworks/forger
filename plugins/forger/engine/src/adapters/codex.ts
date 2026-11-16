@@ -21,6 +21,7 @@ export const codexHarness: Harness = {
   usage: 'tokens',
   spentUsd: codexSpentUsd,
   plainText: codexText,
+  sessionPlugin: false,
   spawn({prompt, model, workerCommand}) {
     return {
       command: 'codex',
