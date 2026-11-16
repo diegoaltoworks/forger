@@ -6,6 +6,7 @@ import {join} from 'path';
 import {claudeHooks, execRunner, gitStateStore} from '../adapters';
 import {renderHookPolicy} from '../hooks';
 import {HOOK_COMMAND_LINE} from '../packs';
+import {eventLine, terminalEvent} from '../loop';
 import {findProjectRoot, main} from './main';
 import type {CommandRunner} from '../ports';
 
@@ -1074,6 +1075,25 @@ describe('measure and retro', () => {
     writeFileSync(join(root, 'b.json'), JSON.stringify({...report, tickets_merged: 3}));
     const diff = JSON.parse(await capture(['measure', '--diff', 'a.json', 'b.json'], run));
     expect(diff.tickets_merged).toEqual({a: 0, b: 3, delta: 3});
+  });
+
+  test('measure --report exits 1 and names the tickets when a run\'s commands were not the engine\'s', async () => {
+    const root = projectWith({});
+    process.chdir(root);
+    mkdirSync(join(root, '.forger', 'output'), {recursive: true});
+    const before = process.exitCode;
+    process.exitCode = 0;
+    const err = spyOn(console, 'error').mockImplementation(() => {});
+    try {
+      writeFileSync(join(root, '.forger', 'output', 'iteration-5.log'), '=== forger iteration 5 ===\nticket: issue-5\nelapsed: 5s\noutcome: exited with code 0\nstatus: completed\n=== output ===\n');
+      writeFileSync(join(root, '.forger', 'events.jsonl'), eventLine(terminalEvent('picked', 5, 'issue-5', null, new Date(), {commands: 'other'})));
+      expect(await capture(['measure', '--report'], () => '[]')).toBe('');
+      expect(process.exitCode).toBe(1);
+      expect(err.mock.calls.flat().join(' ')).toContain('issue-5');
+    } finally {
+      err.mockRestore();
+      process.exitCode = before;
+    }
   });
 
   test('measure survives gh failing', async () => {

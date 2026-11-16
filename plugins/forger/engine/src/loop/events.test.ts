@@ -11,6 +11,13 @@ afterEach(() => {
 });
 
 describe('terminal events', () => {
+  test('the picked event carries the commands field only when given', () => {
+    const at = new Date('2000-01-02T03:04:05.000Z');
+    expect(eventLine(terminalEvent('picked', 7, 'issue-9', null, at, {commands: 'engine'}))).toBe(
+      '{"event":"picked","at":"2000-01-02T03:04:05.000Z","iteration":7,"ticket":"issue-9","reason":null,"commands":"engine"}\n'
+    );
+  });
+
   test('a line is one JSON object with a fixed shape', () => {
     const e = terminalEvent('stalled', 4, 't', 'why', new Date('2000-01-02T03:04:05.000Z'));
     expect(eventLine(e)).toBe(

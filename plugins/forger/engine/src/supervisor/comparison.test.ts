@@ -1,6 +1,6 @@
 import {describe, expect, test} from 'bun:test';
 
-import {buildComparisonReport, diffReports} from './comparison';
+import {buildComparisonReport, diffReports, MixedCommandsError} from './comparison';
 import {computeMeasures, reworkMeasures, type IterationRecord, type MeasureInputs} from './measure';
 
 const it = (iteration: number, ticket: string, status: string, cause: IterationRecord['cause'] = 'ok'): IterationRecord => ({
@@ -35,6 +35,7 @@ describe('buildComparisonReport', () => {
       cost_unknown_tickets: 0,
       rework: {ci_extra_rounds: 0, blocked_prs: 0, rerun_after_conflict: 0, redone_tickets: 0},
       owner_interventions: {total: 0, by_event: {}},
+      worker_commands: {from_engine: 0, not_recorded: 0},
     });
   });
 
@@ -63,7 +64,21 @@ describe('buildComparisonReport', () => {
       cost_unknown_tickets: 0,
       rework: {ci_extra_rounds: 2, blocked_prs: 0, rerun_after_conflict: 0, redone_tickets: 0},
       owner_interventions: {total: 2, by_event: {halted: 1, merged_red: 1}},
+      worker_commands: {from_engine: 0, not_recorded: 3},
     });
+  });
+
+  const pick = (iteration: number, commands?: 'engine' | 'other') => ({event: 'picked', at: 't', iteration, ticket: `t${iteration}`, reason: null, ...(commands ? {commands} : {})}) as MeasureInputs['events'][number];
+
+  test('the comparison report refuses a period with a run whose commands were not the engine\'s', () => {
+    const m = computeMeasures({...base, iterations: [it(1, 'a', 'completed'), it(2, 'b', 'completed')], picks: [pick(1, 'engine'), pick(2, 'other')]});
+    expect(() => buildComparisonReport(m)).toThrow(MixedCommandsError);
+    expect(() => buildComparisonReport(m)).toThrow('b');
+  });
+
+  test('the comparison report carries the count of runs with no record', () => {
+    const m = computeMeasures({...base, iterations: [it(1, 'a', 'completed'), it(2, 'b', 'completed'), it(3, 'c', 'completed')], picks: [pick(1, 'engine'), pick(2)]});
+    expect(buildComparisonReport(m).worker_commands).toEqual({from_engine: 1, not_recorded: 2});
   });
 });
 

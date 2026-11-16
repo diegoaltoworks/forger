@@ -119,19 +119,35 @@ function writeIfAbsent(path: string, content: () => string): 'written' | 'kept' 
   return 'written';
 }
 
-/** The plugin's commands in the harness's format, where it reads them. Derived files, so a changed one is rewritten. */
-function installCommands(projectRoot: string, pluginRoot: string, harness: Harness): SetupEntry[] {
+/** Each command file `setup` installs for the harness: where, and what it holds. */
+function commandFiles(pluginRoot: string, harness: Harness): {rel: string; content: string}[] {
   const dir = join(pluginRoot, 'commands');
   const names = existsSync(dir) ? readdirSync(dir).filter(f => f.endsWith('.md')).map(f => f.slice(0, -3)).sort() : [];
-  return names.flatMap((name): SetupEntry[] => {
+  return names.flatMap(name => {
     const rel = harness.commandPath(name);
     if (rel === null) return [];
+    return [{rel, content: harness.packageCommand(readFileSync(join(dir, `${name}.md`), 'utf-8'), pluginRoot, name)}];
+  });
+}
+
+/**
+ * Where a worker started in `root` takes its commands from: `engine` when the harness loads the plugin from
+ * the engine's root, or every command file `setup` installs for it is there and equal to the engine's
+ * packaging; `other` when one is missing or differs.
+ */
+export function workerCommandsSource(harness: Harness, pluginRoot: string, root: string, read: (path: string) => string | null = p => (existsSync(p) ? readFileSync(p, 'utf-8') : null)): 'engine' | 'other' {
+  if (harness.sessionPlugin) return 'engine';
+  return commandFiles(pluginRoot, harness).every(f => read(join(root, f.rel)) === f.content) ? 'engine' : 'other';
+}
+
+/** The plugin's commands in the harness's format, where it reads them. Derived files, so a changed one is rewritten. */
+function installCommands(projectRoot: string, pluginRoot: string, harness: Harness): SetupEntry[] {
+  return commandFiles(pluginRoot, harness).map(({rel, content}): SetupEntry => {
     const target = join(projectRoot, rel);
-    const content = harness.packageCommand(readFileSync(join(dir, `${name}.md`), 'utf-8'), pluginRoot, name);
-    if (existsSync(target) && readFileSync(target, 'utf-8') === content) return [{path: rel, action: 'kept'}];
+    if (existsSync(target) && readFileSync(target, 'utf-8') === content) return {path: rel, action: 'kept'};
     mkdirSync(dirname(target), {recursive: true});
     writeFileSync(target, content);
-    return [{path: rel, action: 'written'}];
+    return {path: rel, action: 'written'};
   });
 }
 

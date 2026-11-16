@@ -213,6 +213,8 @@ every ticket in the period, merged or not, over the merged tickets; it is null
 when nothing merged or any ticket's cost is unknown, and `cost_unknown_tickets`
 counts those tickets. The budget cap is not part of it.
 
+The report also carries `worker_commands`, the runs by where the worker's commands came from, as `{from_engine, not_recorded}`. A report saved before it has none, and `measure --diff` does not compare it. A period in which a run took other commands than the engine's gets no report: it would measure two versions at once.
+
 `report` shows the owner four of these without the retro detail: cost per merged
 ticket (the mean over tickets whose cost is known, with how many are unknown),
 the rework rate, escaped defects and owner interventions, all from `measure`.

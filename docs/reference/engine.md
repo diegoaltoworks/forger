@@ -42,6 +42,8 @@ reason; `report` lists each uncaused clear under waiting on you.
 
 `measure --json` also reports `worker_denials` as `{total, by_rule, by_ticket}`: the `worker_denied` events of the runs in the period, the rule being the reason's text before its first colon. It is null, and the readable line says `unknown` with the reason, when the events file does not cover the period. The comparison report does not carry it.
 
+The engine records at each pick where the worker's commands come from, in the `commands` field of the `picked` event: `engine` when the harness loads the plugin from the engine's root for the session, or every command file `setup` installs for it is in the project and equal to what this engine's `setup` would write; `other` when one is missing or differs. An event written by an earlier engine has no field. `measure --json` reports `worker_commands` as `{from_engine, other_tickets, not_recorded}`, the last being runs with no `picked` event or one without `commands`; the readable output prints one line for it. `measure --report` prints no report and exits 1, naming the tickets, when a run in the period had `other`; otherwise the report carries `worker_commands` as `{from_engine, not_recorded}`. A run with no record is never counted under `from_engine`.
+
 `verify` and `merge` refuse, and record `engine_changed`, when the engine's own source still has uncommitted changes after waiting `limits.engineChangedWaitSeconds`. The loop halts on that event and sets no ticket aside.
 
 A failed gate is run once more on the same head by `verify`; a pass records a
