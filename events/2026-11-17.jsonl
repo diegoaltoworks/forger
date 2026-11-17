@@ -9,3 +9,4 @@
 {"event":"halt_cleared","at":"2026-11-17T05:24:30.829Z","iteration":246,"ticket":null,"reason":"Infrastructure error (worktree): worktree for issue-487: fatal: '/home/diego/work/forger/.forger/worktrees/issue-487' already exists","cause":504,"not_a_defect":null}
 {"event":"picked","at":"2026-11-17T05:28:45.601Z","iteration":247,"ticket":"issue-504","reason":null,"commands":"engine"}
 {"event":"worker_denied","at":"2026-11-17T05:29:26.328Z","iteration":247,"ticket":"issue-504","reason":"leave-worktree: cd /home/diego/work/forger/plugins/forger/engine/src; grep -rln \"worktree\" --include=*.test.ts . | head; grep -rn \"Infrastructure error\" --include=*.test.ts . | head"}
+{"event":"worker_denied","at":"2026-11-17T05:31:15.007Z","iteration":247,"ticket":"issue-504","reason":"other-engine: verify from /home/diego/work/forger/.forger/worktrees/issue-504/plugins/forger"}
