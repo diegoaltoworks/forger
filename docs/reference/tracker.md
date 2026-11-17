@@ -73,6 +73,27 @@ no default branch. Two tests in the tracker folder hold the rest: no file
 outside it names a `gh issue` or `gh label` command, and none outside the
 config and tracker folders reads the kind.
 
+## Jira documents and ticket markdown
+
+A Jira issue's text is a document in Atlassian Document Format, a tree of nodes
+in JSON. Two pure functions in `plugins/forger/engine/src/tracker/jira/` convert
+it; nothing calls them yet.
+
+- **Read** (`adfToMarkdown`): paragraphs, headings, bullet and ordered lists
+  (nested lists indent), code blocks with their language, rules, hard breaks,
+  and the marks code, strong, emphasis and link. A task item is a checkbox
+  item, checked when its state is done; a plain list item that begins `[ ]` or
+  `[x]` is one too. Text is written as it is, with no escaping, and code-font
+  text goes between backticks, so a command comes out character for character.
+  A node it does not know (a mention, an emoji, a panel, a table, media) keeps
+  its text, or the text of the nodes inside it.
+- **Written** (`markdownToAdf`): a version 1 document with only the nodes
+  above. A checkbox item is a plain list item whose text begins `[ ]` or
+  `[x]`. Markdown with no node of its own (a table, a quote, raw HTML) is
+  written as paragraph text and comes back unchanged.
+
+A ticket in the engine's shape keeps its sections and criteria through both.
+
 ## Tracker: GitHub Issues
 
 With `tracker.kind` `github`, the issues are the backlog (see
