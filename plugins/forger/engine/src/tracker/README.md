@@ -24,8 +24,7 @@ configured kind into a tracker. A read is a method and a write is data.
   hands it to what hands a ticket back.
 - `worker-backlog.ts` - what the worker is told about its backlog and its pull
   request, for each kind. Pure, a `switch` with no default branch.
-- `jira/` - the conversion between a Jira document and ticket markdown. Pure.
-  See its README.
+- `jira/` - Jira text and the Jira call. Pure. See its README.
 - `tracker-rules.test.ts` - two rules keep the port whole. No file outside
   this folder names a `gh issue` or `gh label` command. None outside `config`
   and this folder reads the tracker kind.

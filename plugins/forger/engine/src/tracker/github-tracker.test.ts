@@ -1,5 +1,6 @@
 import {describe, expect, test} from 'bun:test';
 
+import {mergeConfig} from '../config';
 import {capturing, type CommandRunner, type TrackerWrite} from '../ports';
 import {githubCommand} from './github-command';
 import {filedLabels} from './filed-labels';
@@ -168,5 +169,12 @@ describe('what the engine reads and links with a GraphQL query', () => {
       [6, {closed: false, mergedPr: null}],
     ]);
     expect(seen).toHaveLength(1);
+  });
+});
+
+describe('openTracker for jira', () => {
+  test('opening the tracker for the kind jira says the reads and writes of a single ticket are not built', () => {
+    const config = mergeConfig({tracker: {kind: 'jira', jira: {site: 'https://x.net', project: 'ABC'}}});
+    expect(() => openTracker(config, () => '')).toThrow('the reads and writes of a single ticket are not built');
   });
 });

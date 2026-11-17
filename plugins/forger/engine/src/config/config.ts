@@ -8,6 +8,7 @@
 import {existsSync, readFileSync} from 'fs';
 import {join} from 'path';
 
+import {type JiraSettings, jiraProblems, mergeJira} from './jira-settings';
 import {CONFIG_FILE, FORGER_DIR, detectLayout, toPhysical} from './layout';
 
 export interface Tier {
@@ -142,7 +143,7 @@ export interface WorkloopConfig {
    * off any tracker. `ignore` lists labels whose issues are not work - a
    * trailing `*` matches a prefix, as in `wayfinder:*`.
    */
-  tracker: {kind: 'github' | 'local' | 'none'; label: string; ignore: string[]};
+  tracker: {kind: 'github' | 'local' | 'none' | 'jira'; label: string; ignore: string[]; jira?: JiraSettings};
   /** What `check ticket` holds acceptance criteria to; `subjective_words` extends the built-in list. */
   criteria: {subjective_words: string[]};
   /**
@@ -207,7 +208,7 @@ export interface WorkloopConfigInput {
   parallelism?: number;
   limits?: Partial<WorkloopConfig['limits']>;
   paths?: Partial<WorkloopConfig['paths']>;
-  tracker?: Partial<WorkloopConfig['tracker']>;
+  tracker?: Partial<Omit<WorkloopConfig['tracker'], 'jira'>> & {jira?: Partial<WorkloopConfig['tracker']['jira']>};
   criteria?: Partial<WorkloopConfig['criteria']>;
   guards?: string[] | null;
   state?: Partial<WorkloopConfig['state']>;
@@ -371,12 +372,18 @@ export function mergeConfig(
     sandbox_limits: sandboxLimits,
     limits: {...base.limits, ...(user.limits ?? {})},
     paths: {...base.paths, ...(user.paths ?? {})},
-    tracker: {...base.tracker, ...(user.tracker ?? {})},
+    tracker: mergeTracker(base.tracker, user.tracker),
     criteria: {...base.criteria, ...(user.criteria ?? {})},
     guards: user.guards ?? base.guards,
     skills: {...base.skills, ...(user.skills ?? {})},
     model_names: user.model_names ?? base.model_names,
   };
+}
+
+function mergeTracker(base: WorkloopConfig['tracker'], user: WorkloopConfigInput['tracker']): WorkloopConfig['tracker'] {
+  const {jira, ...rest} = user ?? {};
+  const merged = {...base, ...rest};
+  return merged.kind === 'jira' || jira ? {...merged, jira: mergeJira(jira)} : merged;
 }
 
 /** Resolves every configured path to where this project keeps it (the legacy folder, until migrated). */
@@ -397,5 +404,10 @@ export function loadConfig(projectRoot: string): WorkloopConfig {
   } catch (e) {
     throw new Error(`Invalid ${layout.dir}/${CONFIG_FILE}: ${(e as Error).message}`);
   }
-  return resolvePaths(mergeConfig(user), projectRoot);
+  const config = mergeConfig(user);
+  const problems = jiraProblems(config.tracker);
+  if (problems.length > 0) {
+    throw new Error(`Invalid ${layout.dir}/${CONFIG_FILE}: the Jira settings have problems:\n${problems.map(p => `- ${p}`).join('\n')}`);
+  }
+  return resolvePaths(config, projectRoot);
 }

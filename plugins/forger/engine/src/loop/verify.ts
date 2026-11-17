@@ -30,7 +30,7 @@ export interface VerifyOptions {
   queue: 'tracker' | 'file';
   /** Whether the verify status goes to the code host. */
   publishStatus: boolean;
-  ticketNaming: 'closing-reference' | 'backlog-id';
+  ticketNaming: 'closing-reference' | 'backlog-id' | 'key-in-title';
   backlogFile: string;
   /** Directory holding the verdict records. */
   verdictsDir: string;

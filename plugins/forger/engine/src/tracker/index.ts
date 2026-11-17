@@ -5,3 +5,5 @@ export * from './github-tracker';
 export * from './open';
 export * from './filed-labels';
 export * from './worker-backlog';
+export * from './jira/call';
+export * from './jira/adf-to-markdown';
