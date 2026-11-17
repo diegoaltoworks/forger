@@ -4,7 +4,8 @@ import {join, relative, isAbsolute} from 'path';
 
 import {readBaseSync, decideHalt, pidAlive, viewLease, standingHalt, parseAllEvents, StatusIssueHalt, requiresVerifyStatus, handedOver, listRepoLabels, loopLabels, missingLabels, readAllVerdicts, verdictsHome, setAsideReasons} from '../loop';
 import {describeBlocked} from '../backlog';
-import {detectLayout, forgerPath} from '../config';
+import {detectLayout, forgerPath, jiraSettingsOf} from '../config';
+import {jiraTicketLabel} from '../tracker';
 import {gitignoreLines} from '../packs';
 import {engineStartLine, readEngineStart} from './detach';
 import {buildReport, formatReport, mergedInPeriod, orient as orientPlan, failedDeliveryItems, proposedAdrs, reportPeriod, uncausedClearItems, waitingIssues, ownerReviewPrs, OWNER_LABELS, lastComparedCommit, processChangeItems, processChangesFromLog, readComparisons, type ProcessChangesRead, type AdrText, type OwnerReviewPr, type MergedPrFact, type OwnerItem, type WaitingIssue} from '../supervisor';
@@ -133,6 +134,7 @@ function supervise(which: 'orient' | 'report') {
           processChanges: processChanges.kind === 'changes' ? processChanges.value : null,
           merged,
           period,
+          ticketLabel: jiraSettingsOf(config) ? t => jiraTicketLabel(jiraSettingsOf(config)!, t) : undefined,
           status,
           measures: gatherMeasures(ctx),
           plan,

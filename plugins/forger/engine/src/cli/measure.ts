@@ -1,7 +1,8 @@
 import {playwrightScreenshotter, shellAppServer} from '../adapters';
 import {UiInfrastructureError, type Tracker} from '../ports';
 import {UI_PATH, UiConfigError, formatFitReport, longestString, parseUiConfig, runFit} from '../ui';
-import {forgerPath} from '../config';
+import {forgerPath, jiraSettingsOf, type WorkloopConfig} from '../config';
+import {jiraClosingTicket} from '../tracker';
 import {JOURNEYS_PATH, loadJourneysConfig} from '../checks';
 import {existsSync, readdirSync, readFileSync} from 'fs';
 import {homedir} from 'os';
@@ -53,8 +54,14 @@ interface GhPr {
   closingIssuesReferences?: {number: number}[];
 }
 
+/** The ticket a merged PR closed: the key in a Jira PR's title, otherwise what the code host says it closes. */
+function closingNumber(config: WorkloopConfig, p: GhPr): number | null {
+  const jira = jiraSettingsOf(config);
+  return jira ? jiraClosingTicket(jira, p) : p.closingIssuesReferences?.[0]?.number ?? null;
+}
+
 /** Merged PRs oldest first with their touched lines, and the issues; null when gh cannot read them. */
-function gatherChanges(run: (cmd: string) => string, tracker: Tracker, iterations: IterationRecord[], picked: {iteration: number; ticket: string | null}[], window: number, limit: number): ReworkInputs | null {
+function gatherChanges(run: (cmd: string) => string, config: WorkloopConfig, tracker: Tracker, iterations: IterationRecord[], picked: {iteration: number; ticket: string | null}[], window: number, limit: number): ReworkInputs | null {
   try {
     const listed = (JSON.parse(run(`gh pr list --state merged --limit ${limit} --json number,title,body,closingIssuesReferences`)) as GhPr[]).reverse();
     const prs: MergedPr[] = listed.map((p, order) => {
@@ -67,7 +74,7 @@ function gatherChanges(run: (cmd: string) => string, tracker: Tracker, iteration
       } catch {
         // A PR whose diff cannot be read has no overlap evidence, not an error.
       }
-      return {number: p.number, order, title: p.title, body: p.body ?? '', closes: p.closingIssuesReferences?.[0]?.number ?? null, ranges, replaced};
+      return {number: p.number, order, title: p.title, body: p.body ?? '', closes: closingNumber(config, p), ranges, replaced};
     });
     const issues: TrackerIssue[] = tracker.tickets({state: 'all', label: 'bug', limit}).map(i => ({number: i.number, labels: i.labels, body: i.body}));
     return {prs, issues, picks: picksToPrs(picked, iterations, prs), window};
@@ -99,7 +106,7 @@ export function gatherMeasures(ctx: CommandContext): Measures {
   const window = values.window === undefined ? DEFAULT_REWORK_WINDOW : parseInt(values.window, 10);
   if (!(window >= 1)) throw new Error('--window must be a whole number of merges, 1 or more');
   const picked = parseAllEvents(ctx.stateStore.readEvents()).filter(e => e.event === 'picked');
-  const changes = gatherChanges(ctx.run(), ctx.tracker(), iterations, picked, window, 100);
+  const changes = gatherChanges(ctx.run(), ctx.config, ctx.tracker(), iterations, picked, window, 100);
   const notHere = [
     ...(iterations.length === 0 ? ['iteration logs'] : []),
     ...(Object.values(sessionCosts).some(c => c === null) ? ['session transcripts'] : []),

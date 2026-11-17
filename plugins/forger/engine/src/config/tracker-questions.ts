@@ -5,7 +5,7 @@
  */
 
 import type {WorkloopConfig} from './config';
-import {jiraOf} from './jira-settings';
+import {jiraOf, type JiraSettings} from './jira-settings';
 
 type Kinded = Pick<WorkloopConfig, 'tracker'>;
 
@@ -75,4 +75,9 @@ export function workerBlockedHosts(config: Kinded): string[] {
     case 'none':
       return [];
   }
+}
+
+/** The Jira settings when the tracker is Jira; null for every other kind. */
+export function jiraSettingsOf(config: Kinded): JiraSettings | null {
+  return config.tracker.kind === 'jira' ? jiraOf(config.tracker) : null;
 }

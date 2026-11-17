@@ -1,6 +1,8 @@
 import {describe, expect, test} from 'bun:test';
 
 import type {Measures} from './measure';
+import {jiraClosingTicket, jiraTicketLabel} from '../tracker';
+import {picksToPrs} from './rework';
 import {APPROVAL_POLICY, approvalFor, buildReport, formatReport, orient} from './supervisor';
 import {buildStatus, conflictHalt} from '../loop';
 import {defaultState} from '../loop';
@@ -217,5 +219,25 @@ describe('the process changes section', () => {
     expect(formatReport(none)).not.toContain('Process changes');
     const empty = formatReport(buildReport({status: status(), plan, branch: 'main', baseBranch: 'main', processChanges: {since: 'c', changes: []}}));
     expect(empty).toContain('**Process changes since the last comparison**\n- none');
+  });
+});
+
+describe('over a Jira tracker', () => {
+  const jira = {site: 'https://example.atlassian.net/', project: 'ABC'};
+  test('report over a Jira tracker shows a ticket by its key and its address', () => {
+    const plan = orient({...base, status: status({remaining: 1})});
+    const r = buildReport({status: {...status({remaining: 1}), next_pick: 'issue-7', declined: [{ticket: 'issue-3', reason: 'too-large'}]}, plan, branch: 'main', baseBranch: 'main', ticketLabel: t => jiraTicketLabel(jira, t)});
+    const text = formatReport(r);
+    expect(text).toContain('ABC-7 (https://example.atlassian.net/browse/ABC-7)');
+    expect(text).toContain('ABC-3 (https://example.atlassian.net/browse/ABC-3) (too-large)');
+    expect(formatReport(buildReport({status: {...status({remaining: 1}), next_pick: 'issue-7'}, plan, branch: 'main', baseBranch: 'main'}))).toContain('- issue-7');
+  });
+
+  test('measure over a Jira tracker finds a ticket\'s pull request by the key in its title', () => {
+    const closes = jiraClosingTicket(jira, {title: 'ABC-12: the thing'});
+    expect(closes).toBe(12);
+    expect(jiraClosingTicket(jira, {title: 'feat: no key'})).toBeNull();
+    const pr = {number: 40, order: 0, title: 'ABC-12: the thing', body: '', closes, ranges: [], replaced: []};
+    expect(picksToPrs([{iteration: 1, ticket: 'issue-12'}], [{iteration: 1, ticket: 'issue-12'}], [pr])).toEqual([{ticket: 'issue-12', pr: 40}]);
   });
 });

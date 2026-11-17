@@ -23,7 +23,9 @@ import {runCoverageCheck, runTestsCheck} from './testing';
 import {runUiCheckOutput} from './ui';
 import {listOpinions, LOCK_PATH, loadPacks, parseLock, type Lock, type LoadedPack, type Opinion} from '../packs';
 import {applyWaivers, parseWaivers, staleWaivers, WAIVERS_PATH, type Finding, type WaivedFinding, type Waiver} from './waivers';
-import {forgerPath} from '../config';
+import {forgerPath, jiraSettingsOf, loadConfig} from '../config';
+import {trackerLines} from '../tracker';
+import {capturing} from '../ports';
 import {classifyGaps, gapsFail, gapsOpen, type Gap, type ReportedGap} from './gaps';
 
 /** `unmeasured`: nothing failed, but something could not be measured, so it is not a pass. */
@@ -89,6 +91,11 @@ export const CHECKS: Record<string, (ctx: CheckContext) => Finding[] | CheckOutp
   },
   ui: ctx => runUiCheckOutput(ctx.projectRoot, ctx.run),
   hooks: ctx => runHooksCheck(ctx.projectRoot, ctx.harness),
+  tracker: ctx => {
+    return trackerLines(jiraSettingsOf(loadConfig(ctx.projectRoot)), process.env, capturing(ctx.run))
+      .filter(l => !l.ok)
+      .map(l => ({file: '.forger/workloop.config.json', line: 1, rule: 'tracker-ready', opinion: 'base.tracker-ready', detail: l.text}));
+  },
   spec: ctx => {
     const {findings, gaps} = runSpecDecision(ctx.run, ctx.spec);
     return {findings, gaps};

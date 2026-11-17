@@ -77,7 +77,7 @@ config and tracker folders reads the kind.
 
 A Jira issue's text is a document in Atlassian Document Format, a tree of nodes
 in JSON. Two pure functions in `plugins/forger/engine/src/tracker/jira/` convert
-it; nothing calls them yet.
+it; the Jira adapter calls them.
 
 - **Read** (`adfToMarkdown`): paragraphs, headings, bullet and ordered lists
   (nested lists indent), code blocks with their language, rules, hard breaks,
@@ -93,6 +93,57 @@ it; nothing calls them yet.
   written as paragraph text and comes back unchanged.
 
 A ticket in the engine's shape keeps its sections and criteria through both.
+
+## Tracker: Jira
+
+With `tracker.kind` `jira`, the issues of one Jira Cloud project are the
+backlog. Only the tracker moves to Jira: branches, pull requests, checks and
+the merge stay on the code host, and a pull request names its ticket by the key
+at the start of its title (`ABC-12: the summary`).
+
+Settings, under `tracker.jira` in `.forger/workloop.config.json`:
+
+- `site` - the https address of the Jira site.
+- `project` - the key of the project that is the backlog.
+- `jql` - replaces the intake label test of the backlog when set.
+- `statuses` - `started`, `review` and `done`: the status each move leads to.
+  A move names a status the project's workflow reaches by one transition from
+  where the issue is; each is optional.
+- `priority` - maps a Jira priority name to `P0`-`P3`.
+- `effort` - a number field and two limits that sort its value into small,
+  medium and large.
+- `blocks_link` - the issue link type whose inward side is "blocked by".
+- `cloud_id` - set when the token works only through the vendor's gateway.
+
+The credential is two environment variables, `JIRA_EMAIL` and `JIRA_API_TOKEN`.
+They are never written to the config, a log or a command line: the call hands
+them to `curl` on standard input.
+
+How the loop reads an issue: it is intake when it carries the intake label and
+is not in a done status category; its priority and effort come from the mapped
+priority and the effort field; its blockers are the issues linked by
+`blocks_link`; it is complete when its status category is done.
+
+The three status moves happen at the start of a run, when the pull request is
+opened and at the merge. A move with no configured status does nothing, except
+that a merge with no `done` status comments the pull request's address on the
+issue and swaps the intake label for `merged`. A missing transition is logged
+and the run goes on.
+
+The loop's status issue is a Jira issue titled as on GitHub, made by `setup`
+when the credential is set and otherwise by the first halt.
+
+What a team sets up on its side: a project whose workflow has a transition to
+each configured status, the intake label on the issues to work, a link type for
+blockers, and an API token for an account that may browse, create and
+transition issues in the project.
+
+`check tracker` says, one line each, whether the two variables are set, whether
+the site accepts the credential, whether the project exists and whether each
+configured status is one the project has; a status the project lacks fails and
+the line names the statuses it has. It passes with one line for the other kinds.
+`measure` and `report` read through the port, show a ticket by its key and its
+address on the site, and find a ticket's pull request by the key in its title.
 
 ## Tracker: GitHub Issues
 

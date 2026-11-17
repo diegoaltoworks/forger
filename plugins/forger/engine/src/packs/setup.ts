@@ -17,6 +17,9 @@ export interface SetupOptions {
   gates?: string;
   baseBranch?: string;
   trackerKind?: string;
+  /** The Jira site and project key a `jira` tracker kind records. */
+  jiraSite?: string;
+  jiraProject?: string;
   /** The flavour to record in the config, as `<name>@<version>`. */
   flavour?: string;
   /** Pack ids to install; defaults to DEFAULT_PACKS. */
@@ -130,6 +133,7 @@ export function renderConfig(template: string, opts: SetupOptions, checkCommand:
   if (opts.flavour) config.flavour = opts.flavour;
   if (opts.harness) config.harness = opts.harness.id;
   if (opts.trackerKind) config.tracker = {...config.tracker, kind: opts.trackerKind};
+  if (opts.trackerKind === 'jira') config.tracker = {...config.tracker, jira: {site: opts.jiraSite ?? '', project: opts.jiraProject ?? ''}};
   return JSON.stringify(config, null, 2) + '\n';
 }
 

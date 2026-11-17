@@ -13,3 +13,5 @@ export * from './jira/status/moves';
 export * from './pull-request-title';
 export * from './jira/pr-title';
 export * from './ticket-view';
+export * from './jira/site-check';
+export * from './jira/ticket-label';
