@@ -10,7 +10,7 @@ export const replay: Command = {
   help: `  replay --file requests.json [--dry-run] [--json]
                    File the stored owner requests as issues in this repository, in order, each with its
                    blocked-by set. Run it in a fresh copy of the sample repository. --dry-run prints the plan only`,
-  run({values, config, run}) {
+  run({values, config, run, tracker}) {
     const file = values.file as string | undefined;
     if (!file) {
       console.error('Usage: replay --file requests.json [--dry-run] [--json]');
@@ -29,7 +29,7 @@ export const replay: Command = {
         console.log(values.json ? JSON.stringify(plan) : plan.map(p => `${p.position}. ${p.title}${p.blockedBy.length ? ` (after ${p.blockedBy.join(', ')})` : ''}`).join('\n'));
         return;
       }
-      const filed = fileReplay(run(), plan, config.tracker.kind === 'github' ? config.tracker.label : null);
+      const filed = fileReplay(tracker(), run(), plan, config.tracker.label);
       console.log(values.json ? JSON.stringify(filed) : filed.map(f => `#${f.number} ${f.title}${f.blockedBy.length ? ` (blocked by ${f.blockedBy.map(n => `#${n}`).join(', ')})` : ''}`).join('\n'));
     } catch (e) {
       console.error(`replay: ${(e as Error).message}`);

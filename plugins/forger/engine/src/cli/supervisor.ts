@@ -2,7 +2,7 @@ import {hostname} from 'os';
 import {existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync} from 'fs';
 import {join, relative, isAbsolute} from 'path';
 
-import {readBaseSync, decideHalt, pidAlive, viewLease, standingHalt, parseAllEvents, GhTrackerHalt, requiresVerifyStatus, handedOver, listRepoLabels, loopLabels, missingLabels, readAllVerdicts, verdictsHome, setAsideReasons} from '../loop';
+import {readBaseSync, decideHalt, pidAlive, viewLease, standingHalt, parseAllEvents, StatusIssueHalt, requiresVerifyStatus, handedOver, listRepoLabels, loopLabels, missingLabels, readAllVerdicts, verdictsHome, setAsideReasons} from '../loop';
 import {describeBlocked} from '../backlog';
 import {detectLayout, forgerPath} from '../config';
 import {gitignoreLines} from '../packs';
@@ -90,7 +90,7 @@ function supervise(which: 'orient' | 'report') {
     const branch = ctx.run()('git branch --show-current');
     let missing: string[] | undefined;
     let requiresVerify: boolean | null | undefined;
-    if (config.tracker.kind === 'github') {
+    if (ctx.tracker().queue === 'tracker') {
       requiresVerify = requiresVerifyStatus(ctx.capture(), config.base_branch);
       try {
         missing = missingLabels(loopLabels(config.tracker.label), listRepoLabels(ctx.tracker())).map(l => l.name);
@@ -110,7 +110,7 @@ function supervise(which: 'orient' | 'report') {
       status,
       haltReason: haltReasonOf(
         existsSync(haltFile) ? readFileSync(haltFile, 'utf-8') : null,
-        config.tracker.kind === 'github' ? new GhTrackerHalt(ctx.run()).read() : {label: false, reason: null}
+        ctx.tracker().queue === 'tracker' ? new StatusIssueHalt(ctx.tracker()).read() : {label: false, reason: null}
       ),
       branch,
       baseBranch: config.base_branch,

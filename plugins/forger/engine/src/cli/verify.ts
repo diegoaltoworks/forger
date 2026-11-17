@@ -79,7 +79,7 @@ export function verifyOne(ctx: CommandContext, pr: number): Promise<VerifyResult
     gates: config.gates,
     onFlaky: flaky => {
       ctx.stateStore.appendEvent(eventLine(terminalEvent('flaky_gate', 0, null, flakyReason(flaky))), new Date());
-      if (config.tracker.kind === 'github') ticketFlaky(ctx.run(), flaky, config.tracker.label);
+      if (ctx.tracker().queue === 'tracker') ticketFlaky(ctx.tracker(), flaky, config.tracker.label);
     },
     checksTimeoutMs: parseInt(ctx.values.timeout as string, 10) * 1000,
     sessionId: randomUUID(),

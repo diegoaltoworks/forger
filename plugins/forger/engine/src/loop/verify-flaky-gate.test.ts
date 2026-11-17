@@ -4,6 +4,7 @@ import {tmpdir} from 'os';
 import {join} from 'path';
 
 import type {AgentRunner, CommandRunner} from '../ports';
+import {githubTracker} from '../tracker';
 import {failedRunIds, failedTests, flakyReason, ticketFlaky, type FlakyGate} from './flaky-gate';
 import {verifyPr, type VerifyOptions} from './verify';
 
@@ -139,10 +140,10 @@ describe('a flaky gate is ticketed once', () => {
       if (cmd.startsWith('gh issue create')) open = [{number: 50, title: 'Make the flaky gate "test" deterministic'}];
       return '';
     };
-    expect(ticketFlaky(run, flaky, 'ready-for-agent')).toBe('filed');
-    expect(ticketFlaky(run, flaky, 'ready-for-agent')).toBe('commented');
+    expect(ticketFlaky(githubTracker(run), flaky, 'ready-for-agent')).toBe('filed');
+    expect(ticketFlaky(githubTracker(run), flaky, 'ready-for-agent')).toBe('commented');
     expect(calls.filter(c => c.startsWith('gh issue create')).length).toBe(1);
-    expect(calls.find(c => c.startsWith('gh issue create'))).toContain("--label flaky-gate --label 'ready-for-agent'");
+    expect(calls.find(c => c.startsWith('gh issue create'))).toContain("--label 'flaky-gate' --label 'ready-for-agent'");
     expect(calls.find(c => c.startsWith('gh issue comment 50'))).toContain('Seen again');
   });
 });
@@ -155,5 +156,22 @@ describe('the pure readers', () => {
 
   test('failedTests names each failed test once', () => {
     expect(failedTests('(fail) a [1ms]\n(fail) a [1ms]\nFAIL b\nok c')).toEqual(['a', 'b']);
+  });
+});
+
+describe('the flaky gate through the tracker', () => {
+  test('a flaky gate is a comment when its ticket is open and a new ticket with both labels when not', () => {
+    const calls: string[] = [];
+    let open: {number: number; title: string}[] = [];
+    const t = githubTracker(cmd => {
+      calls.push(cmd);
+      return cmd.startsWith('gh issue list') ? JSON.stringify(open) : '';
+    });
+    const f: FlakyGate = {pr: 5, head: 'abc1234', check: 'test', tests: []};
+    expect(ticketFlaky(t, f, 'ready-for-agent')).toBe('filed');
+    expect(calls.at(-1)).toContain("--label 'flaky-gate' --label 'ready-for-agent'");
+    open = [{number: 9, title: 'Make the flaky gate "test" deterministic'}];
+    expect(ticketFlaky(t, f, 'ready-for-agent')).toBe('commented');
+    expect(calls.at(-1)).toStartWith('gh issue comment 9');
   });
 });

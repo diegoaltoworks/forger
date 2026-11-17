@@ -7,7 +7,8 @@
 import {existsSync, mkdirSync, writeFileSync} from 'fs';
 import {dirname} from 'path';
 
-import type {CommandRunner} from '../ports';
+import type {CommandRunner, Tracker} from '../ports';
+import {filedLabels} from '../tracker';
 
 /** The label on the ticket that makes a flaky test deterministic. */
 export const FLAKY_GATE_LABEL = 'flaky-gate';
@@ -19,10 +20,6 @@ export interface FlakyGate {
   check: string;
   /** The tests the failed job's log names; empty when the log names none. */
   tests: string[];
-}
-
-function quote(s: string): string {
-  return `'${s.replace(/'/g, `'\\''`)}'`;
 }
 
 /** The ids of the workflow runs on a head that did not succeed, from `gh run list --json databaseId,conclusion`. */
@@ -126,15 +123,14 @@ function flakyBody(f: FlakyGate): string {
  * Files one ticket for a flaky gate; a later sighting of the same check comments on the open
  * ticket and files nothing. Returns what it did.
  */
-export function ticketFlaky(run: CommandRunner, f: FlakyGate, intakeLabel: string): 'filed' | 'commented' {
+export function ticketFlaky(tracker: Tracker, f: FlakyGate, intakeLabel: string): 'filed' | 'commented' {
   const title = flakyTitle(f.check);
-  const open = JSON.parse(run(`gh issue list --state open --label ${FLAKY_GATE_LABEL} --search ${quote(`"${title}" in:title`)} --json number,title`)) as {number: number; title: string}[];
-  const existing = open.find(i => i.title === title);
+  const existing = tracker.list({state: 'open', label: FLAKY_GATE_LABEL, title}).find(i => i.title === title);
   if (existing) {
     const tests = f.tests.length > 0 ? ` Failed tests: ${f.tests.join(', ')}.` : '';
-    run(`gh issue comment ${existing.number} --body ${quote(`Seen again: \`${f.check}\` failed on PR #${f.pr} and passed on a rerun.${tests}`)}`);
+    tracker.apply({kind: 'comment', ticket: existing.number, body: `Seen again: \`${f.check}\` failed on PR #${f.pr} and passed on a rerun.${tests}`});
     return 'commented';
   }
-  run(`gh issue create --title ${quote(title)} --body ${quote(flakyBody(f))} --label ${FLAKY_GATE_LABEL} --label ${quote(intakeLabel)}`);
+  tracker.apply({kind: 'file', title, body: flakyBody(f), labels: filedLabels(tracker.queue, intakeLabel, [FLAKY_GATE_LABEL])});
   return 'filed';
 }

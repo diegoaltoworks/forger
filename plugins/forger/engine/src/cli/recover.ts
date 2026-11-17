@@ -1,10 +1,7 @@
+import {filedLabels} from '../tracker';
 import {parseAllEvents, recover as recoverHalt, standingHalt} from '../loop';
 import type {Command} from './command';
 import {verifyOne} from './verify';
-
-function quote(s: string): string {
-  return `'${s.replace(/'/g, `'\\''`)}'`;
-}
 
 export const recover: Command = {
   name: 'recover',
@@ -22,8 +19,8 @@ export const recover: Command = {
         return {decision: r.decision, open: r.entries.filter(e => e.verdict !== 'met').map(e => `${e.criterion} ${e.verdict}`)};
       },
       fileTicket(title, body) {
-        const label = config.tracker.kind === 'github' ? ` --label ${quote(config.tracker.label)}` : '';
-        return ctx.run()(`gh issue create --title ${quote(title)} --body ${quote(body)}${label}`).trim();
+        const tracker = ctx.tracker();
+        return tracker.apply({kind: 'file', title, body, labels: filedLabels(tracker.queue, config.tracker.label)}).trim();
       },
       resume: detail => runner.recoverHalt(detail),
     });

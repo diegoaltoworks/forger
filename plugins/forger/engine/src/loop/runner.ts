@@ -277,7 +277,7 @@ export class AutomationRunner {
 
   /** Files each periodic review that is due. Best effort: a tracker or config failure never fails the iteration. */
   private fileReviews(iteration: number): void {
-    if (this.config.tracker.kind !== 'github') return;
+    if (this.tracker.queue !== 'tracker') return;
     const kinds = [
       {kind: STRUCTURE_REVIEW, file: fileStructureReview},
       {kind: ACCESS_REVIEW, file: fileAccessReview},
@@ -286,7 +286,7 @@ export class AutomationRunner {
       try {
         const template = readReviewTemplate(this.projectRoot, kind);
         if (template === null) continue;
-        const reason = file(this.projectRoot, this.gitRunner, this.config.tracker.label, this.stateStore.readEvents(), template);
+        const reason = file(this.projectRoot, this.tracker, this.config.tracker.label, this.stateStore.readEvents(), template);
         if (reason !== null) this.emit(kind.filedEvent, iteration, null, reason);
       } catch (e) {
         this.logger.log('WARN', `Could not check whether a ${kind.label} is due: ${(e as Error).message}`);
@@ -304,6 +304,7 @@ export class AutomationRunner {
         base: this.config.base_branch,
         intakeLabel: this.config.tracker.label,
         run: this.gitRunner,
+        tracker: this.tracker,
         probe,
         iteration,
         ticket,

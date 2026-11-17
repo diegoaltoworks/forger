@@ -7,7 +7,8 @@
 import {existsSync, readFileSync} from 'fs';
 import {join} from 'path';
 
-import type {CommandRunner} from '../../ports';
+import type {Tracker} from '../../ports';
+import {filedLabels} from '../../tracker';
 import type {EventKind, TerminalEvent} from '../events';
 
 export interface ReviewKind {
@@ -28,16 +29,12 @@ export function mergesSinceFiled(events: TerminalEvent[], filedEvent: EventKind)
   return n;
 }
 
-function quote(s: string): string {
-  return `'${s.replace(/'/g, `'\\''`)}'`;
+export function reviewIsOpen(tracker: Tracker, kind: ReviewKind): boolean {
+  return tracker.list({state: 'open', label: kind.label}).length > 0;
 }
 
-export function reviewIsOpen(run: CommandRunner, kind: ReviewKind): boolean {
-  return run(`gh issue list --label ${kind.label} --state open --json number --jq ".[].number"`).trim() !== '';
-}
-
-export function createReviewIssue(run: CommandRunner, kind: ReviewKind, intakeLabel: string, body: string): void {
-  run(`gh issue create --title ${quote(kind.title)} --body ${quote(body)} --label ${quote(kind.label)} --label ${quote(intakeLabel)}`);
+export function createReviewIssue(tracker: Tracker, kind: ReviewKind, intakeLabel: string, body: string): void {
+  tracker.apply({kind: 'file', title: kind.title, body, labels: filedLabels(tracker.queue, intakeLabel, [kind.label])});
 }
 
 /** The kind's template as installed, or null when the pack is not. */

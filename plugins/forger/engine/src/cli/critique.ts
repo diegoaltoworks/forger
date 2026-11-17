@@ -7,12 +7,9 @@ import {resolveModel, forgerPath} from '../config';
 import {critiquePr, DEFAULT_THRESHOLD, isSeverity, type CritiqueResult} from '../critique';
 import {loopRootOf, verdictsHome, verifierTier} from '../loop';
 import {CRITIQUE_SEVERITIES} from '../pipeline';
+import {filedLabels} from '../tracker';
 import {parseUiConfig, UI_PATH} from '../ui';
 import type {Command, CommandContext} from './command';
-
-function quote(s: string): string {
-  return `'${s.replace(/'/g, `'\\''`)}'`;
-}
 
 function visualPaths(ctx: CommandContext): string[] {
   const path = forgerPath(ctx.projectRoot, UI_PATH);
@@ -50,11 +47,11 @@ export const critique: Command = {
     }
     try {
       const tier = verifierTier(config);
-      const label = config.tracker.kind === 'github' ? ` --label ${quote(config.tracker.label)}` : '';
+      const tracker = ctx.tracker();
       const result = await critiquePr(
         ctx.run(),
         ctx.deps.agent ?? agentFor(findHarness(config.harness), config.model_prices, sandboxFor(config.sandbox, execCapture(ctx.projectRoot), sandboxSite(config, ctx.projectRoot, ctx.pluginRoot))),
-        {fileTicket: (title, body) => ctx.run()(`gh issue create --title ${quote(title)} --body ${quote(body)}${label}`).trim()},
+        {fileTicket: (title, body) => tracker.apply({kind: 'file', title, body, labels: filedLabels(tracker.queue, config.tracker.label)}).trim()},
         {
           pr,
           force: Boolean(values.force),
