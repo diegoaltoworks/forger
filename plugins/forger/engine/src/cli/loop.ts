@@ -1,7 +1,7 @@
 import {findHarness, guardRefusal} from '../adapters';
 import {watchRepos} from './multi';
 import {harnessOfRoot} from './harness-of';
-import {hooksGateProblems, hooksGateRefusal} from '../checks';
+import {commandsGateProblems, commandsGateRefusal, hooksGateProblems, hooksGateRefusal} from '../checks';
 import {spawnSync} from 'child_process';
 import {relative} from 'path';
 import {fastForwardRefusal, parseHaltClear, planBaseSync, readBaseSync, RESUME_FORMS, touchesPlugin} from '../loop';
@@ -35,6 +35,12 @@ export const run: Command = {
     const hooks = hooksGateRefusal(hooksGateProblems(projectRoot, pluginRoot, harnessOfRoot(projectRoot)));
     if (hooks) {
       console.error(`Not starting: ${hooks}.`);
+      process.exitCode = 1;
+      return;
+    }
+    const commands = commandsGateRefusal(commandsGateProblems(projectRoot, pluginRoot, run(), harnessOfRoot(projectRoot)));
+    if (commands) {
+      console.error(`Not starting: ${commands}.`);
       process.exitCode = 1;
       return;
     }

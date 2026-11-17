@@ -12,6 +12,7 @@ import {runBudgetsCheck} from './budgets';
 import {runDecisionsCheck} from './decisions';
 import {runDocsCheck} from './docs';
 import {runGuardsCheck} from './guards';
+import {runCommandsCheck} from './commands';
 import {runHooksCheck} from './hooks';
 import {runDeliveryCheck} from './delivery';
 import {runJourneysCheck} from './journeys';
@@ -21,7 +22,7 @@ import {runSpecDecision} from './spec';
 import {runStructureCheck} from './structure';
 import {runCoverageCheck, runTestsCheck} from './testing';
 import {runUiCheckOutput} from './ui';
-import {listOpinions, LOCK_PATH, loadPacks, parseLock, type Lock, type LoadedPack, type Opinion} from '../packs';
+import {commandFilePaths, listOpinions, LOCK_PATH, loadPacks, parseLock, type Lock, type LoadedPack, type Opinion} from '../packs';
 import {applyWaivers, parseWaivers, staleWaivers, WAIVERS_PATH, type Finding, type WaivedFinding, type Waiver} from './waivers';
 import {forgerPath, jiraSettingsOf, loadConfig} from '../config';
 import {trackerLines} from '../tracker';
@@ -59,6 +60,8 @@ export interface CheckContext {
   spec?: SpecProvider;
   /** The harness whose hook settings `check hooks` reads; absent means none to check. */
   harness?: Harness;
+  /** Where the engine's commands are; `check commands` compares the harness's command files with them. */
+  pluginRoot?: string;
 }
 
 /** A check's output: findings, and what it could not measure. */
@@ -91,6 +94,7 @@ export const CHECKS: Record<string, (ctx: CheckContext) => Finding[] | CheckOutp
   },
   ui: ctx => runUiCheckOutput(ctx.projectRoot, ctx.run),
   hooks: ctx => runHooksCheck(ctx.projectRoot, ctx.harness),
+  commands: ctx => (ctx.pluginRoot && ctx.harness ? runCommandsCheck(ctx.projectRoot, commandFilePaths(ctx.pluginRoot, ctx.harness), ctx.run) : []),
   tracker: ctx => {
     return trackerLines(jiraSettingsOf(loadConfig(ctx.projectRoot)), process.env, capturing(ctx.run))
       .filter(l => !l.ok)
@@ -157,7 +161,7 @@ export function runChecks(projectRoot: string, pluginRoot: string, run: CommandR
   const available = loadPacks(pluginRoot);
   const ids = checksToRun(available, lock);
   const waivers = loadWaivers(projectRoot);
-  const ctx: CheckContext = {projectRoot, run, spec, harness};
+  const ctx: CheckContext = {projectRoot, run, spec, harness, pluginRoot};
   const outputs = ids.map(check => {
     const out = CHECKS[check](ctx);
     return {check, ...(Array.isArray(out) ? {findings: out} : out)};
@@ -181,4 +185,18 @@ export function hooksGateProblems(projectRoot: string, pluginRoot: string, harne
 export function hooksGateRefusal(findings: Finding[]): string | null {
   if (findings.length === 0) return null;
   return `the hooks gate fails (${findings.map(f => `${f.file}: ${f.rule}`).join('; ')}); run \`work.ts setup\` in this repository to add what is missing, then commit it`;
+}
+
+/** As `hooksGateProblems`, for the command files a worker's harness reads from the repository. */
+export function commandsGateProblems(projectRoot: string, pluginRoot: string, run: CommandRunner, harness?: Harness): Finding[] {
+  const lockPath = forgerPath(projectRoot, LOCK_PATH);
+  if (!existsSync(lockPath)) return [];
+  if (!checksToRun(loadPacks(pluginRoot), parseLock(readFileSync(lockPath, 'utf-8'))).includes('commands')) return [];
+  return applyWaivers(runCommandsCheck(projectRoot, harness ? commandFilePaths(pluginRoot, harness) : [], run), loadWaivers(projectRoot)).violations;
+}
+
+/** The sentence `run` gives for a red commands gate; null when it is green. */
+export function commandsGateRefusal(findings: Finding[]): string | null {
+  if (findings.length === 0) return null;
+  return `the commands gate fails (${findings.map(f => `${f.file}: ${f.rule}`).join('; ')}); a worker runs from the base branch and will not have these files; see \`work.ts check commands\``;
 }

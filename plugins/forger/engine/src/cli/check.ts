@@ -12,6 +12,7 @@ import {
   runGuardsCheck,
   runDocsCheck,
   runDocsWarnings,
+  runCommandsCheck,
   runHooksCheck,
   runBudgetsCheck,
   runDeliveryCheck,
@@ -37,6 +38,7 @@ import {placementContext} from './placement-context';
 import type {CommandRunner, Harness} from '../ports';
 import {UiInfrastructureError} from '../ports';
 import {harnessOfRoot} from './harness-of';
+import {commandFilePaths} from '../packs';
 import {loopRootOf, realHookIo} from './hook';
 import {formatTrackerLines, githubTracker, trackerLines} from '../tracker';
 import type {Command} from './command';
@@ -51,6 +53,10 @@ function checkWorker(env: Record<string, string | undefined>): {ticket: string; 
 
 const SINGLE = {hooks: (root: string) => runHooksCheck(root, harnessOfRoot(root)), docs: runDocsCheck, arch: runArchCheck, decisions: runDecisionsCheck, guards: runGuardsCheck, safety: runSafetyCheck, delivery: (root: string) => runDeliveryCheck(root), journeys: (root: string, run: CommandRunner) => runJourneysCheck(root, run).findings, budgets: (root: string, run: CommandRunner) => runBudgetsCheck(root, run).findings, tests: runTestsCheck, coverage: runCoverageCheck, ui: runUiCheck};
 
+function commandPathsOf(pluginRoot: string, harness: Harness | undefined): string[] {
+  return harness ? commandFilePaths(pluginRoot, harness) : [];
+}
+
 export const check: Command = {
   name: 'check',
   needs: 'root',
@@ -62,6 +68,7 @@ export const check: Command = {
   check decisions [--json] Fail on a new dependency or layer-map change with no ADR in the diff
   check guards [--json]    Fail when the diff loosens a guard, skips or deletes a test and the ticket's Decisions do not name it
   check hooks [--json] Fail when the hook policy is missing or drops a default rule without a waiver, or the harness's settings do not run the hook
+  check commands [--json] Fail when a command file the harness reads from the repository is missing, ignored by git or not tracked; a worker runs from the base branch and would not have it
   check safety [--json] Fail on an added secret or a stored-shape change with no test
   check delivery [--json] Validate .forger/deliver.json (check required, commands non-empty, timeouts positive); runs none of the commands
   check journeys [--json] Start the app, run each journey in .forger/journeys.json and fail on one that exits non-zero; no journey named is a gap, not a pass
@@ -211,8 +218,8 @@ export const check: Command = {
       }
       return;
     }
-    if (!(positionals[1] in SINGLE)) {
-      console.error('Usage: check [--json | --summary] | check docs|arch|structure|decisions|guards|hooks|safety|delivery|journeys|budgets|tests|coverage|ui|spec|a11y|sandbox [--json] | check coverage --update');
+    if (!(positionals[1] in SINGLE) && positionals[1] !== 'commands') {
+      console.error('Usage: check [--json | --summary] | check docs|arch|structure|decisions|guards|hooks|commands|safety|delivery|journeys|budgets|tests|coverage|ui|spec|a11y|sandbox [--json] | check coverage --update');
       process.exitCode = 1;
       return;
     }
@@ -241,8 +248,8 @@ export const check: Command = {
     let violations;
     try {
       const run = ctx.run();
-      const runOne = SINGLE[positionals[1] as keyof typeof SINGLE];
-      violations = applyWaivers(runOne(projectRoot, run), loadWaivers(projectRoot)).violations;
+      const found = positionals[1] === 'commands' ? runCommandsCheck(projectRoot, commandPathsOf(pluginRoot, harnessOfRoot(projectRoot)), run) : SINGLE[positionals[1] as keyof typeof SINGLE](projectRoot, run);
+      violations = applyWaivers(found, loadWaivers(projectRoot)).violations;
     } catch (e) {
       console.error((e as Error).message);
       process.exitCode = 1;

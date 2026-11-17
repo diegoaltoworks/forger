@@ -3,10 +3,11 @@ import {StatusIssueHalt, ensureLabels, requireVerifyStatus, VERIFY_STATUS_CONTEX
 import {forgerPath, loadConfig, publishesVerifyStatus} from '../config';
 import {flavourRef, loadFlavour} from '../pipeline';
 import {findHarness} from '../adapters';
-import {runChecks} from '../checks';
+import type {Harness} from '../ports';
+import {commandFileFacts, formatUntrackedCommands, runChecks} from '../checks';
 import {harnessOfRoot} from './harness-of';
 import {specProvider} from './spec-provider';
-import {coverageAdvice, formatCoverageAdvice, formatSetup, failingChecksOf, formatUpgrade, formatUpgradeChecks, upgradeChangedFiles, type UpgradeChecks, readRepoFacts, type CoverageAdvice, loadPresets, offerPresets, parsePackList, runSetup, runUpgrade, trackedRuntimeFiles, formatTrackedRuntime, chooseStarter, hasSourceFile, loadStarters, withStarterPacks, type StarterManifest} from '../packs';
+import {commandFilePaths, coverageAdvice, formatCoverageAdvice, formatSetup, failingChecksOf, formatUpgrade, formatUpgradeChecks, upgradeChangedFiles, type UpgradeChecks, readRepoFacts, type CoverageAdvice, loadPresets, offerPresets, parsePackList, runSetup, runUpgrade, trackedRuntimeFiles, formatTrackedRuntime, chooseStarter, hasSourceFile, loadStarters, withStarterPacks, type StarterManifest} from '../packs';
 import {existsSync, readFileSync} from 'fs';
 import {join} from 'path';
 import {formatCredentialSetup, formatSandboxSetup, setupCredential, setupSandbox, type CredentialSetup, type SandboxSetup} from './setup-sandbox';
@@ -150,8 +151,9 @@ export const setup: Command = {
     }
     let result;
     let starter: StarterManifest | undefined;
+    let harness: Harness | undefined;
     try {
-      const harness = values.harness ? findHarness(values.harness) : undefined;
+      harness = values.harness ? findHarness(values.harness) : undefined;
       const choice = chooseStarter({
         hasSource: hasSourceFile(setupRoot(ctx)),
         noStarter: values['no-starter'] === true,
@@ -200,19 +202,22 @@ export const setup: Command = {
       }
     }
     const tracked = trackedRuntimeFiles(setupRoot(ctx), c => ctx.run()(c));
+    const written = new Set(result.files.filter(f => f.action === 'written').map(f => f.path));
+    const commandNotes = commandFileFacts(setupRoot(ctx), harness ? commandFilePaths(pluginRoot, harness) : [], ctx.run()).filter(f => written.has(f.path) && f.state !== 'tracked');
     const labels = createLabels(ctx);
     const jira = jiraSetup(ctx);
     const verifyCheck = requireVerify(ctx);
     const coverage = coverageNextStep(ctx, starter ? withStarterPacks(parsePackList(values.packs), starter) : parsePackList(values.packs));
     const offered = offerPresets(loadPresets(pluginRoot), installedSkills());
     const presets = offered.map(p => p.name);
-    if (values.json) console.log(JSON.stringify({...result, ...(unread.length > 0 ? {unread} : {}), ...(tracked.length > 0 ? {tracked_runtime: tracked} : {}), presets, labels, ...(jira ? {jira} : {}), ...(box ? {sandbox: box} : {}), ...(credential ? {credential} : {}), ...(verifyCheck ? {verify_check: verifyCheck} : {}), ...(coverage ? {coverage, next_steps: coverage.next_steps} : {})}));
+    if (values.json) console.log(JSON.stringify({...result, ...(unread.length > 0 ? {unread} : {}), ...(tracked.length > 0 ? {tracked_runtime: tracked} : {}), ...(commandNotes.length > 0 ? {untracked_commands: commandNotes} : {}), presets, labels, ...(jira ? {jira} : {}), ...(box ? {sandbox: box} : {}), ...(credential ? {credential} : {}), ...(verifyCheck ? {verify_check: verifyCheck} : {}), ...(coverage ? {coverage, next_steps: coverage.next_steps} : {})}));
     else
       console.log(
         [
           formatSetup(result, presets),
           ...formatUnread(unread),
           ...formatTrackedRuntime(tracked),
+          ...formatUntrackedCommands(commandNotes),
           ...(box ? formatSandboxSetup(box) : []),
           ...(credential ? formatCredentialSetup(credential) : []),
           ...labels.created.map(l => `label   ${l}`),

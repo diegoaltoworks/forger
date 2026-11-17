@@ -364,6 +364,7 @@ describe('check', () => {
       results: [
         {check: 'docs', opinions: ['base.ascii-punctuation', 'base.nothing-personal', 'base.no-hard-coded-skills', 'base.model-agnostic', 'base.merge-through-tool'], status: 'passed', violations: [], waived: [], gaps: []},
         {check: 'hooks', opinions: ['base.worker-hooks'], status: 'passed', violations: [], waived: [], gaps: []},
+        {check: 'commands', opinions: ['base.worker-commands'], status: 'passed', violations: [], waived: [], gaps: []},
         {check: 'guards', opinions: ['base.guards-hold'], status: 'passed', violations: [], waived: [], gaps: []},
         {check: 'tracker', opinions: ['base.tracker-ready'], status: 'passed', violations: [], waived: [], gaps: []},
       ],
@@ -1769,5 +1770,70 @@ describe('the command context tracker', () => {
     expect(tracker.text(3)).toBe('body text');
     expect(tracker.queue).toBe('file');
     expect(seen).toEqual(['gh issue view 3 --json body --jq .body']);
+  });
+});
+
+describe('commands gate', () => {
+  const gitSays = (tracked: string, ignored: string): CommandRunner => cmd => {
+    if (cmd.startsWith('git ls-files')) return tracked;
+    if (cmd.startsWith('git check-ignore')) {
+      if (ignored === '') throw new Error('exit 1');
+      return ignored;
+    }
+    return 'main';
+  };
+
+  async function codexRepo(): Promise<{root: string; paths: string[]}> {
+    const root = realpathSync(mkdtempSync(join(tmpdir(), 'forger-cli-commands-')));
+    dirs.push(root);
+    process.chdir(root);
+    const out = JSON.parse(await capture(['setup', '--json', '--no-starter', '--gates', 'make test', '--tracker', 'local', '--harness', 'codex'], gitSays('', '')));
+    const paths = (out.files as {path: string}[]).map(f => f.path).filter(p => p.startsWith('.agents/'));
+    return {root, paths};
+  }
+
+  test('check commands fails and names an ignored command file', async () => {
+    const {paths} = await codexRepo();
+    const out = JSON.parse(await capture(['check', 'commands', '--json'], gitSays(paths.slice(1).join('\n'), paths[0])));
+    expect(process.exitCode).toBe(1);
+    process.exitCode = 0;
+    expect(out).toHaveLength(1);
+    expect(out[0].file).toBe(paths[0]);
+    expect(out[0].rule).toBe('command-ignored');
+  });
+
+  test('check commands exits 0 when every command file is tracked', async () => {
+    const {paths} = await codexRepo();
+    await capture(['check', 'commands', '--json'], gitSays(paths.join('\n'), ''));
+    expect(process.exitCode).not.toBe(1);
+  });
+
+  test('run refuses to start a worker while a command file is not tracked, and charges no ticket', async () => {
+    const {root, paths} = await codexRepo();
+    const err: string[] = [];
+    const orig = console.error;
+    console.error = (m: string) => void err.push(String(m));
+    try {
+      await capture(['run'], gitSays(paths.slice(1).join('\n'), ''));
+      expect(process.exitCode).toBe(1);
+    } finally {
+      console.error = orig;
+      process.exitCode = 0;
+    }
+    expect(err.join('\n')).toContain('Not starting: the commands gate fails');
+    expect(err.join('\n')).toContain(paths[0]);
+    expect(err.join('\n')).toContain('check commands');
+    expect(existsSync(join(root, '.forger', 'state.json'))).toBe(false);
+  });
+
+  test('setup lists the command files it wrote that git ignores or does not track', async () => {
+    const root = realpathSync(mkdtempSync(join(tmpdir(), 'forger-cli-commands-')));
+    dirs.push(root);
+    process.chdir(root);
+    const text = await capture(['setup', '--no-starter', '--gates', 'make test', '--tracker', 'local', '--harness', 'codex'], gitSays('', ''));
+    expect(text).toContain('git does not track .agents/');
+    expect(text).toContain('base branch');
+    const ignored = await capture(['setup', '--json', '--harness', 'codex'], gitSays('', ''));
+    expect(ignored).not.toContain('untracked_commands');
   });
 });
