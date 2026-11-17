@@ -3,10 +3,12 @@ import {mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync} from 'node:
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 
+import {githubTracker} from '../../tracker';
 import {checkTicketCriteria} from '../criteria';
 import {eventLine, terminalEvent, type EventKind} from '../events';
-import {mergesSinceReview, reviewDue} from './structure-review';
+import {mergesSinceReview, reviewDue, STRUCTURE_REVIEW} from './structure-review';
 import {fileStructureReview} from './structure-review-io';
+import {createReviewIssue} from './schedule';
 
 const TEMPLATE = join(import.meta.dir, '../../../../packs/structure/files/structure-review.md');
 
@@ -56,15 +58,16 @@ describe('fileStructureReview', () => {
     writeFileSync(join(root, '.forger/structure-baseline.json'), JSON.stringify({entries: Array.from({length: entries}, (_, i) => ({rule: 'structure.folder-size', path: `d${i}`, count: 20}))}));
     return root;
   }
-  function tracker(open = '') {
+  function tracker(open = '[]') {
     const commands: string[] = [];
-    return {commands, run: (cmd: string): string => (commands.push(cmd), cmd.includes('issue list') ? open : '')};
+    return {commands, tracker: githubTracker((cmd: string): string => (commands.push(cmd), cmd.includes('issue list') ? open : ''))};
   }
+  const OPEN = JSON.stringify([{number: 77, title: 'review'}]);
   const body = readFileSync(TEMPLATE, 'utf-8');
 
   test('a merge that brings the count to every_merged files one structure review and records why', () => {
     const t = tracker();
-    const reason = fileStructureReview(project({every_merged: 3, warnings_over: 0}), t.run, 'ready-for-agent', text(...many(3)), body);
+    const reason = fileStructureReview(project({every_merged: 3, warnings_over: 0}), t.tracker, 'ready-for-agent', text(...many(3)), body);
     expect(reason).toContain('3 tickets merged');
     const created = t.commands.filter(c => c.includes('issue create'));
     expect(created).toHaveLength(1);
@@ -74,27 +77,27 @@ describe('fileStructureReview', () => {
 
   test('a baseline over warnings_over files a structure review early', () => {
     const t = tracker();
-    const reason = fileStructureReview(project({every_merged: 0, warnings_over: 2}, 3), t.run, 'ready-for-agent', text('merged'), body);
+    const reason = fileStructureReview(project({every_merged: 0, warnings_over: 2}, 3), t.tracker, 'ready-for-agent', text('merged'), body);
     expect(reason).toContain('3 entries');
     expect(t.commands.some(c => c.includes('issue create'))).toBe(true);
   });
 
   test('no review is filed while one with the structure-review label is open', () => {
-    const t = tracker('77\n');
-    expect(fileStructureReview(project({every_merged: 1, warnings_over: 0}), t.run, 'ready-for-agent', text(...many(5)), body)).toBeNull();
+    const t = tracker(OPEN);
+    expect(fileStructureReview(project({every_merged: 1, warnings_over: 0}), t.tracker, 'ready-for-agent', text(...many(5)), body)).toBeNull();
     expect(t.commands.some(c => c.includes('issue create'))).toBe(false);
   });
 
   test('a threshold of 0 turns that trigger off', () => {
     const t = tracker();
-    expect(fileStructureReview(project({every_merged: 0, warnings_over: 0}, 99), t.run, 'ready-for-agent', text(...many(99)), body)).toBeNull();
+    expect(fileStructureReview(project({every_merged: 0, warnings_over: 0}, 99), t.tracker, 'ready-for-agent', text(...many(99)), body)).toBeNull();
   });
 
   test('a project without the structure pack is left alone', () => {
     const root = mkdtempSync(join(tmpdir(), 'forger-structure-review-'));
     dirs.push(root);
     const t = tracker();
-    expect(fileStructureReview(root, t.run, 'ready-for-agent', text(...many(99)), body)).toBeNull();
+    expect(fileStructureReview(root, t.tracker, 'ready-for-agent', text(...many(99)), body)).toBeNull();
     expect(t.commands).toEqual([]);
   });
 
@@ -102,5 +105,14 @@ describe('fileStructureReview', () => {
     const check = checkTicketCriteria(body);
     expect(check.problems).toEqual([]);
     expect(check.ok).toBe(true);
+  });
+});
+
+describe('a review filed through the tracker', () => {
+  test('a due review is filed through the tracker with its label and the intake label', () => {
+    const applied: unknown[] = [];
+    const tracker = {queue: 'tracker', list: () => [], apply: (w: unknown) => (applied.push(w), '')} as never;
+    createReviewIssue(tracker, STRUCTURE_REVIEW, 'ready-for-agent', 'body');
+    expect(applied).toEqual([{kind: 'file', title: STRUCTURE_REVIEW.title, body: 'body', labels: ['structure-review', 'ready-for-agent']}]);
   });
 });

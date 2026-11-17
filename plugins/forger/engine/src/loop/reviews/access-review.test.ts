@@ -4,6 +4,7 @@ import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 
 import {parseSafetyConfig} from '../../checks';
+import {githubTracker} from '../../tracker';
 import {checkTicketCriteria} from '../criteria';
 import {eventLine, terminalEvent, type EventKind} from '../events';
 import {accessReviewDue} from './access-review';
@@ -28,43 +29,44 @@ function project(files: Record<string, object>): string {
   return root;
 }
 const safety = (everyMerged?: number) => ({'safety.json': {migration_paths: ['m/**'], data_test_paths: ['t/**'], ...(everyMerged === undefined ? {} : {access_review: {every_merged: everyMerged}})}});
-function tracker(open = '') {
+function tracker(open = '[]') {
   const commands: string[] = [];
-  return {commands, run: (cmd: string): string => (commands.push(cmd), cmd.includes('issue list') ? open : '')};
+  return {commands, tracker: githubTracker((cmd: string): string => (commands.push(cmd), cmd.includes('issue list') ? open : ''))};
 }
-const body = readFileSync(TEMPLATE, 'utf-8');
+const OPEN = JSON.stringify([{number: 77, title: 'review'}]);
+  const body = readFileSync(TEMPLATE, 'utf-8');
 const created = (t: {commands: string[]}) => t.commands.filter(c => c.includes('issue create'));
 
 describe('access review', () => {
   test('an access review is due after every_merged merges since the last one', () => {
     const t = tracker();
     const root = project(safety(3));
-    expect(fileAccessReview(root, t.run, 'ready-for-agent', text(...many(2)), body)).toBeNull();
-    const reason = fileAccessReview(root, t.run, 'ready-for-agent', text(...many(3)), body);
+    expect(fileAccessReview(root, t.tracker, 'ready-for-agent', text(...many(2)), body)).toBeNull();
+    const reason = fileAccessReview(root, t.tracker, 'ready-for-agent', text(...many(3)), body);
     expect(reason).toContain('every_merged 3');
     expect(created(t)).toHaveLength(1);
     expect(created(t)[0]).toContain("--label 'access-review'");
     expect(created(t)[0]).toContain("--label 'ready-for-agent'");
-    expect(fileAccessReview(root, tracker().run, 'ready-for-agent', text('merged', 'merged', 'access_review_filed', 'merged'), body)).toBeNull();
+    expect(fileAccessReview(root, tracker().tracker, 'ready-for-agent', text('merged', 'merged', 'access_review_filed', 'merged'), body)).toBeNull();
   });
 
   test('no access review is filed while one is open', () => {
-    const t = tracker('12\n');
-    expect(fileAccessReview(project(safety(1)), t.run, 'ready-for-agent', text(...many(5)), body)).toBeNull();
+    const t = tracker(JSON.stringify([{number: 12, title: 'review'}]));
+    expect(fileAccessReview(project(safety(1)), t.tracker, 'ready-for-agent', text(...many(5)), body)).toBeNull();
     expect(created(t)).toHaveLength(0);
     expect(accessReviewDue(1, {merged: 5, reviewOpen: true})).toBeNull();
   });
 
   test('every_merged of 0 files none', () => {
     const t = tracker();
-    expect(fileAccessReview(project(safety(0)), t.run, 'ready-for-agent', text(...many(99)), body)).toBeNull();
-    expect(fileAccessReview(project(safety()), t.run, 'ready-for-agent', text(...many(99)), body)).toBeNull();
+    expect(fileAccessReview(project(safety(0)), t.tracker, 'ready-for-agent', text(...many(99)), body)).toBeNull();
+    expect(fileAccessReview(project(safety()), t.tracker, 'ready-for-agent', text(...many(99)), body)).toBeNull();
     expect(t.commands).toEqual([]);
   });
 
   test('a project without the safety pack is left alone', () => {
     const t = tracker();
-    expect(fileAccessReview(project({}), t.run, 'ready-for-agent', text(...many(99)), body)).toBeNull();
+    expect(fileAccessReview(project({}), t.tracker, 'ready-for-agent', text(...many(99)), body)).toBeNull();
     expect(t.commands).toEqual([]);
   });
 
@@ -72,7 +74,7 @@ describe('access review', () => {
     const t = tracker();
     const root = project({...safety(2), 'structure.json': {review: {every_merged: 3, warnings_over: 0}}});
     const events = text('merged', 'merged', 'access_review_filed', 'merged');
-    expect(fileStructureReview(root, t.run, 'ready-for-agent', events, readFileSync(STRUCTURE_TEMPLATE, 'utf-8'))).toContain('3 tickets merged');
+    expect(fileStructureReview(root, t.tracker, 'ready-for-agent', events, readFileSync(STRUCTURE_TEMPLATE, 'utf-8'))).toContain('3 tickets merged');
     expect(created(t)[0]).toContain("--label 'structure-review'");
   });
 

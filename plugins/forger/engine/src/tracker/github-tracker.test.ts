@@ -2,6 +2,7 @@ import {describe, expect, test} from 'bun:test';
 
 import {capturing, type CommandRunner, type TrackerWrite} from '../ports';
 import {githubCommand} from './github-command';
+import {filedLabels} from './filed-labels';
 import {githubTracker} from './github-tracker';
 import {openTracker} from './open';
 
@@ -89,5 +90,20 @@ describe('openTracker', () => {
   test('the queue is in the tracker for github and in a file for local and none', () => {
     const queue = (kind: 'github' | 'local' | 'none') => openTracker({tracker: {kind, label: 'l', ignore: []}}, run).queue;
     expect([queue('github'), queue('local'), queue('none')]).toEqual(['tracker', 'file', 'file']);
+  });
+});
+
+describe('what the engine files', () => {
+  test('the GitHub tracker lists tickets by state, label and title with one command', () => {
+    const seen: string[] = [];
+    const t = githubTracker(fake({"gh issue list --state open --label 'x' --search '\"A b\" in:title' --json number,title": '[{"number":3,"title":"A b"}]'}, seen));
+    expect(t.list({state: 'open', label: 'x', title: 'A b'})).toEqual([{number: 3, title: 'A b'}]);
+    expect(seen).toHaveLength(1);
+  });
+
+  test('a ticket the engine files carries the intake label only when the queue is in the tracker', () => {
+    expect(filedLabels('tracker', 'ready', ['p'])).toEqual(['p', 'ready']);
+    expect(filedLabels('file', 'ready', ['p'])).toEqual(['p']);
+    expect(filedLabels('file', 'ready')).toEqual([]);
   });
 });

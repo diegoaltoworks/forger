@@ -1,5 +1,6 @@
 import {expect, test} from 'bun:test';
 
+import {githubTracker} from '../tracker';
 import {parseRequests, planReplay} from './replay';
 import {fileReplay} from './run';
 
@@ -15,7 +16,7 @@ test('files in order, then links the blockers of each dependent', () => {
     if (cmd.includes('-F number=11')) return JSON.stringify({data: {repository: {issue: {id: 'A', body: 'one', blockedBy: {nodes: []}}}}});
     return '';
   };
-  const filed = fileReplay(run, planReplay(p.requests), 'ready-for-agent');
+  const filed = fileReplay(githubTracker(run), run, planReplay(p.requests), 'ready-for-agent');
   expect(filed.map(f => [f.id, f.number, f.blockedBy])).toEqual([['a', 11, []], ['b', 12, [11]]]);
   const creates = calls.filter(c => c.startsWith('gh issue create'));
   expect(creates[0]).toContain("--label 'ready-for-agent'");

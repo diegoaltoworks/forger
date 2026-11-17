@@ -2,7 +2,8 @@ import {existsSync, readFileSync} from 'fs';
 
 import {DELIVER_PATH, parseDeliverConfig, planDelivery, type PlannedStep, type StepName} from '../../checks';
 import {forgerPath} from '../../config';
-import type {CommandResult, CommandRunner, ProbeRunner} from '../../ports';
+import type {CommandResult, CommandRunner, ProbeRunner, Tracker} from '../../ports';
+import {filedLabels} from '../../tracker';
 import type {EventKind} from '../events';
 import {DELIVERY_FAILED_TITLE, DELIVERY_LABEL, failureBody, prReason} from './outcome';
 
@@ -12,6 +13,7 @@ export interface DeliveryDeps {
   intakeLabel: string;
   /** git and gh calls in the main checkout. */
   run: CommandRunner;
+  tracker: Tracker;
   /** Runs the project's own commands with a time limit. */
   probe: ProbeRunner;
   iteration: number;
@@ -46,9 +48,9 @@ function mergedPr(run: CommandRunner, ticket: string | null): number | null {
 function reportFailure(d: DeliveryDeps, pr: number | null, step: string, detail: string, output: string): void {
   const body = failureBody(pr, step, detail, output);
   try {
-    const open = d.run(`gh issue list --label ${DELIVERY_LABEL} --state open --search ${quote(`${DELIVERY_FAILED_TITLE} in:title`)} --json number,title --jq ".[] | select(.title == \\"${DELIVERY_FAILED_TITLE}\\") | .number"`).trim().split('\n')[0];
-    if (open) d.run(`gh issue comment ${open} --body ${quote(body)}`);
-    else d.run(`gh issue create --title ${quote(DELIVERY_FAILED_TITLE)} --body ${quote(body)} --label ${quote(d.intakeLabel)} --label ${DELIVERY_LABEL}`);
+    const open = d.tracker.list({state: 'open', label: DELIVERY_LABEL, title: DELIVERY_FAILED_TITLE}).find(i => i.title === DELIVERY_FAILED_TITLE);
+    if (open) d.tracker.apply({kind: 'comment', ticket: open.number, body});
+    else d.tracker.apply({kind: 'file', title: DELIVERY_FAILED_TITLE, body, labels: filedLabels('tracker', d.intakeLabel, [DELIVERY_LABEL])});
   } catch (e) {
     d.warn(`Could not file the delivery failure: ${(e as Error).message}`);
   }

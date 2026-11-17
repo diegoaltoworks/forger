@@ -23,6 +23,16 @@ What a hand-back does is decided once, as writes, and each tracker says how:
   code host and keeps its own `gh pr edit` command;
 - `setup` creates the labels a repository lacks with label-creating writes.
 
+The tickets the engine files go through the same tracker: a flaky gate, a
+periodic review, a failed delivery, a critique's findings, the ticket for a
+revert and a replay's requests are file writes, and a later sighting is a
+comment on the open ticket found by a list of tickets by state, label and
+title. One function gives a filed ticket's labels: the labels the caller names,
+and the intake label when the backlog is in the tracker. The loop's status issue
+(the halt signal) is one ticket found by its title, the lowest number when
+several match; setting it is a comment and a label write, clearing it a label
+write, and a pin that fails does not fail the rest.
+
 A function that applies these reads the ticket's labels back through the same
 tracker to check the label held.
 

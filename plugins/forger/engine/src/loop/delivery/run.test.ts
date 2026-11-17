@@ -4,6 +4,7 @@ import {tmpdir} from 'os';
 import {join} from 'path';
 
 import type {CommandResult} from '../../ports';
+import {githubTracker} from '../../tracker';
 import type {EventKind} from '../events';
 import {DELIVERY_FAILED_TITLE} from './outcome';
 import {runDelivery, type DeliveryDeps} from './run';
@@ -37,11 +38,15 @@ function scene(s: Scene = {}) {
     projectRoot: root,
     base: 'main',
     intakeLabel: 'ready-for-agent',
+    tracker: githubTracker(cmd => {
+      tracker.push(cmd);
+      if (cmd.startsWith('gh issue list')) return s.openIssue === undefined ? '[]' : JSON.stringify([{number: Number(s.openIssue), title: DELIVERY_FAILED_TITLE}]);
+      return '';
+    }),
     run: cmd => {
       tracker.push(cmd);
       if (s.mergeFails && cmd.startsWith('git merge')) throw new Error('not a fast-forward');
       if (cmd.startsWith('gh pr list')) return '12\n';
-      if (cmd.startsWith('gh issue list')) return s.openIssue ?? '';
       return '';
     },
     probe: (command): CommandResult => {
@@ -74,7 +79,7 @@ describe('runDelivery', () => {
     runDelivery(s.deps);
     const [create] = created(s.tracker);
     expect(created(s.tracker)).toHaveLength(1);
-    expect(create).toContain('--label P0');
+    expect(create).toContain("--label 'P0'");
     expect(create).toContain("--label 'ready-for-agent'");
     expect(create).toContain('#12');
     expect(create).toContain('boom: the page is down');
@@ -151,13 +156,23 @@ describe('runDelivery', () => {
 
   test('a tracker that refuses the issue does not stop the rollback', () => {
     const s = scene({exits: {smoke: 1}});
-    const run = s.deps.run;
-    s.deps.run = cmd => {
-      if (cmd.startsWith('gh issue')) throw new Error('rate limited');
-      return run(cmd);
-    };
+    s.deps.tracker = githubTracker(() => {
+      throw new Error('rate limited');
+    });
     runDelivery(s.deps);
     expect(s.probed).toContain('revert');
     expect(s.warns[0]).toContain('Could not file');
+  });
+});
+
+describe('the failed delivery through the tracker', () => {
+  test('a failed delivery comments on its open ticket through the tracker and files one when none is open', () => {
+    const open = scene({exits: {smoke: 1}, openIssue: '77'});
+    runDelivery(open.deps);
+    expect(open.tracker.some(c => c.startsWith('gh issue comment 77'))).toBe(true);
+    expect(created(open.tracker)).toHaveLength(0);
+    const none = scene({exits: {smoke: 1}});
+    runDelivery(none.deps);
+    expect(created(none.tracker)).toHaveLength(1);
   });
 });
