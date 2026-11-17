@@ -86,3 +86,4 @@
 {"event":"worker_denied","at":"2026-11-17T08:06:07.988Z","iteration":264,"ticket":"issue-526","reason":"leave-worktree: cd /home/diego/work/forger/docs/reference 2>/dev/null || cd /home/diego/work/forger/.forger/worktrees/issue-526/docs/reference; pwd; grep -n \"^#\" tracker.md; grep -n \"tracker\" configuration.md | head; grep -n \"^#\" install.md; grep -n \"check structure\\|setup \\[\" commands.md | head; grep -n -i jira tracker.md | head"}
 {"event":"worker_denied","at":"2026-11-17T08:12:54.671Z","iteration":264,"ticket":"issue-526","reason":"other-engine: verify from /home/diego/work/forger/.forger/worktrees/issue-526/plugins/forger"}
 {"event":"merged","at":"2026-11-17T08:17:44.210Z","iteration":264,"ticket":"issue-526","reason":null}
+{"event":"completed","at":"2026-11-17T08:17:56.256Z","iteration":264,"ticket":null,"reason":null}
