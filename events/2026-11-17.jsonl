@@ -68,3 +68,4 @@
 {"event":"worker_denied","at":"2026-11-17T07:25:40.014Z","iteration":260,"ticket":"issue-491","reason":"other-engine: verify from /home/diego/work/forger/.forger/worktrees/issue-491/plugins/forger"}
 {"event":"merged","at":"2026-11-17T07:28:45.019Z","iteration":260,"ticket":"issue-491","reason":null}
 {"event":"picked","at":"2026-11-17T07:29:05.181Z","iteration":261,"ticket":"issue-523","reason":null,"commands":"engine"}
+{"event":"worker_denied","at":"2026-11-17T07:35:18.000Z","iteration":261,"ticket":"issue-523","reason":"leave-worktree: cd /home/diego/work/forger; grep -c cycle .forger/structure-baseline.json; grep -n \"github-backlog\" .forger/structure-baseline.json | head -5; git stash list >/dev/null; git show main:.forger/structure-baseline.json | grep -n \"cycle\" | head -3"}
