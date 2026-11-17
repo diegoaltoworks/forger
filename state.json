@@ -239,7 +239,10 @@
       "ticket": "issue-509",
       "pid": null,
       "session_id": "1c59048c-ed42-4044-8b61-cc2f2dad1f96",
-      "snapshot": null,
+      "snapshot": {
+        "baseSha": "",
+        "reflogLength": 1
+      },
       "started_at": "2026-11-17T06:15:08.262Z",
       "plan": {
         "stages": [
