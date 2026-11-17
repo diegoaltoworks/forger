@@ -1,11 +1,8 @@
 /** The `gh` command of each read and each write; pure. */
 
 import type {TicketQuery, TrackerWrite} from '../ports';
-
-/** Every label, title and text goes into a command through this; a ticket's number is bare. */
-export function quote(s: string): string {
-  return `'${s.replace(/'/g, `'\\''`)}'`;
-}
+import {blockCommand} from './github-graphql';
+import {quote} from './quote';
 
 export const githubRead = {
   text: (n: number): string => `gh issue view ${n} --json body --jq .body`,
@@ -44,5 +41,7 @@ export function githubCommand(write: TrackerWrite): string {
       return `gh issue pin ${write.ticket}`;
     case 'createLabel':
       return `gh label create ${quote(write.name)} --color ${write.color} --description ${quote(write.description)}`;
+    case 'block':
+      return blockCommand(write.blocked, write.blocker);
   }
 }

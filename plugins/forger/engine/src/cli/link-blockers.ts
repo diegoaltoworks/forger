@@ -8,7 +8,7 @@ export const linkBlockersCommand: Command = {
   help: `  link-blockers --issue N [--json]
                    Link every issue under the issue's "Blocked by" heading as a native
                    blocked-by, so a dependency written in prose is one the engine sees`,
-  run({values, run}) {
+  run({values, tracker}) {
     const issue = Number(values.issue);
     if (!Number.isInteger(issue) || issue <= 0) {
       console.error('link-blockers: --issue N is required');
@@ -16,7 +16,7 @@ export const linkBlockersCommand: Command = {
       return;
     }
     try {
-      const result = linkBlockers(run(), issue);
+      const result = linkBlockers(tracker(), issue);
       console.log(
         values.json
           ? JSON.stringify(result)

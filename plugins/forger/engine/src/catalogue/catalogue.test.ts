@@ -1,7 +1,9 @@
 import {describe, expect, test} from 'bun:test';
 
 import {checkCatalogue, factsOnMerge, parseCatalogue, ticketsOf, updateCatalogue, type TicketFacts} from './catalogue';
-import {branchPr, branchTicket, factFromIssue, parseFacts, trackerFacts} from './tracker';
+import {factFromIssue, parseFacts} from '../tracker';
+import {githubTracker} from '../tracker';
+import {branchPr, branchTicket, trackerFacts} from './tracker';
 
 const facts = (o: Record<number, number | 'closed' | 'open'>): TicketFacts =>
   new Map(
@@ -163,8 +165,8 @@ describe('tracker facts', () => {
     expect([...parseFacts(raw)]).toEqual([[5, {closed: true, mergedPr: 9}]]);
   });
   test('a failing tracker gives null, and no tickets need no call', () => {
-    expect(trackerFacts(() => { throw new Error('no gh'); }, [5])).toBeNull();
-    expect(trackerFacts(() => { throw new Error('unused'); }, [])).toEqual(new Map());
+    expect(trackerFacts(githubTracker(() => { throw new Error('no gh'); }), [5])).toBeNull();
+    expect(trackerFacts(githubTracker(() => { throw new Error('unused'); }), [])).toEqual(new Map());
   });
 });
 

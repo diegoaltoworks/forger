@@ -4,7 +4,7 @@
  * Every tracker call goes through the injected runner.
  */
 
-import type {CommandRunner} from '../ports';
+import type {Tracker} from '../ports';
 import {blockersToLink, parseBlockedBy} from './blocked-by';
 
 export interface LinkResult {
@@ -13,59 +13,21 @@ export interface LinkResult {
   already: number[];
 }
 
-function shellQuote(s: string): string {
-  return `'${s.replace(/'/g, `'\\''`)}'`;
-}
-
-export const ISSUE_LINKS_QUERY = `query($owner: String!, $repo: String!, $number: Int!) {
-  repository(owner: $owner, name: $repo) {
-    issue(number: $number) { id body blockedBy(first: 50) { nodes { number } } }
-  }
-}`;
-
-export const ADD_BLOCKED_BY = `mutation($issue: ID!, $blocker: ID!) {
-  addBlockedBy(input: {issueId: $issue, blockingIssueId: $blocker}) { clientMutationId }
-}`;
-
-interface IssueLinks {
-  id: string;
-  body: string;
-  native: number[];
-}
-
-function readIssue(run: CommandRunner, issue: number): IssueLinks {
-  const raw = run(
-    [
-      'gh api graphql',
-      `-F owner='{owner}' -F repo='{repo}' -F number=${issue}`,
-      `-f query=${shellQuote(ISSUE_LINKS_QUERY)}`,
-    ].join(' ')
-  );
-  let node: {id?: string; body?: string; blockedBy?: {nodes?: Array<{number: number}>}} | null | undefined;
-  try {
-    node = JSON.parse(raw)?.data?.repository?.issue;
-  } catch {
-    throw new Error(`link-blockers: gh returned invalid JSON for #${issue}`);
-  }
-  if (!node?.id) throw new Error(`link-blockers: issue #${issue} was not found`);
-  return {id: node.id, body: node.body ?? '', native: (node.blockedBy?.nodes ?? []).map(n => n.number)};
+function readIssue(tracker: Tracker, issue: number) {
+  const links = tracker.links(issue);
+  if (!links) throw new Error(`link-blockers: issue #${issue} was not found`);
+  return links;
 }
 
 /** Links every issue under the issue's `Blocked by` heading that is not already linked. */
-export function linkBlockers(run: CommandRunner, issue: number): LinkResult {
-  const me = readIssue(run, issue);
+export function linkBlockers(tracker: Tracker, issue: number): LinkResult {
+  const me = readIssue(tracker, issue);
   const declared = parseBlockedBy(me.body);
   const todo = blockersToLink(issue, declared, me.native);
   const linked: number[] = [];
   for (const blocker of todo) {
-    const other = readIssue(run, blocker);
-    run(
-      [
-        'gh api graphql',
-        `-f query=${shellQuote(ADD_BLOCKED_BY)}`,
-        `-f issue=${shellQuote(me.id)} -f blocker=${shellQuote(other.id)}`,
-      ].join(' ')
-    );
+    const other = readIssue(tracker, blocker);
+    tracker.apply({kind: 'block', blocked: me.ref, blocker: other.ref});
     linked.push(blocker);
   }
   return {issue, linked, already: declared.filter(n => n !== issue && me.native.includes(n))};

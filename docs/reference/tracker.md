@@ -42,6 +42,16 @@ placement context). The tracker also says what a person runs to list the
 tickets with a label, so the recommendation printed when a read fails comes
 from the adapter.
 
+Three reads are GraphQL queries and one write is a GraphQL mutation: the open
+tickets with a label, each with its text and its native blockers (a ticket
+check compares with them; a failure carries the tracker's own error); one
+ticket's text, native blockers and the tracker's own reference for it; and, for
+a list of tickets, whether each is closed and which merged pull request closed
+it (the failure catalogue is checked against these). The write blocks one ticket
+by another, named by those references: the port does not say what a reference
+is, so GitHub uses a node id and another tracker can use its key. Which blockers
+to link stays a pure decision over the ticket's text.
+
 A function that applies these reads the ticket's labels back through the same
 tracker to check the label held.
 

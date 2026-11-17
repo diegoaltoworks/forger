@@ -2,6 +2,7 @@
 
 import {capturing, type CapturingRunner, type CommandResult, type CommandRunner, type QueueHome, type TicketFacts, type TicketState, type Tracker, type TrackerWrite, type WholeResult} from '../ports';
 import {githubCommand, githubRead} from './github-command';
+import {factsCommand, openTicketsCommand, parseFacts, parseOpenTickets, parseTicketLinks, ticketLinksCommand} from './github-graphql';
 
 function lines(out: string): string[] {
   return out.split('\n').map(l => l.trim()).filter(Boolean);
@@ -31,6 +32,13 @@ export function githubTracker(run: CommandRunner, capture: CapturingRunner = cap
     list: q => JSON.parse(call(githubRead.list(q))) as Array<{number: number; title: string}>,
     tickets: q =>
       (JSON.parse(call(githubRead.tickets(q))) as Array<{number: number; title: string; labels: Array<{name: string}>; body?: string}>).map(i => ({number: i.number, title: i.title, labels: i.labels.map(l => l.name), body: i.body ?? ''})),
+    openTickets(label) {
+      const r = call(openTicketsCommand(label), {whole: true});
+      if (r.exitCode !== 0) throw new Error(lines(r.stderr).join(' ') || `gh exited ${r.exitCode}`);
+      return parseOpenTickets(r.stdout);
+    },
+    links: n => parseTicketLinks(call(ticketLinksCommand(n)), n),
+    ticketFacts: numbers => parseFacts(call(factsCommand(numbers))),
     listCommand: label => githubRead.listing(label),
     repoLabels: () => lines(call(githubRead.repoLabels())),
     account: ((how?: WholeResult) => (how ? call(githubRead.account(), how) : call(githubRead.account()))) as Tracker['account'],

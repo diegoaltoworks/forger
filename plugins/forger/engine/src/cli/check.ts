@@ -32,7 +32,6 @@ import {
 import {checkContract, contractItems, formatContract, resolveSandboxImage, findHarness, playwrightAuditor, playwrightScreenshotter, shellAppServer} from '../adapters';
 import {loadConfig} from '../config';
 import {checkSequencing} from '../backlog';
-import {readOpenTickets} from './open-tickets';
 import {WORKER_ITERATION_VAR, WORKER_TICKET_VAR, checkTicketCriteria, criterionOptions, placementProblems} from '../loop';
 import {placementContext} from './placement-context';
 import type {CommandRunner, Harness} from '../ports';
@@ -134,7 +133,7 @@ export const check: Command = {
       const result = checkTicketCriteria(body, criterionOptions(projectRoot, config));
       let native: number[] = [];
       try {
-        const open = readOpenTickets(ctx.capture(), config.tracker.label);
+        const open = ctx.tracker().openTickets(config.tracker.label);
         const subject = open.find(t => t.number === n) ?? {number: n, body, native: []};
         native = subject.native;
         result.problems.push(...checkSequencing({...subject, body}, open));
