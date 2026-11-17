@@ -270,28 +270,7 @@
   ],
   "consecutive_declines": 0,
   "owner_review_tasks": [],
-  "set_aside_tasks": [
-    {
-      "ticket": "issue-487",
-      "reason": "Agent signaled stop - blocked or no actionable work",
-      "iteration": 252,
-      "footprint": {
-        "paths": [
-          "plugins/forger/engine/src/ports/tracker.ts",
-          "plugins/forger/engine/src/loop/reviews/structure-review-io.ts",
-          "plugins/forger/engine/src/loop/reviews/access-review-io.ts",
-          "plugins/forger/engine/src/loop/runner.ts",
-          "plugins/forger/engine/src/loop/state.ts",
-          "plugins/forger/engine/src/loop/index.ts",
-          "plugins/forger/engine/src/cli/verify.ts",
-          "plugins/forger/engine/src/cli/replay.ts",
-          "plugins/forger/engine/src/cli/main.ts",
-          "plugins/forger/engine/src/cli/supervisor.ts"
-        ],
-        "modules": []
-      }
-    }
-  ],
+  "set_aside_tasks": [],
   "consecutive_set_asides": 0,
   "last_remaining_count": 12
 }
