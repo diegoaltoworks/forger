@@ -12,3 +12,4 @@
 {"event":"worker_denied","at":"2026-11-17T05:31:15.007Z","iteration":247,"ticket":"issue-504","reason":"other-engine: verify from /home/diego/work/forger/.forger/worktrees/issue-504/plugins/forger"}
 {"event":"worker_denied","at":"2026-11-17T05:31:19.053Z","iteration":247,"ticket":"issue-504","reason":"other-engine: merge from /home/diego/work/forger/.forger/worktrees/issue-504/plugins/forger"}
 {"event":"merged","at":"2026-11-17T05:34:32.922Z","iteration":247,"ticket":"issue-504","reason":null}
+{"event":"picked","at":"2026-11-17T05:34:52.941Z","iteration":248,"ticket":"issue-487","reason":null,"commands":"engine"}
