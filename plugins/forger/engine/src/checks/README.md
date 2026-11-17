@@ -16,7 +16,7 @@ reads the tree and hands it to them.
 - `ci.ts` - the CI job summary and the workflow the loop's CI runs. Pure.
 - `record/` - the per-opinion records of a `check` run inside a worker, appended
   to `paths.checks`. The records are pure; the append is the only I/O.
-- `docs/`, `arch/`, `decisions/`, `guards/`, `hooks/`, `journeys/`, `safety/`, `spec/`, `structure/`, `testing/`, `ui/` - one check each; see
+- `commands/`, `docs/`, `arch/`, `decisions/`, `guards/`, `hooks/`, `journeys/`, `safety/`, `spec/`, `structure/`, `testing/`, `ui/` - one check each; see
   their READMEs.
 
 ## Entry point

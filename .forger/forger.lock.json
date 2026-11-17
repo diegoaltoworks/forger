@@ -2,7 +2,7 @@
   "packs": [
     {
       "id": "base",
-      "version": "1.9.0",
+      "version": "1.10.0",
       "files": [
         {
           "path": ".forger/templates/pr.md",

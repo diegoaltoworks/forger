@@ -165,6 +165,11 @@ function commandFiles(pluginRoot: string, harness: Harness): {rel: string; conte
   });
 }
 
+/** Where `setup` installs each command file for the harness. */
+export function commandFilePaths(pluginRoot: string, harness: Harness): string[] {
+  return commandFiles(pluginRoot, harness).map(f => f.rel);
+}
+
 /**
  * Where a worker started in `root` takes its commands from: `engine` when the harness loads the plugin from
  * the engine's root, or every command file `setup` installs for it is there and equal to the engine's

@@ -49,6 +49,7 @@ the harness in the config. To update, pull the clone and run the same setup
 line again: it rewrites the commands that changed and keeps everything else.
 In these harnesses a command is named `forger-<step>`, for example
 `/forger-work` in OpenCode and Copilot and `$forger-work` in Codex.
+A worker runs in a worktree made from the base branch, so these command files must be committed and not ignored by git: `setup` lists the ones git ignores or does not track, `check commands` fails on them, and `run` starts no worker until they are on the base branch.
 
 Already-onboarded repos keep working with their files in `.claude/` (the legacy layout):
 every command prints one warning naming `migrate`, which moves them to `.forger/`. An old config without a
