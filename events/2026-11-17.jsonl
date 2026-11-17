@@ -77,3 +77,4 @@
 {"event":"worker_denied","at":"2026-11-17T07:48:29.336Z","iteration":262,"ticket":"issue-524","reason":"other-engine: verify from /home/diego/work/forger/.forger/worktrees/issue-524/plugins/forger"}
 {"event":"merged","at":"2026-11-17T07:51:45.650Z","iteration":262,"ticket":"issue-524","reason":null}
 {"event":"picked","at":"2026-11-17T07:52:04.769Z","iteration":263,"ticket":"issue-525","reason":null,"commands":"engine"}
+{"event":"worker_denied","at":"2026-11-17T07:52:36.686Z","iteration":263,"ticket":"issue-525","reason":"leave-worktree: cd /home/diego/work/forger/plugins/forger/engine/src 2>/dev/null || cd /home/diego/work/forger/.forger/worktrees/issue-525/plugins/forger/engine/src; pwd; grep -rln \"ticketNaming\" . ; grep -rn \"ticketNaming\" . | grep -v \"test.ts\"; cat tracker/tracker-rules.test.ts | head -50; ls cli | head -80; git status --short"}
