@@ -121,6 +121,7 @@ export function jiraTracker(capture: CapturingRunner, config: Config, log: (line
       const i = readIssue(n);
       return {labels: i.fields?.labels ?? [], body: textOf(i)};
     },
+    title: n => readIssue(n).fields?.summary ?? '',
     labels: n => readIssue(n).fields?.labels ?? [],
     state(n): TicketState {
       return {state: isDone(readIssue(n)) ? 'CLOSED' : 'OPEN', closedBy: []};

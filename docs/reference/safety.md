@@ -8,6 +8,17 @@ The worker runs headless with `--dangerously-skip-permissions`. Keep the repo's
 data-safety and write-scope rules in `.forger/process.md` explicit and enforced
 by tests, not convention - the loop will do exactly what the backlog tells it to.
 
+## The tracker's site is not the worker's
+
+With the tracker kind `jira`, the worker's hook has one more rule, `tracker-site`.
+A command that names the configured site's host, or the vendor's gateway host,
+is refused with a message that points at `work ticket <n>`; the engine reads and
+moves the issues. The rule is on for every worker whatever `.forger/hooks.json`
+says, and with the other kinds it refuses nothing. The engine's own calls are
+not a worker's and are not judged by it. With this kind a pull request's title
+begins with the issue's key and its body holds no closing reference: `verify`
+and `merge` refuse one.
+
 ## Guards hold
 
 A guarantee (a coverage floor, a budget, a threshold, a test) is the owner's to

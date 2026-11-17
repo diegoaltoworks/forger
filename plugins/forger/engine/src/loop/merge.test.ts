@@ -181,3 +181,21 @@ describe('mergePr on the verdict', () => {
     expect(calls).not.toContain(MERGE);
   });
 });
+
+describe('mergePr on a tracker that names tickets by a key in the title', () => {
+  test('verify and merge refuse a Jira ticket\'s pull request whose body holds a closing reference', async () => {
+    const {run, calls} = fakeGh([['SUCCESS']]);
+    const withBody: CommandRunner = cmd => (cmd === 'gh pr view 9 --json body --jq .body' ? 'what it does\n\nCloses #12\n' : run(cmd));
+    const r = await mergePr(withBody, {...opts, ticketNaming: 'key-in-title', verdictsDir: verdictsDir(record('pass'))});
+    expect(r.merged).toBe(false);
+    expect(r.reason).toContain('"Closes #12"');
+    expect(calls).not.toContain(MERGE);
+  });
+
+  test('a body with no closing reference merges as before', async () => {
+    const {run} = fakeGh([['SUCCESS'], ['SUCCESS']]);
+    const withBody: CommandRunner = cmd => (cmd === 'gh pr view 9 --json body --jq .body' ? 'what it does\n' : run(cmd));
+    const r = await mergePr(withBody, {...opts, ticketNaming: 'key-in-title', verdictsDir: verdictsDir(record('pass'))});
+    expect(r).toMatchObject({merged: true, reason: null});
+  });
+});

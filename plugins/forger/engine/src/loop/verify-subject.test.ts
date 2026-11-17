@@ -1,6 +1,6 @@
 import {describe, expect, test} from 'bun:test';
 
-import {resolveSubject} from './verify-subject';
+import {closingReferenceRefusal, resolveSubject} from './verify-subject';
 
 const base = {ticketNaming: 'closing-reference' as const, inBacklog: () => false};
 
@@ -38,5 +38,23 @@ describe('resolveSubject', () => {
     const local = {ticketNaming: 'backlog-id' as const, inBacklog: () => false};
     expect(resolveSubject({...local, branch: 'feat/x', body: '## Acceptance\n- [ ] a'}).kind).toBe('body');
     expect(() => resolveSubject({...local, branch: 'feat/x', body: ''})).toThrow('cannot tell');
+  });
+});
+
+describe('a pull request on a tracker that names tickets by a key in the title', () => {
+  const keyed = {ticketNaming: 'key-in-title' as const, inBacklog: () => false, ticketOfTitle: (t: string) => Number(/^ABC-(\d+)/.exec(t)?.[1]) || null};
+
+  test("a pull request's ticket is read from the key in its title, then from its branch, never from a closing reference", () => {
+    expect(resolveSubject({...keyed, branch: 'feat/issue-3', body: '', title: 'ABC-8: x'})).toEqual({kind: 'ticket', ticket: 'issue-8'});
+    expect(resolveSubject({...keyed, branch: 'feat/issue-3', body: '', title: 'feat: x'})).toEqual({kind: 'ticket', ticket: 'issue-3'});
+    expect(() => resolveSubject({...keyed, branch: 'docs/x', body: 'Closes #5', title: 'feat: x'})).toThrow(/closing reference/);
+    expect(() => resolveSubject({...keyed, branch: 'feat/issue-3', body: 'Closes #5', title: 'ABC-3: x'})).toThrow(/closing reference/);
+  });
+
+  test('the refusal names the closing reference and only applies to this naming', () => {
+    expect(closingReferenceRefusal('key-in-title', 'text\nthis fixes #12 too')).toContain('"fixes #12"');
+    expect(closingReferenceRefusal('key-in-title', 'no reference, issue #12 is related')).toBeNull();
+    expect(closingReferenceRefusal('closing-reference', 'Closes #5')).toBeNull();
+    expect(closingReferenceRefusal('backlog-id', 'Closes #5')).toBeNull();
   });
 });

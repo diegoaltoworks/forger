@@ -22,6 +22,7 @@ export function githubTracker(run: CommandRunner, capture: CapturingRunner = cap
       const data = JSON.parse(call(githubRead.facts(n))) as {labels?: Array<{name: string}>; body?: string};
       return {labels: (data.labels ?? []).map(l => l.name), body: data.body ?? ''};
     },
+    title: n => call(githubRead.title(n)).trim(),
     labels: n => lines(call(githubRead.labels(n))),
     state(n): TicketState {
       const data = JSON.parse(call(githubRead.state(n))) as {state?: string; closedByPullRequestsReferences?: Array<{number?: number}>};

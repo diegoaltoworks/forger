@@ -85,6 +85,8 @@ export interface Tracker {
   text(ticket: number, how: WholeResult): CommandResult;
   /** The ticket's labels and its text, in one read. */
   facts(ticket: number): TicketFacts;
+  /** The ticket's title. */
+  title(ticket: number): string;
   labels(ticket: number): string[];
   state(ticket: number): TicketState;
   lastComment(ticket: number): string;

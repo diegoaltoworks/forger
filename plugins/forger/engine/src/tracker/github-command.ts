@@ -7,6 +7,7 @@ import {quote} from './quote';
 export const githubRead = {
   text: (n: number): string => `gh issue view ${n} --json body --jq .body`,
   facts: (n: number): string => `gh issue view ${n} --json labels,body`,
+  title: (n: number): string => `gh issue view ${n} --json title --jq .title`,
   labels: (n: number): string => `gh issue view ${n} --json labels --jq ".labels[].name"`,
   state: (n: number): string => `gh issue view ${n} --json state,closedByPullRequestsReferences`,
   lastComment: (n: number): string => `gh issue view ${n} --json comments --jq ".comments[-1].body // empty"`,

@@ -11,6 +11,7 @@ import {check} from './check';
 import {contract} from './contract';
 import {decide} from './decide';
 import {decline} from './decline';
+import {ticket} from './ticket';
 import type {Command} from './command';
 import {awaitEventCommand, events} from './events';
 import {evalCommand} from './eval';
@@ -69,6 +70,7 @@ export const COMMANDS: Command[] = [
   replay,
   runLogged,
   decline,
+  ticket,
   decide,
   prBody,
   worktree,

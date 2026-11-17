@@ -5,6 +5,7 @@
  */
 
 import type {WorkloopConfig} from './config';
+import {jiraOf} from './jira-settings';
 
 type Kinded = Pick<WorkloopConfig, 'tracker'>;
 
@@ -55,5 +56,23 @@ export function backlogReader(config: Kinded): 'github' | 'jira' | 'file' {
     case 'local':
     case 'none':
       return 'file';
+  }
+}
+
+/** The vendor's gateway host, which a token that works only there reaches. */
+export const JIRA_GATEWAY_HOST = 'api.atlassian.com';
+
+/** The hosts a worker may not name: the tracker's own site, because the worker reads a ticket with `work ticket`. None for a tracker read with the code host's tool. */
+export function workerBlockedHosts(config: Kinded): string[] {
+  switch (config.tracker.kind) {
+    case 'jira': {
+      const site = jiraOf(config.tracker).site.trim();
+      const host = /^https?:\/\/([^\s/:?#]+)/i.exec(site)?.[1];
+      return host ? [host, JIRA_GATEWAY_HOST] : [JIRA_GATEWAY_HOST];
+    }
+    case 'github':
+    case 'local':
+    case 'none':
+      return [];
   }
 }

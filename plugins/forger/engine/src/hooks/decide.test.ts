@@ -267,3 +267,33 @@ describe('leave-worktree', () => {
     expect(rule('cd /loop', wf, {...DEFAULT_POLICY, rules: ['merge']})).toBeNull();
   });
 });
+
+describe('tracker-site', () => {
+  const jira: WorkerFacts = {...facts, trackerHosts: ['example.atlassian.net', 'api.atlassian.com']};
+
+  test('a worker\'s command that names the Jira site is refused under tracker-site and told to use work ticket', () => {
+    for (const command of [
+      'curl -s https://example.atlassian.net/rest/api/3/issue/ABC-1',
+      'curl https://api.atlassian.com/ex/jira/abc/rest/api/3/issue/ABC-1',
+      'echo hi && wget example.atlassian.net',
+      'bash -c "curl -u a:b \'https://EXAMPLE.atlassian.net/browse/ABC-1\'"',
+    ]) {
+      const d = decideWorker(DEFAULT_POLICY, bash(command), jira);
+      expect(d.allow).toBe(false);
+      if (!d.allow) {
+        expect(d.rule).toBe('tracker-site');
+        expect(d.message).toContain('work ticket');
+      }
+    }
+  });
+
+  test('a host that only ends in the site is allowed, one that extends it is refused, and plain commands are allowed', () => {
+    expect(rule('curl https://example.atlassian.net.evil.example/x', {...jira, trackerHosts: ['example.atlassian.net']})).toBe('tracker-site');
+    for (const command of ['curl https://example.com', 'ls', 'bun work.ts ticket 4', 'curl https://notexample.atlassian.net/x']) expect(rule(command, jira)).toBeNull();
+  });
+
+  test('with the tracker on GitHub the tracker-site rule refuses nothing', () => {
+    expect(rule('curl https://example.atlassian.net/rest/api/3/issue/ABC-1')).toBeNull();
+    expect(rule('curl https://example.atlassian.net/x', {...facts, trackerHosts: []})).toBeNull();
+  });
+});

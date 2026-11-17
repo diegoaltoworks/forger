@@ -21,3 +21,14 @@ describe('the kind jira', () => {
     expect(workerChangesText(config)).toBe('code, tests, docs');
   });
 });
+
+describe('the kind jira, the key and the pull request', () => {
+  test("the worker's text for jira names the key, work ticket, the title's key and no closing reference", () => {
+    const text = workerBacklogText(mergeConfig({tracker: {kind: 'jira', jira: {site: 'https://x.net', project: 'ABC'}}}));
+    expect(text).toContain('`ABC-<n>`');
+    expect(text).toContain('`work ticket <n>`');
+    expect(text).toContain('title begins with the key');
+    expect(text).toContain('body carries no closing reference');
+    expect(text).not.toContain('Closes #<issue>');
+  });
+});

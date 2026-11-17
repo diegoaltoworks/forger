@@ -11,11 +11,24 @@ export interface SubjectInput {
   branch: string;
   body: string;
   ticketNaming: 'closing-reference' | 'backlog-id' | 'key-in-title';
+  /** The pull request's title; read first when tickets are named by a key in the title. */
+  title?: string;
+  /** The ticket number a title's key names, or null. */
+  ticketOfTitle?: (title: string) => number | null;
   /** Whether a backlog file has the ticket; only asked on a local or no tracker. */
   inBacklog: (ticket: string) => boolean;
 }
 
 const CLOSING = /^\s*(?:closes?|fixes|fixed|resolves?|resolved)\s*:?\s+#(\d+)\b/im;
+
+const ANY_CLOSING = /\b(?:closes?|closed|fix(?:es|ed)?|resolves?|resolved)\s*:?\s+#\d+\b/i;
+
+/** Why a body may not hold a closing reference, or null: where tickets are named by a key in the title, `Closes #n` would close the code host's issue of that number. */
+export function closingReferenceRefusal(ticketNaming: SubjectInput['ticketNaming'], body: string): string | null {
+  if (ticketNaming !== 'key-in-title') return null;
+  const found = ANY_CLOSING.exec(body)?.[0];
+  return found ? `the pull request's body holds a closing reference ("${found}"), which would close the code host's issue of that number, not the ticket; remove it and name the ticket by its key at the start of the title` : null;
+}
 
 /** The checkbox items under an explicit Acceptance heading; none when the heading is missing. */
 export function bodyAcceptance(body: string): Criterion[] {
@@ -31,6 +44,10 @@ export function noSubjectMessage(branch: string): string {
 export function resolveSubject(input: SubjectInput): VerifySubject {
   const {branch, body, ticketNaming} = input;
   if (ticketNaming === 'closing-reference' || ticketNaming === 'key-in-title') {
+    const refused = closingReferenceRefusal(ticketNaming, body);
+    if (refused) throw new Error(refused);
+    const keyed = ticketNaming === 'key-in-title' && input.title !== undefined ? input.ticketOfTitle?.(input.title) : null;
+    if (keyed) return {kind: 'ticket', ticket: `issue-${keyed}`};
     const closes = ticketNaming === 'closing-reference' ? CLOSING.exec(body)?.[1] : undefined;
     if (closes) return {kind: 'ticket', ticket: `issue-${closes}`};
     const issue = /^feat\/(issue-\d+)$/.exec(branch)?.[1];
