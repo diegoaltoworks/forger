@@ -101,6 +101,31 @@ describe('what the engine files', () => {
     expect(seen).toHaveLength(1);
   });
 
+  test('the GitHub tracker lists tickets with their number, title, labels and text', () => {
+    const seen: string[] = [];
+    const t = githubTracker(fake({"gh issue list --state all --label 'bug' --limit 50 --json number,title,labels,body": '[{"number":4,"title":"T","labels":[{"name":"bug"}],"body":"B"},{"number":5,"title":"U","labels":[{"name":"bug"}]}]'}, seen));
+    expect(t.tickets({state: 'all', label: 'bug', limit: 50})).toEqual([
+      {number: 4, title: 'T', labels: ['bug'], body: 'B'},
+      {number: 5, title: 'U', labels: ['bug'], body: ''},
+    ]);
+    expect(seen).toHaveLength(1);
+  });
+
+  test('the GitHub tracker says whether a ticket exists', () => {
+    const t = githubTracker(fake({'gh issue view 3 --json number': '{}'}));
+    expect(t.exists(3)).toBe(true);
+    expect(t.exists(4)).toBe(false);
+  });
+
+  test("the GitHub tracker reads a ticket's state and the pull requests that close it", () => {
+    const t = githubTracker(fake({'gh issue view 5 --json state,closedByPullRequestsReferences': '{"state":"OPEN","closedByPullRequestsReferences":[{"number":8},{"number":2}]}'}));
+    expect(t.state(5)).toEqual({state: 'OPEN', closedBy: [8, 2]});
+  });
+
+  test('the GitHub tracker gives the command a person runs to list the tickets with a label', () => {
+    expect(githubTracker(fake({})).listCommand('needs-info')).toBe('gh issue list --label needs-info');
+  });
+
   test('a ticket the engine files carries the intake label only when the queue is in the tracker', () => {
     expect(filedLabels('tracker', 'ready', ['p'])).toEqual(['p', 'ready']);
     expect(filedLabels('file', 'ready', ['p'])).toEqual(['p']);

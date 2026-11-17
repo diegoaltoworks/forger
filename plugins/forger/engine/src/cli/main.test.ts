@@ -922,6 +922,23 @@ describe('supervisor commands', () => {
     expect(out.reason).toBe('cut off before merge');
   });
 
+  test('what waits on the owner is read through the tracker, one list for each owner label', async () => {
+    process.chdir(projectWith({a: {status: 'not_started'}}));
+    const calls: string[] = [];
+    const run: CommandRunner = cmd => (calls.push(cmd), cmd.startsWith('gh issue list') ? JSON.stringify([{number: 7, title: 'q', labels: [{name: 'needs-info'}], body: 'b'}]) : cmd.startsWith('git branch') ? 'main' : '[]');
+    const out = JSON.parse(await capture(['report', '--json'], run));
+    const lists = calls.filter(c => c.startsWith('gh issue list --state open'));
+    expect(lists.length).toBeGreaterThan(1);
+    for (const c of lists) expect(c).toMatch(/^gh issue list --state open --label '[^']+' --limit 100 --json number,title,labels,body$/);
+    expect(JSON.stringify(out.waiting_on_owner)).toContain('#7');
+    const failing: CommandRunner = cmd => {
+      if (cmd.startsWith('gh issue list')) throw new Error('offline');
+      return cmd.startsWith('git branch') ? 'main' : '[]';
+    };
+    const failed = JSON.parse(await capture(['report', '--json'], failing));
+    expect(failed.waiting_on_owner.map((i: {recommendation: string}) => i.recommendation)).toContain('run `gh issue list --label needs-info` yourself');
+  });
+
   test('report names the real checked-out branch as an anomaly when no runner is alive', async () => {
     process.chdir(projectWith({a: {status: 'not_started'}}));
     const out = JSON.parse(await capture(['report', '--json'], () => 'feat/a'));

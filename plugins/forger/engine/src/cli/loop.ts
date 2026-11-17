@@ -126,7 +126,7 @@ export const resume: Command = {
       return;
     }
     const {cause} = parsed.why;
-    if (cause !== null && config.tracker.kind === 'github' && ctx.capture()(`gh issue view ${cause} --json number`).exitCode !== 0) {
+    if (cause !== null && ctx.tracker().queue === 'tracker' && !ctx.tracker().exists(Number(cause))) {
       console.error(`Not resuming: #${cause} is not an issue in the tracker. The halt stays. Give the issue that fixes or tracks the cause, or use --not-a-defect "<why>".`);
       process.exitCode = 1;
       return;

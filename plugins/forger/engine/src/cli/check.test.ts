@@ -199,7 +199,7 @@ describe('check ticket placement', () => {
   /** The tracker answers the issue body, an open `structure` ticket list, and the other open tickets. */
   function placed(root: string, body: string, native: number[] = []): CommandContext {
     const run = (cmd: string): string => {
-      if (cmd.startsWith('gh issue list')) return '77\n';
+      if (cmd.startsWith('gh issue list')) return '[{"number":77,"title":"t"}]';
       if (cmd.startsWith('gh api graphql')) {
         return JSON.stringify({data: {repository: {issues: {nodes: [{number: 5, body, blockedBy: {nodes: native.map(number => ({number}))}}]}}}});
       }

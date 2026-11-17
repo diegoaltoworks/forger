@@ -1,5 +1,5 @@
 import {playwrightScreenshotter, shellAppServer} from '../adapters';
-import {UiInfrastructureError} from '../ports';
+import {UiInfrastructureError, type Tracker} from '../ports';
 import {UI_PATH, UiConfigError, formatFitReport, longestString, parseUiConfig, runFit} from '../ui';
 import {forgerPath} from '../config';
 import {JOURNEYS_PATH, loadJourneysConfig} from '../checks';
@@ -54,7 +54,7 @@ interface GhPr {
 }
 
 /** Merged PRs oldest first with their touched lines, and the issues; null when gh cannot read them. */
-function gatherChanges(run: (cmd: string) => string, iterations: IterationRecord[], picked: {iteration: number; ticket: string | null}[], window: number, limit: number): ReworkInputs | null {
+function gatherChanges(run: (cmd: string) => string, tracker: Tracker, iterations: IterationRecord[], picked: {iteration: number; ticket: string | null}[], window: number, limit: number): ReworkInputs | null {
   try {
     const listed = (JSON.parse(run(`gh pr list --state merged --limit ${limit} --json number,title,body,closingIssuesReferences`)) as GhPr[]).reverse();
     const prs: MergedPr[] = listed.map((p, order) => {
@@ -69,8 +69,7 @@ function gatherChanges(run: (cmd: string) => string, iterations: IterationRecord
       }
       return {number: p.number, order, title: p.title, body: p.body ?? '', closes: p.closingIssuesReferences?.[0]?.number ?? null, ranges, replaced};
     });
-    const raw = JSON.parse(run(`gh issue list --state all --label bug --limit ${limit} --json number,labels,body`)) as {number: number; labels: {name: string}[]; body: string}[];
-    const issues: TrackerIssue[] = raw.map(i => ({number: i.number, labels: i.labels.map(l => l.name), body: i.body ?? ''}));
+    const issues: TrackerIssue[] = tracker.tickets({state: 'all', label: 'bug', limit}).map(i => ({number: i.number, labels: i.labels, body: i.body}));
     return {prs, issues, picks: picksToPrs(picked, iterations, prs), window};
   } catch {
     return null;
@@ -100,7 +99,7 @@ export function gatherMeasures(ctx: CommandContext): Measures {
   const window = values.window === undefined ? DEFAULT_REWORK_WINDOW : parseInt(values.window, 10);
   if (!(window >= 1)) throw new Error('--window must be a whole number of merges, 1 or more');
   const picked = parseAllEvents(ctx.stateStore.readEvents()).filter(e => e.event === 'picked');
-  const changes = gatherChanges(ctx.run(), iterations, picked, window, 100);
+  const changes = gatherChanges(ctx.run(), ctx.tracker(), iterations, picked, window, 100);
   const notHere = [
     ...(iterations.length === 0 ? ['iteration logs'] : []),
     ...(Object.values(sessionCosts).some(c => c === null) ? ['session transcripts'] : []),
@@ -209,12 +208,12 @@ function readCheckRecords(file: string): FailureRecord[] | null {
 }
 
 /** Tickets whose PR merged, and the bodies of their issues; empty when gh cannot read them. */
-function mergedTickets(run: (cmd: string) => string): {tickets: Set<string>; bodies: string[]} {
+function mergedTickets(run: (cmd: string) => string, tracker: Tracker): {tickets: Set<string>; bodies: string[]} {
   try {
     const prs = JSON.parse(run('gh pr list --state merged --limit 100 --json closingIssuesReferences')) as {closingIssuesReferences?: {number: number}[]}[];
     const numbers = new Set(prs.flatMap(p => (p.closingIssuesReferences ?? []).map(i => i.number)));
-    const issues = JSON.parse(run('gh issue list --state all --limit 200 --json number,body')) as {number: number; body: string}[];
-    return {tickets: new Set([...numbers].map(n => `issue-${n}`)), bodies: issues.filter(i => numbers.has(i.number)).map(i => i.body ?? '')};
+    const issues = tracker.tickets({state: 'all', limit: 200});
+    return {tickets: new Set([...numbers].map(n => `issue-${n}`)), bodies: issues.filter(i => numbers.has(i.number)).map(i => i.body)};
   } catch {
     return {tickets: new Set(), bodies: []};
   }
@@ -227,7 +226,7 @@ export function loadOpinionFailures(ctx: CommandContext): {rows: OpinionFailures
   if (records === null) return null;
   const lockFile = join(projectRoot, LOCK_PATH);
   const installed = existsSync(lockFile) ? listOpinions(loadPacks(pluginRoot), parseLock(readFileSync(lockFile, 'utf-8'))) : [];
-  const {tickets, bodies} = mergedTickets(ctx.run());
+  const {tickets, bodies} = mergedTickets(ctx.run(), ctx.tracker());
   const installedTemplate = join(projectRoot, '.forger/templates/ticket.md');
   const template = [installedTemplate, join(pluginRoot, 'packs/base/files/ticket.md')].find(f => existsSync(f));
   const checked = installed.filter(o => o.check !== null);

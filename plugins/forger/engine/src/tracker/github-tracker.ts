@@ -29,6 +29,9 @@ export function githubTracker(run: CommandRunner, capture: CapturingRunner = cap
     lastComment: n => call(githubRead.lastComment(n)).trim(),
     exists: n => call(githubRead.exists(n), {whole: true}).exitCode === 0,
     list: q => JSON.parse(call(githubRead.list(q))) as Array<{number: number; title: string}>,
+    tickets: q =>
+      (JSON.parse(call(githubRead.tickets(q))) as Array<{number: number; title: string; labels: Array<{name: string}>; body?: string}>).map(i => ({number: i.number, title: i.title, labels: i.labels.map(l => l.name), body: i.body ?? ''})),
+    listCommand: label => githubRead.listing(label),
     repoLabels: () => lines(call(githubRead.repoLabels())),
     account: ((how?: WholeResult) => (how ? call(githubRead.account(), how) : call(githubRead.account()))) as Tracker['account'],
     apply: ((write: TrackerWrite, how?: WholeResult) => (how ? call(githubCommand(write), how) : call(githubCommand(write)))) as Tracker['apply'],
