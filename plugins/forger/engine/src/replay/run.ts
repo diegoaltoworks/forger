@@ -1,5 +1,5 @@
 import {linkBlockers} from '../backlog';
-import type {CommandRunner, Tracker} from '../ports';
+import type {Tracker} from '../ports';
 import {filedLabels} from '../tracker';
 import {issueBody, type IssuePlan} from './replay';
 
@@ -11,7 +11,7 @@ export interface Filed {
 }
 
 /** Files the plan in order with the intake label, then links each issue's blockers natively. */
-export function fileReplay(tracker: Tracker, run: CommandRunner, plan: IssuePlan[], intakeLabel: string): Filed[] {
+export function fileReplay(tracker: Tracker, plan: IssuePlan[], intakeLabel: string): Filed[] {
   const numbers: Record<string, number> = {};
   const filed: Filed[] = [];
   for (const p of plan) {
@@ -19,7 +19,7 @@ export function fileReplay(tracker: Tracker, run: CommandRunner, plan: IssuePlan
     const number = Number(url.match(/(\d+)\s*$/)?.[1]);
     if (!Number.isInteger(number)) throw new Error(`could not read the issue number for "${p.id}" from: ${url}`);
     numbers[p.id] = number;
-    if (p.blockedBy.length) linkBlockers(run, number);
+    if (p.blockedBy.length) linkBlockers(tracker, number);
     filed.push({id: p.id, number, title: p.title, blockedBy: p.blockedBy.map(b => numbers[b])});
   }
   return filed;

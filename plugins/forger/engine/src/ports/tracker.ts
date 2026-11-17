@@ -15,7 +15,9 @@ export type TrackerWrite =
   | {kind: 'labels'; ticket: number; add: string[]; remove: string[]}
   | {kind: 'body'; ticket: number; body: string}
   | {kind: 'pin'; ticket: number}
-  | {kind: 'createLabel'; name: string; color: string; description: string};
+  | {kind: 'createLabel'; name: string; color: string; description: string}
+  /** Makes `blocked` wait on `blocker`; both are the tracker's own references, as `links` hands them back. */
+  | {kind: 'block'; blocked: string; blocker: string};
 
 export interface TicketFacts {
   labels: string[];
@@ -52,6 +54,28 @@ export interface TicketDetail extends TicketSummary {
   body: string;
 }
 
+/** An open ticket with its text and the numbers of its native blockers. */
+export interface OpenTicket {
+  number: number;
+  body: string;
+  /** Numbers of the native blocked-by issues. */
+  native: number[];
+}
+
+/** A ticket's text and native blockers, with the tracker's own reference for it. */
+export interface TicketLinks {
+  /** What a block write names the ticket by; the port does not say what it is. */
+  ref: string;
+  body: string;
+  native: number[];
+}
+
+/** What the tracker says about one ticket. `mergedPr` is set only when a merged PR closed it. */
+export interface TicketFact {
+  closed: boolean;
+  mergedPr: number | null;
+}
+
 export interface Tracker {
   readonly queue: QueueHome;
   text(ticket: number): string;
@@ -65,6 +89,12 @@ export interface Tracker {
   list(query: TicketQuery): TicketSummary[];
   /** The tickets of a query with their labels and text. */
   tickets(query: TicketQuery): TicketDetail[];
+  /** The open tickets with a label, each with its text and its native blockers, in one call; throws with the tracker's own error. */
+  openTickets(label: string): OpenTicket[];
+  /** One ticket's text, native blockers and reference, or null when there is no such ticket. */
+  links(ticket: number): TicketLinks | null;
+  /** Whether each ticket is closed and which merged pull request closed it, in one call; throws when the tracker cannot answer. */
+  ticketFacts(tickets: number[]): ReadonlyMap<number, TicketFact>;
   /** What a person runs to list the tickets that carry a label. */
   listCommand(label: string): string;
   /** The labels the repository has. */

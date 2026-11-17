@@ -23,7 +23,7 @@ export const catalogue: Command = {
     }
     const text = readFileSync(path, 'utf-8');
     const run = ctx.run();
-    const tracker = trackerFacts(run, ticketsOf(text));
+    const tracker = trackerFacts(ctx.tracker(), ticketsOf(text));
     const ticket = branchTicket(run);
     const pr = ticket === null ? null : branchPr(run);
     const facts = tracker && factsOnMerge(text, tracker, ticket, pr);

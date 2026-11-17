@@ -9,7 +9,7 @@ that decide which table a row belongs in.
   the table the tracker names. It reads the facts as they will be once the
   branch's own ticket merges. Once that branch has an open PR, it fails an
   Open row whose only open issue is that ticket. Pure.
-- `tracker.ts` - the issues' facts from GitHub, through a `CommandRunner` handed in.
+- `tracker.ts` - the issues' facts, through the `Tracker` handed in, and the branch's ticket and PR, through a `CommandRunner`.
   It also finds the ticket the checked-out branch works and its open PR.
   Pure over it.
 

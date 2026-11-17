@@ -2,15 +2,10 @@
  * Whether two open tickets that touch the same ground say which goes first.
  * Pure: the caller supplies the bodies and the native blockers.
  */
+import type {OpenTicket} from '../ports';
 import {parseBlockedBy} from './blocked-by';
 import {parseFootprint, pathsOverlap} from './schedule';
 
-export interface OpenTicket {
-  number: number;
-  body: string;
-  /** Numbers of the native blocked-by issues. */
-  native: number[];
-}
 
 const HEADING = /^#{1,6}\s+sequencing\s*:?\s*$/i;
 const ANY_HEADING = /^#{1,6}\s/;

@@ -3,6 +3,7 @@ import {describe, expect, test} from 'bun:test';
 import {capturing, type CommandRunner, type TrackerWrite} from '../ports';
 import {githubCommand} from './github-command';
 import {filedLabels} from './filed-labels';
+import {blockCommand, factsCommand, openTicketsCommand, ticketLinksCommand} from './github-graphql';
 import {githubTracker} from './github-tracker';
 import {openTracker} from './open';
 
@@ -130,5 +131,42 @@ describe('what the engine files', () => {
     expect(filedLabels('tracker', 'ready', ['p'])).toEqual(['p', 'ready']);
     expect(filedLabels('file', 'ready', ['p'])).toEqual(['p']);
     expect(filedLabels('file', 'ready')).toEqual([]);
+  });
+});
+
+describe('what the engine reads and links with a GraphQL query', () => {
+  test('the GitHub tracker reads the open tickets with a label, their text and their blockers in one call', () => {
+    const seen: string[] = [];
+    const answer = JSON.stringify({data: {repository: {issues: {nodes: [{number: 3, body: 'b', blockedBy: {nodes: [{number: 1}]}}, {number: 4, body: null}]}}}});
+    const t = githubTracker(fake({[openTicketsCommand('ready')]: answer}, seen));
+    expect(t.openTickets('ready')).toEqual([
+      {number: 3, body: 'b', native: [1]},
+      {number: 4, body: '', native: []},
+    ]);
+    expect(seen).toHaveLength(1);
+    expect(() => githubTracker(fake({})).openTickets('ready')).toThrow('unexpected');
+  });
+
+  test("the GitHub tracker reads a ticket's blockers and links one with the mutation", () => {
+    const seen: string[] = [];
+    const node = {data: {repository: {issue: {id: 'I7', body: 'x', blockedBy: {nodes: [{number: 2}]}}}}};
+    const t = githubTracker(fake({[ticketLinksCommand(7)]: JSON.stringify(node), [ticketLinksCommand(8)]: '{"data":{"repository":{"issue":null}}}', [blockCommand('I7', 'I5')]: '{}'}, seen));
+    expect(t.links(7)).toEqual({ref: 'I7', body: 'x', native: [2]});
+    expect(t.links(8)).toBeNull();
+    t.apply({kind: 'block', blocked: 'I7', blocker: 'I5'});
+    expect(seen[2]).toContain("-f issue='I7' -f blocker='I5'");
+    expect(seen[2]).toContain('addBlockedBy');
+  });
+
+  test('the GitHub tracker reads the facts of several tickets in one call', () => {
+    const seen: string[] = [];
+    const issue = (state: string, closer: unknown) => ({state, timelineItems: {nodes: [{closer}]}});
+    const raw = JSON.stringify({data: {repository: {i5: issue('CLOSED', {__typename: 'PullRequest', number: 9, merged: true}), i6: issue('OPEN', null), i7: null}}});
+    const t = githubTracker(fake({[factsCommand([5, 6, 7])]: raw}, seen));
+    expect([...t.ticketFacts([5, 6, 7])]).toEqual([
+      [5, {closed: true, mergedPr: 9}],
+      [6, {closed: false, mergedPr: null}],
+    ]);
+    expect(seen).toHaveLength(1);
   });
 });

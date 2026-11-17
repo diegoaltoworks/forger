@@ -5,7 +5,7 @@ import {join} from 'node:path';
 
 import {capturing} from '../ports';
 import {check} from './check';
-import {openTicketsCommand, readOpenTickets} from './open-tickets';
+import {githubTracker, openTicketsCommand} from '../tracker';
 import type {CommandContext} from './command';
 
 const dirs: string[] = [];
@@ -31,7 +31,7 @@ function ctx(root: string, positionals: string[], body: string | Error, json = f
     }
     return body;
   };
-  return {values: {json}, positionals: ['check', ...positionals], projectRoot: root, pluginRoot: root, run: () => run, capture: () => capturing(run)} as unknown as CommandContext;
+  return {values: {json}, positionals: ['check', ...positionals], projectRoot: root, pluginRoot: root, run: () => run, capture: () => capturing(run), tracker: () => githubTracker(run, capturing(run))} as unknown as CommandContext;
 }
 
 async function capture(c: CommandContext): Promise<{out: string; err: string; code: number}> {
@@ -116,10 +116,13 @@ describe('check ticket', () => {
 
   test('readOpenTickets passes owner and repo as gh fields, not inside the query text', () => {
     const commands: string[] = [];
-    readOpenTickets(cmd => {
-      commands.push(cmd);
-      return {stdout: JSON.stringify({data: {repository: {issues: {nodes: []}}}}), stderr: '', exitCode: 0};
-    }, 'ready-for-agent');
+    githubTracker(
+      () => '',
+      cmd => {
+        commands.push(cmd);
+        return {stdout: JSON.stringify({data: {repository: {issues: {nodes: []}}}}), stderr: '', exitCode: 0};
+      }
+    ).openTickets('ready-for-agent');
     expect(commands).toEqual([openTicketsCommand('ready-for-agent')]);
     expect(commands[0]).toContain("-F owner='{owner}'");
     expect(commands[0]).toContain("-F repo='{repo}'");
@@ -134,7 +137,7 @@ describe('check ticket', () => {
       if (cmd.startsWith('gh api graphql')) throw new Error('gh: Could not resolve to a Repository');
       return '## Acceptance\n- [ ] `bun run check` exits 0\n\n## Guards\n\nnone\n';
     };
-    const c = {values: {json: false}, positionals: ['check', 'ticket', '5'], projectRoot: project(), run: () => run, capture: () => capturing(run)} as unknown as CommandContext;
+    const c = {values: {json: false}, positionals: ['check', 'ticket', '5'], projectRoot: project(), run: () => run, capture: () => capturing(run), tracker: () => githubTracker(run, capturing(run))} as unknown as CommandContext;
     c.pluginRoot = c.projectRoot;
     const r = await capture(c);
     expect(r.code).toBe(0);
@@ -205,7 +208,7 @@ describe('check ticket placement', () => {
       }
       return body;
     };
-    return {values: {}, positionals: ['check', 'ticket', '5'], projectRoot: root, pluginRoot: root, run: () => run, capture: () => capturing(run)} as unknown as CommandContext;
+    return {values: {}, positionals: ['check', 'ticket', '5'], projectRoot: root, pluginRoot: root, run: () => run, capture: () => capturing(run), tracker: () => githubTracker(run, capturing(run))} as unknown as CommandContext;
   }
 
   const over = [{rule: 'structure.folder-size', path: 'src/big', count: 30}];
@@ -240,5 +243,26 @@ describe('check ticket placement', () => {
     const body = `${head}## What to build\n\nMove the parser files out of src/big into src/parse.\n\n## Placement\n\n\`src/big/\`\n`;
     const r = await capture(placed(structured([], over), body));
     expect(r.code).toBe(0);
+  });
+});
+
+describe('check ticket and the open tickets the tracker gives', () => {
+  test('check ticket compares with the open tickets the tracker gives', async () => {
+    const asked: string[] = [];
+    const body = '## Acceptance\n- [ ] `bun run check` exits 0\n\n## Guards\n\nnone\n';
+    const run = (): string => body;
+    const tracker = {
+      text: () => body,
+      openTickets: (label: string) => {
+        asked.push(label);
+        return [{number: 5, body, native: []}];
+      },
+    };
+    const c = {values: {json: false}, positionals: ['check', 'ticket', '5'], projectRoot: project(), run: () => run, capture: () => capturing(run), tracker: () => tracker} as unknown as CommandContext;
+    c.pluginRoot = c.projectRoot;
+    const r = await capture(c);
+    expect(r.code).toBe(0);
+    expect(asked).toHaveLength(1);
+    expect(r.out).not.toContain('could not compare');
   });
 });

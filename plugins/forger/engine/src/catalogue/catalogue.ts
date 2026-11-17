@@ -5,16 +5,12 @@
  * answers arrive as facts.
  */
 
+import type {TicketFact} from '../ports';
+
 export const CATALOGUE_PATH = 'docs/06-failure-catalogue.md';
 export const CATALOGUE_OPINION = 'docs.catalogue-status';
 export const UNTRACKED = 'before tickets were tracked';
 const MERGED_IN = ' - merged in ';
-
-/** What the tracker says about one ticket. `mergedPr` is set only when a merged PR closed it. */
-export interface TicketFact {
-  closed: boolean;
-  mergedPr: number | null;
-}
 
 export type TicketFacts = ReadonlyMap<number, TicketFact>;
 

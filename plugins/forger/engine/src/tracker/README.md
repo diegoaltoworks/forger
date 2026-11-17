@@ -12,6 +12,11 @@ configured kind into a tracker. A read is a method and a write is data.
   It answers the supervisor's reads too: tickets with their labels and text,
   existence and state. A call takes the plain one unless the caller asks
   for the whole result.
+- `quote.ts` - quotes a label, a title or a text for the shell. Pure.
+- `github-graphql.ts` - the GraphQL calls and the parsers of their answers.
+  Pure. Three calls read. They give the open tickets with a label.
+  They give a ticket's text and blockers with its node id. They give the facts
+  of several tickets. One call blocks a ticket by another.
 - `filed-labels.ts` - `filedLabels`, the labels of a filed ticket. The caller's
   own, and the intake label when the backlog is in the tracker. Pure.
 - `open.ts` - `openTracker`, the tracker for a config's kind. Every kind reads

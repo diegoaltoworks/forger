@@ -11,8 +11,8 @@ reads; a tracker is an adapter behind it.
   and where they disagree with the native blocked-by. Pure.
 - `outside-prs.ts` - open pull requests the loop did not open, and which tickets
   they hold back. Pure.
-- `link-blockers.ts` - links those numbers as native blocked-by, through a
-  `CommandRunner` handed in.
+- `link-blockers.ts` - links those numbers as native blocked-by, through the
+  `Tracker` handed in; the queries live in `tracker/`.
 - `schedule.ts` - which tickets may run together. It reads the Knock-on
   footprint and the folder map. Then `schedule` rules on a pair. Then `pick`
   works over the ordered candidates (ADR 0011). Pure, no I/O.

@@ -12,6 +12,7 @@ import {checkAvoidedTerms, checkDiagrams, checkLinks, parseGlossaryAvoid, type A
 import {branchPr, branchTicket, CATALOGUE_OPINION, CATALOGUE_PATH, checkCatalogue, ticketsOf, trackerFacts, type TicketFacts} from '../../catalogue';
 import {loadConfig} from '../../config';
 import type {CommandRunner} from '../../ports';
+import {githubTracker} from '../../tracker';
 import {projectFiles} from '../files';
 import {checkRoadmap, ROADMAP_OPINION, ROADMAP_PATH} from './docs-roadmap';
 import {checkCommandSlots, slotsByCommand, type DefinitionShape} from './docs-slots';
@@ -75,7 +76,7 @@ export function runDocsWarnings(projectRoot: string, run: CommandRunner, packs?:
 export function catalogueFindings(
   projectRoot: string,
   run: CommandRunner,
-  lookup: (tickets: number[]) => TicketFacts | null = tickets => trackerFacts(run, tickets)
+  lookup: (tickets: number[]) => TicketFacts | null = tickets => trackerFacts(githubTracker(run), tickets)
 ): Finding[] {
   const path = join(projectRoot, CATALOGUE_PATH);
   if (!existsSync(path)) return [];
