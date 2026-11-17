@@ -1,3 +1,4 @@
 {"event":"lease_takeover","at":"2026-11-17T02:15:49.282Z","iteration":245,"ticket":null,"reason":"took over the lease from Diego-X1:3465571:8c2dbba6 on Diego-X1"}
 {"event":"runner_gone","at":"2026-11-17T02:15:57.566Z","iteration":245,"ticket":"issue-487","reason":null}
 {"event":"merged","at":"2026-11-17T02:16:00.475Z","iteration":245,"ticket":"issue-487","reason":null}
+{"event":"picked","at":"2026-11-17T02:16:19.765Z","iteration":246,"ticket":"issue-501","reason":null,"commands":"engine"}
