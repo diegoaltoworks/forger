@@ -250,7 +250,10 @@
       "ticket": "issue-525",
       "pid": null,
       "session_id": "4ef38509-035e-426c-beec-d5c1ab883121",
-      "snapshot": null,
+      "snapshot": {
+        "baseSha": "",
+        "reflogLength": 1
+      },
       "started_at": "2026-11-17T07:51:58.650Z",
       "plan": {
         "stages": [
