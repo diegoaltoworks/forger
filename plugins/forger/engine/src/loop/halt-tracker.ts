@@ -28,7 +28,8 @@ export class GhTrackerHalt implements TrackerHalt {
   constructor(
     private run: CommandRunner,
     private now: () => number = Date.now,
-    private title: string = LOOP_ISSUE_TITLE
+    private title: string = LOOP_ISSUE_TITLE,
+    private scrub: (text: string) => string = text => text
   ) {}
 
   private find(): number | null {
@@ -83,7 +84,7 @@ export class GhTrackerHalt implements TrackerHalt {
 
   set(reason: string): void {
     const issue = this.ensure();
-    this.run(`gh issue comment ${issue} --body ${q(reason)}`);
+    this.run(`gh issue comment ${issue} --body ${q(this.scrub(reason))}`);
     this.run(`gh issue edit ${issue} --add-label ${HALT_LABEL}`);
     this.cached = {at: this.now(), value: {label: true, reason}};
   }
@@ -96,6 +97,6 @@ export class GhTrackerHalt implements TrackerHalt {
 
   writeStatus(body: string): void {
     const issue = this.ensure();
-    this.run(`gh issue edit ${issue} --body ${q(body)}`);
+    this.run(`gh issue edit ${issue} --body ${q(this.scrub(body))}`);
   }
 }

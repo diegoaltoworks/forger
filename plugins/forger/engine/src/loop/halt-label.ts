@@ -32,6 +32,25 @@ export function decideHalt(facts: HaltFacts): HaltDecision {
   return {halted: false};
 }
 
+function escapeRegex(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/**
+ * Makes a text fit for the tracker, which may be public: a path at or under
+ * the repository root is written relative to it, any other path under the
+ * home folder starts with `~`. Text with neither is returned unchanged.
+ */
+export function postable(text: string, root: string, home: string): string {
+  const strip = (s: string): string => s.replace(/\/+$/, '');
+  let out = text;
+  const r = strip(root);
+  if (r !== '') out = out.replace(new RegExp(`${escapeRegex(r)}(?:/|(?![\\w.-]))`, 'g'), m => (m.endsWith('/') ? '' : '.'));
+  const h = strip(home);
+  if (h !== '') out = out.replace(new RegExp(`${escapeRegex(h)}(?![\\w.-])`, 'g'), '~');
+  return out;
+}
+
 /** The one-screen status written to the pinned issue's body. */
 export function statusBody(state: AutomationState, halted: boolean, now: Date): string {
   const running = state.in_flight.map(r => r.ticket ?? 'no ticket').join(', ');

@@ -1,5 +1,10 @@
+import {mkdtempSync, readFileSync, rmSync} from 'fs';
+import {tmpdir} from 'os';
+import {join} from 'path';
 import {describe, expect, test} from 'bun:test';
 
+import {postable} from './halt-label';
+import {defaultState, LoopStore} from './state';
 import {GhTrackerHalt, HALT_READ_TTL_MS} from './halt-tracker';
 
 function fake(handler: (cmd: string) => string) {
@@ -70,5 +75,35 @@ describe('GhTrackerHalt', () => {
     const f = fake(cmd => (cmd.startsWith('gh issue list') ? '7' : ''));
     new GhTrackerHalt(f.run).writeStatus('hello');
     expect(f.calls).toContain("gh issue edit 7 --body 'hello'");
+  });
+
+  const scrub = (t: string): string => postable(t, '/srv/me/work/repo', '/srv/me');
+  const leak = "fatal: '/srv/me/work/repo/.forger/worktrees/a' failed";
+
+  test('the status body shows the last error with no absolute path', () => {
+    const f = fake(cmd => (cmd.startsWith('gh issue list') ? '7' : ''));
+    const t = new GhTrackerHalt(f.run, Date.now, undefined, scrub);
+    const store = new LoopStore({readState: () => null, writeState: () => {}} as never, '/nonexistent/HALT', t);
+    store.publishStatus({...defaultState(), last_error: leak});
+    const edit = f.calls.find(c => c.startsWith('gh issue edit 7 --body')) ?? '';
+    expect(edit).toContain(".forger/worktrees/a");
+    expect(edit).not.toContain('/srv/me');
+  });
+
+  test('the comment that carries a halt reason has no absolute path', () => {
+    const f = fake(cmd => (cmd.startsWith('gh issue list') ? '7' : ''));
+    new GhTrackerHalt(f.run, Date.now, undefined, scrub).set(leak);
+    const comment = f.calls.find(c => c.startsWith('gh issue comment')) ?? '';
+    expect(comment).toContain(".forger/worktrees/a");
+    expect(comment).not.toContain('/srv/me');
+  });
+
+  test('the HALT file and the log keep the full path', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'halt-'));
+    const file = join(dir, 'HALT');
+    const down = {read: () => ({label: false, reason: null}), set: () => { throw new Error('down'); }, clear: () => {}, writeStatus: () => {}};
+    new LoopStore({readState: () => null, writeState: () => {}} as never, file, down).writeHalt(leak);
+    expect(readFileSync(file, 'utf-8')).toContain('/srv/me/work/repo/.forger');
+    rmSync(dir, {recursive: true});
   });
 });
