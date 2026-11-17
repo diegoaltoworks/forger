@@ -26,3 +26,4 @@
 {"event":"lease_takeover","at":"2026-11-17T06:14:53.433Z","iteration":250,"ticket":null,"reason":"took over the lease from Diego-X1:4042709:bec44166 on Diego-X1"}
 {"event":"picked","at":"2026-11-17T06:15:13.288Z","iteration":251,"ticket":"issue-509","reason":null,"commands":"engine"}
 {"event":"worker_denied","at":"2026-11-17T06:17:42.082Z","iteration":251,"ticket":"issue-509","reason":"merge: gh pr merge 510 --squash 2>&1 | tail -3; gh pr view 510 --json state -q .state"}
+{"event":"worker_denied","at":"2026-11-17T06:17:51.645Z","iteration":251,"ticket":"issue-509","reason":"other-engine: verify from /home/diego/work/forger/.forger/worktrees/issue-509/plugins/forger"}
