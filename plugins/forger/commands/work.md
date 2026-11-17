@@ -64,7 +64,7 @@ Confirm with `work status --json` that `runner.alive` is true and record
 ## 3. Watch the event files
 
 Terminal events (completed, blocked_on_owner, halted, stalled, timed_out, too_many_failures,
-runner_gone) and mid-run ones (`worker_denied`, `recovered`) are JSON lines in
+runner_gone, `unreachable`, `lease_held`) and mid-run ones (`worker_denied`, `recovered`, `waiting`) are JSON lines in
 the file at `paths.events`. Do not tail the log, match a process name or build
 a pipeline of your own.
 
@@ -79,6 +79,14 @@ a pipeline of your own.
   call (its `reason` names the rule and the command) and the run goes on.
   Report it and keep watching; repeated denials on one ticket mean the ticket
   needs restating.
+- A `waiting` event is mid-run too: the engine could not reach the tracker or
+  the state branch and is waiting it out, retrying with growing waits. It is
+  written once per stretch of waiting and charges no ticket. Keep watching.
+- `unreachable` is terminal: the waiting ended with no answer, and the engine
+  exited with a status other than 0 and no halt. Check the network or the
+  token, then start `run` again; it closes out a run left in flight from the
+  facts. `lease_held` is terminal too: another engine holds the loop lease
+  (`reason` names the holder and the expiry), so this one did not run.
 
 On each event, and on each tick, verify from facts: `work facts --json` gives
 the checkout's branch, whether it is clean, the base head on `origin`, and with

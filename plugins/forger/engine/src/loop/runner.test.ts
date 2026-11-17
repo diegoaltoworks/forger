@@ -9,7 +9,7 @@ import {localStateFor, memoryStateStore} from '../adapters';
 import {mergeConfig} from '../config';
 import type {StoredPlan} from '../pipeline';
 import {parseIterationLog} from '../supervisor';
-import {RATE_LIMIT_MARGIN_MS, RateLimitError} from './infra';
+import {RATE_LIMIT_MARGIN_MS, RateLimitError, TrackerUnreachableError} from './infra';
 import {AutomationRunner, WATCH_BACKLOG_EVERY} from './runner';
 import {defaultState} from './state';
 
@@ -898,6 +898,80 @@ describe('AutomationRunner and a rate-limited backlog', () => {
       }}
     );
     await expect(runner.refreshBacklog()).rejects.toThrow(/GitHub backlog/);
+  });
+
+  /** A runner whose backlog read fails as an unreachable tracker for the first `failing` reads. */
+  function unreachableRun(failing: number, store = memoryStateStore()) {
+    const root = mkdtempSync(join(tmpdir(), 'forger-runner-'));
+    dirs.push(root);
+    const slept: number[] = [];
+    let reads = 0;
+    const backlogRead = backlogFrom(() => {
+      if (reads++ < failing) throw new TrackerUnreachableError('error connecting to api.github.com');
+      return backlog;
+    }, fast);
+    const runner = new AutomationRunner(root, fast, backlogRead, {
+      stateStore: store,
+      agent: {run: async () => fail},
+      gitRunner: () => '',
+      sleep: async ms => void slept.push(ms),
+    });
+    const kinds = () => store.readEvents().split('\n').filter(Boolean).map(l => JSON.parse(l).event as string);
+    return {runner, slept, kinds, store};
+  }
+
+  test('a tracker that cannot be reached is waited out, and the ticket is not charged', async () => {
+    const {runner, slept} = unreachableRun(3);
+    await runner.refreshBacklog();
+    expect(slept).toEqual([15_000, 30_000, 60_000]);
+    expect(runner.endedBy).toBe(null);
+  });
+
+  test('a wait for the tracker writes one waiting event, however many attempts it takes', async () => {
+    const {runner, slept, kinds} = unreachableRun(4);
+    await runner.refreshBacklog();
+    expect(slept.length).toBe(4);
+    expect(kinds().filter(k => k === 'waiting')).toEqual(['waiting']);
+  });
+
+  test('a tracker that stays unreachable ends the run with an unreachable event and no halt', async () => {
+    const {runner, kinds, store} = unreachableRun(Infinity);
+    expect(await runner.run(1)).toBe(false);
+    expect(runner.endedBy).toBe('unreachable');
+    expect(kinds()).toEqual(['waiting', 'unreachable']);
+    expect(store.readEvents()).toContain('error connecting to api.github.com');
+    expect(kinds()).not.toContain('halted');
+    expect(JSON.parse(store.readEvents().split('\n').filter(Boolean)[0]).event).toBe('waiting');
+  });
+
+  test('an error that ends the run is written as a runner_gone event before the engine exits', async () => {
+    const store = memoryStateStore();
+    const root = mkdtempSync(join(tmpdir(), 'forger-runner-'));
+    dirs.push(root);
+    const runner = new AutomationRunner(root, fast, backlogFrom(() => {
+      throw new Error('GitHub backlog: gh exited 1 with no output, nothing on stderr');
+    }, fast), {stateStore: store, agent: {run: async () => fail}, gitRunner: () => ''});
+    await expect(runner.run(1)).rejects.toThrow(/GitHub backlog/);
+    const events = store.readEvents().split('\n').filter(Boolean).map(l => JSON.parse(l));
+    expect(events.map(e => e.event)).toEqual(['runner_gone']);
+    expect(events[0].reason).toContain('GitHub backlog');
+  });
+
+  test('status says no runner is alive when the state still says running', () => {
+    const root = mkdtempSync(join(tmpdir(), 'forger-runner-'));
+    dirs.push(root);
+    mkdirSync(join(root, '.forger'));
+    writeFileSync(join(root, '.forger', 'state.json'), JSON.stringify({...defaultState(), status: 'running'}));
+    const runner = new AutomationRunner(root, fast, backlogFrom(() => backlog, fast), {stateStore: localStateFor(root, fast), agent: {run: async () => fail}, gitRunner: () => ''});
+    const lines: string[] = [];
+    const log = console.log;
+    console.log = (m?: unknown) => void lines.push(String(m));
+    try {
+      runner.showStatus();
+    } finally {
+      console.log = log;
+    }
+    expect(lines).toContain('Status: running (no runner is alive)');
   });
 
   test('watch re-reads the backlog only every so many redraws, and reports a failed read', () => {

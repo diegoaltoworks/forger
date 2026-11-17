@@ -22,7 +22,7 @@ import {ACCESS_REVIEW} from './reviews/access-review';
 import {readReviewTemplate} from './reviews/schedule';
 import {STRUCTURE_REVIEW} from './reviews/structure-review';
 import {fileStructureReview} from './reviews/structure-review-io';
-import {RateLimitError, rateLimitWaitMs} from './infra';
+import {RateLimitError, TrackerUnreachableError, rateLimitWaitMs, unreachableWaitMs} from './infra';
 import type {StoredPlan} from '../pipeline';
 import {type IterationContext, type Placement, closeOrphan, runIteration} from './iteration';
 import {conflictAfterAttempt, folderMapFrom, inWorktree} from './parallel';
@@ -106,6 +106,13 @@ export function loadFolderMap(projectRoot: string): FolderMap {
 /** Watch redraws often; the backlog behind it is re-read only every this many redraws. */
 export const WATCH_BACKLOG_EVERY = 30;
 
+/** The wait for the tracker reached its bound with no answer. */
+class UnreachableGiveUp extends Error {
+  constructor(what: string, error: string) {
+    super(`${what} could not be reached for the whole wait: ${error}`);
+  }
+}
+
 export class AutomationRunner {
   private logger: Logger;
   private store: LoopStore;
@@ -126,6 +133,8 @@ export class AutomationRunner {
   private folderMap: FolderMap | undefined;
   private leaseSettings: LeaseSettings | undefined;
   private leaseLost = false;
+  /** The terminal event that ended the run without an answer from the tracker or the lease; null when the run ended on its own. */
+  endedBy: TerminalEventKind | null = null;
   private leaseTimer: ReturnType<typeof setInterval> | undefined;
   private released = false;
   private onSignal: (signal: 'SIGTERM' | 'SIGINT', handler: () => void) => void;
@@ -204,16 +213,48 @@ export class AutomationRunner {
    * the limit is the platform's, so it is never charged to a ticket.
    */
   async refreshBacklog(): Promise<void> {
+    const waits = this.unreachableWaits();
     while (true) {
       try {
         this.backlog.refresh();
         return;
       } catch (e) {
+        if (e instanceof TrackerUnreachableError) {
+          await waits.next('the tracker', e.message);
+          continue;
+        }
         if (!(e instanceof RateLimitError)) throw e;
         const wait = rateLimitWaitMs(e.window, this.now());
         this.logger.log('WARN', `${e.message}; waiting ${Math.ceil(wait / 1000)}s`);
         await this.sleep(wait);
       }
+    }
+  }
+
+  /**
+   * The waits of one stretch of an unreachable tracker or state branch: one
+   * `waiting` event when it begins, and a give-up once the bound is reached.
+   * A wait is the platform's, so it is never charged to a ticket.
+   */
+  private unreachableWaits(): {next: (what: string, error: string) => Promise<void>} {
+    let attempt = 0;
+    return {
+      next: async (what, error) => {
+        const wait = unreachableWaitMs(attempt);
+        if (wait === null) throw new UnreachableGiveUp(what, error);
+        if (attempt++ === 0) this.emitSafely('waiting', `${what} could not be reached: ${error}`);
+        this.logger.log('WARN', `${error}; waiting ${Math.ceil(wait / 1000)}s`);
+        await this.sleep(wait);
+      },
+    };
+  }
+
+  /** An event whose own write may fail for the same reason the run is in trouble. */
+  private emitSafely(kind: EventKind, reason: string): void {
+    try {
+      this.emit(kind, this.store.load().iteration, null, reason);
+    } catch (e) {
+      this.logger.log('WARN', `Could not write the ${kind} event: ${(e as Error).message}`);
     }
   }
 
@@ -329,10 +370,10 @@ export class AutomationRunner {
     closeOrphan(this.iteration);
   }
 
-  /** Takes, renews or takes over the lease; false (and the lease marked lost) when it is not ours. */
-  private claimLease(): boolean {
+  /** One attempt at the lease: ok, held by another engine, or lost to a state branch that cannot be written. */
+  private tryClaim(): {ok: true} | {ok: false; reason: 'held' | 'lost'; text: string} {
     const settings = this.leaseSettings;
-    if (!settings) return true;
+    if (!settings) return {ok: true};
     const claim = this.stateStore.claimLease({...settings, now: new Date(this.now()), isAlive: this.isAliveFn});
     if (claim.ok) {
       if (claim.action === 'takeover') {
@@ -340,21 +381,49 @@ export class AutomationRunner {
         this.logger.log('WARN', reason);
         this.emit('lease_takeover', this.store.load().iteration, null, reason);
       }
-      return true;
+      return {ok: true};
     }
-    this.leaseLost = true;
-    this.logger.log(
-      'ERROR',
-      claim.reason === 'held'
-        ? `The loop lease is held by ${claim.holder} until ${claim.expiresAt}. Not running.`
-        : 'Lost the loop lease: the state branch could not be written. Stopping rather than running unguarded.'
-    );
-    return false;
+    return claim.reason === 'held'
+      ? {ok: false, reason: 'held', text: `held by ${claim.holder} until ${claim.expiresAt}`}
+      : {ok: false, reason: 'lost', text: 'the state branch could not be written'};
   }
 
-  /** Renews the lease at the top of an iteration; false when the loop must stop. */
-  private leaseHeld(): boolean {
-    return !this.leaseLost && this.claimLease();
+  /**
+   * Takes, renews or takes over the lease. A claim that is lost is tried again
+   * with the waits of an unreachable tracker; nothing runs meanwhile. A lease
+   * another engine holds ends the run at once. False when the run must end.
+   */
+  private async claimLease(): Promise<boolean> {
+    const waits = this.unreachableWaits();
+    while (true) {
+      const claim = this.tryClaim();
+      if (claim.ok) return true;
+      if (claim.reason === 'held') {
+        this.leaseLost = true;
+        this.logger.log('ERROR', `The loop lease is ${claim.text}. Not running.`);
+        this.endRun('lease_held', `the loop lease is ${claim.text}`);
+        return false;
+      }
+      try {
+        await waits.next('the state branch', 'Lost the loop lease: the state branch could not be written. Not running without it');
+      } catch (e) {
+        if (!(e instanceof UnreachableGiveUp)) throw e;
+        this.leaseLost = true;
+        this.endRun('unreachable', e.message);
+        return false;
+      }
+    }
+  }
+
+  /** The run ends with a terminal event the watcher wakes on, and a status other than 0. */
+  private endRun(kind: TerminalEventKind, reason: string): void {
+    this.endedBy = kind;
+    this.emitSafely(kind, reason);
+  }
+
+  /** The renewal at the top of an iteration; false when the loop must stop. */
+  private async leaseHeld(): Promise<boolean> {
+    return !this.leaseLost && (await this.claimLease());
   }
 
   /**
@@ -362,7 +431,7 @@ export class AutomationRunner {
    * already holds the lock, or another engine holds the lease.
    */
   async run(iterations = 1, continuous = false): Promise<boolean> {
-    if (!this.claimLease()) return false;
+    if (!(await this.claimLease())) return false;
     const lock = this.lock.acquire();
     if (!lock.ok) {
       const msg = `Another runner (pid ${lock.holder}) is already running. Not starting a second one.`;
@@ -377,7 +446,12 @@ export class AutomationRunner {
       // A long iteration outlives the TTL, so the lease is renewed on a timer as well.
       const every = Math.max(1000, (this.leaseSettings.ttlSeconds * 1000) / 3);
       this.leaseTimer = setInterval(() => {
-        if (!this.leaseLost) this.claimLease();
+        if (this.leaseLost) return;
+        const claim = this.tryClaim();
+        if (!claim.ok && claim.reason === 'held') {
+          this.leaseLost = true;
+          this.logger.log('ERROR', `The loop lease is ${claim.text}. Stopping.`);
+        }
       }, every);
     }
     this.released = false;
@@ -394,7 +468,14 @@ export class AutomationRunner {
       this.closeOrphan();
       if (this.config.parallelism > 1) await this.loopParallel(iterations, continuous);
       else await this.loop(iterations, continuous);
-      return true;
+      return this.endedBy === null;
+    } catch (e) {
+      if (e instanceof UnreachableGiveUp) {
+        this.endRun('unreachable', e.message);
+        return false;
+      }
+      this.emitSafely('runner_gone', (e as Error).message);
+      throw e;
     } finally {
       this.releaseHeld();
     }
@@ -451,7 +532,7 @@ export class AutomationRunner {
     while (true) {
       iteration++;
 
-      if (!this.leaseHeld()) break;
+      if (!(await this.leaseHeld())) break;
       if (this.store.isHalted()) {
         this.logger.log('WARN', 'HALT file detected. Stopping.');
         break;
@@ -602,7 +683,7 @@ export class AutomationRunner {
     };
 
     while (true) {
-      if (!this.leaseHeld()) {
+      if (!(await this.leaseHeld())) {
         if (running.size === 0) break;
         abort.abort();
       } else if (this.store.isHalted()) {
@@ -747,7 +828,7 @@ export class AutomationRunner {
     const holder = this.lock.holder();
     const live = this.lock.liveHolder() !== null;
     console.log(`Runner: ${holder === null ? 'none' : `pid ${holder} (${live ? 'alive' : 'dead'})`}`);
-    console.log(`Status: ${state.status}`);
+    console.log(`Status: ${state.status}${state.status === 'running' && !live ? ' (no runner is alive)' : ''}`);
     console.log(`Iteration: ${state.iteration}`);
     console.log(`Completed: ${state.completed_iterations}`);
     console.log(`Failed: ${state.failed_iterations}`);

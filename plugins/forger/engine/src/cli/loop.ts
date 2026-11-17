@@ -61,7 +61,10 @@ export const run: Command = {
     }
     const iterationArg = positionals[1] || (values.iterations as string);
     const started = await runner.run(parseInt(iterationArg, 10), values.continuous as boolean);
-    if (!started) {
+    if (runner.endedBy !== null) {
+      console.error(`The run ended without finishing: ${runner.endedBy}. See the event file.`);
+      process.exitCode = 1;
+    } else if (!started) {
       console.error('Another runner is already running; not starting a second one.');
       process.exitCode = 1;
     }
