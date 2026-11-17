@@ -12,6 +12,10 @@ over them, and the model roles.
   logical paths to physical paths for every other folder.
 - `home.ts` - `homeOf`, pure: which of main, state, tracker or local each forger
   file belongs to (ADR 0015). A path the table does not name throws.
+- `tracker-questions.ts` - one pure function for each question about the
+  tracker kind. Where the Backlog is. Whether the verify status goes to the
+  code host. How a pull request names its ticket. Each is a `switch` with no
+  default branch.
 
 ## Entry point
 

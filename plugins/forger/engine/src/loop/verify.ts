@@ -27,7 +27,10 @@ import {setVerifyStatus, withoutVerifyStatus, type VerifyStatusOutcome} from './
 
 export interface VerifyOptions {
   pr: number;
-  trackerKind: 'github' | 'local' | 'none';
+  queue: 'tracker' | 'file';
+  /** Whether the verify status goes to the code host. */
+  publishStatus: boolean;
+  ticketNaming: 'closing-reference' | 'backlog-id';
   backlogFile: string;
   /** Directory holding the verdict records. */
   verdictsDir: string;
@@ -160,7 +163,7 @@ function shellQuote(s: string): string {
 
 /** The ticket's criteria: the issue's Acceptance section on GitHub, `acceptance_criteria` in a file backlog. */
 function criteriaFor(run: CommandRunner, opts: VerifyOptions, ticket: string): {criteria: Criterion[]; uiStates: Criterion[]} {
-  if (opts.trackerKind === 'github') {
+  if (opts.queue === 'tracker') {
     const issue = issueNumber(ticket);
     if (issue === null) throw new Error(`"${ticket}" is not an issue-<n> ticket`);
     const body = githubTracker(run).text(issue);
@@ -263,7 +266,7 @@ export async function verifyPr(run: CommandRunner, agent: AgentRunner, opts: Ver
   const pr = parsePr(JSON.stringify({...view, statusCheckRollup: withoutVerifyStatus(view.statusCheckRollup)}));
   if (!pr || !view.headRefOid) throw new Error(`cannot read PR #${opts.pr}`);
   const head = view.headRefOid;
-  const found = resolveSubject({branch: view.headRefName ?? '', body: view.body ?? '', trackerKind: opts.trackerKind, inBacklog: id => inBacklog(opts.backlogFile, id)});
+  const found = resolveSubject({branch: view.headRefName ?? '', body: view.body ?? '', ticketNaming: opts.ticketNaming, inBacklog: id => inBacklog(opts.backlogFile, id)});
   const ticket = found.kind === 'ticket' ? found.ticket : `pr-${opts.pr}`;
 
   const {criteria: acceptance, uiStates} = found.kind === 'ticket' ? criteriaFor(run, opts, ticket) : {criteria: found.criteria, uiStates: []};
@@ -387,6 +390,6 @@ function writeRecord(opts: VerifyOptions, setup: SetupChoice | null, log: string
   }
   const record: VerdictRecord = {...base, setup, commandLog};
   writeFileSync(verdictFile(opts.verdictsDir, record.pr, record.head), JSON.stringify(record, null, 2) + '\n');
-  if (opts.trackerKind !== 'github' || !opts.capture) return record;
+  if (!opts.publishStatus || !opts.capture) return record;
   return {...record, status: setVerifyStatus(opts.capture, record.head, record.decision)};
 }

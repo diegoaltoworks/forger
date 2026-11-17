@@ -44,7 +44,9 @@ function fixture() {
   });
   const opts: VerifyOptions = {
     pr: 5,
-    trackerKind: 'github',
+    queue: 'tracker',
+    publishStatus: true,
+    ticketNaming: 'closing-reference',
     backlogFile: '',
     verdictsDir: verdicts,
     tmpDir: scratch,
@@ -325,12 +327,18 @@ describe('verifyPr', () => {
       expect(existsSync(verdictFile(f.verdicts, 5, 'deadbeef'))).toBe(true);
     });
 
+    test('verify publishes its status when the config says the code host takes it', async () => {
+      const f = withCapture();
+      const record = await verifyPr(f.run, f.agentSaying(met(['c1', 'c2'])), {...f.opts, publishStatus: true});
+      expect(record.status?.context).toBe('forger/verify');
+    });
+
     test('off GitHub no status is set', async () => {
       const f = withCapture();
       const root = tmp();
       const file = join(root, 'backlog.json');
       writeFileSync(file, JSON.stringify({features: {'issue-9': {acceptance_criteria: ['only one']}}}));
-      const record = await verifyPr(f.run, f.agentSaying(met(['c1'])), {...f.opts, trackerKind: 'local', backlogFile: file});
+      const record = await verifyPr(f.run, f.agentSaying(met(['c1'])), {...f.opts, queue: 'file', publishStatus: false, ticketNaming: 'backlog-id', backlogFile: file});
       expect(record.status).toBeUndefined();
       expect(f.statuses).toEqual([]);
     });
@@ -411,7 +419,7 @@ describe('verifyPr', () => {
     writeFileSync(backlogFile, JSON.stringify({features: {'sim-engine': {acceptance_criteria: ['it simulates']}}}));
     const local = JSON.stringify({...JSON.parse(view), headRefName: 'feat/sim-engine', body: ''});
     const run: CommandRunner = c => (c.startsWith('gh pr view') ? local : f.run(c));
-    const record = await verifyPr(run, f.agentSaying('x'), {...f.opts, trackerKind: 'local', backlogFile});
+    const record = await verifyPr(run, f.agentSaying('x'), {...f.opts, queue: 'file', publishStatus: false, ticketNaming: 'backlog-id', backlogFile});
     expect(record.ticket).toBe('sim-engine');
     expect(f.prompts[0]).toContain('it simulates');
   });
@@ -428,7 +436,7 @@ describe('verifyPr', () => {
     const file = join(root, 'backlog.json');
     writeFileSync(file, JSON.stringify({features: {'issue-9': {acceptance_criteria: ['only one']}}}));
     const out = JSON.stringify({verdict: [{criterion: 'c1', verdict: 'cannot_tell', missing: 'no_test', evidence: []}]});
-    const record = await verifyPr(f.run, f.agentSaying(out), {...f.opts, trackerKind: 'local', backlogFile: file});
+    const record = await verifyPr(f.run, f.agentSaying(out), {...f.opts, queue: 'file', publishStatus: false, ticketNaming: 'backlog-id', backlogFile: file});
     expect(record.entries.map(e => e.criterion)).toEqual(['c1']);
   });
 });

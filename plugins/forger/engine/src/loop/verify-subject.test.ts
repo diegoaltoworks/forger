@@ -2,9 +2,15 @@ import {describe, expect, test} from 'bun:test';
 
 import {resolveSubject} from './verify-subject';
 
-const base = {trackerKind: 'github' as const, inBacklog: () => false};
+const base = {ticketNaming: 'closing-reference' as const, inBacklog: () => false};
 
 describe('resolveSubject', () => {
+  test('resolveSubject is told how a pull request names its ticket', () => {
+    expect(resolveSubject({branch: 'feat/issue-3', body: '', ticketNaming: 'closing-reference', inBacklog: () => true})).toEqual({kind: 'ticket', ticket: 'issue-3'});
+    expect(resolveSubject({branch: 'feat/issue-3', body: '', ticketNaming: 'backlog-id', inBacklog: () => true})).toEqual({kind: 'ticket', ticket: 'issue-3'});
+    expect(() => resolveSubject({branch: 'feat/issue-3', body: '', ticketNaming: 'backlog-id', inBacklog: () => false})).toThrow();
+  });
+
   test('a closing reference in the body names the ticket when the branch does not', () => {
     expect(resolveSubject({...base, branch: 'docs/x', body: 'text\n\nCloses #206\n'})).toEqual({kind: 'ticket', ticket: 'issue-206'});
   });
@@ -25,11 +31,11 @@ describe('resolveSubject', () => {
     expect(() => resolveSubject({...base, branch: 'wip', body: ''})).toThrow(/Closes #<n>.*## Acceptance/);
   });
   test('on a local tracker the branch feat/<id> names a backlog ticket', () => {
-    const s = resolveSubject({branch: 'feat/sim-engine', body: '', trackerKind: 'local', inBacklog: id => id === 'sim-engine'});
+    const s = resolveSubject({branch: 'feat/sim-engine', body: '', ticketNaming: 'backlog-id', inBacklog: id => id === 'sim-engine'});
     expect(s).toEqual({kind: 'ticket', ticket: 'sim-engine'});
   });
   test('on a local tracker a branch outside the backlog falls back to the body, then refuses', () => {
-    const local = {trackerKind: 'local' as const, inBacklog: () => false};
+    const local = {ticketNaming: 'backlog-id' as const, inBacklog: () => false};
     expect(resolveSubject({...local, branch: 'feat/x', body: '## Acceptance\n- [ ] a'}).kind).toBe('body');
     expect(() => resolveSubject({...local, branch: 'feat/x', body: ''})).toThrow('cannot tell');
   });

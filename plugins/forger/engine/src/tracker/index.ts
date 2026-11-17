@@ -4,3 +4,4 @@ export * from './quote';
 export * from './github-tracker';
 export * from './open';
 export * from './filed-labels';
+export * from './worker-backlog';
