@@ -30,3 +30,4 @@
 {"event":"worker_denied","at":"2026-11-17T06:17:54.386Z","iteration":251,"ticket":"issue-509","reason":"other-engine: merge from /home/diego/work/forger/.forger/worktrees/issue-509/plugins/forger"}
 {"event":"merged","at":"2026-11-17T06:20:45.015Z","iteration":251,"ticket":"issue-509","reason":null}
 {"event":"picked","at":"2026-11-17T06:21:05.402Z","iteration":252,"ticket":"issue-487","reason":null,"commands":"engine"}
+{"event":"set_aside","at":"2026-11-17T06:23:13.280Z","iteration":252,"ticket":"issue-487","reason":"Agent signaled stop - blocked or no actionable work"}
