@@ -22,3 +22,4 @@
 {"event":"worker_denied","at":"2026-11-17T05:46:12.050Z","iteration":250,"ticket":"issue-507","reason":"merge: gh pr merge 508 --squash --delete-branch 2>&1 | tail -3; gh pr view 508 --json state -q .state"}
 {"event":"worker_denied","at":"2026-11-17T05:46:16.006Z","iteration":250,"ticket":"issue-507","reason":"other-engine: verify from /home/diego/work/forger/.forger/worktrees/issue-507/plugins/forger"}
 {"event":"worker_denied","at":"2026-11-17T05:46:19.667Z","iteration":250,"ticket":"issue-507","reason":"other-engine: merge from /home/diego/work/forger/.forger/worktrees/issue-507/plugins/forger"}
+{"event":"merged","at":"2026-11-17T05:50:08.134Z","iteration":250,"ticket":"issue-507","reason":null}
