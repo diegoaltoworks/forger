@@ -63,3 +63,4 @@
 {"event":"picked","at":"2026-11-17T07:12:07.304Z","iteration":259,"ticket":"issue-490","reason":null,"commands":"engine"}
 {"event":"worker_denied","at":"2026-11-17T07:16:16.958Z","iteration":259,"ticket":"issue-490","reason":"other-engine: verify from /home/diego/work/forger/.forger/worktrees/issue-490/plugins/forger"}
 {"event":"merged","at":"2026-11-17T07:19:35.157Z","iteration":259,"ticket":"issue-490","reason":null}
+{"event":"picked","at":"2026-11-17T07:19:54.310Z","iteration":260,"ticket":"issue-491","reason":null,"commands":"engine"}
