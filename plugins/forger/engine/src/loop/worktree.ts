@@ -19,6 +19,8 @@ export interface WorktreeResult {
   error: string | null;
   /** True when the ticket's own worktree was already there and is used as it is. */
   reused?: boolean;
+  /** True when the ticket's branch had no commit of its own and was started again from the base. */
+  restarted?: boolean;
 }
 
 /** What git lists at a path: nothing, the ticket's own worktree, or another checkout. */
@@ -95,11 +97,17 @@ export function createWorktree(run: CapturingRunner, o: WorktreeOptions): Worktr
   // An earlier attempt at the ticket leaves its branch behind (removeWorktree
   // keeps it), so a retry checks that branch out rather than failing on -b.
   const exists = run(`git rev-parse --verify --quiet ${quote(`refs/heads/${branch}`)}`).exitCode === 0;
-  const added = exists
-    ? run(`git worktree add ${quote(path)} ${quote(branch)}`)
-    : run(`git worktree add -b ${quote(branch)} ${quote(path)} ${quote(`origin/${o.baseBranch}`)}`);
+  // A branch with nothing of its own holds no work to lose, and would carry the base as it was then.
+  const origin = quote(`origin/${o.baseBranch}`);
+  const counted = exists ? run(`git rev-list --count ${origin}..${quote(branch)}`) : null;
+  const restart = counted !== null && counted.exitCode === 0 && counted.stdout.trim() === '0';
+  const added = !exists
+    ? run(`git worktree add -b ${quote(branch)} ${quote(path)} ${origin}`)
+    : restart
+      ? run(`git worktree add -B ${quote(branch)} ${quote(path)} ${origin}`)
+      : run(`git worktree add ${quote(path)} ${quote(branch)}`);
   if (added.exitCode !== 0) return {...base, ok: false, error: failure(added)};
-  return {...base, ok: true, error: null};
+  return {...base, ok: true, error: null, ...(restart ? {restarted: true} : {})};
 }
 
 /** Remove the ticket's worktree. The branch stays: it is the PR's head or already merged. */

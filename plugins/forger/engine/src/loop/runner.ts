@@ -611,6 +611,7 @@ export class AutomationRunner {
     if (!made.ok) return `worktree for ${ticket}: ${made.error}`;
     const cwd = made.path;
     if (made.reused) this.logger.log('INFO', `Using the worktree already at ${cwd} for ${ticket}`);
+    if (made.restarted) this.logger.log('INFO', `The branch of ${ticket} had no commit of its own: started again from ${this.config.base_branch}`);
     return {
       ticket,
       cwd,
