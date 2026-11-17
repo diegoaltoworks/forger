@@ -34,11 +34,12 @@ you install it and the way you start a step differ.
 
 ### 🤖 Claude Code
 
-Add the forger repository as a marketplace once, then install the plugin. A
-local checkout works as well as `owner/repo` on GitHub.
+Add the forger repository as a marketplace once, then install the plugin. To
+install from a local checkout instead, see the
+[Install reference](reference/install.md#install-and-update).
 
 ```
-claude plugin marketplace add <path-or-owner/repo>
+claude plugin marketplace add diegoaltoworks/forger
 claude plugin install forger@forger
 ```
 

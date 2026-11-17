@@ -5,13 +5,23 @@ Install, update and onboard in detail. The short path is in
 
 ## Install and update
 
-Add this repository as a marketplace once, then install. A local checkout works
-as well as the GitHub repository, and installs alongside any other loop plugin:
+Add the GitHub repository as a marketplace once, then install. The plugin
+installs alongside any other loop plugin:
 
 ```
-claude plugin marketplace add <path-or-owner/repo>
+claude plugin marketplace add diegoaltoworks/forger
 claude plugin install forger@forger
 ```
+
+An installed copy changes only when it is updated, which is what a loop that does
+real work needs: an engine loads its code from disk at each hook call, `verify`
+and `merge`, so a copy that moves under a running loop leaves it part old code and
+part new.
+
+A local checkout is the source for a person developing forger. Add its path in
+place of `diegoaltoworks/forger`. A repository whose loop does real work installs
+from GitHub instead. Update the installed copy only when no engine that runs from
+it is alive.
 
 Update on each machine, then restart Claude Code:
 
