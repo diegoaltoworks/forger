@@ -19,6 +19,9 @@ export type TrackerWrite =
   /** Makes `blocked` wait on `blocker`; both are the tracker's own references, as `links` hands them back. */
   | {kind: 'block'; blocked: string; blocker: string};
 
+/** Where a ticket is in the loop: picked, its pull request verified, its pull request merged. */
+export type StatusEvent = 'started' | 'review' | 'done';
+
 export interface TicketFacts {
   labels: string[];
   body: string;
@@ -102,6 +105,8 @@ export interface Tracker {
   /** The account the tracker acts as, such as the login that records a decision. */
   account(): string;
   account(how: WholeResult): CommandResult;
+  /** Moves the ticket as the event says and returns a line to log for each move that could not be made; a tracker with no statuses does nothing. */
+  moveStatus(ticket: number, event: StatusEvent, pr?: string): string[];
   /** Applies a write and returns what the tracker answered, such as the address of a filed ticket. */
   apply(write: TrackerWrite): string;
   apply(write: TrackerWrite, how: WholeResult): CommandResult;

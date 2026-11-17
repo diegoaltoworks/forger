@@ -1,13 +1,12 @@
 /** The tracker for the configured kind. */
 
 import {backlogReader, queueHome, type WorkloopConfig} from '../config';
-import type {CapturingRunner, CommandRunner, Tracker} from '../ports';
+import {capturing, type CapturingRunner, type CommandRunner, type Tracker} from '../ports';
 import {githubTracker} from './github-tracker';
+import {jiraTracker} from './jira/tracker';
 
-/** A ticket named by a number is read from GitHub whatever the kind; the kinds differ in where the queue is. */
-export function openTracker(config: Pick<WorkloopConfig, 'tracker'>, run: CommandRunner, capture?: CapturingRunner): Tracker {
-  if (backlogReader(config) === 'jira') {
-    throw new Error('tracker kind jira: the reads and writes of a single ticket are not built yet');
-  }
+/** A ticket named by a number is read from GitHub for the kinds on GitHub; the kinds differ in where the queue is. Jira reads its own project. */
+export function openTracker(config: Pick<WorkloopConfig, 'tracker'>, run: CommandRunner, capture: CapturingRunner = capturing(run)): Tracker {
+  if (backlogReader(config) === 'jira') return jiraTracker(capture, config.tracker);
   return githubTracker(run, capture, queueHome(config));
 }

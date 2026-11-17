@@ -125,6 +125,8 @@ export async function runIteration(
   updateRun(state, sessionId, {ticket: attemptedTask, plan});
   ctx.store.save(state);
   if (attemptedTask) ctx.emit('picked', iteration, attemptedTask, null, ctx.workerCommands ? {commands: ctx.workerCommands(root)} : undefined);
+  const pickedIssue = issueOfTicket(attemptedTask);
+  if (pickedIssue !== null) for (const line of ctx.tracker.moveStatus(pickedIssue, 'started')) ctx.logger.log('WARN', line);
 
   // Read before the run: a worker that hands the ticket over takes it out of the queue, and its text with it.
   const ownBody = attemptedTask ? ctx.backlog.body(attemptedTask) : null;

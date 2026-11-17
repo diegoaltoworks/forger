@@ -1,16 +1,12 @@
 /** The search of the Jira backlog: its query and the call for each page. Pure. */
 
 import {type WorkloopConfig, jiraOf} from '../../config';
-import {jiraCall} from '../../tracker';
+import {jiraCall, jqlString} from '../../tracker';
 
 type Tracker = WorkloopConfig['tracker'];
 
 export const SEARCH_PATH = '/rest/api/3/search/jql';
 export const PAGE_SIZE = 50;
-
-function jqlString(s: string): string {
-  return `"${s.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`;
-}
 
 /** The project and the open work, then the intake label or the configured jql in its place. */
 export function jiraQuery(tracker: Tracker): string {

@@ -7,3 +7,6 @@ export * from './filed-labels';
 export * from './worker-backlog';
 export * from './jira/call';
 export * from './jira/adf-to-markdown';
+export * from './jira/jql';
+export * from './jira/tracker';
+export * from './jira/status/moves';

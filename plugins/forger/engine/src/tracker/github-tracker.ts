@@ -42,6 +42,7 @@ export function githubTracker(run: CommandRunner, capture: CapturingRunner = cap
     listCommand: label => githubRead.listing(label),
     repoLabels: () => lines(call(githubRead.repoLabels())),
     account: ((how?: WholeResult) => (how ? call(githubRead.account(), how) : call(githubRead.account()))) as Tracker['account'],
+    moveStatus: () => [],
     apply: ((write: TrackerWrite, how?: WholeResult) => (how ? call(githubCommand(write), how) : call(githubCommand(write)))) as Tracker['apply'],
   };
 }

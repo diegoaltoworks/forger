@@ -171,10 +171,3 @@ describe('what the engine reads and links with a GraphQL query', () => {
     expect(seen).toHaveLength(1);
   });
 });
-
-describe('openTracker for jira', () => {
-  test('opening the tracker for the kind jira says the reads and writes of a single ticket are not built', () => {
-    const config = mergeConfig({tracker: {kind: 'jira', jira: {site: 'https://x.net', project: 'ABC'}}});
-    expect(() => openTracker(config, () => '')).toThrow('the reads and writes of a single ticket are not built');
-  });
-});
