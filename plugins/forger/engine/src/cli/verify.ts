@@ -6,6 +6,7 @@ import {agentFor, execCapture, findHarness, sandboxFor, sandboxSite, slcrProvide
 import {publishesVerifyStatus, queueHome, resolveModel, ticketNaming} from '../config';
 import {issueOfTicket, awaitCleanEngine, engineChangedMessage, engineChanges, eventLine, flakyReason, loopRootOf, otherEngine, otherEngineMessage, otherEngineReason, otherEngineRun, terminalEvent, ticketFlaky, verdictsHome, verifierTier, verifyPr, workerIdentity, type VerifyResult} from '../loop';
 import type {StatusEvent} from '../ports';
+import {titleReader} from '../tracker';
 import type {Command, CommandContext} from './command';
 
 const realOrAsWritten = (path: string): string => {
@@ -80,6 +81,7 @@ export function verifyOne(ctx: CommandContext, pr: number): Promise<VerifyResult
     queue: queueHome(config),
     publishStatus: publishesVerifyStatus(config),
     ticketNaming: ticketNaming(config),
+    ticketOfTitle: titleReader(config),
     backlogFile: join(projectRoot, config.paths.backlog),
     verdictsDir: verdictsHome(ctx.run(), projectRoot, config.paths.verdicts),
     tmpDir: join(loopRootOf(ctx.run(), projectRoot), config.paths.tmp),

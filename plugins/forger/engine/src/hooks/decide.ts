@@ -25,11 +25,16 @@ export interface WorkerFacts {
   statePaths: string[];
   /** The worker's own worktree and the loop's checkout; set only when the engine started the worker in a worktree, which is what `leave-worktree` needs. */
   worktree?: {path: string; loopRoot: string; cwd: string};
+  /** The hosts a worker may not name because the tracker is read through `work ticket`; empty for a tracker the worker reads with the code host's tool. */
+  trackerHosts?: string[];
 }
 
 const ALLOW: HookDecision = {allow: true};
 
-export function ruleMessage(rule: DefaultRule, baseBranch: string): string {
+/** The rule of the worker's hook that no policy file turns off: the tracker's site, which a worker reads through `work ticket`. */
+export const TRACKER_SITE_RULE = 'tracker-site';
+
+export function ruleMessage(rule: DefaultRule | typeof TRACKER_SITE_RULE, baseBranch: string): string {
   switch (rule) {
     case 'merge':
       return 'Refused: a worker does not merge by hand. Stop at PR open and green: `work verify --pr <n>`, then `work merge --pr <n>`, which merges only on green checks and a passing verdict.';
@@ -41,6 +46,8 @@ export function ruleMessage(rule: DefaultRule, baseBranch: string): string {
       return 'Refused: the engine\'s state under .forger/ (state, events, verdicts, HALT, lock) is written by the engine only. Use the work commands (`work decline`, `work verify`) instead.';
     case 'leave-worktree':
       return 'Refused: this path is in the loop\'s checkout, outside your worktree. All work happens in your worktree; read the loop\'s checkout by path, never enter or write it.';
+    case TRACKER_SITE_RULE:
+      return 'Refused: a worker never calls the tracker\'s site. Read a ticket with `work ticket <n>`; the engine reads and moves the issues.';
   }
 }
 
@@ -218,6 +225,12 @@ export function isStatePath(path: string, statePaths: string[]): boolean {
   });
 }
 
+/** Whether a word names one of the hosts, as a bare host or inside an address. */
+function namesHost(word: string, hosts: string[]): boolean {
+  const lower = word.toLowerCase();
+  return hosts.some(host => new RegExp(`(^|[^a-z0-9.-])${host.toLowerCase().replace(/[.]/g, '\\.')}($|[^a-z0-9-])`).test(lower));
+}
+
 const WRITERS = new Set(['rm', 'mv', 'tee', 'truncate', 'touch', 'ln', 'unlink', 'shred', 'chmod', 'dd', 'install', 'rsync']);
 
 /** Whether the segment writes to a path `target` accepts: a redirect, or a program that writes its operands. */
@@ -261,7 +274,7 @@ export function commandOf(call: ToolCall): string | null {
 
 /** The worker's hook: the first rule the call breaks, in policy order, or allow. */
 export function decideWorker(policy: HookPolicy, call: ToolCall, facts: WorkerFacts): HookDecision {
-  const refuse = (rule: DefaultRule, command: string): HookDecision => ({allow: false, rule, message: ruleMessage(rule, facts.baseBranch), command});
+  const refuse = (rule: DefaultRule | typeof TRACKER_SITE_RULE, command: string): HookDecision => ({allow: false, rule, message: ruleMessage(rule, facts.baseBranch), command});
   const leave = policy.rules.includes('leave-worktree') ? facts.worktree : undefined;
   if (EDIT_TOOLS.has(call.tool_name)) {
     const path = inputPath(call.tool_input);
@@ -290,6 +303,7 @@ export function decideWorker(policy: HookPolicy, call: ToolCall, facts: WorkerFa
             : words.length > 0 && (rule === 'merge' ? breaksMerge(words) : rule === 'push-base' ? breaksPush(words, facts) : breaksStatus(words));
       if (broken) return refuse(rule, command);
     }
+    if (words.some(w => namesHost(w, facts.trackerHosts ?? []))) return refuse(TRACKER_SITE_RULE, command);
     const joined = words.join(' ');
     for (const deny of policy.deny) {
       if (new RegExp(deny.pattern).test(joined)) return {allow: false, rule: deny.id, message: deny.message, command};

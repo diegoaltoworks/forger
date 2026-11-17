@@ -3,7 +3,7 @@
  * switches have no default so a new kind must be answered here.
  */
 
-import type {WorkloopConfig} from '../config';
+import {jiraOf, type WorkloopConfig} from '../config';
 
 type Kinded = Pick<WorkloopConfig, 'tracker'>;
 
@@ -28,13 +28,16 @@ export function workerBacklogText(config: Kinded): string {
       }
       return lines.join('\n');
     }
-    case 'jira':
+    case 'jira': {
+      const project = jiraOf(config.tracker).project;
       return [
         '## A Jira project is the backlog',
-        `- Tracker is JIRA. The issue \`KEY-<n>\` is the ticket \`issue-<n>\`. Branch as \`feat/issue-<n>\`.`,
-        '- Never call Jira yourself; the engine reads and updates the issues.',
+        `- Tracker is JIRA. The Jira project \`${project}\` is the backlog; ticket \`issue-<n>\` is the issue \`${project}-<n>\`. Branch as \`feat/issue-<n>\`.`,
+        '- Read a ticket with `work ticket <n>`. Never call Jira yourself; the engine moves the issue, you do not.',
+        `- The pull request's title begins with the key (\`${project}-<n>: <summary>\`). Its body carries no closing reference: \`Closes #<n>\` would close the code host's issue of that number, so \`verify\` and \`merge\` refuse it.`,
         '- The pull request holds code, tests and docs.',
       ].join('\n');
+    }
     case 'local':
       return fileText('- Tracker is LOCAL. backlog.json is the only ticket record; do not create or update issues.');
     case 'none':

@@ -197,6 +197,10 @@ policy and the call, and it reads through chains (`&&`, `;`, pipes), wrappers
   worktree. Another worker's worktree counts as outside. Reading the loop's
   checkout by path, and running the engine from it, stay allowed.
 
+- `tracker-site`: with the tracker kind `jira`, a command that names the
+  configured site's host or the vendor's gateway host. It is always on for a
+  worker and no policy file drops it.
+
 A refusal tells the worker what to do instead, and is appended to the event
 file as `worker_denied`, with the ticket, the rule and the refused command. A
 project adds rules of its own in `deny` (an id, a regular expression over each

@@ -15,6 +15,7 @@ Only `tracker.ts` runs a command.
   credential variables and never holds their values; they reach `curl` through
   a config on standard input.
 - `tracker.ts` - `jiraTracker`, the port over the call, with the three status moves.
+- `pr-title.ts` - the title `KEY-<n>: <summary>` and the ticket a leading key names. Pure.
 - `jql.ts` - a string as a JQL literal.
 - `status/` - the status moves as decisions. See its README.
 - `markdown-to-adf.ts` - `markdownToAdf`. Writes a version 1 document with only

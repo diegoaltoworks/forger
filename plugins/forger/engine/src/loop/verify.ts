@@ -31,6 +31,8 @@ export interface VerifyOptions {
   /** Whether the verify status goes to the code host. */
   publishStatus: boolean;
   ticketNaming: 'closing-reference' | 'backlog-id' | 'key-in-title';
+  /** The ticket number the key in a pull request's title names; given when `ticketNaming` is `key-in-title`. */
+  ticketOfTitle?: (title: string) => number | null;
   backlogFile: string;
   /** Directory holding the verdict records. */
   verdictsDir: string;
@@ -262,11 +264,11 @@ async function gatesCommandEntry(run: CommandRunner, opts: VerifyOptions, c: Cri
 }
 
 export async function verifyPr(run: CommandRunner, agent: AgentRunner, opts: VerifyOptions): Promise<VerifyResult> {
-  const view = JSON.parse(run(`gh pr view ${opts.pr} --json ${PR_FIELDS},headRefName,baseRefName,body`)) as {headRefOid?: string; headRefName?: string; baseRefName?: string; body?: string; statusCheckRollup?: unknown};
+  const view = JSON.parse(run(`gh pr view ${opts.pr} --json ${PR_FIELDS},headRefName,baseRefName,body,title`)) as {headRefOid?: string; title?: string; headRefName?: string; baseRefName?: string; body?: string; statusCheckRollup?: unknown};
   const pr = parsePr(JSON.stringify({...view, statusCheckRollup: withoutVerifyStatus(view.statusCheckRollup)}));
   if (!pr || !view.headRefOid) throw new Error(`cannot read PR #${opts.pr}`);
   const head = view.headRefOid;
-  const found = resolveSubject({branch: view.headRefName ?? '', body: view.body ?? '', ticketNaming: opts.ticketNaming, inBacklog: id => inBacklog(opts.backlogFile, id)});
+  const found = resolveSubject({branch: view.headRefName ?? '', body: view.body ?? '', title: view.title, ticketOfTitle: opts.ticketOfTitle, ticketNaming: opts.ticketNaming, inBacklog: id => inBacklog(opts.backlogFile, id)});
   const ticket = found.kind === 'ticket' ? found.ticket : `pr-${opts.pr}`;
 
   const {criteria: acceptance, uiStates} = found.kind === 'ticket' ? criteriaFor(run, opts, ticket) : {criteria: found.criteria, uiStates: []};

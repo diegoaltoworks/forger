@@ -63,8 +63,10 @@ the moment the gates are green; a pushed branch survives a kill, a local one doe
 
 ### 2. Read the ticket named in the prompt
 The prompt names the ticket to build: the engine's pick. Do not choose another
-and do not re-derive the order. On GitHub, ticket `issue-<n>` is issue #<n>:
-read it with `gh issue view <n>`; otherwise read it in `backlog.json`. When the
+and do not re-derive the order. Ticket `issue-<n>` is
+read with `bun "${FORGER_PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT}}/bin/work.ts" ticket <n>`,
+which prints its title, labels and text for every tracker kind; on a local or
+no tracker read it in `backlog.json`. When the
 prompt says there is no workable ticket, signal `stop`.
 
 Build it or decline it. If the ticket is blocked on something only a human can
@@ -192,6 +194,7 @@ git push -u origin feat/<ticket-id>     # FIRST - do not defer this
 gh pr create --title "feat: <summary>" --body "<what + how + gate results>
 
 Closes #<issue>" --base <base-branch>
+# on a Jira tracker: title "<KEY>-<n>: <summary>" and no Closes line, as the backlog text says
 bun "${FORGER_PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT}}/bin/work.ts" verify --pr <pr> --json
 bun "${FORGER_PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT}}/bin/work.ts" merge --pr <pr> --json
 git checkout <base-branch> && git pull

@@ -1,3 +1,4 @@
+import {ticketNaming} from '../config';
 import {issueOfTicket, mergePr, mergeMode, verdictsHome, workerIdentity} from '../loop';
 import type {CommandRunner} from '../ports';
 import {githubTracker} from '../tracker';
@@ -47,6 +48,7 @@ export const merge: Command = {
       baseBranch: config.base_branch,
       verdictsDir: verdictsHome(ctx.run(), ctx.projectRoot, config.paths.verdicts),
       timeoutMs: parseInt(values.timeout as string, 10) * 1000,
+      ticketNaming: ticketNaming(ctx.config),
       mode: mergeMode(workerTicketBody(ctx.run(), ctx.deps.env ?? process.env)),
     });
     if (!r.merged) process.exitCode = 1;

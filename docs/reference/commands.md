@@ -74,6 +74,7 @@ $ bun ${FORGER_PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT}}/bin/work.ts status --json
 |---|---|
 | `backlog` | Lists the workable tickets in order, the remaining count and the next pick. |
 | `link-blockers` | Links the issues under an issue's "Blocked by" heading as native blocked-by. |
+| `ticket` | Prints a ticket's title, labels and text as markdown through the configured tracker, for every kind; `--json` gives the same as data. A ticket that does not exist exits 1 with one line. |
 | `decline` | Records that the engine's pick cannot be built and takes it out of the backlog. |
 | `slice` | Prints the spec slice of each requirement a ticket's `Satisfies:` line names. |
 | `intent` | Classifies a planning request as product or creative. |

@@ -4,7 +4,7 @@ The harness hook that refuses what a worker is only asked not to do. The same
 hook guards the supervisor.
 
 It refuses a merge by hand, a push to the base branch and a forced push. It
-refuses a commit status, a check run and an edit of the engine's state. For a worker started in a worktree it refuses a
+refuses a command that names the tracker's site when the kind is `jira`. It refuses a commit status, a check run and an edit of the engine's state. For a worker started in a worktree it refuses a
 write to, or a `cd` into, the loop's checkout outside that worktree. While
 an engine is alive, it refuses state-changing git in the loop's checkout.
 
