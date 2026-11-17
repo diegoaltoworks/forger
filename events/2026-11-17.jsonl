@@ -57,3 +57,4 @@
 {"event":"merged","at":"2026-11-17T07:02:25.305Z","iteration":257,"ticket":"issue-488","reason":null}
 {"event":"picked","at":"2026-11-17T07:02:45.891Z","iteration":258,"ticket":"issue-489","reason":null,"commands":"engine"}
 {"event":"worker_denied","at":"2026-11-17T07:08:26.636Z","iteration":258,"ticket":"issue-489","reason":"other-engine: verify from /home/diego/work/forger/.forger/worktrees/issue-489/plugins/forger"}
+{"event":"worker_denied","at":"2026-11-17T07:08:39.519Z","iteration":258,"ticket":"issue-489","reason":"other-engine: merge from /home/diego/work/forger/.forger/worktrees/issue-489/plugins/forger"}
