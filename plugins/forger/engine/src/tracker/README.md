@@ -19,12 +19,12 @@ configured kind into a tracker. A read is a method and a write is data.
   of several tickets. One call blocks a ticket by another.
 - `filed-labels.ts` - `filedLabels`, the labels of a filed ticket. The caller's
   own, and the intake label when the backlog is in the tracker. Pure.
-- `open.ts` - `openTracker`, the tracker for a config's kind. Every kind reads
-  GitHub; the kinds differ in where the backlog is. The loop opens one and
+- `open.ts` - `openTracker`, the tracker for a config's kind. The kinds on
+  GitHub read GitHub and differ in where the backlog is; `jira` reads its project. The loop opens one and
   hands it to what hands a ticket back.
 - `worker-backlog.ts` - what the worker is told about its backlog and its pull
   request, for each kind. Pure, a `switch` with no default branch.
-- `jira/` - Jira text and the Jira call. Pure. See its README.
+- `jira/` - Jira text, the Jira call, and the Jira adapter of the port with its status moves. See its README.
 - `tracker-rules.test.ts` - two rules keep the port whole. No file outside
   this folder names a `gh issue` or `gh label` command. None outside `config`
   and this folder reads the tracker kind.

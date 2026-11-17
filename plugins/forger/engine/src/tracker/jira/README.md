@@ -1,7 +1,7 @@
 # tracker/jira
 
-The Jira text and the Jira call, all pure: no file, network, clock or random
-value. A Jira document is Atlassian Document Format, a tree of nodes in JSON.
+The Jira text, the Jira call and the tracker port over them.
+Only `tracker.ts` runs a command.
 
 ## Files
 
@@ -14,6 +14,9 @@ value. A Jira document is Atlassian Document Format, a tree of nodes in JSON.
 - `call.ts` - `jiraCall`, the `curl` command of one call. It names the two
   credential variables and never holds their values; they reach `curl` through
   a config on standard input.
+- `tracker.ts` - `jiraTracker`, the port over the call, with the three status moves.
+- `jql.ts` - a string as a JQL literal.
+- `status/` - the status moves as decisions. See its README.
 - `markdown-to-adf.ts` - `markdownToAdf`. Writes a version 1 document with only
   the written nodes. A checkbox item is a plain list item that begins `[ ]` or
   `[x]`. It writes markdown with no node of its own as paragraph text.

@@ -4,7 +4,8 @@ import {randomUUID} from 'crypto';
 
 import {agentFor, execCapture, findHarness, sandboxFor, sandboxSite, slcrProvider} from '../adapters';
 import {publishesVerifyStatus, queueHome, resolveModel, ticketNaming} from '../config';
-import {awaitCleanEngine, engineChangedMessage, engineChanges, eventLine, flakyReason, loopRootOf, otherEngine, otherEngineMessage, otherEngineReason, otherEngineRun, terminalEvent, ticketFlaky, verdictsHome, verifierTier, verifyPr, workerIdentity, type VerifyResult} from '../loop';
+import {issueOfTicket, awaitCleanEngine, engineChangedMessage, engineChanges, eventLine, flakyReason, loopRootOf, otherEngine, otherEngineMessage, otherEngineReason, otherEngineRun, terminalEvent, ticketFlaky, verdictsHome, verifierTier, verifyPr, workerIdentity, type VerifyResult} from '../loop';
+import type {StatusEvent} from '../ports';
 import type {Command, CommandContext} from './command';
 
 const realOrAsWritten = (path: string): string => {
@@ -19,6 +20,17 @@ const realOrAsWritten = (path: string): string => {
  * Refuses `verify` or `merge` run by a worker from another engine than the one that started it:
  * sets exit 1, records `worker_denied` and prints the command to run. True when it refused.
  */
+/** Moves the worker's own ticket as the event says; a move that cannot be made is a line on standard error and never a failure. */
+export function moveWorkerTicket(ctx: CommandContext, event: StatusEvent, pr?: string): void {
+  const issue = issueOfTicket(workerIdentity(ctx.deps.env ?? process.env)?.ticket ?? null);
+  if (issue === null) return;
+  try {
+    for (const line of ctx.tracker().moveStatus(issue, event, pr)) console.error(line);
+  } catch (e) {
+    console.error(`${event} move: ${(e as Error).message}`);
+  }
+}
+
 export function refuseOtherEngine(ctx: CommandContext, command: 'verify' | 'merge'): boolean {
   const env = ctx.deps.env ?? process.env;
   const found = otherEngine(env, ctx.pluginRoot, realOrAsWritten);
@@ -119,6 +131,7 @@ export const verify: Command = {
     try {
       const record = await verifyOne(ctx, pr);
       if (record.decision !== 'pass') process.exitCode = 1;
+      else moveWorkerTicket(ctx, 'review');
       if (record.status?.error) console.error(`verify: the verdict is recorded but the ${record.status.context} status was not set: ${record.status.error}`);
       console.log(
         values.json

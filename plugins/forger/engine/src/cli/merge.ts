@@ -2,7 +2,7 @@ import {issueOfTicket, mergePr, mergeMode, verdictsHome, workerIdentity} from '.
 import type {CommandRunner} from '../ports';
 import {githubTracker} from '../tracker';
 import type {Command} from './command';
-import {refuseChangedEngine, refuseOtherEngine} from './verify';
+import {moveWorkerTicket, refuseChangedEngine, refuseOtherEngine} from './verify';
 
 /** The ticket body of the worker calling `merge`; null when the caller is no worker or the issue cannot be read. */
 function workerTicketBody(run: CommandRunner, env: Record<string, string | undefined>): string | null {
@@ -12,6 +12,15 @@ function workerTicketBody(run: CommandRunner, env: Record<string, string | undef
     return githubTracker(run).text(issue);
   } catch {
     return null;
+  }
+}
+
+/** The pull request's address, or nothing when it cannot be read. */
+function prAddress(run: CommandRunner, pr: number): string | undefined {
+  try {
+    return run(`gh pr view ${pr} --json url --jq .url`).trim() || undefined;
+  } catch {
+    return undefined;
   }
 }
 
@@ -41,6 +50,7 @@ export const merge: Command = {
       mode: mergeMode(workerTicketBody(ctx.run(), ctx.deps.env ?? process.env)),
     });
     if (!r.merged) process.exitCode = 1;
+    else moveWorkerTicket(ctx, 'done', prAddress(ctx.run(), pr));
     console.log(values.json ? JSON.stringify(r) : r.merged ? `PR #${r.pr} merged, checks ${r.checks}` : `PR #${r.pr} not merged: ${r.reason}`);
   },
 };
