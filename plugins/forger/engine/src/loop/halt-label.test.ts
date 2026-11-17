@@ -1,6 +1,6 @@
 import {describe, expect, test} from 'bun:test';
 
-import {decideHalt, statusBody, type HaltDecision} from './halt-label';
+import {decideHalt, postable, statusBody, type HaltDecision} from './halt-label';
 import {defaultState} from './state';
 
 describe('decideHalt', () => {
@@ -30,5 +30,19 @@ describe('statusBody', () => {
     expect(body).toContain('Loop: halted');
     expect(body).toContain('Last error: boom');
     expect(body).toContain('Remove the `halted` label to resume');
+  });
+});
+
+describe('postable', () => {
+  const root = '/srv/me/work/repo';
+  const home = '/srv/me';
+  test('a path under the repository\'s root is posted relative to the root', () => {
+    expect(postable(`fatal: '${root}/.forger/worktrees/a' exists; cwd ${root}`, root, home)).toBe("fatal: '.forger/worktrees/a' exists; cwd .");
+  });
+  test('a path under the home folder and outside the repository is posted with a tilde', () => {
+    expect(postable(`cannot open ${home}/.cache/x and ${root}-other/y`, root, home)).toBe('cannot open ~/.cache/x and ~/work/repo-other/y');
+  });
+  test('a text with no path is posted unchanged', () => {
+    expect(postable('Infrastructure error (worktree): boom', root, home)).toBe('Infrastructure error (worktree): boom');
   });
 });

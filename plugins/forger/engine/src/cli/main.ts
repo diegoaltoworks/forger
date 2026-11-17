@@ -13,7 +13,7 @@ import {parseArgs} from 'util';
 import {agentFor, execCapture, sandboxFor, sandboxSite, gitStateStore, localStateFor, execRunner, execProbe, findHarness} from '../adapters';
 import type {Backlog} from '../backlog';
 import {detectLayout, isProjectRoot, legacyWarning, loadConfig, resolveProjectRoot, type WorkloopConfig} from '../config';
-import {AutomationRunner, DEFAULT_LEASE_TTL_SECONDS, GhTrackerHalt, type LeaseSettings} from '../loop';
+import {AutomationRunner, DEFAULT_LEASE_TTL_SECONDS, GhTrackerHalt, postable, type LeaseSettings} from '../loop';
 import {capturing, type StateStore} from '../ports';
 import {listCollectionRoots, listInstalledSkills, workerCommandsSource} from '../packs';
 import {openTracker} from '../tracker';
@@ -76,7 +76,7 @@ export function contextFor(base: Pick<CommandContext, 'values' | 'positionals' |
     },
     get runner() {
       const box = sandboxFor(ctx.config.sandbox, execCapture(ctx.projectRoot), sandboxSite(ctx.config, ctx.projectRoot, ctx.pluginRoot));
-      return (runner ??= new AutomationRunner(ctx.projectRoot, ctx.config, ctx.backlog, {stateStore: ctx.stateStore, lease: leaseSettingsFor(ctx.config), gitRunner: execRunner(ctx.projectRoot), gitCapture: execCapture(ctx.projectRoot), probeRunner: execProbe, sandbox: box, agent: agentFor(findHarness(ctx.config.harness), ctx.config.model_prices, box), pluginRoot: ctx.pluginRoot, workerCommands: root => workerCommandsSource(findHarness(ctx.config.harness), ctx.pluginRoot, root), resolvePlan: ticket => storedPlanFor(ctx, ticket), haltTracker: ctx.config.tracker.kind === 'github' ? new GhTrackerHalt(execRunner(ctx.projectRoot)) : undefined}));
+      return (runner ??= new AutomationRunner(ctx.projectRoot, ctx.config, ctx.backlog, {stateStore: ctx.stateStore, lease: leaseSettingsFor(ctx.config), gitRunner: execRunner(ctx.projectRoot), gitCapture: execCapture(ctx.projectRoot), probeRunner: execProbe, sandbox: box, agent: agentFor(findHarness(ctx.config.harness), ctx.config.model_prices, box), pluginRoot: ctx.pluginRoot, workerCommands: root => workerCommandsSource(findHarness(ctx.config.harness), ctx.pluginRoot, root), resolvePlan: ticket => storedPlanFor(ctx, ticket), haltTracker: ctx.config.tracker.kind === 'github' ? new GhTrackerHalt(execRunner(ctx.projectRoot), Date.now, undefined, text => postable(text, ctx.projectRoot, homedir())) : undefined}));
     },
   };
   return ctx;
