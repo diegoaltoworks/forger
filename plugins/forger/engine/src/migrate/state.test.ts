@@ -3,7 +3,9 @@ import {mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync} from 'fs';
 import {tmpdir} from 'os';
 import {join} from 'path';
 
-import {execCapture, gitStateStore} from '../adapters';
+import {execCapture, gitStateStore as realGitStateStore, type GitStateOptions} from '../adapters';
+const gitStateStore = (o: Omit<GitStateOptions, 'tmpDir'>) => realGitStateStore({tmpDir: join(o.repo, '.forger', 'tmp'), ...o});
+
 import {MigrateRefused} from './migrate';
 import {runMigrateState, splitEventsByDay} from './state';
 

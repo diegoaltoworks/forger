@@ -1,3 +1,4 @@
+import {join} from 'path';
 import {gitStateStore} from '../adapters';
 import {loadConfig} from '../config';
 import {formatMigrate, formatMigrateState, MigrateRefused, runMigrate, runMigrateState} from '../migrate';
@@ -15,7 +16,7 @@ export const migrate: Command = {
   run(ctx) {
     try {
       if (ctx.values.state) {
-        const result = runMigrateState({projectRoot: ctx.projectRoot, branch: gitStateStore({repo: ctx.projectRoot})});
+        const result = runMigrateState({projectRoot: ctx.projectRoot, branch: gitStateStore({repo: ctx.projectRoot, tmpDir: join(ctx.projectRoot, loadConfig(ctx.projectRoot).paths.tmp)})});
         console.log(ctx.values.json ? JSON.stringify(result) : formatMigrateState(result));
         return;
       }

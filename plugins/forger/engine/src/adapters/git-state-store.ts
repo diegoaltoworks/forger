@@ -7,8 +7,7 @@
  * a bound. A lease that cannot be written within the bound is lost.
  */
 
-import {mkdtempSync, rmSync, writeFileSync} from 'fs';
-import {tmpdir} from 'os';
+import {mkdirSync, mkdtempSync, rmSync, writeFileSync} from 'fs';
 import {join} from 'path';
 
 import {execCapture} from './exec';
@@ -18,6 +17,8 @@ import {eventDay, type LeaseClaim, type LeaseRequest, type StateBranch, type Sta
 export interface GitStateOptions {
   /** The repository whose remote carries the state branch. */
   repo: string;
+  /** Where the temporary trees of a push go: under the state directory, never the system's temporary folder. */
+  tmpDir: string;
   remote?: string;
   branch?: string;
   /** Attempts per write before giving up; at least one. */
@@ -65,13 +66,23 @@ export function gitStateStore(opts: GitStateOptions): StateStore & StateBranch {
 
   /** Commits `files` on top of `tip` and pushes without force; false when refused. */
   function push(tip: string | null, files: Record<string, string>, message: string): boolean {
-    const dir = mkdtempSync(join(tmpdir(), 'forger-state-'));
+    let dir: string;
+    try {
+      mkdirSync(opts.tmpDir, {recursive: true});
+      dir = mkdtempSync(join(opts.tmpDir, 'forger-state-'));
+    } catch {
+      return false;
+    }
     try {
       const git = execCapture(opts.repo, {GIT_INDEX_FILE: join(dir, 'index')});
       if (tip !== null) git(`git read-tree ${tip}`);
       for (const [path, text] of Object.entries(files)) {
         const file = join(dir, 'blob');
-        writeFileSync(file, text);
+        try {
+          writeFileSync(file, text);
+        } catch {
+          return false;
+        }
         const hashed = run(`git hash-object -w ${q(file)}`);
         if (hashed.exitCode !== 0) return false;
         if (git(`git update-index --add --cacheinfo 100644,${hashed.stdout},${q(path)}`).exitCode !== 0) return false;

@@ -3,7 +3,9 @@ import {existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, 
 import {tmpdir} from 'os';
 import {join} from 'path';
 
-import {claudeHooks, execRunner, gitStateStore} from '../adapters';
+import {claudeHooks, execRunner, gitStateStore as realGitStateStore, type GitStateOptions} from '../adapters';
+const gitStateStore = (o: Omit<GitStateOptions, 'tmpDir'>) => realGitStateStore({tmpDir: join(o.repo, '.forger', 'tmp'), ...o});
+
 import {renderHookPolicy} from '../hooks';
 import {HOOK_COMMAND_LINE} from '../packs';
 import {eventLine, terminalEvent} from '../loop';

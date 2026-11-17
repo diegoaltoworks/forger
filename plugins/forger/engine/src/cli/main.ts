@@ -7,7 +7,7 @@
 
 import {homedir, hostname} from 'os';
 import {realpathSync} from 'fs';
-import {resolve} from 'path';
+import {join, resolve} from 'path';
 import {parseArgs} from 'util';
 
 import {agentFor, execCapture, sandboxFor, sandboxSite, gitStateStore, localStateFor, execRunner, execProbe, findHarness} from '../adapters';
@@ -72,7 +72,7 @@ export function contextFor(base: Pick<CommandContext, 'values' | 'positionals' |
       if (base.deps.stateStore) return base.deps.stateStore;
       const from = base.values.from ?? ctx.config.state.home;
       if (from !== 'local' && from !== 'branch') throw new Error('--from must be local or branch');
-      return (store ??= from === 'branch' ? gitStateStore({repo: ctx.projectRoot, branch: ctx.config.state.branch}) : localStateFor(ctx.projectRoot, ctx.config));
+      return (store ??= from === 'branch' ? gitStateStore({repo: ctx.projectRoot, branch: ctx.config.state.branch, tmpDir: join(ctx.projectRoot, ctx.config.paths.tmp)}) : localStateFor(ctx.projectRoot, ctx.config));
     },
     get runner() {
       const box = sandboxFor(ctx.config.sandbox, execCapture(ctx.projectRoot), sandboxSite(ctx.config, ctx.projectRoot, ctx.pluginRoot));

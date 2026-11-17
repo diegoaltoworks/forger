@@ -1,5 +1,5 @@
 import {existsSync} from 'fs';
-import {resolve} from 'path';
+import {join, resolve} from 'path';
 
 import {gitStateStore, localStateFor} from '../adapters';
 import {loadConfig} from '../config';
@@ -22,7 +22,7 @@ export function reposOf(ctx: CommandContext): string[] {
 function followedRepo(name: string, path: string): FollowedRepo {
   const config = loadConfig(path);
   const branch = config.state.home === 'branch';
-  const store = branch ? gitStateStore({repo: path, branch: config.state.branch}) : localStateFor(path, config);
+  const store = branch ? gitStateStore({repo: path, branch: config.state.branch, tmpDir: join(path, config.paths.tmp)}) : localStateFor(path, config);
   return {name, read: () => parseWatchedEvents(store.readEvents()), pollMs: branch ? BRANCH_POLL_MS : LOCAL_POLL_MS};
 }
 
