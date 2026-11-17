@@ -75,6 +75,25 @@ describe('createWorktree', () => {
     expect(createWorktree(run, O)).toMatchObject({ok: true, error: null});
     expect(calls.at(-1)).toBe(`git worktree add '${PATH}' 'feat/issue-9'`);
   });
+  test('a branch left with no commit of its own starts again from the base', () => {
+    const {run, calls} = fake({'rev-list': ok('0\n')});
+    expect(createWorktree(run, O)).toEqual({ok: true, ticket: 'issue-9', branch: 'feat/issue-9', path: PATH, error: null, restarted: true});
+    expect(calls).toContain(`git rev-list --count 'origin/main'..'feat/issue-9'`);
+    expect(calls.at(-1)).toBe(`git worktree add -B 'feat/issue-9' '${PATH}' 'origin/main'`);
+    expect(calls.some(c => /reset|clean|stash|checkout|branch -[dD]/.test(c))).toBe(false);
+  });
+  test('a branch with a commit of its own is checked out where it is', () => {
+    const {run, calls} = fake({'rev-list': ok('2\n')});
+    expect(createWorktree(run, O)).toEqual({ok: true, ticket: 'issue-9', branch: 'feat/issue-9', path: PATH, error: null});
+    expect(calls.at(-1)).toBe(`git worktree add '${PATH}' 'feat/issue-9'`);
+  });
+  test('a count that cannot be read checks the branch out where it is', () => {
+    for (const reply of [bad('fatal: bad revision'), ok('')]) {
+      const {run, calls} = fake({'rev-list': reply});
+      expect(createWorktree(run, O)).toMatchObject({ok: true, error: null});
+      expect(calls.at(-1)).toBe(`git worktree add '${PATH}' 'feat/issue-9'`);
+    }
+  });
   test("git's progress on stderr with a zero exit is a created worktree, not an error", () => {
     const {run} = fake({...NO_BRANCH, 'worktree add': {stdout: '', stderr: "Preparing worktree (new branch 'feat/issue-9')", exitCode: 0}});
     expect(createWorktree(run, O)).toEqual({ok: true, ticket: 'issue-9', branch: 'feat/issue-9', path: PATH, error: null});
