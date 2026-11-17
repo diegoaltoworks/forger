@@ -10,7 +10,7 @@ export type VerifySubject = {kind: 'ticket'; ticket: string} | {kind: 'body'; cr
 export interface SubjectInput {
   branch: string;
   body: string;
-  trackerKind: 'github' | 'local' | 'none';
+  ticketNaming: 'closing-reference' | 'backlog-id';
   /** Whether a backlog file has the ticket; only asked on a local or no tracker. */
   inBacklog: (ticket: string) => boolean;
 }
@@ -29,8 +29,8 @@ export function noSubjectMessage(branch: string): string {
 
 /** Closing reference first, then the branch name, then criteria in the body; throws naming both fixes. */
 export function resolveSubject(input: SubjectInput): VerifySubject {
-  const {branch, body, trackerKind} = input;
-  if (trackerKind === 'github') {
+  const {branch, body, ticketNaming} = input;
+  if (ticketNaming === 'closing-reference') {
     const closes = CLOSING.exec(body)?.[1];
     if (closes) return {kind: 'ticket', ticket: `issue-${closes}`};
     const issue = /^feat\/(issue-\d+)$/.exec(branch)?.[1];

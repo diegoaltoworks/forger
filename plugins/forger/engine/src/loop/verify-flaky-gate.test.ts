@@ -56,7 +56,9 @@ function setup(rollups: unknown[], o: Opts = {}) {
   };
   const opts: VerifyOptions = {
     pr: 5,
-    trackerKind: 'github',
+    queue: 'tracker',
+    publishStatus: true,
+    ticketNaming: 'closing-reference',
     backlogFile: '',
     verdictsDir: join(root, 'v'),
     tmpDir: join(root, 't'),

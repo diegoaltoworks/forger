@@ -61,6 +61,18 @@ whatever the kind; `local` and `none` differ in where the backlog is. A command
 reaches the tracker through its context's `tracker()`. Selection stays with the
 `Backlog` interface, and pull requests stay on the code host.
 
+## Adding a kind
+
+A new kind is added in three places, and the type checker lists them: the
+config's type for the kind, `openTracker`, and the functions in
+`plugins/forger/engine/src/config/tracker-questions.ts` that answer for a kind
+(where the Backlog is, whether the verify status is published on the code host,
+how a pull request names its ticket), with the worker's text in
+`plugins/forger/engine/src/tracker/worker-backlog.ts`. Each is a `switch` with
+no default branch. Two tests in the tracker folder hold the rest: no file
+outside it names a `gh issue` or `gh label` command, and none outside the
+config and tracker folders reads the kind.
+
 ## Tracker: GitHub Issues
 
 With `tracker.kind` `github`, the issues are the backlog (see

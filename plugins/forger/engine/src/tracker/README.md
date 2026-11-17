@@ -22,6 +22,11 @@ configured kind into a tracker. A read is a method and a write is data.
 - `open.ts` - `openTracker`, the tracker for a config's kind. Every kind reads
   GitHub; the kinds differ in where the backlog is. The loop opens one and
   hands it to what hands a ticket back.
+- `worker-backlog.ts` - what the worker is told about its backlog and its pull
+  request, for each kind. Pure, a `switch` with no default branch.
+- `tracker-rules.test.ts` - two rules keep the port whole. No file outside
+  this folder names a `gh issue` or `gh label` command. None outside `config`
+  and this folder reads the tracker kind.
 
 ## Entry point
 

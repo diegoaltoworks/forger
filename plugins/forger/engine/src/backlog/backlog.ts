@@ -13,7 +13,7 @@ import {footprintsShare, parseFootprint, type Footprint, type Schedulable} from 
 export interface Ticket {
   status: string;
   priority?: string;
-  /** Tracker issue number (GitHub) this ticket is published as. Set when config.tracker.kind is `github`. */
+  /** Tracker issue number (GitHub) this ticket is published as. Set when the queue is in the tracker. */
   issue?: number;
   /** Ticket ids that must be `completed` before this one can start. */
   depends_on?: string[];

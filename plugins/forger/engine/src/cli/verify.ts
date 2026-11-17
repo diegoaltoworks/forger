@@ -3,7 +3,7 @@ import {join} from 'path';
 import {randomUUID} from 'crypto';
 
 import {agentFor, execCapture, findHarness, sandboxFor, sandboxSite, slcrProvider} from '../adapters';
-import {resolveModel} from '../config';
+import {publishesVerifyStatus, queueHome, resolveModel, ticketNaming} from '../config';
 import {awaitCleanEngine, engineChangedMessage, engineChanges, eventLine, flakyReason, loopRootOf, otherEngine, otherEngineMessage, otherEngineReason, otherEngineRun, terminalEvent, ticketFlaky, verdictsHome, verifierTier, verifyPr, workerIdentity, type VerifyResult} from '../loop';
 import type {Command, CommandContext} from './command';
 
@@ -65,7 +65,9 @@ export function verifyOne(ctx: CommandContext, pr: number): Promise<VerifyResult
   const tier = verifierTier(config);
   return verifyPr(ctx.run(), ctx.deps.agent ?? agentFor(findHarness(config.harness), config.model_prices, sandboxFor(config.sandbox, execCapture(projectRoot), sandboxSite(config, projectRoot, ctx.pluginRoot))), {
     pr,
-    trackerKind: config.tracker.kind,
+    queue: queueHome(config),
+    publishStatus: publishesVerifyStatus(config),
+    ticketNaming: ticketNaming(config),
     backlogFile: join(projectRoot, config.paths.backlog),
     verdictsDir: verdictsHome(ctx.run(), projectRoot, config.paths.verdicts),
     tmpDir: join(loopRootOf(ctx.run(), projectRoot), config.paths.tmp),

@@ -1,6 +1,6 @@
 import {openTracker} from '../tracker';
 import {ensureLabels, requireVerifyStatus, VERIFY_STATUS_CONTEXT, type RequireOutcome} from '../loop';
-import {forgerPath, loadConfig} from '../config';
+import {forgerPath, loadConfig, publishesVerifyStatus} from '../config';
 import {flavourRef, loadFlavour} from '../pipeline';
 import {findHarness} from '../adapters';
 import {runChecks} from '../checks';
@@ -42,7 +42,7 @@ function createLabels(ctx: CommandContext): LabelOutcome {
 /** GitHub repositories only, and never fatal: a token without admin rights is common, so the gap is reported for the owner to close. */
 function requireVerify(ctx: CommandContext): RequireOutcome | undefined {
   const config = loadConfig(setupRoot(ctx));
-  if (config.tracker.kind !== 'github') return undefined;
+  if (!publishesVerifyStatus(config)) return undefined;
   return requireVerifyStatus(ctx.capture(), config.base_branch);
 }
 

@@ -6,7 +6,7 @@
 import {join} from 'path';
 
 import type {Backlog} from '../backlog';
-import type {WorkloopConfig} from '../config';
+import {queueHome, type WorkloopConfig} from '../config';
 import {fileBacklog} from '../backlog';
 import {execCapture} from '../adapters';
 import {type CommandRunner, capturing} from '../ports';
@@ -15,7 +15,7 @@ import {githubBacklog} from '../backlog';
 export type BacklogSource = 'github' | 'file';
 
 export function backlogSource(config: WorkloopConfig): BacklogSource {
-  return config.tracker.kind === 'github' ? 'github' : 'file';
+  return queueHome(config) === 'tracker' ? 'github' : 'file';
 }
 
 export function openBacklog(
