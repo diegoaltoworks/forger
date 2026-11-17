@@ -210,5 +210,19 @@ describe('parallelism 2', () => {
     expect(state.failed_iterations).toBe(0);
     expect(state.last_error).toBe("Infrastructure error (worktree): worktree for tk_a: fatal: '/x' already exists");
   });
+
+  test('a pick whose worktree a dead runner left starts its worker there and writes no halt', async () => {
+    let root = '';
+    const capture = (cmd: string): CommandResult =>
+      cmd.includes('worktree list') ? ok(`worktree ${join(root, '.forger', 'worktrees', 'tk_a')}\nHEAD abc\nbranch refs/heads/feat/tk_a\n`) : ok();
+    const t = setup(2, only('tk_a'), slow, () => '', capture);
+    root = t.root;
+    await t.runner.run(1);
+    expect(t.calls).toHaveLength(1);
+    expect(t.calls[0].cwd).toBe(join(t.root, '.forger', 'worktrees', 'tk_a'));
+    expect(existsSync(join(t.root, '.forger', 'HALT'))).toBe(false);
+    expect(t.captured.some(c => c.includes('worktree add'))).toBe(false);
+    expect(readFileSync(join(t.root, '.forger', 'work.log'), 'utf-8')).toContain('Using the worktree already at');
+  });
 });
 

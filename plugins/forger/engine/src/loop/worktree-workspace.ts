@@ -11,7 +11,7 @@ export function worktreeWorkspace(git: CapturingRunner): WorkspaceSandbox {
     prepare(request) {
       const made = createWorktree(git, request);
       if (!made.ok) return {ok: false, ticket: request.ticket, error: made.error ?? 'worktree failed'};
-      return {ok: true, ticket: request.ticket, path: worktreePath(request.stateDir, request.ticket)};
+      return {ok: true, ticket: request.ticket, path: worktreePath(request.stateDir, request.ticket), ...(made.reused ? {reused: true} : {})};
     },
     cleanup(request, dropBranch) {
       return finishWorktree(git, request, dropBranch);
