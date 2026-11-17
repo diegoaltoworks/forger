@@ -1,10 +1,12 @@
 import {afterAll, describe, expect, test} from 'bun:test';
-import {mkdtempSync, rmSync, writeFileSync} from 'fs';
+import {existsSync, mkdtempSync, readdirSync, rmSync, writeFileSync} from 'fs';
 import {tmpdir} from 'os';
 import {join} from 'path';
 
 import {execCapture} from './exec';
-import {gitStateStore} from './git-state-store';
+import {gitStateStore as realGitStateStore, type GitStateOptions} from './git-state-store';
+const gitStateStore = (o: Omit<GitStateOptions, 'tmpDir'>) => realGitStateStore({tmpDir: join(o.repo, '.forger', 'tmp'), ...o});
+
 
 const root = mkdtempSync(join(tmpdir(), 'forger-git-state-'));
 afterAll(() => rmSync(root, {recursive: true, force: true}));
@@ -107,6 +109,43 @@ describe('gitStateStore', () => {
     a.claimLease(req('a'));
     a.releaseLease('a');
     expect(b.claimLease(req('b'))).toMatchObject({ok: true, action: 'acquire'});
+  });
+
+  test("the state store keeps its temporary files under the state directory, not the system's temporary directory", () => {
+    const s = scene();
+    const a = s.clone('a');
+    const tmpDir = join(a, '.forger', 'tmp');
+    const saved = process.env.TMPDIR;
+    process.env.TMPDIR = join(root, 'no-such-system-tmp');
+    try {
+      const store = realGitStateStore({repo: a, tmpDir});
+      store.writeState('{"iteration":1}');
+      expect(store.readState()).toBe('{"iteration":1}');
+      expect(existsSync(tmpDir)).toBe(true);
+      expect(readdirSync(tmpDir)).toEqual([]);
+    } finally {
+      if (saved === undefined) delete process.env.TMPDIR;
+      else process.env.TMPDIR = saved;
+    }
+  });
+
+  test('a state store that cannot write its temporary files refuses the push and throws nothing', () => {
+    const s = scene();
+    const a = s.clone('a');
+    const blocker = join(a, 'blocker');
+    writeFileSync(blocker, 'a file where a folder is needed');
+    const store = realGitStateStore({repo: a, tmpDir: join(blocker, 'tmp'), attempts: 1, identity: () => 'someone'});
+    expect(store.seed({'state.json': '{}'}, 'seed')).toBe(false);
+    expect(() => store.readState()).not.toThrow();
+  });
+
+  test('a lease claim whose temporary files cannot be written is lost, not an error that ends the run', () => {
+    const s = scene();
+    const a = s.clone('a');
+    const blocker = join(a, 'blocker');
+    writeFileSync(blocker, 'a file where a folder is needed');
+    const store = realGitStateStore({repo: a, tmpDir: join(blocker, 'tmp'), attempts: 2});
+    expect(store.claimLease(req('a'))).toEqual({ok: false, reason: 'lost'});
   });
 
   test('a branch name that is not plain is refused', () => {

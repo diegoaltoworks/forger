@@ -101,7 +101,7 @@ export const realHookIo: HookIo = {
   readFile: path => (existsSync(path) ? readFileSync(path, 'utf-8') : null),
   engineAlive: (loopRoot, config) => new RunnerLock(resolve(loopRoot, config.paths.lock)).liveHolder() !== null,
   appendEvent(loopRoot, config, event) {
-    const store = config.state.home === 'branch' ? gitStateStore({repo: loopRoot, branch: config.state.branch}) : localStateFor(loopRoot, config);
+    const store = config.state.home === 'branch' ? gitStateStore({repo: loopRoot, branch: config.state.branch, tmpDir: join(loopRoot, config.paths.tmp)}) : localStateFor(loopRoot, config);
     store.appendEvent(eventLine(event), new Date(event.at));
   },
 };

@@ -4,7 +4,9 @@ import {tmpdir} from 'os';
 import {join} from 'path';
 
 import {type BacklogData, backlogFrom} from '../backlog';
-import {execCapture, gitStateStore, memoryStateStore} from '../adapters';
+import {execCapture, gitStateStore as realGitStateStore, type GitStateOptions, memoryStateStore} from '../adapters';
+const gitStateStore = (o: Omit<GitStateOptions, 'tmpDir'>) => realGitStateStore({tmpDir: join(o.repo, '.forger', 'tmp'), ...o});
+
 import {mergeConfig} from '../config';
 import {AutomationRunner} from './runner';
 
