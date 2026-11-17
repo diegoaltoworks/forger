@@ -1,6 +1,6 @@
 {
-  "iteration": 246,
-  "status": "ready",
+  "iteration": 247,
+  "status": "running",
   "last_completed_at": "2026-11-17T02:23:46.438Z",
   "completed_iterations": 227,
   "failed_iterations": 7,
@@ -231,7 +231,15 @@
     "issue-486",
     "issue-501"
   ],
-  "in_flight": [],
+  "in_flight": [
+    {
+      "ticket": null,
+      "pid": null,
+      "session_id": "19b9218f-5195-4474-b57b-582fc2833466",
+      "snapshot": null,
+      "started_at": "2026-11-17T05:28:40.292Z"
+    }
+  ],
   "last_error": "Infrastructure error (worktree): worktree for issue-487: fatal: '/home/diego/work/forger/.forger/worktrees/issue-487' already exists",
   "stall_count": 0,
   "declined_tasks": [
