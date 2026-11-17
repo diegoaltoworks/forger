@@ -259,8 +259,8 @@ describe('githubBacklog', () => {
   });
 
   test('empty output throws with what gh printed on stderr, not a guess', () => {
-    const failed = githubBacklog(() => ({stdout: '', stderr: 'HTTP 502: Bad Gateway', exitCode: 1}), config);
-    expect(() => failed.remaining()).toThrow('GitHub backlog: gh exited 1 with no output, on stderr: HTTP 502: Bad Gateway');
+    const failed = githubBacklog(() => ({stdout: '', stderr: 'HTTP 500: Internal Server Error', exitCode: 1}), config);
+    expect(() => failed.remaining()).toThrow('GitHub backlog: gh exited 1 with no output, on stderr: HTTP 500: Internal Server Error');
     const silent = githubBacklog(() => ok(''), config);
     expect(() => silent.remaining()).toThrow('GitHub backlog: gh exited 0 with no output, nothing on stderr');
   });
@@ -452,7 +452,7 @@ describe('a ticket with more blockers than a page', () => {
   });
 
   test('a second blockers read that fails fails the backlog read and names the ticket', () => {
-    for (const out of [{stdout: '', stderr: 'HTTP 502', exitCode: 1}, ok('')]) {
+    for (const out of [{stdout: '', stderr: 'HTTP 500', exitCode: 1}, ok('')]) {
       expect(() => readIssueBacklog(reader(() => out), tracker)).toThrow(/blockers of #2 could not be read/);
     }
   });

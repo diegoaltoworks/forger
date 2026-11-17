@@ -13,7 +13,7 @@ import {type Backlog, type BacklogData, type Ticket, backlogFrom} from './backlo
 import type {WorkloopConfig} from '../config';
 import type {CapturingRunner} from '../ports';
 import {OPEN_PRS_COMMAND, VIEWER_COMMAND, type OpenPr, holdingPrs, outsidePrAnomaly, outsidePrs, parseOpenPrs} from './outside-prs';
-import {RateLimitError, isRateLimited, parseRateLimit} from '../loop';
+import {RateLimitError, TrackerUnreachableError, isRateLimited, isUnreachable, parseRateLimit} from '../loop';
 
 interface Page<T> {
   totalCount?: number;
@@ -294,7 +294,7 @@ export function parseBlockersResponse(raw: string, number: number): Page<IssueNo
 function withWholeBlockers(run: CapturingRunner, issue: TrackedIssue): TrackedIssue {
   const result = run(blockersCommand(issue.number));
   if (result.exitCode !== 0 || result.stdout.trim() === '') {
-    if (isRateLimited(result.stderr)) throw ghFailure(run, result.exitCode, result.stderr);
+    if (isRateLimited(result.stderr) || isUnreachable(result.stderr)) throw ghFailure(run, result.exitCode, result.stderr);
     const said = result.stderr.trim() === '' ? 'nothing on stderr' : `on stderr: ${result.stderr.trim()}`;
     throw new Error(`GitHub backlog: the blockers of #${issue.number} could not be read: gh exited ${result.exitCode}, ${said}`);
   }
@@ -313,6 +313,7 @@ export function ghFailure(run: CapturingRunner, exitCode: number, stderr: string
     const limits = run(RATE_LIMIT_COMMAND);
     return new RateLimitError('graphql', limits.exitCode === 0 ? parseRateLimit(limits.stdout, 'graphql') : null, stderr);
   }
+  if (isUnreachable(stderr)) return new TrackerUnreachableError(stderr);
   const said = stderr.trim() === '' ? 'nothing on stderr' : `on stderr: ${stderr.trim()}`;
   return new Error(`GitHub backlog: gh exited ${exitCode} with no output, ${said}`);
 }

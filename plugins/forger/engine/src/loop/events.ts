@@ -16,6 +16,8 @@ export const TERMINAL_EVENTS = [
   'timed_out',
   'too_many_failures',
   'runner_gone',
+  'unreachable',
+  'lease_held',
 ] as const;
 
 export type TerminalEventKind = (typeof TERMINAL_EVENTS)[number];
@@ -37,9 +39,11 @@ export type RecordedEventKind = (typeof RECORDED_EVENTS)[number];
  * Mid-run facts a watcher wakes on while the run continues: a worker's call
  * the hook refused, or a `verify` or `merge` it ran from another engine (`reason` carries the rule and the refused command), and a
  * halt the engine recovered by itself (`reason` carries the check that passed),
- * and a `verify` or `merge` refused because the engine's source had uncommitted changes (`reason` carries the command and the paths).
+ * and a `verify` or `merge` refused because the engine's source had uncommitted changes (`reason` carries the command and the paths),
+ * and the start of a wait for a tracker or state branch that cannot be reached (`reason` carries what and the error's text).
+ * The terminal kinds `unreachable` (the wait ended without an answer; same `reason`) and `lease_held` (`reason` carries the holder and the expiry) say why a run ended.
  */
-export const MIDRUN_EVENTS = ['worker_denied', 'recovered', 'engine_changed'] as const;
+export const MIDRUN_EVENTS = ['worker_denied', 'recovered', 'engine_changed', 'waiting'] as const;
 
 export type MidrunEventKind = (typeof MIDRUN_EVENTS)[number];
 

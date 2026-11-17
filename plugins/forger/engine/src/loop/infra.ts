@@ -129,3 +129,40 @@ export function rateLimitWaitMs(window: RateLimitWindow | null, now: number): nu
   if (!window) return RATE_LIMIT_FALLBACK_MS;
   return Math.max(0, window.resetAt - now) + RATE_LIMIT_MARGIN_MS;
 }
+
+/**
+ * What gh prints when it never reached GitHub: the host did not resolve or
+ * answer, the connection dropped or timed out, or a gateway answered 502, 503
+ * or 504. A wait heals it; nothing in the repository is at fault.
+ */
+const UNREACHABLE =
+  /error connecting to|could not resolve host|no such host|dial tcp|connection (?:reset|refused|timed out)|i\/o timeout|network is unreachable|temporary failure in name resolution|TLS handshake timeout|\bHTTP (?:502|503|504)\b|\b(?:502|503|504) (?:bad gateway|service unavailable|gateway time-?out)/i;
+
+export function isUnreachable(stderr: string): boolean {
+  return UNREACHABLE.test(stderr);
+}
+
+/** A tracker read or write that never reached the tracker. Waited out, never charged to a ticket. */
+export class TrackerUnreachableError extends Error {
+  readonly category = 'unreachable';
+  constructor(readonly stderr: string) {
+    super(`Infrastructure error (unreachable): the tracker could not be reached: ${stderr.trim()}`);
+    this.name = 'TrackerUnreachableError';
+  }
+}
+
+export const UNREACHABLE_FIRST_WAIT_MS = 15_000;
+export const UNREACHABLE_CAP_MS = 5 * 60_000;
+export const UNREACHABLE_BOUND_MS = 60 * 60_000;
+
+/**
+ * The wait before retry `attempt` (0 for the first): it doubles from the first
+ * wait to the cap and stays there. Null once the waits so far have reached the
+ * bound: the waiting is over and the run ends.
+ */
+export function unreachableWaitMs(attempt: number): number | null {
+  let waited = 0;
+  for (let i = 0; i < attempt; i++) waited += Math.min(UNREACHABLE_CAP_MS, UNREACHABLE_FIRST_WAIT_MS * 2 ** i);
+  if (waited >= UNREACHABLE_BOUND_MS) return null;
+  return Math.min(UNREACHABLE_CAP_MS, UNREACHABLE_FIRST_WAIT_MS * 2 ** attempt);
+}

@@ -88,8 +88,64 @@ describe('AutomationRunner with the state local', () => {
       stateStore: store,
       lease: {self: 'a', host: 'h', ttlSeconds: 900},
       gitRunner: () => '',
+      sleep: async () => {},
     });
     expect(await runner.run(1)).toBe(false);
+  });
+
+  test('a lease claim that is lost is tried again, and no iteration starts before a claim succeeds', async () => {
+    const dir = mkdtempSync(join(root, 'retry-'));
+    mkdirSync(join(dir, '.forger'));
+    const store = memoryStateStore();
+    const real = store.claimLease.bind(store);
+    let lost = 3;
+    let claims = 0;
+    const order: string[] = [];
+    store.claimLease = o => {
+      claims++;
+      if (lost-- > 0) {
+        order.push('lost');
+        return {ok: false, reason: 'lost'};
+      }
+      order.push('claimed');
+      return real(o);
+    };
+    const open: BacklogData = {features: {a: {priority: 'P1', status: 'not_started', depends_on: []}}};
+    const runner = new AutomationRunner(dir, config, backlogFrom(() => open, config), {
+      stateStore: store,
+      lease: {self: 'a', host: 'h', ttlSeconds: 900},
+      gitRunner: () => '',
+      agent: {run: async () => {
+        order.push('worker');
+        return {exitCode: 1, signal: null, output: '', timedOut: false};
+      }},
+      sleep: async () => void order.push('sleep'),
+    });
+    await runner.run(1);
+    expect(order.slice(0, 7)).toEqual(['lost', 'sleep', 'lost', 'sleep', 'lost', 'sleep', 'claimed']);
+    expect(order.indexOf('worker')).toBeGreaterThan(order.indexOf('claimed'));
+    expect(claims).toBeGreaterThan(3);
+  });
+
+  test('a lease held by another engine ends the run with a lease_held event', async () => {
+    const dir = mkdtempSync(join(root, 'held-'));
+    mkdirSync(join(dir, '.forger'));
+    const store = memoryStateStore();
+    store.claimLease = () => ({ok: false, reason: 'held', holder: 'other:1:ab', expiresAt: '2026-01-01T00:15:00.000Z'});
+    const runner = new AutomationRunner(dir, config, backlogFrom(() => done, config), {
+      stateStore: store,
+      lease: {self: 'a', host: 'h', ttlSeconds: 900},
+      gitRunner: () => '',
+      sleep: async () => {
+        throw new Error('must not wait');
+      },
+    });
+    expect(await runner.run(1)).toBe(false);
+    expect(runner.endedBy).toBe('lease_held');
+    const events = store.readEvents();
+    expect(events).toContain('"event":"lease_held"');
+    expect(events).toContain('other:1:ab');
+    expect(events).toContain('2026-01-01T00:15:00.000Z');
   });
 
   test('a stop signal releases the lease and exits, before the run ends', async () => {
