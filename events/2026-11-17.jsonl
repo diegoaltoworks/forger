@@ -92,3 +92,4 @@
 {"event":"worker_denied","at":"2026-11-17T11:33:00.548Z","iteration":265,"ticket":"issue-532","reason":"other-engine: verify from /home/diego/work/forger/.forger/worktrees/issue-532/plugins/forger"}
 {"event":"worker_denied","at":"2026-11-17T11:33:02.970Z","iteration":265,"ticket":"issue-532","reason":"other-engine: merge from /home/diego/work/forger/.forger/worktrees/issue-532/plugins/forger"}
 {"event":"merged","at":"2026-11-17T16:16:53.860Z","iteration":265,"ticket":"issue-532","reason":null}
+{"event":"completed","at":"2026-11-17T16:17:05.047Z","iteration":265,"ticket":null,"reason":null}
