@@ -24,3 +24,5 @@ over them, and the model roles.
 ## May import
 
 Nothing outside the folder.
+
+- `jira-settings.ts` - the settings of the tracker kind `jira` and their defaults. Pure.

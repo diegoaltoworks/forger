@@ -7,3 +7,4 @@ export * from './schedule';
 export * from './blocked-by';
 export * from './link-blockers';
 export * from './sequencing';
+export * from './jira';

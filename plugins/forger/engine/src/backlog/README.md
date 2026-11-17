@@ -19,6 +19,7 @@ reads; a tracker is an adapter behind it.
 - `github-backlog.ts` - GitHub Issues as a Backlog, through an injected
   `CapturingRunner`. Pure over it. A second query fetches the whole blocker
   list of a ticket the first query cut short.
+- `jira/` - a Jira Cloud project as a Backlog. See its README.
 - `graphql-cost.ts` - a GraphQL query's rate-limit cost. Pure.
 - `file-backlog.ts` - `backlog.json` as a Backlog. Reads the file.
 - `*.json`, `*.stderr` - recorded `gh` output the tests replay.

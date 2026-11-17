@@ -28,6 +28,13 @@ export function workerBacklogText(config: Kinded): string {
       }
       return lines.join('\n');
     }
+    case 'jira':
+      return [
+        '## A Jira project is the backlog',
+        `- Tracker is JIRA. The issue \`KEY-<n>\` is the ticket \`issue-<n>\`. Branch as \`feat/issue-<n>\`.`,
+        '- Never call Jira yourself; the engine reads and updates the issues.',
+        '- The pull request holds code, tests and docs.',
+      ].join('\n');
     case 'local':
       return fileText('- Tracker is LOCAL. backlog.json is the only ticket record; do not create or update issues.');
     case 'none':
@@ -43,6 +50,7 @@ function fileText(trackerLine: string): string {
 export function workerChangesText(config: Kinded): string {
   switch (config.tracker.kind) {
     case 'github':
+    case 'jira':
       return 'code, tests, docs';
     case 'local':
     case 'none':
