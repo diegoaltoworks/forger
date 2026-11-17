@@ -33,6 +33,15 @@ and the intake label when the backlog is in the tracker. The loop's status issue
 several match; setting it is a comment and a label write, clearing it a label
 write, and a pin that fails does not fail the rest.
 
+The supervisor reads through the tracker too: the tickets of a query with their
+number, title, labels and text (what waits on the owner, the rework measure and
+the merged tickets' texts), whether a ticket exists (what `resume` checks when
+the backlog is in the tracker), a ticket's state with the pull requests that
+close it (`facts`), and the tickets labelled `structure` (a ticket check's
+placement context). The tracker also says what a person runs to list the
+tickets with a label, so the recommendation printed when a read fails comes
+from the adapter.
+
 A function that applies these reads the ticket's labels back through the same
 tracker to check the label held.
 

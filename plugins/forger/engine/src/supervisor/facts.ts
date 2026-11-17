@@ -6,7 +6,7 @@
  */
 
 import {ciConfigured as hasCi, deliveryOutcome, dirtyEntries, viewPr as readPr, type DeliveryOutcome, type PrFact, type TerminalEvent} from '../loop';
-import type {CommandRunner} from '../ports';
+import type {CommandRunner, Tracker} from '../ports';
 
 export {checksConclusion, parsePr, type ChecksConclusion, type PrFact} from '../loop';
 
@@ -27,28 +27,18 @@ export interface LoopFacts {
   pr?: PrFact;
 }
 
-function parseJson(text: string): unknown {
-  try {
-    return JSON.parse(text);
-  } catch {
-    return null;
-  }
-}
-
 /**
- * The PR that closed or will close an issue, from `gh issue view --json
- * state,closedByPullRequestsReferences`. A merged PR wins over an open or
+ * The PR that closed or will close an issue, from the tracker's
+ * answer for the issue. A merged PR wins over an open or
  * closed one; otherwise the newest. Null when none references the issue.
  */
-export function closingPrNumber(issueJson: string): number | null {
-  const parsed = parseJson(issueJson) as {closedByPullRequestsReferences?: {number?: number}[]} | null;
-  const nums = (parsed?.closedByPullRequestsReferences ?? []).map(r => r.number).filter((n): n is number => typeof n === 'number');
-  return nums.length === 0 ? null : Math.max(...nums);
+export function closingPrNumber(closedBy: number[]): number | null {
+  return closedBy.length === 0 ? null : Math.max(...closedBy);
 }
 
 export function gatherLoopFacts(
   run: CommandRunner,
-  opts: {baseBranch: string; ignore: string[]; issue?: number; pr?: number; events?: TerminalEvent[]}
+  opts: {tracker: Tracker; baseBranch: string; ignore: string[]; issue?: number; pr?: number; events?: TerminalEvent[]}
 ): LoopFacts {
   const branch = run('git branch --show-current');
   run(`git fetch --quiet origin ${opts.baseBranch}`);
@@ -63,9 +53,8 @@ export function gatherLoopFacts(
   const ci = hasCi(run, opts.baseBranch);
   const viewPr = (n: number) => readPr(run, n, ci);
   if (opts.issue !== undefined) {
-    const issueJson = run(`gh issue view ${opts.issue} --json state,closedByPullRequestsReferences`);
-    const state = (parseJson(issueJson) as {state?: string} | null)?.state ?? 'UNKNOWN';
-    const prNumber = closingPrNumber(issueJson);
+    const {state, closedBy} = opts.tracker.state(opts.issue);
+    const prNumber = closingPrNumber(closedBy);
     facts.issue = {number: opts.issue, state, closing_pr: prNumber === null ? null : viewPr(prNumber), delivery: prNumber === null ? null : deliveryOutcome(opts.events ?? [], prNumber)};
   }
   if (opts.pr !== undefined) facts.pr = viewPr(opts.pr) ?? undefined;

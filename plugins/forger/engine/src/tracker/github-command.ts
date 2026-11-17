@@ -16,6 +16,8 @@ export const githubRead = {
   exists: (n: number): string => `gh issue view ${n} --json number`,
   account: (): string => 'gh api user --jq .login',
   repoLabels: (): string => 'gh label list --limit 1000 --json name --jq ".[].name"',
+  listing: (label: string): string => `gh issue list --label ${label}`,
+  tickets: (q: TicketQuery): string => githubRead.list(q).replace(/ --json number,title$/, ' --json number,title,labels,body'),
   list: (q: TicketQuery): string => {
     const label = q.label === undefined ? '' : ` --label ${quote(q.label)}`;
     const search = q.title === undefined ? '' : ` --search ${quote(`"${q.title}" in:title`)}`;

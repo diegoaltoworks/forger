@@ -4,7 +4,12 @@ import {join} from 'path';
 
 import type {TerminalEvent} from '../loop';
 import type {CommandRunner} from '../ports';
+import {githubTracker} from '../tracker';
 import {checksConclusion, closingPrNumber, formatFacts, gatherLoopFacts, parsePr} from './facts';
+
+function gather(run: CommandRunner, opts: Omit<Parameters<typeof gatherLoopFacts>[1], 'tracker'>) {
+  return gatherLoopFacts(run, {...opts, tracker: githubTracker(run)});
+}
 
 function stub(answers: Record<string, string>, seen: string[] = []): CommandRunner {
   return cmd => {
@@ -15,11 +20,11 @@ function stub(answers: Record<string, string>, seen: string[] = []): CommandRunn
 
 describe('closingPrNumber / parsePr', () => {
   test('takes the newest referenced PR', () => {
-    expect(closingPrNumber('{"closedByPullRequestsReferences":[{"number":3},{"number":9}]}')).toBe(9);
+    expect(closingPrNumber([3, 9])).toBe(9);
   });
   test('null when none or unreadable', () => {
-    expect(closingPrNumber('{"closedByPullRequestsReferences":[]}')).toBeNull();
-    expect(closingPrNumber('')).toBeNull();
+    expect(closingPrNumber([])).toBeNull();
+    expect(closingPrNumber([])).toBeNull();
   });
   test('merged from state or mergedAt', () => {
     expect(parsePr('{"number":1,"state":"MERGED"}')?.merged).toBe(true);
@@ -39,7 +44,7 @@ describe('gatherLoopFacts', () => {
   };
 
   test('reports branch, clean (ignoring engine files), origin head and issue -> PR -> merged', () => {
-    const f = gatherLoopFacts(stub(answers), {baseBranch: 'main', ignore: ['.forger/state.json'], issue: 5});
+    const f = gather(stub(answers), {baseBranch: 'main', ignore: ['.forger/state.json'], issue: 5});
     expect(f).toEqual({
       branch: 'feat/issue-5',
       clean: true,
@@ -55,15 +60,15 @@ describe('gatherLoopFacts', () => {
       {event: 'delivery_failed', at: 't', iteration: 1, ticket: 'issue-5', reason: 'PR #7: check: `x` exited 1'},
       {event: 'rolled_back', at: 't', iteration: 1, ticket: 'issue-5', reason: 'PR #7: undone'},
     ] as TerminalEvent[];
-    const f = gatherLoopFacts(stub(answers), {baseBranch: 'main', ignore: [], issue: 5, events});
+    const f = gather(stub(answers), {baseBranch: 'main', ignore: [], issue: 5, events});
     expect(f.issue?.delivery).toBe('rolled_back');
     expect(formatFacts(f)).toContain('delivery rolled_back');
     const other = [{event: 'delivered', at: 't', iteration: 1, ticket: 'issue-9', reason: 'PR #8: ok'}] as TerminalEvent[];
-    expect(gatherLoopFacts(stub(answers), {baseBranch: 'main', ignore: [], issue: 5, events: other}).issue?.delivery).toBeNull();
+    expect(gather(stub(answers), {baseBranch: 'main', ignore: [], issue: 5, events: other}).issue?.delivery).toBeNull();
   });
 
   test('dirty tree, detached HEAD, issue without a PR', () => {
-    const f = gatherLoopFacts(stub({'git status --porcelain': '?? x.ts', 'gh issue view 5 --json state,closedByPullRequestsReferences': '{"state":"OPEN","closedByPullRequestsReferences":[]}'}), {baseBranch: 'main', ignore: [], issue: 5});
+    const f = gather(stub({'git status --porcelain': '?? x.ts', 'gh issue view 5 --json state,closedByPullRequestsReferences': '{"state":"OPEN","closedByPullRequestsReferences":[]}'}), {baseBranch: 'main', ignore: [], issue: 5});
     expect(f.branch).toBeNull();
     expect(f.clean).toBe(false);
     expect(f.origin_base_head).toBeNull();
@@ -72,7 +77,7 @@ describe('gatherLoopFacts', () => {
 
   test('issues only read-only commands', () => {
     const seen: string[] = [];
-    gatherLoopFacts(stub(answers, seen), {baseBranch: 'main', ignore: [], issue: 5});
+    gather(stub(answers, seen), {baseBranch: 'main', ignore: [], issue: 5});
     expect(seen.filter(c => c.startsWith('git ')).every(c => /^git (branch --show-current|fetch --quiet|rev-parse|status --porcelain|ls-tree)/.test(c))).toBe(true);
     expect(seen.filter(c => c.startsWith('gh ')).every(c => /^gh (issue|pr) view/.test(c))).toBe(true);
   });
@@ -107,13 +112,13 @@ describe('checksConclusion', () => {
 
 describe('gatherLoopFacts --pr', () => {
   test('reports a PR on its own, and no CI configured means none', () => {
-    const f = gatherLoopFacts(stub({'gh pr view 8 --json number,state,mergedAt,statusCheckRollup,headRefOid': '{"number":8,"state":"OPEN","statusCheckRollup":[]}'}), {baseBranch: 'main', ignore: [], pr: 8});
+    const f = gather(stub({'gh pr view 8 --json number,state,mergedAt,statusCheckRollup,headRefOid': '{"number":8,"state":"OPEN","statusCheckRollup":[]}'}), {baseBranch: 'main', ignore: [], pr: 8});
     expect(f.pr).toEqual({number: 8, state: 'OPEN', merged: false, checks: 'none', checks_ok: true, failing_checks: [], head: null});
     expect(f.issue).toBeUndefined();
     expect(formatFacts(f)).toContain('PR #8 open, checks none');
   });
   test('a workflow only on HEAD still counts as CI configured', () => {
-    const f = gatherLoopFacts(stub({
+    const f = gather(stub({
       'git ls-tree -r --name-only HEAD -- .github/workflows': '.github/workflows/ci.yml',
       'gh pr view 8 --json number,state,mergedAt,statusCheckRollup,headRefOid': '{"number":8,"state":"OPEN","statusCheckRollup":[]}',
     }), {baseBranch: 'main', ignore: [], pr: 8});
@@ -121,7 +126,7 @@ describe('gatherLoopFacts --pr', () => {
   });
   test('no PR lookup without --issue or --pr', () => {
     const seen: string[] = [];
-    gatherLoopFacts(stub({}, seen), {baseBranch: 'main', ignore: []});
+    gather(stub({}, seen), {baseBranch: 'main', ignore: []});
     expect(seen.some(c => c.includes('ls-tree') || c.startsWith('gh '))).toBe(false);
   });
 });

@@ -46,6 +46,12 @@ export interface WholeResult {
   whole: true;
 }
 
+/** A ticket with the fields a supervisor read needs. */
+export interface TicketDetail extends TicketSummary {
+  labels: string[];
+  body: string;
+}
+
 export interface Tracker {
   readonly queue: QueueHome;
   text(ticket: number): string;
@@ -57,6 +63,10 @@ export interface Tracker {
   lastComment(ticket: number): string;
   exists(ticket: number): boolean;
   list(query: TicketQuery): TicketSummary[];
+  /** The tickets of a query with their labels and text. */
+  tickets(query: TicketQuery): TicketDetail[];
+  /** What a person runs to list the tickets that carry a label. */
+  listCommand(label: string): string;
   /** The labels the repository has. */
   repoLabels(): string[];
   /** The account the tracker acts as, such as the login that records a decision. */

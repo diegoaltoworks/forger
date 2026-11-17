@@ -8,7 +8,9 @@ configured kind into a tracker. A read is a method and a write is data.
 - `github-command.ts` - the `gh` command of each read and of each write.
   One function quotes a label, a title or a text. Pure.
 - `github-tracker.ts` - `githubTracker`, the port over the two command
-  functions a command gets; it also answers the account it acts as. A call takes the plain one unless the caller asks
+  functions a command gets. It also answers the account it acts as.
+  It answers the supervisor's reads too: tickets with their labels and text,
+  existence and state. A call takes the plain one unless the caller asks
   for the whole result.
 - `filed-labels.ts` - `filedLabels`, the labels of a filed ticket. The caller's
   own, and the intake label when the backlog is in the tracker. Pure.

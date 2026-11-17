@@ -27,17 +27,17 @@ function lastReportAt(file: string): string | null {
 /** Open issues parked for the owner and Proposed ADRs; the tracker read fails soft into one item saying so. */
 function ownerWaiting(ctx: CommandContext): OwnerItem[] {
   const out: OwnerItem[] = [];
+  const tracker = ctx.tracker();
   try {
     const run = ctx.run();
     const issues: WaitingIssue[] = [];
     for (const label of OWNER_LABELS) {
-      const raw = JSON.parse(run(`gh issue list --state open --label ${label} --limit 100 --json number,title,labels,body`)) as {number: number; title: string; labels: {name: string}[]; body: string}[];
-      for (const i of raw) if (!issues.some(x => x.number === i.number)) issues.push({number: i.number, title: i.title, labels: i.labels.map(l => l.name), body: i.body ?? ''});
+      for (const i of tracker.tickets({state: 'open', label, limit: 100})) if (!issues.some(x => x.number === i.number)) issues.push(i);
     }
     out.push(...waitingIssues(issues, setAsideReasons(parseAllEvents(ctx.stateStore.readEvents()))));
     out.push(...ownerReviewPrs(JSON.parse(run('gh pr list --state open --label owner-review --limit 100 --json number,title,url')) as OwnerReviewPr[]));
   } catch {
-    out.push({question: 'The issues waiting on you could not be read from the tracker', recommendation: 'run `gh issue list --label needs-info` yourself', because: 'gh failed or is offline, so this list may be incomplete'});
+    out.push({question: 'The issues waiting on you could not be read from the tracker', recommendation: `run \`${tracker.listCommand('needs-info')}\` yourself`, because: 'gh failed or is offline, so this list may be incomplete'});
   }
   const dir = join(ctx.projectRoot, 'docs/adr');
   if (existsSync(dir)) {

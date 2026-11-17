@@ -142,7 +142,7 @@ export const check: Command = {
         result.warnings.push(`could not compare with the other open tickets: ${(e as Error).message}`);
       }
       try {
-        result.problems.push(...placementProblems(body, placementContext(projectRoot, ctx.run(), native)));
+        result.problems.push(...placementProblems(body, placementContext(projectRoot, githubTracker(ctx.run()), native)));
       } catch (e) {
         result.warnings.push(`could not check the Placement against the structure: ${(e as Error).message}`);
       }

@@ -9,19 +9,18 @@ import {existsSync, readFileSync} from 'fs';
 import {parseStructureBaseline, parseStructureConfig, STRUCTURE_BASELINE_PATH, STRUCTURE_PATH} from '../checks';
 import {forgerPath} from '../config';
 import type {PlacementContext} from '../loop';
-import type {CommandRunner} from '../ports';
+import type {Tracker} from '../ports';
 
 function read(projectRoot: string, rel: string): string | null {
   const file = forgerPath(projectRoot, rel);
   return existsSync(file) ? readFileSync(file, 'utf-8') : null;
 }
 
-export function placementContext(projectRoot: string, run: CommandRunner, blockedBy: number[]): PlacementContext {
+export function placementContext(projectRoot: string, tracker: Tracker, blockedBy: number[]): PlacementContext {
   const config = read(projectRoot, STRUCTURE_PATH);
   if (config === null) return {frozen: [], overLimit: [], structureTickets: [], blockedBy};
   const baseline = read(projectRoot, STRUCTURE_BASELINE_PATH);
   const overLimit = baseline === null ? [] : parseStructureBaseline(baseline).entries.filter(e => e.rule === 'structure.folder-size').map(e => e.path);
-  const listed = run('gh issue list --label structure --state open --json number --jq ".[].number"');
-  const structureTickets = listed.split(/\s+/).filter(Boolean).map(Number).filter(Number.isInteger);
+  const structureTickets = tracker.list({state: 'open', label: 'structure'}).map(t => t.number);
   return {frozen: parseStructureConfig(config).frozen, overLimit, structureTickets, blockedBy};
 }

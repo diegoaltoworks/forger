@@ -38,6 +38,7 @@ export const facts: Command = {
       return Number.isNaN(n) ? undefined : n;
     };
     const facts = gatherLoopFacts(ctx.run(), {
+      tracker: ctx.tracker(),
       baseBranch: config.base_branch,
       ignore: [state, log, output, halt, lock, events, declined, verdicts, ...config.local_only],
       issue: num(values.issue),
