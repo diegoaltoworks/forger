@@ -31,3 +31,4 @@
 {"event":"merged","at":"2026-11-17T06:20:45.015Z","iteration":251,"ticket":"issue-509","reason":null}
 {"event":"picked","at":"2026-11-17T06:21:05.402Z","iteration":252,"ticket":"issue-487","reason":null,"commands":"engine"}
 {"event":"set_aside","at":"2026-11-17T06:23:13.280Z","iteration":252,"ticket":"issue-487","reason":"Agent signaled stop - blocked or no actionable work"}
+{"event":"picked","at":"2026-11-17T06:23:43.510Z","iteration":253,"ticket":"issue-511","reason":null,"commands":"engine"}
