@@ -44,3 +44,4 @@
 {"event":"worker_denied","at":"2026-11-17T06:36:01.256Z","iteration":255,"ticket":"issue-512","reason":"other-engine: merge from /home/diego/work/forger/.forger/worktrees/issue-512/plugins/forger"}
 {"event":"merged","at":"2026-11-17T06:41:05.320Z","iteration":255,"ticket":"issue-512","reason":null}
 {"event":"blocked_on_owner","at":"2026-11-17T06:41:19.931Z","iteration":255,"ticket":null,"reason":"issue-488 blocked by issue-487 (needs_human); issue-489 blocked by issue-487 (needs_human), issue-488 (not_started); issue-490 blocked by issue-487 (needs_human), issue-489 (not_started); issue-491 blocked by issue-490 (not_started)"}
+{"event":"picked","at":"2026-11-17T06:42:39.253Z","iteration":256,"ticket":"issue-487","reason":null,"commands":"engine"}
