@@ -243,7 +243,10 @@
       "ticket": "issue-487",
       "pid": null,
       "session_id": "31e7dedb-c4ab-4df3-bde5-5b289b5b5533",
-      "snapshot": null,
+      "snapshot": {
+        "baseSha": "",
+        "reflogLength": 1
+      },
       "started_at": "2026-11-17T06:42:34.016Z",
       "plan": {
         "stages": [
