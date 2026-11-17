@@ -6,20 +6,8 @@
  */
 
 import {rootsFromModulePaths, type FolderMap} from '../backlog';
-import type {CapturingRunner, CommandRunner} from '../ports';
-import {rebaseOnBase, removeWorktree, ticketBranch, type WorktreeOptions} from './worktree';
-
-function quote(s: string): string {
-  return `'${s.replace(/'/g, `'\\''`)}'`;
-}
-
-/**
- * A git runner whose `git` calls act on a worktree instead of the main
- * checkout. Other commands (the PR lookups) run as given. Pure.
- */
-export function inWorktree(run: CommandRunner, path: string): CommandRunner {
-  return cmd => run(cmd.startsWith('git ') ? `git -C ${quote(path)} ${cmd.slice(4)}` : cmd);
-}
+import type {CapturingRunner} from '../ports';
+import {quote, rebaseOnBase, removeWorktree, ticketBranch, type WorktreeOptions} from './worktree';
 
 /**
  * The state directory a worktree command derives its paths from. Inside a

@@ -74,18 +74,25 @@ export function mergedFrom(prState: string, baseMoved: boolean): boolean {
   return baseMoved;
 }
 
-export function gatherFacts(
-  run: CommandRunner,
-  baseBranch: string,
-  before: RunSnapshot
-): GitRunFacts {
-  const after = remoteBase(run, baseBranch);
+function branchOfRun(run: CommandRunner, baseBranch: string, before: RunSnapshot): string | null {
   const all = lines(run('git reflog --format=%gs'));
   const fresh = all.slice(0, Math.max(0, all.length - before.reflogLength));
   const current = run('git branch --show-current');
-  const branch =
+  return (
     branchFromReflog(fresh, baseBranch) ??
-    (current !== '' && current !== baseBranch ? current : null);
+    (current !== '' && current !== baseBranch ? current : null)
+  );
+}
+
+/** `knownBranch` is the run's branch when no reflog can say it: the main checkout's reflog says nothing of a worktree's run. */
+export function gatherFacts(
+  run: CommandRunner,
+  baseBranch: string,
+  before: RunSnapshot,
+  knownBranch?: string
+): GitRunFacts {
+  const after = remoteBase(run, baseBranch);
+  const branch = knownBranch ?? branchOfRun(run, baseBranch, before);
 
   const pushed = branch !== null && run(`git ls-remote --heads origin ${branch}`) !== '';
 

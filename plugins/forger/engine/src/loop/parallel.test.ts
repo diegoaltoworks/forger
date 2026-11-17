@@ -1,7 +1,8 @@
 import {describe, expect, test} from 'bun:test';
 
 import type {CapturingRunner, CommandResult} from '../ports';
-import {conflictAfterAttempt, finishWorktree, folderMapFrom, inWorktree, stateDirFor} from './parallel';
+import {conflictAfterAttempt, finishWorktree, folderMapFrom, stateDirFor} from './parallel';
+import {inWorktree} from './worktree';
 
 const O = {ticket: 'tk-1', baseBranch: 'main', stateDir: '/r/.forger'};
 const ok = (stdout = ''): CommandResult => ({stdout, stderr: '', exitCode: 0});
