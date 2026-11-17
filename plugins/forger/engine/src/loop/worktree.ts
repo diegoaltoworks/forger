@@ -8,7 +8,7 @@
 
 import {join} from 'path';
 
-import type {CapturingRunner} from '../ports';
+import type {CapturingRunner, CommandRunner} from '../ports';
 
 export interface WorktreeResult {
   ok: boolean;
@@ -58,7 +58,7 @@ export function validTicket(ticket: string): boolean {
   return SAFE.test(ticket) && !ticket.includes('..');
 }
 
-function quote(s: string): string {
+export function quote(s: string): string {
   return `'${s.replace(/'/g, `'\\''`)}'`;
 }
 
@@ -138,4 +138,12 @@ export function rebaseOnBase(run: CapturingRunner, o: WorktreeOptions): RebaseRe
   const files = unmerged.exitCode === 0 ? unmerged.stdout.split('\n').map(f => f.trim()).filter(Boolean) : [];
   if (files.length === 0) return {...base, status: 'error', error: failure(rebased)};
   return {...base, status: 'conflict', files};
+}
+
+/**
+ * A git runner whose `git` calls act on a worktree instead of the main
+ * checkout. Other commands (the PR lookups) run as given. Pure.
+ */
+export function inWorktree(run: CommandRunner, path: string): CommandRunner {
+  return cmd => run(cmd.startsWith('git ') ? `git -C ${quote(path)} ${cmd.slice(4)}` : cmd);
 }

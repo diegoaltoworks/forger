@@ -651,6 +651,57 @@ describe('AutomationRunner single runner', () => {
     expect(eventsOf(root)[0].event).toBe('runner_gone');
   });
 
+  describe('an orphan that worked in a worktree', () => {
+    const orphan = (root: string, snapshot: {baseSha: string; reflogLength: number}) =>
+      writeFileSync(
+        join(root, '.forger', 'state.json'),
+        JSON.stringify({...defaultState(), iteration: 4, status: 'running', in_flight: [{ticket: 'the_ticket', pid: null, session_id: 's1', snapshot, started_at: ''}]})
+      );
+    // The main checkout's reflog is long and ends in an old ticket's merged branch.
+    const mainGit = (cmd: string): string => {
+      if (cmd === 'git reflog --format=%gs') return 'checkout: moving from main to feat/old_ticket\nx\nx\nx\nx';
+      if (cmd === 'git branch --show-current') return 'main';
+      if (cmd.startsWith('gh pr view') && cmd.includes('feat/old_ticket')) return '{"number":3,"state":"MERGED","statusCheckRollup":[]}';
+      return '';
+    };
+
+    test('an orphan that worked in a worktree is closed out from that worktree, not from the main checkout', () => {
+      const {root} = runnerWith(fail);
+      orphan(root, {baseSha: '', reflogLength: 1});
+      mkdirSync(join(root, '.forger', 'worktrees', 'the_ticket'), {recursive: true});
+      const seen: string[] = [];
+      const git = (cmd: string): string => {
+        seen.push(cmd);
+        if (cmd.includes('-C') && cmd.includes('reflog')) return 'checkout: moving from main to feat/the_ticket\nold';
+        if (cmd.startsWith('gh pr view') && cmd.includes('feat/the_ticket')) return '{"number":9,"state":"MERGED","headRefOid":"h9","statusCheckRollup":[{"__typename":"StatusContext","context":"forger/verify","state":"SUCCESS"}]}';
+        return mainGit(cmd);
+      };
+      runnerIn(root, {gitRunner: git}, done).closeOrphan();
+      expect(seen.some(c => c.includes('-C') && c.includes('reflog'))).toBe(true);
+      expect(readState(root).completed_tasks).toEqual(['the_ticket']);
+    });
+
+    test("an old branch in the main checkout's reflog is no evidence that an orphan merged", () => {
+      const {root} = runnerWith(fail);
+      orphan(root, {baseSha: '', reflogLength: 1});
+      const seen: string[] = [];
+      runnerIn(root, {gitRunner: (c: string) => (seen.push(c), mainGit(c))}).closeOrphan();
+      expect(seen.some(c => c.includes('feat/old_ticket'))).toBe(false);
+      expect(readState(root).completed_tasks).toEqual([]);
+    });
+
+    test('an orphan with no pull request and no moved base counts as a failure and stays out of the completed tasks', () => {
+      const {root} = runnerWith(fail);
+      orphan(root, {baseSha: '', reflogLength: 1});
+      mkdirSync(join(root, '.forger', 'worktrees', 'the_ticket'), {recursive: true});
+      runnerIn(root, {gitRunner: (c: string) => (c.includes('-C') ? '' : mainGit(c))}).closeOrphan();
+      const state = readState(root);
+      expect(state.status).toBe('failed');
+      expect(state.failed_iterations).toBe(1);
+      expect(state.completed_tasks).toEqual([]);
+    });
+  });
+
   test('the engine pick is recorded before the worker runs', async () => {
     const {runner, root} = runnerWith(fail);
     await runner.runIteration(1);

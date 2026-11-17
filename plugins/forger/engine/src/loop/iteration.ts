@@ -7,7 +7,8 @@
  */
 
 import {join} from 'path';
-import {writeFileSync} from 'fs';
+import {existsSync, writeFileSync} from 'fs';
+import {inWorktree, ticketBranch, validTicket, worktreePath} from './worktree';
 
 import type {Backlog, Footprint} from '../backlog';
 import {resolveModel, type WorkloopConfig} from '../config';
@@ -34,7 +35,7 @@ import {actualOf, failedProbe, parseProbes, probeFailureComment, probePromptSect
 import {probeHandBack} from './probe-io';
 import {buildPrompt} from './prompt';
 import {workerEnv} from './worker-env';
-import {gatherFacts, takeSnapshot, ticketFromBranch} from './run-facts';
+import {gatherFacts, takeSnapshot, ticketFromBranch, type GitRunFacts, type RunSnapshot} from './run-facts';
 import {type InFlightRun, endRun, type LoopStore, stallUpdate, startRun, updateRun} from './state';
 
 /** What an iteration reads and writes, handed in by the runner that owns it. */
@@ -466,7 +467,7 @@ function closeRun(ctx: IterationContext, iteration: number, run: InFlightRun | u
   // Without a snapshot nothing is known about the run's start, so only the
   // current branch and its PR can speak.
   const snapshot = run?.snapshot ?? {baseSha: '', reflogLength: Number.MAX_SAFE_INTEGER};
-  const gitFacts = gatherFacts(ctx.gitRunner, base, snapshot);
+  const gitFacts = factsOfOrphan(ctx, ticket, base, snapshot);
   const taken = ticketFromBranch(gitFacts.branch);
   const held = taken && ctx.backlog.has(taken) ? taken : ticket;
   const backlogCompleted = held !== null && ctx.backlog.isCompleted(held);
@@ -490,6 +491,21 @@ function closeRun(ctx: IterationContext, iteration: number, run: InFlightRun | u
   });
   ctx.emit('runner_gone', iteration, held, outcome.error ?? outcome.warning);
   settle(ctx, run?.session_id ?? '', iteration, held, backlogCompleted, outcome, false);
+}
+
+/**
+ * A run that worked in a worktree is read from that worktree. One whose
+ * worktree is gone, but whose snapshot was taken for a worktree (no base SHA),
+ * has the ticket's own branch and no reflog to read: the main checkout's
+ * reflog holds other tickets' branches.
+ */
+function factsOfOrphan(ctx: IterationContext, ticket: string | null, base: string, snapshot: RunSnapshot): GitRunFacts {
+  if (ticket !== null && validTicket(ticket)) {
+    const path = worktreePath(join(ctx.projectRoot, ctx.config.paths.state, '..'), ticket);
+    if (existsSync(path)) return gatherFacts(inWorktree(ctx.gitRunner, path), base, snapshot);
+    if (snapshot.baseSha === '' && snapshot.reflogLength !== Number.MAX_SAFE_INTEGER) return gatherFacts(ctx.gitRunner, base, snapshot, ticketBranch(ticket));
+  }
+  return gatherFacts(ctx.gitRunner, base, snapshot);
 }
 
 /**
