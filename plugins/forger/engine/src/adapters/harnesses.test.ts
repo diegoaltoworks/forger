@@ -78,6 +78,18 @@ describe('the engine root an engine call names', () => {
     }
     expect(bad).toEqual([]);
   });
+  test('this repository\'s own hook line prefers the engine that runs the loop to the checkout', () => {
+    const settings = JSON.parse(readFileSync(join(import.meta.dir, '../../../../../.claude/settings.json'), 'utf8')) as {
+      hooks: Record<string, {hooks: {command: string}[]}[]>;
+    };
+    const commands = Object.values(settings.hooks).flatMap((groups) => groups.flatMap((g) => g.hooks.map((h) => h.command)));
+    expect(commands.length).toBeGreaterThan(0);
+    for (const c of commands) {
+      expect(c.indexOf('FORGER_PLUGIN_ROOT')).toBeGreaterThanOrEqual(0);
+      expect(c.indexOf('FORGER_PLUGIN_ROOT')).toBeLessThan(c.indexOf('CLAUDE_PROJECT_DIR'));
+      expect(c).toContain('forger hook could not run');
+    }
+  });
   test('opencode packages an engine call that prefers the engine\'s root', () => {
     expect(opencodeHarness.packageCommand(call, '/plug')).toBe('bun "${FORGER_PLUGIN_ROOT:-/plug}/bin/work.ts" status');
   });
