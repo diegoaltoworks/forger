@@ -17,6 +17,23 @@ export interface WorktreeResult {
   path: string;
   /** Why it failed; null when ok. */
   error: string | null;
+  /** True when the ticket's own worktree was already there and is used as it is. */
+  reused?: boolean;
+}
+
+/** What git lists at a path: nothing, the ticket's own worktree, or another checkout. */
+export type PathHolder = {kind: 'none'} | {kind: 'ticket'} | {kind: 'other'; checkedOut: string};
+
+/** Read `git worktree list --porcelain` for what is at `path` when `branch` is the ticket's. Pure. */
+export function worktreeAt(porcelain: string, path: string, branch: string): PathHolder {
+  for (const block of porcelain.split(/\n\s*\n/)) {
+    const lines = block.split('\n').map(l => l.trim());
+    if (!lines.includes(`worktree ${path}`)) continue;
+    const ref = lines.find(l => l.startsWith('branch '))?.slice('branch '.length);
+    if (ref === `refs/heads/${branch}`) return {kind: 'ticket'};
+    return {kind: 'other', checkedOut: ref ? ref.replace(/^refs\/heads\//, '') : 'a detached head'};
+  }
+  return {kind: 'none'};
 }
 
 export type RebaseResult =
@@ -68,6 +85,13 @@ export function createWorktree(run: CapturingRunner, o: WorktreeOptions): Worktr
   if (!validTicket(o.ticket)) return {...base, ok: false, error: `not a usable ticket id: ${o.ticket}`};
   const fetched = run(`git fetch origin ${quote(o.baseBranch)}`);
   if (fetched.exitCode !== 0) return {...base, ok: false, error: `fetch failed: ${failure(fetched)}`};
+  // A dead runner leaves its worktree, maybe with uncommitted work: use it, touch nothing in it.
+  const listed = run('git worktree list --porcelain');
+  if (listed.exitCode === 0) {
+    const holder = worktreeAt(listed.stdout, path, branch);
+    if (holder.kind === 'ticket') return {...base, ok: true, error: null, reused: true};
+    if (holder.kind === 'other') return {...base, ok: false, error: `${path} is a worktree with ${holder.checkedOut} checked out, not ${branch}`};
+  }
   // An earlier attempt at the ticket leaves its branch behind (removeWorktree
   // keeps it), so a retry checks that branch out rather than failing on -b.
   const exists = run(`git rev-parse --verify --quiet ${quote(`refs/heads/${branch}`)}`).exitCode === 0;

@@ -609,6 +609,7 @@ export class AutomationRunner {
     const made = this.sandbox.prepare(o);
     if (!made.ok) return `worktree for ${ticket}: ${made.error}`;
     const cwd = made.path;
+    if (made.reused) this.logger.log('INFO', `Using the worktree already at ${cwd} for ${ticket}`);
     return {
       ticket,
       cwd,

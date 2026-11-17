@@ -1,7 +1,7 @@
 import {describe, expect, test} from 'bun:test';
 
 import type {CapturingRunner, CommandResult} from '../ports';
-import {createWorktree, rebaseOnBase, removeWorktree, ticketBranch, validTicket, worktreePath} from './worktree';
+import {createWorktree, worktreeAt, rebaseOnBase, removeWorktree, ticketBranch, validTicket, worktreePath} from './worktree';
 
 const O = {ticket: 'issue-9', baseBranch: 'main', stateDir: '/r/.forger'};
 const NO_BRANCH = {'rev-parse': {stdout: '', stderr: '', exitCode: 1}};
@@ -33,12 +33,39 @@ describe('names', () => {
   });
 });
 
+const LISTED = (branch: string) =>
+  `worktree /r\nHEAD abc\nbranch refs/heads/main\n\nworktree ${PATH}\nHEAD def\n${branch}\n`;
+
+describe('worktreeAt', () => {
+  test('what git lists at a path is read from the porcelain output: nothing, the ticket\'s worktree, or something else', () => {
+    expect(worktreeAt('', PATH, 'feat/issue-9')).toEqual({kind: 'none'});
+    expect(worktreeAt(LISTED('branch refs/heads/feat/issue-9').replace(PATH, '/other'), PATH, 'feat/issue-9')).toEqual({kind: 'none'});
+    expect(worktreeAt(LISTED('branch refs/heads/feat/issue-9'), PATH, 'feat/issue-9')).toEqual({kind: 'ticket'});
+    expect(worktreeAt(LISTED('branch refs/heads/feat/issue-1'), PATH, 'feat/issue-9')).toEqual({kind: 'other', checkedOut: 'feat/issue-1'});
+    expect(worktreeAt(LISTED('detached'), PATH, 'feat/issue-9')).toEqual({kind: 'other', checkedOut: 'a detached head'});
+  });
+});
+
 describe('createWorktree', () => {
+  test("a worktree already at the ticket's path on the ticket's branch is used as it is, and nothing is added", () => {
+    const {run, calls} = fake({'worktree list': ok(LISTED('branch refs/heads/feat/issue-9'))});
+    expect(createWorktree(run, O)).toEqual({ok: true, ticket: 'issue-9', branch: 'feat/issue-9', path: PATH, error: null, reused: true});
+    expect(calls.some(c => /worktree add|reset|clean|stash|checkout|worktree remove/.test(c))).toBe(false);
+  });
+  test('a path that holds another branch is an error that names the path and the branch', () => {
+    const {run, calls} = fake({'worktree list': ok(LISTED('branch refs/heads/feat/issue-1'))});
+    const r = createWorktree(run, O);
+    expect(r.ok).toBe(false);
+    expect(r.error).toContain(PATH);
+    expect(r.error).toContain('feat/issue-1');
+    expect(calls.some(c => c.includes('worktree add'))).toBe(false);
+  });
   test('fetches the base, then adds the worktree on a new branch from it', () => {
     const {run, calls} = fake(NO_BRANCH);
     expect(createWorktree(run, O)).toEqual({ok: true, ticket: 'issue-9', branch: 'feat/issue-9', path: PATH, error: null});
     expect(calls).toEqual([
       `git fetch origin 'main'`,
+      'git worktree list --porcelain',
       `git rev-parse --verify --quiet 'refs/heads/feat/issue-9'`,
       `git worktree add -b 'feat/issue-9' '${PATH}' 'origin/main'`,
     ]);

@@ -13,7 +13,7 @@ export interface WorkspaceRequest {
   stateDir: string;
 }
 
-export type Workspace = {ok: true; ticket: string; path: string} | {ok: false; ticket: string; error: string};
+export type Workspace = {ok: true; ticket: string; path: string; reused?: boolean} | {ok: false; ticket: string; error: string};
 
 export interface SandboxStart {
   command: string;
