@@ -1,6 +1,6 @@
 {
   "iteration": 246,
-  "status": "completed",
+  "status": "halted",
   "last_completed_at": "2026-11-17T02:23:46.438Z",
   "completed_iterations": 227,
   "failed_iterations": 7,
@@ -232,7 +232,7 @@
     "issue-501"
   ],
   "in_flight": [],
-  "last_error": null,
+  "last_error": "Infrastructure error (worktree): worktree for issue-487: fatal: '/home/diego/work/forger/.forger/worktrees/issue-487' already exists",
   "stall_count": 0,
   "declined_tasks": [
     {
