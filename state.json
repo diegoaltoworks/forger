@@ -249,7 +249,10 @@
       "ticket": "issue-524",
       "pid": null,
       "session_id": "00053d85-0708-4d0e-9e85-22ee6f19edbd",
-      "snapshot": null,
+      "snapshot": {
+        "baseSha": "",
+        "reflogLength": 1
+      },
       "started_at": "2026-11-17T07:41:38.059Z",
       "plan": {
         "stages": [
