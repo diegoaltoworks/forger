@@ -5,6 +5,7 @@ import {join, resolve} from 'path';
 
 import {claudeHarness, codexHarness, copilotHarness, opencodeHarness} from '../adapters';
 import {EARLIER_HOOK_LINE} from '../hooks';
+import {formatJiraSetupNote, jiraSetupNote} from '../tracker';
 import {sha256} from './packs';
 import {findBaseBranch, formatSetup, gitignoreLines, mergeGitignore, relocatableGates, renderConfig, runSetup, HOOK_COMMAND_LINE, trackedRuntimeFiles, formatTrackedRuntime, withCheck, workerCommandsSource} from './setup';
 
@@ -399,5 +400,25 @@ describe('setup and the earlier hook line', () => {
     const root = emptyProject();
     runSetup(root, PLUGIN_ROOT, {harness: claudeHarness});
     expect(JSON.parse(readFileSync(join(root, FILES.claude), 'utf-8')).hooks.PreToolUse[0].hooks[0].command).toBe(HOOK_COMMAND_LINE);
+  });
+});
+
+describe('setup for the tracker jira', () => {
+  test('setup with the tracker jira writes the kind, the site and the project, and creates no label', () => {
+    const root = emptyProject();
+    runSetup(root, PLUGIN_ROOT, {trackerKind: 'jira', jiraSite: 'https://example.atlassian.net', jiraProject: 'ABC', packs: ['base']});
+    const tracker = JSON.parse(readFileSync(join(root, '.forger/workloop.config.json'), 'utf-8')).tracker;
+    expect(tracker.kind).toBe('jira');
+    expect(tracker.jira).toEqual({site: 'https://example.atlassian.net', project: 'ABC'});
+    const source = readFileSync(join(import.meta.dir, '../cli/setup.ts'), 'utf-8');
+    expect(source).toContain("config.tracker.kind === 'jira') return {created: []}");
+  });
+
+  test('setup without the two variables writes the config, names the missing variables and exits 0', () => {
+    const root = emptyProject();
+    expect(() => runSetup(root, PLUGIN_ROOT, {trackerKind: 'jira', jiraSite: 'https://example.atlassian.net', jiraProject: 'ABC', packs: ['base']})).not.toThrow();
+    expect(existsSync(join(root, '.forger/workloop.config.json'))).toBe(true);
+    const note = jiraSetupNote({});
+    expect(formatJiraSetupNote(note).join('\n')).toContain('JIRA_EMAIL and JIRA_API_TOKEN not set: the checks have not run');
   });
 });

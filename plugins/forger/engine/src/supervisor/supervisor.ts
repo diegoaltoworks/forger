@@ -160,6 +160,8 @@ export interface ReportInputs {
   /** What merged in the period; absent when the tracker could not be read. */
   merged?: string[];
   period?: Period;
+  /** How a ticket id shows in the report; a Jira repository shows the key and its address. */
+  ticketLabel?: (ticket: string) => string;
 }
 
 export interface Report {
@@ -204,20 +206,21 @@ export function buildReport(i: ReportInputs): Report {
     });
   }
   waiting.push(...(i.ownerWaiting ?? []));
-  const inProgress = s.current_ticket && s.runner.alive ? [{ticket: s.current_ticket, branch: i.branch}] : [];
+  const label = i.ticketLabel ?? ((t: string) => t);
+  const inProgress = s.current_ticket && s.runner.alive ? [{ticket: label(s.current_ticket), branch: i.branch}] : [];
   return {
     period: i.period ?? {since: null, source: 'none'},
     merged: i.merged ?? null,
     in_progress: inProgress,
-    declined: s.declined,
+    declined: s.declined.map(d => ({...d, ticket: label(d.ticket)})),
     recovered: i.recovered ?? [],
     flaky_gates: i.flakyGates ?? [],
     handed_over: (i.handedOver ?? []).map(h => ({
-      ticket: h.ticket,
+      ticket: label(h.ticket),
       pr: h.pr,
       criteria: h.open.map(openLabel),
     })),
-    next: s.next_pick ? [s.next_pick] : [],
+    next: s.next_pick ? [label(s.next_pick)] : [],
     waiting_on_owner: waiting,
     measures: i.measures === undefined ? null : buildReportMeasures(i.measures),
     process_changes: i.processChanges ?? null,

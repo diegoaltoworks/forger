@@ -24,7 +24,8 @@ know:
   CI config if you can read one);
 - the **base branch** (default: the current default branch);
 - the **tracker** (`github` when `origin` is a GitHub remote and `gh` is
-  authenticated, else `local`; say why).
+  authenticated, else `local`; say why; `jira` only when the owner names a
+  Jira site and project, passed as `--jira-site` and `--jira-project`).
 
 Then ask about skills. List the flavours whose skill collection is installed:
 ```
@@ -88,7 +89,9 @@ When the tracker is `github`: create the intake label if missing:
 ```
 gh label create ready-for-agent --description "Fully specified, ready for the work loop" --color 0E8A16 2>/dev/null || true
 ```
-Only this label is the loop's concern.
+Only this label is the loop's concern. When the tracker is `jira`, no label is
+made; relay the tool's `jira` answer: the variables it names as missing, and
+that `check tracker` runs the checks once they are set.
 
 ## 4. process.md
 

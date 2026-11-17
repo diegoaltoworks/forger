@@ -44,6 +44,8 @@ export const FLAGS = {
   upgrade: {type: 'boolean'},
   starter: {type: 'string'},
   'no-starter': {type: 'boolean'},
+  'jira-site': {type: 'string'},
+  'jira-project': {type: 'string'},
   detect: {type: 'boolean', default: false},
   presets: {type: 'boolean', default: false},
   seen: {type: 'string', default: '0'},

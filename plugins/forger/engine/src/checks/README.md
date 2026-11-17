@@ -12,6 +12,7 @@ reads the tree and hands it to them.
   modality-to-severity mapping. Pure.
 - `files.ts` - the files a check scans: tracked, and untracked but not ignored.
   The local gates see an unstaged file before it is committed.
+- `check tracker` comes from the base pack; its lines come from `tracker/jira/site-check.ts`.
 - `ci.ts` - the CI job summary and the workflow the loop's CI runs. Pure.
 - `record/` - the per-opinion records of a `check` run inside a worker, appended
   to `paths.checks`. The records are pure; the append is the only I/O.
@@ -25,4 +26,4 @@ import `../waivers` and `../files` directly; every other folder goes through `in
 
 ## May import
 
-The core: `config`, `hooks`, `packs`, `ports`, `ui`.
+The core: `config`, `hooks`, `packs`, `ports`, `tracker`, `ui`.

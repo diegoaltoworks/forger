@@ -365,6 +365,7 @@ describe('check', () => {
         {check: 'docs', opinions: ['base.ascii-punctuation', 'base.nothing-personal', 'base.no-hard-coded-skills', 'base.model-agnostic', 'base.merge-through-tool'], status: 'passed', violations: [], waived: [], gaps: []},
         {check: 'hooks', opinions: ['base.worker-hooks'], status: 'passed', violations: [], waived: [], gaps: []},
         {check: 'guards', opinions: ['base.guards-hold'], status: 'passed', violations: [], waived: [], gaps: []},
+        {check: 'tracker', opinions: ['base.tracker-ready'], status: 'passed', violations: [], waived: [], gaps: []},
       ],
       waivers: [],
       staleWaivers: [],

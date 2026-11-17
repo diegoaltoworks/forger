@@ -30,7 +30,7 @@ import {
   updateCoverageBaseline,
 } from '../checks';
 import {checkContract, contractItems, formatContract, resolveSandboxImage, findHarness, playwrightAuditor, playwrightScreenshotter, shellAppServer} from '../adapters';
-import {loadConfig} from '../config';
+import {jiraSettingsOf, loadConfig} from '../config';
 import {checkSequencing} from '../backlog';
 import {WORKER_ITERATION_VAR, WORKER_TICKET_VAR, checkTicketCriteria, criterionOptions, placementProblems} from '../loop';
 import {placementContext} from './placement-context';
@@ -38,7 +38,7 @@ import type {CommandRunner, Harness} from '../ports';
 import {UiInfrastructureError} from '../ports';
 import {harnessOfRoot} from './harness-of';
 import {loopRootOf, realHookIo} from './hook';
-import {githubTracker} from '../tracker';
+import {formatTrackerLines, githubTracker, trackerLines} from '../tracker';
 import type {Command} from './command';
 import {specProvider} from './spec-provider';
 
@@ -75,6 +75,7 @@ export const check: Command = {
   check ticket N [--json] Fail when an acceptance criterion of issue N is not a named test, a command with its result, a sourced number or a named UI state, or uses a subjective word, or when it shares a footprint with another open ticket and neither is ordered against the other
   check sandbox [--json] Start the configured docker image with the image contract probes (git, bun, the harness CLI, a non-root user) and print one line per item; exit 0 only when every item passes, and 0 with nothing to check under the host sandbox
   check structure [--json] [--baseline | --update] Fail on a new folder over the size limit, prefix cluster, name that repeats its folder, file in a frozen folder, re-export shim, server file without its guard import, client file importing a server module, import across a declared boundary or import cycle; recorded ones in .forger/structure-baseline.json warn; --baseline writes the record once, --update drops entries that no longer hold
+  check tracker [--json] On a Jira tracker, say per line whether the credential variables are set, the site accepts the credential, the project exists and each configured status is one the project has; one passing line for the other kinds; never prints a credential
   check arch [--json] Fail on an import that crosses a forbidden edge of .forger/architecture.json
   check docs [--json] Fail on non-ASCII punctuation, emails, home paths, denylist terms and, with the docs pack, README writing rules; passive voice warns on stderr`,
   async run(ctx) {
@@ -88,6 +89,12 @@ export const check: Command = {
         console.error(values.json ? JSON.stringify({ok: false, infrastructure: e instanceof UiInfrastructureError, error: (e as Error).message}) : (e as Error).message);
         process.exitCode = e instanceof UiInfrastructureError ? 2 : 1;
       }
+      return;
+    }
+    if (positionals[1] === 'tracker') {
+      const lines = trackerLines(jiraSettingsOf(loadConfig(projectRoot)), process.env, ctx.capture());
+      console.log(values.json ? JSON.stringify({ok: lines.every(l => l.ok), lines}) : formatTrackerLines(lines));
+      if (!lines.every(l => l.ok)) process.exitCode = 1;
       return;
     }
     if (positionals[1] === 'a11y') {
