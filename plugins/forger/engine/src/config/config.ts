@@ -144,6 +144,11 @@ export interface WorkloopConfig {
    * trailing `*` matches a prefix, as in `wayfinder:*`.
    */
   tracker: {kind: 'github' | 'local' | 'none' | 'jira'; label: string; ignore: string[]; jira?: JiraSettings};
+  /**
+   * The version files and the changelog `release` writes: each file is JSON with the key that holds
+   * the version. Absent, releases are not configured.
+   */
+  release?: {files: {path: string; key: string}[]; changelog: string};
   /** What `check ticket` holds acceptance criteria to; `subjective_words` extends the built-in list. */
   criteria: {subjective_words: string[]};
   /**
@@ -209,6 +214,7 @@ export interface WorkloopConfigInput {
   limits?: Partial<WorkloopConfig['limits']>;
   paths?: Partial<WorkloopConfig['paths']>;
   tracker?: Partial<Omit<WorkloopConfig['tracker'], 'jira'>> & {jira?: Partial<WorkloopConfig['tracker']['jira']>};
+  release?: {files?: {path: string; key: string}[]; changelog?: string};
   criteria?: Partial<WorkloopConfig['criteria']>;
   guards?: string[] | null;
   state?: Partial<WorkloopConfig['state']>;
@@ -374,6 +380,7 @@ export function mergeConfig(
     paths: {...base.paths, ...(user.paths ?? {})},
     tracker: mergeTracker(base.tracker, user.tracker),
     criteria: {...base.criteria, ...(user.criteria ?? {})},
+    release: user.release ? {files: user.release.files ?? [], changelog: user.release.changelog ?? 'CHANGELOG.md'} : base.release,
     guards: user.guards ?? base.guards,
     skills: {...base.skills, ...(user.skills ?? {})},
     model_names: user.model_names ?? base.model_names,

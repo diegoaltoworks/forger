@@ -297,6 +297,7 @@ it, and an action it does not list needs the owner.
 | Resume after a known-recovery halt whose check passes | yes, report it | |
 | File the tickets a critique raises above its threshold | yes, report them | |
 | Clear any other HALT, reset counters | | yes |
+| File a release ticket (`release --file`) | | yes |
 | Close issues, delete branches with unmerged work | | yes |
 | Touch production data or secrets | | yes |
 | Publish anything outside the repository | | yes |

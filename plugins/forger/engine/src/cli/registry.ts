@@ -25,6 +25,7 @@ import {migrate} from './migrate';
 import {opinions, packs} from './packs';
 import {pipeline} from './pipeline';
 import {prBody} from './pr-body';
+import {release} from './release';
 import {retro} from './retro';
 import {runLogged} from './run-logged';
 import {screenshot} from './screenshot';
@@ -61,6 +62,7 @@ export const COMMANDS: Command[] = [
   linkBlockersCommand,
   orient,
   report,
+  release,
   facts,
   merge,
   verify,

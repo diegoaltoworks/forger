@@ -23,6 +23,8 @@ place of `diegoaltoworks/forger`. A repository whose loop does real work install
 from GitHub instead. Update the installed copy only when no engine that runs from
 it is alive.
 
+The plugin carries a version, and an update moves an installed copy from one version to the next; [releases](release.md) says how the next one is decided.
+
 Update on each machine, then restart Claude Code:
 
 ```

@@ -19,6 +19,7 @@ import {listCollectionRoots, listInstalledSkills, workerCommandsSource} from '..
 import {openTracker} from '../tracker';
 import {STAGES, type CliDeps, type CommandContext, type Stage} from './command';
 import {FLAGS} from './flags';
+import {releaseArgs} from '../supervisor';
 import {openBacklog} from './open-backlog';
 import {storedPlanFor} from './pipeline';
 import {findCommand, renderHelp} from './registry';
@@ -91,7 +92,7 @@ function reach(ctx: CommandContext, stage: Stage): void {
 }
 
 export async function main(argv: string[] = process.argv.slice(2), deps: CliDeps = {}): Promise<void> {
-  const {values, positionals} = parseArgs({args: argv, options: FLAGS, allowPositionals: true});
+  const {values, positionals} = parseArgs({args: releaseArgs(argv), options: FLAGS, allowPositionals: true});
 
   if (values.help) {
     console.log(renderHelp());
