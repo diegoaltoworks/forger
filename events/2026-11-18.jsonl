@@ -20,3 +20,4 @@
 {"event":"picked","at":"2026-11-18T06:30:56.688Z","iteration":270,"ticket":"issue-540","reason":null,"commands":"engine"}
 {"event":"picked","at":"2026-11-18T06:31:10.336Z","iteration":271,"ticket":"issue-541","reason":null,"commands":"engine"}
 {"event":"worker_denied","at":"2026-11-18T06:39:00.900Z","iteration":270,"ticket":"issue-540","reason":"other-engine: verify from /home/diego/work/forger/.forger/worktrees/issue-540/plugins/forger"}
+{"event":"worker_denied","at":"2026-11-18T06:40:24.662Z","iteration":271,"ticket":"issue-541","reason":"other-engine: verify from /home/diego/work/forger/.forger/worktrees/issue-541/plugins/forger"}
