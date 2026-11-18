@@ -23,3 +23,4 @@
 {"event":"worker_denied","at":"2026-11-18T06:40:24.662Z","iteration":271,"ticket":"issue-541","reason":"other-engine: verify from /home/diego/work/forger/.forger/worktrees/issue-541/plugins/forger"}
 {"event":"merged","at":"2026-11-18T06:42:11.137Z","iteration":270,"ticket":"issue-540","reason":null}
 {"event":"lease_takeover","at":"2026-11-18T11:10:56.648Z","iteration":271,"ticket":null,"reason":"took over the lease from Diego-X1:1037486:e8245141 on Diego-X1"}
+{"event":"runner_gone","at":"2026-11-18T11:11:03.482Z","iteration":271,"ticket":"issue-541","reason":"feat/issue-541 pushed, not merged"}
