@@ -161,7 +161,7 @@ function commandFiles(pluginRoot: string, harness: Harness): {rel: string; conte
   return names.flatMap(name => {
     const rel = harness.commandPath(name);
     if (rel === null) return [];
-    return [{rel, content: harness.packageCommand(readFileSync(join(dir, `${name}.md`), 'utf-8'), pluginRoot, name)}];
+    return [{rel, content: harness.packageCommand(readFileSync(join(dir, `${name}.md`), 'utf-8'), name)}];
   });
 }
 
@@ -257,6 +257,12 @@ export function runSetup(projectRoot: string, pluginRoot: string, opts: SetupOpt
   const merged = mergeGitignore(existsSync(ignorePath) ? readFileSync(ignorePath, 'utf-8') : '', gitignoreLines(detectLayout(projectRoot).dir));
   if (merged.added.length > 0) writeFileSync(ignorePath, merged.text);
   return {files, gitignore: {added: merged.added, kept: merged.kept}, ...(structure ? {structure} : {}), ...(starter ? {starter: starter.name} : {}), ...(baseBranch ? {base_branch: baseBranch} : {})};
+}
+
+/** What a person's own session needs when the harness reads committed command files: the variable, and its value on this machine. Empty for a harness that loads the plugin itself. */
+export function ownSessionNote(harness: Harness | undefined, pluginRoot: string): string[] {
+  if (!harness || harness.sessionPlugin || harness.commandPath('x') === null) return [];
+  return [`note    your own ${harness.id} session runs the command files through ${harness.pluginRootVar}; set ${harness.pluginRootVar}=${pluginRoot} (a worker the engine starts has it already)`];
 }
 
 export function formatSetup(result: SetupResult, offeredPresets: string[] = []): string {

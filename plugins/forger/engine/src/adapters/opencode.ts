@@ -9,6 +9,7 @@
  */
 
 import type {Harness} from '../ports';
+import {resolvePluginRoot} from './skill-package';
 import {opencodeHooks} from './opencode-hooks';
 import {opencodeSpentUsd, opencodeText} from './usage';
 
@@ -40,8 +41,8 @@ export const opencodeHarness: Harness = {
   },
   commandPath: name => `.opencode/commands/forger-${name}.md`,
   pluginRootVar: 'FORGER_ROOT',
-  packageCommand(source, pluginRoot) {
-    return stripClaudeFrontmatter(source).replace(/\$\{CLAUDE_PLUGIN_ROOT\}|\$CLAUDE_PLUGIN_ROOT/g, pluginRoot);
+  packageCommand(source) {
+    return resolvePluginRoot(stripClaudeFrontmatter(source), 'FORGER_ROOT');
   },
   hooks: opencodeHooks,
 };
