@@ -43,3 +43,4 @@
 {"event":"picked","at":"2026-11-18T12:29:45.471Z","iteration":277,"ticket":"issue-549","reason":null,"commands":"engine"}
 {"event":"picked","at":"2026-11-18T12:32:21.581Z","iteration":278,"ticket":"issue-549","reason":null,"commands":"engine"}
 {"event":"owner_review","at":"2026-11-18T12:34:33.857Z","iteration":278,"ticket":"issue-549","reason":"PR #551"}
+{"event":"completed","at":"2026-11-18T12:34:51.613Z","iteration":278,"ticket":null,"reason":null}
