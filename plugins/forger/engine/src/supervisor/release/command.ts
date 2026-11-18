@@ -2,7 +2,7 @@
 
 import {filedLabels} from '../../tracker';
 import type {CommandRunner, Tracker} from '../../ports';
-import {changelogEntry, withEntry} from './changelog';
+import {changelogEntry, entryNotes, withEntry} from './changelog';
 import {checkVersions, readVersions, writeVersions, type FilePort, type ReleaseFile} from './files';
 import {gatherChanges} from './gather';
 import {agreedVersion, changeLine, formatPlan, isBump, parseVersion, planRelease, type Bump, type PlanResult} from './plan';
@@ -12,7 +12,7 @@ export interface ReleaseSettings {
   changelog: string;
 }
 
-export type ReleaseMode = 'plan' | 'file' | 'write' | 'check';
+export type ReleaseMode = 'plan' | 'file' | 'write' | 'check' | 'notes';
 
 export interface ReleaseRequest {
   mode: ReleaseMode | null;
@@ -77,11 +77,15 @@ function planOf(deps: ReleaseDeps, settings: ReleaseSettings, override: Bump | u
 export function runRelease(req: ReleaseRequest, deps: ReleaseDeps): ReleaseOutcome {
   const settings = deps.settings;
   if (!settings || settings.files.length === 0) return fail('release: releases are not configured; name the version files in `release.files` of the config');
-  if (req.mode === null) return fail('release: pass one of --plan, --file, --write --version V, --check --version V');
+  if (req.mode === null) return fail('release: pass one of --plan, --file, --write --version V, --check --version V, --notes --version V');
   if (req.bump !== undefined && !isBump(req.bump)) return fail('release: --bump must be patch, minor or major');
   try {
-    if (req.mode === 'check' || req.mode === 'write') {
+    if (req.mode === 'check' || req.mode === 'write' || req.mode === 'notes') {
       if (req.version === undefined || parseVersion(req.version) === null) return fail(`release: --${req.mode} needs --version x.y.z`);
+    }
+    if (req.mode === 'notes') {
+      const notes = entryNotes(deps.fs.read(settings.changelog), req.version as string);
+      return notes === null ? fail(`release: ${settings.changelog} has no entry for ${req.version}`) : ok(notes);
     }
     if (req.mode === 'check') {
       const problems = checkVersions(settings.files, settings.changelog, req.version as string, deps.fs);

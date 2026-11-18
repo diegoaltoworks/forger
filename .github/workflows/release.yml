@@ -1,0 +1,32 @@
+name: Release
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - plugins/forger/.claude-plugin/plugin.json
+      - plugins/forger/engine/package.json
+
+permissions:
+  contents: write
+
+jobs:
+  tag:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.14
+      # A version already tagged is a push that changed a file for another reason: nothing to do.
+      - name: Tag and publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version=$(jq -r .version plugins/forger/.claude-plugin/plugin.json)
+          if gh release view "v$version" >/dev/null 2>&1 || git ls-remote --exit-code --tags origin "refs/tags/v$version" >/dev/null 2>&1; then
+            echo "v$version exists; nothing to do"
+            exit 0
+          fi
+          bun plugins/forger/bin/work.ts release --notes --version "$version" > "$RUNNER_TEMP/notes.md"
+          gh release create "v$version" --target "$GITHUB_SHA" --title "v$version" --notes-file "$RUNNER_TEMP/notes.md"
