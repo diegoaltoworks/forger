@@ -1,2 +1,3 @@
 {"event":"picked","at":"2026-11-18T02:38:06.475Z","iteration":266,"ticket":"issue-533","reason":null,"commands":"engine"}
 {"event":"picked","at":"2026-11-18T02:38:17.087Z","iteration":267,"ticket":"issue-515","reason":null,"commands":"engine"}
+{"event":"worker_denied","at":"2026-11-18T02:38:39.297Z","iteration":267,"ticket":"issue-515","reason":"leave-worktree: cd /home/diego/work/forger/plugins/forger/engine 2>/dev/null || cd /home/diego/work/forger/.forger/worktrees/issue-515/plugins/forger/engine; pwd; grep -rn \"cleanup(\" src | grep -v \"test.ts\"; grep -rn \"hand-back\\|handBack\\|handback\" src -il | head; sed -n 1,50p src/loop/worktree.ts; grep -n \"export function removeWorktree\" -A15 src/loop/worktree.ts; sed -n 1,40p src/loop/parallel.test.ts"}
