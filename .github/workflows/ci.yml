@@ -29,7 +29,7 @@ jobs:
           echo "FORGER_PLAYWRIGHT_ROOT=$RUNNER_TEMP/playwright" >> "$GITHUB_ENV"
       # Must equal `gates` in .forger/workloop.config.json; a test fails when they drift.
       - name: Gates
-        run: cd plugins/forger/engine && bun install --frozen-lockfile && bun run check && cd ../../.. && bun plugins/forger/bin/work.ts check
+        run: cd tools/brand && bun install --frozen-lockfile && bun run check && cd ../.. && cd plugins/forger/engine && bun install --frozen-lockfile && bun run check && cd ../../.. && bun plugins/forger/bin/work.ts check
       - name: Job summary
         if: always()
         run: bun plugins/forger/bin/work.ts check --summary >> "$GITHUB_STEP_SUMMARY" || true

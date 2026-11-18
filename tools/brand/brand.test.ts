@@ -2,11 +2,11 @@ import {describe, expect, test} from 'bun:test';
 import {readFileSync} from 'node:fs';
 import {join} from 'node:path';
 
-import {resvgRasteriser} from '../adapters';
+import {resvgRasteriser} from './raster';
 import {ICO_FILE, packIco, pngSize, RASTERS} from './plan';
 import {renderBrand} from './render';
 
-const DIR = join(import.meta.dir, '../../../../../assets/brand');
+const DIR = join(import.meta.dir, '../../assets/brand');
 const read = (name: string) => readFileSync(join(DIR, name), 'utf8');
 
 describe('packIco', () => {
@@ -38,13 +38,12 @@ describe('renderBrand over the committed SVGs', () => {
     expect(new DataView(ico.buffer).getUint16(4, true)).toBe(2);
   });
 
-  test('a second run gives the same bytes', () => {
+  test('the rendered brand files equal the committed ones, twice', () => {
     const second = renderBrand(read, resvgRasteriser);
-    for (const [name, bytes] of first) expect(Buffer.from(second.get(name)!).equals(Buffer.from(bytes))).toBe(true);
-  });
-
-  test('the committed rasters are what the SVGs render to', () => {
-    for (const [name, bytes] of first) expect(Buffer.from(readFileSync(join(DIR, name))).equals(Buffer.from(bytes))).toBe(true);
+    for (const [name, bytes] of first) {
+      expect(Buffer.from(readFileSync(join(DIR, name))).equals(Buffer.from(bytes))).toBe(true);
+      expect(Buffer.from(second.get(name)!).equals(Buffer.from(bytes))).toBe(true);
+    }
   });
 
   test('every SVG outlines its text, so no font is needed', () => {

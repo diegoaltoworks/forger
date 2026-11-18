@@ -15,7 +15,6 @@ import a folder, not its files.
 | [`intent/`](intent/README.md) | Classifying a planning request as product or creative |
 | [`critique/`](critique/README.md) | Holding a visual change to the verbatim brief and filing ranked findings as tickets |
 | [`replay/`](replay/README.md) | Turning a stored request set into issues filed in order with their blockers |
-| [`brand/`](brand/README.md) | The brand rasters and icon, rendered from the SVG sources in `assets/brand/` |
 | [`ui/`](ui/README.md) | The ui pack's config, the capture matrix and the screenshot run |
 | [`migrate/`](migrate/README.md) | Moving a repo from the legacy layout to `.forger/` |
 | [`packs/`](packs/README.md) | Pack manifests, `setup`, skill slots |

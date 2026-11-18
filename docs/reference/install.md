@@ -61,7 +61,7 @@ every command prints one warning naming `migrate`, which moves them to `.forger/
 
 ## Prerequisites
 
-- [Bun](https://bun.sh) on `PATH` (the engine is a Bun program).
+- [Bun](https://bun.sh) on `PATH` (the engine is a Bun program). The engine loads only its own files and the runtime's built-in modules, so nothing is fetched or installed, and it starts offline.
 - One supported harness CLI on `PATH`: `claude`, `opencode`, `codex` or `copilot` (the engine spawns it per iteration).
 - The `gh` CLI, authenticated, when `tracker.kind` is `github`.
 

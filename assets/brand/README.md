@@ -36,9 +36,10 @@ No font loads at runtime, so you do not need Outfit to use the files.
 ## Regenerating the rasters
 
 ```
-bun plugins/forger/bin/work.ts brand
+(cd tools/brand && bun install)
+bun tools/brand/brand.ts
 ```
 
-The output is deterministic; the engine tests fail when a committed raster no
-longer matches its SVG. The social preview must be uploaded by hand: see
+The output is deterministic; the tool's test, part of the gates, fails when a
+committed raster no longer matches its SVG. The social preview must be uploaded by hand: see
 `.forger/human.md`.
