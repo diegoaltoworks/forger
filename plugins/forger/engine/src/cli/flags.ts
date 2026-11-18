@@ -75,6 +75,7 @@ export const FLAGS = {
   plan: {type: 'boolean', default: false},
   write: {type: 'boolean', default: false},
   check: {type: 'boolean', default: false},
+  notes: {type: 'boolean', default: false},
   bump: {type: 'string'},
   version: {type: 'string'},
   root: {type: 'string'},

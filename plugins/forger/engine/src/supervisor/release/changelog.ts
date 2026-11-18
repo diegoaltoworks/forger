@@ -23,3 +23,13 @@ export function firstEntryVersion(text: string | null): string | null {
   const m = text === null ? null : /^## (\S+)\s*$/m.exec(text);
   return m ? m[1] : null;
 }
+
+/** The body of the entry for a version, up to the next entry; null when the changelog has none for it. */
+export function entryNotes(text: string | null, version: string): string | null {
+  if (text === null) return null;
+  const lines = text.split('\n');
+  const start = lines.findIndex(l => l.trimEnd() === `## ${version}`);
+  if (start === -1) return null;
+  const end = lines.findIndex((l, i) => i > start && /^## /.test(l));
+  return lines.slice(start + 1, end === -1 ? undefined : end).join('\n').trim();
+}

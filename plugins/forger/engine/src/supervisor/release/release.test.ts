@@ -170,3 +170,27 @@ describe('filing', () => {
     }
   });
 });
+
+describe('notes', () => {
+  const log = '# Changelog\n\n## 0.2.0\n\n### Added\n\n- b (#2)\n\n## 0.1.0\n\n### Fixed\n\n- a (#1)\n';
+  const withLog = () => {
+    const w = deps();
+    w.fs.files['CHANGELOG.md'] = log;
+    return w;
+  };
+
+  test('release --notes prints the changelog entry of the version and nothing of another', () => {
+    const w = withLog();
+    const out = runRelease({mode: 'notes', json: false, version: '0.2.0'}, w.deps);
+    expect(out.exitCode).toBe(0);
+    expect(out.out).toBe('### Added\n\n- b (#2)');
+    expect(runRelease({mode: 'notes', json: false, version: '0.1.0'}, w.deps).out).toBe('### Fixed\n\n- a (#1)');
+  });
+
+  test('release --notes for a version with no entry exits 1', () => {
+    const w = withLog();
+    expect(runRelease({mode: 'notes', json: false, version: '0.3.0'}, w.deps).exitCode).toBe(1);
+    expect(runRelease({mode: 'notes', json: false, version: '0.2'}, w.deps).exitCode).toBe(1);
+    expect(runRelease({mode: 'notes', json: false, version: '0.1.0'}, deps().deps).exitCode).toBe(1);
+  });
+});

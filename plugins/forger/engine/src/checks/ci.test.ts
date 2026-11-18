@@ -96,6 +96,29 @@ describe('gatesDrift', () => {
   });
 });
 
+describe('the release workflow', () => {
+  const yaml = readFileSync(join(REPO, '.github/workflows/release.yml'), 'utf-8');
+  const config = loadConfig(REPO);
+
+  test('the release workflow runs only on the base branch and only when a version file changed', () => {
+    expect(yaml).toContain(`    branches: [${config.base_branch}]`);
+    const paths = (yaml.match(/^ {4}paths:\n((?: {6}- .+\n)+)/m)?.[1] ?? '').split('\n').filter(Boolean).map(l => l.replace(/^ +- /, ''));
+    expect(paths.sort()).toEqual((config.release?.files ?? []).map(f => f.path).sort());
+    expect(yaml).not.toContain('pull_request');
+  });
+
+  test('the release workflow asks for write permission on the contents and no other', () => {
+    const grants = yaml.split('\n').filter(l => /^\s+(contents|actions|checks|deployments|id-token|issues|packages|pages|pull-requests|statuses):\s/.test(l)).map(l => l.trim());
+    expect(grants).toEqual(['contents: write']);
+    expect(yaml).toMatch(/^permissions:\n {2}contents: write\n/m);
+    expect(readFileSync(join(REPO, WORKFLOW_PATH), 'utf-8')).toMatch(/^permissions:\n {2}contents: read\n/m);
+  });
+
+  test('the release workflow makes no commit and pushes to no branch', () => {
+    expect(yaml).not.toMatch(/git (commit|push)/);
+  });
+});
+
 function files(dir: string): string[] {
   return readdirSync(dir).flatMap(name => {
     const p = join(dir, name);
