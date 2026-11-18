@@ -1,7 +1,7 @@
 import {describe, expect, test} from 'bun:test';
 
 import type {CapturingRunner, CommandResult} from '../ports';
-import {conflictAfterAttempt, finishWorktree, folderMapFrom, stateDirFor} from './parallel';
+import {conflictAfterAttempt, finishWorktree, folderMapFrom, keepUncommittedWork, KEPT_WORK_MESSAGE, stateDirFor} from './parallel';
 import {inWorktree} from './worktree';
 
 const O = {ticket: 'tk-1', baseBranch: 'main', stateDir: '/r/.forger'};
@@ -85,5 +85,26 @@ describe('finishWorktree', () => {
     const {run, calls} = fake({'worktree remove': {stdout: '', stderr: 'locked', exitCode: 1}});
     expect(finishWorktree(run, O, true)).toBe('locked');
     expect(calls).toHaveLength(1);
+  });
+});
+
+describe('keepUncommittedWork', () => {
+  test("uncommitted work of a run that did not merge is committed to the ticket's branch before the worktree goes", () => {
+    const {run, calls} = fake({'status --porcelain': ok(' M a.ts\n?? b.ts\n')});
+    expect(keepUncommittedWork(run, O)).toEqual({kept: true, error: null});
+    expect(calls.some(c => c.includes(' add -A'))).toBe(true);
+    const commit = calls.find(c => c.includes(' commit '))!;
+    expect(commit).toContain('core.hooksPath=/dev/null');
+    expect(commit).toContain(KEPT_WORK_MESSAGE);
+    expect(calls.some(c => c.includes('push'))).toBe(false);
+  });
+  test('a worktree with no uncommitted change is removed with no commit made', () => {
+    const {run, calls} = fake({'status --porcelain': ok('')});
+    expect(keepUncommittedWork(run, O)).toEqual({kept: false, error: null});
+    expect(calls.some(c => c.includes('commit'))).toBe(false);
+  });
+  test('a commit that cannot be made is reported so the worktree stays', () => {
+    const {run} = fake({'status --porcelain': ok(' M a.ts'), ' commit ': {stdout: '', stderr: 'no identity', exitCode: 1}});
+    expect(keepUncommittedWork(run, O)).toEqual({kept: false, error: 'no identity'});
   });
 });

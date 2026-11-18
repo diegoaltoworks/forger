@@ -33,6 +33,7 @@ export function answerCommands(issue: number, intakeLabel: string): TrackerWrite
 }
 
 /** The comment that tells the owner why a plain stop set the ticket aside. */
-export function setAsideComment(issue: number, reason: string): string {
-  return [`The worker stopped, so the loop set this ticket aside and went on to others.`, '', `Reason: ${reason}`, '', `Answer with: decide ${issue} "<choice>"`].join('\n');
+export function setAsideComment(issue: number, reason: string, keptWork = false): string {
+  const kept = keptWork ? ['', 'The uncommitted work was kept as a commit on the ticket\'s branch, which is on the machine that ran the loop and not on the remote.'] : [];
+  return [`The worker stopped, so the loop set this ticket aside and went on to others.`, '', `Reason: ${reason}`, ...kept, '', `Answer with: decide ${issue} "<choice>"`].join('\n');
 }

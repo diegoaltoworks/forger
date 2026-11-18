@@ -74,6 +74,8 @@ export interface Outcome {
   conflictStop?: Conflict;
   /** Why the ticket is set aside: a stop for one ticket, which does not end the loop (ADR 0020). */
   setAside?: string;
+  /** The run left uncommitted work, which the engine committed to the ticket's branch. */
+  keptWork?: boolean;
 }
 
 /**

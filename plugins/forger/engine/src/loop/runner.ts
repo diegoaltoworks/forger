@@ -613,13 +613,23 @@ export class AutomationRunner {
     const cwd = made.path;
     if (made.reused) this.logger.log('INFO', `Using the worktree already at ${cwd} for ${ticket}`);
     if (made.restarted) this.logger.log('INFO', `The branch of ${ticket} had no commit of its own: started again from ${this.config.base_branch}`);
+    let keepFailed: string | null = null;
     return {
       ticket,
       cwd,
       gitRunner: inWorktree(this.gitRunner, cwd),
       abort,
       conflicts: () => conflictAfterAttempt(this.gitCapture, o),
+      keepWork: () => {
+        const kept = this.sandbox.keep?.(o) ?? {kept: false, error: null};
+        if (kept.error) {
+          keepFailed = kept.error;
+          this.logger.log('WARN', `Could not keep the uncommitted work of ${ticket}: ${kept.error}; the worktree stays`);
+        }
+        return kept.kept;
+      },
       finish: conflicted => {
+        if (keepFailed && !conflicted) return;
         const failed = this.sandbox.cleanup(o, conflicted);
         if (failed) this.logger.log('WARN', `Could not remove the worktree for ${ticket}: ${failed}`);
       },

@@ -39,3 +39,12 @@ describe('answering a ticket set aside', () => {
     expect(reasonSummary('\nfirst line\nsecond')).toBe('first line');
   });
 });
+
+describe('setAsideComment', () => {
+  test("the hand-back says the uncommitted work is a commit on the ticket's branch", () => {
+    const kept = setAsideComment(7, 'why', true);
+    expect(kept).toContain("commit on the ticket's branch");
+    expect(kept).toContain('not on the remote');
+    expect(setAsideComment(7, 'why')).not.toContain('uncommitted');
+  });
+});
