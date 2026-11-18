@@ -6,6 +6,7 @@ import {join} from 'path';
 import {type BacklogData, backlogFrom} from '../backlog';
 import {memoryStateStore} from '../adapters';
 import {mergeConfig} from '../config';
+import {keepsWork} from './iteration';
 import {AutomationRunner} from './runner';
 
 const dirs: string[] = [];
@@ -22,5 +23,13 @@ describe('runIteration', () => {
     const config = mergeConfig({});
     const runner = new AutomationRunner(root, config, backlogFrom(() => data, config), {stateStore: memoryStateStore(), gitRunner: () => ''});
     await expect(runner.runIteration(1)).rejects.toThrow('no agent runner was given to this runner');
+  });
+});
+
+describe('keepsWork', () => {
+  test('the work of a merged run is never committed again', () => {
+    expect(keepsWork({merged: true, status: 'success'})).toBe(false);
+    expect(keepsWork({merged: false, status: 'set-aside'})).toBe(true);
+    expect(keepsWork({merged: false, status: 'conflict'})).toBe(false);
   });
 });

@@ -7,7 +7,7 @@
 
 import {rootsFromModulePaths, type FolderMap} from '../backlog';
 import type {CapturingRunner} from '../ports';
-import {quote, rebaseOnBase, removeWorktree, ticketBranch, type WorktreeOptions} from './worktree';
+import {failure, quote, rebaseOnBase, removeWorktree, ticketBranch, worktreePath, type WorktreeOptions} from './worktree';
 
 /**
  * The state directory a worktree command derives its paths from. Inside a
@@ -57,4 +57,31 @@ export function finishWorktree(run: CapturingRunner, o: WorktreeOptions, dropBra
   run(`git branch -D ${quote(branch)}`);
   run(`git push origin --delete ${quote(branch)}`);
   return null;
+}
+
+export const KEPT_WORK_MESSAGE = 'wip: uncommitted work of a run that stopped';
+
+export interface KeptWork {
+  /** Whether a commit was made. */
+  kept: boolean;
+  /** Why the work could not be kept; the worktree must then stay. */
+  error: string | null;
+}
+
+/**
+ * Commits what a run left uncommitted in its worktree to the ticket's branch,
+ * so the retry starts from it and the folder can go. Never pushed. The
+ * repository's hooks are switched off for this one commit: it is the engine's
+ * safety copy, not the worker's change.
+ */
+export function keepUncommittedWork(run: CapturingRunner, o: Pick<WorktreeOptions, 'ticket' | 'stateDir'>): KeptWork {
+  const at = `git -C ${quote(worktreePath(o.stateDir, o.ticket))}`;
+  const status = run(`${at} status --porcelain`);
+  if (status.exitCode !== 0) return {kept: false, error: failure(status)};
+  if (status.stdout.trim() === '') return {kept: false, error: null};
+  const added = run(`${at} add -A`);
+  if (added.exitCode !== 0) return {kept: false, error: failure(added)};
+  const made = run(`${at} -c core.hooksPath=/dev/null commit -q -m ${quote(KEPT_WORK_MESSAGE)}`);
+  if (made.exitCode !== 0) return {kept: false, error: failure(made)};
+  return {kept: true, error: null};
 }

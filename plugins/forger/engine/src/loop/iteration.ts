@@ -82,6 +82,8 @@ export interface Placement {
   abort?: AbortSignal;
   /** The files still in conflict with base after the worker's attempt; null when none. */
   conflicts(): string[] | null;
+  /** Commits what the run left uncommitted to the ticket's branch; true when a commit was made. A failure is logged and keeps the worktree. */
+  keepWork(): boolean;
   /** Takes the worktree down; a conflicted branch is dropped with it. */
   finish(conflicted: boolean): void;
 }
@@ -252,6 +254,7 @@ export async function runIteration(
   const declined: DeclineEntry | null =
     outcome.status === 'declined' && record ? {ticket: record.ticket, reason: record.reason, iteration} : null;
   const body = ticket === attemptedTask ? ownBody : ticket === null ? null : ctx.backlog.body(ticket);
+  if (placement && keepsWork(outcome) && placement.keepWork()) outcome.keptWork = true;
   const settled = settle(ctx, sessionId, iteration, ticket, backlogCompleted, outcome, countStall && !engineChanged, declined, ticket === null ? null : ctx.backlog.footprint(ticket, body));
   placement?.finish(outcome.status === 'conflict');
   return settled;
@@ -328,10 +331,10 @@ async function completeConflict(ctx: IterationContext, claim: Claim, r: ReaskCon
 }
 
 /** Labels the issue needs-human and posts the reason or the options; a tracker failure is logged, the ticket is set aside either way. */
-function handToOwnerOnStop(ctx: IterationContext, ticket: string | null, reason: string, conflict: Conflict | undefined): void {
+function handToOwnerOnStop(ctx: IterationContext, ticket: string | null, reason: string, conflict: Conflict | undefined, keptWork: boolean): void {
   const issue = issueOfTicket(ticket);
   if (issue === null || ctx.tracker.queue !== 'tracker') return;
-  const comment = conflict ? conflictComment(issue, conflict) : setAsideComment(issue, reason);
+  const comment = conflict ? conflictComment(issue, conflict) : setAsideComment(issue, reason, keptWork);
   for (const problem of setAsideOnTracker(ctx.tracker, issue, comment, conflict !== undefined)) ctx.logger.log('WARN', problem);
 }
 
@@ -419,7 +422,7 @@ function settle(
   if (aside) {
     ctx.logger.log('WARN', `Iteration ${iteration} set ${aside.ticket} aside: ${aside.reason.split('\n')[0]}`);
     ctx.emit('set_aside', iteration, ticket, aside.reason);
-    handToOwnerOnStop(ctx, ticket, aside.reason, outcome.conflictStop);
+    handToOwnerOnStop(ctx, ticket, aside.reason, outcome.conflictStop, outcome.keptWork === true);
   }
 
   if (outcome.ownerReviewPr !== undefined) handToOwner(ctx, iteration, ticket, outcome.ownerReviewPr);
@@ -519,4 +522,9 @@ function verdictOf(ctx: IterationContext, pr: PrFact | null, root = ctx.projectR
   if (!pr) return null;
   const dirs = [...new Set([ctx.projectRoot, root])].map(r => join(r, ctx.config.paths.verdicts));
   return recordedDecision(dirs.flatMap(d => readVerdicts(d, pr.number)), pr.head, pr.verify_passed === true);
+}
+
+/** Whether a run's uncommitted work is kept: not when it merged, and not when its branch is dropped for a conflict. Pure. */
+export function keepsWork(outcome: {merged: boolean; status: string}): boolean {
+  return !outcome.merged && outcome.status !== 'conflict';
 }

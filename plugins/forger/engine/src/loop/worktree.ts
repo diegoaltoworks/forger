@@ -68,7 +68,7 @@ export function quote(s: string): string {
  * The line that says why. Git writes progress ("Preparing worktree ...") to
  * stderr before its `fatal:`, so the first line is often not the reason.
  */
-function failure(r: {stderr: string; stdout: string}): string {
+export function failure(r: {stderr: string; stdout: string}): string {
   const lines = (r.stderr || r.stdout || 'command failed').split('\n').map(l => l.trim()).filter(Boolean);
   return lines.find(l => /^(fatal|error):/i.test(l)) ?? lines[0] ?? 'command failed';
 }

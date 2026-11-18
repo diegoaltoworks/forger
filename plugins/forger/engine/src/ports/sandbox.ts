@@ -48,6 +48,8 @@ export interface Sandbox {
   pluginRoot?: string;
   prepare(request: WorkspaceRequest): Workspace;
   start(spec: SandboxStart): RunningWorker;
+  /** Commits what the run left uncommitted in the workspace to the ticket's branch, locally; a sandbox with no such workspace leaves it out. `error` set means the workspace must stay. */
+  keep?(request: WorkspaceRequest): {kept: boolean; error: string | null};
   /** Removes the workspace; `dropBranch` also drops the ticket's branch. Returns why it failed, or null. */
   cleanup(request: WorkspaceRequest, dropBranch: boolean): string | null;
 }
