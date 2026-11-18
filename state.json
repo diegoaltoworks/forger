@@ -1,6 +1,6 @@
 {
-  "iteration": 279,
-  "status": "failed",
+  "iteration": 280,
+  "status": "running",
   "last_completed_at": "2026-11-18T15:51:06.690Z",
   "completed_iterations": 253,
   "failed_iterations": 12,
@@ -257,7 +257,15 @@
     "issue-548",
     "issue-549"
   ],
-  "in_flight": [],
+  "in_flight": [
+    {
+      "ticket": null,
+      "pid": null,
+      "session_id": "a20bda1e-8040-4a36-b46d-b0f76e8fee14",
+      "snapshot": null,
+      "started_at": "2026-11-18T15:53:50.457Z"
+    }
+  ],
   "last_error": "Claimed complete but nothing merged into main",
   "stall_count": 0,
   "declined_tasks": [
