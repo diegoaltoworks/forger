@@ -54,3 +54,4 @@
 {"event":"worker_denied","at":"2026-11-18T16:06:30.080Z","iteration":281,"ticket":"issue-554","reason":"merge: gh pr merge 555 --squash --delete-branch 2>&1 | tail -3; gh pr view 555 --json state -q .state"}
 {"event":"picked","at":"2026-11-18T16:07:14.180Z","iteration":282,"ticket":"issue-554","reason":null,"commands":"engine"}
 {"event":"merged","at":"2026-11-18T16:29:56.976Z","iteration":282,"ticket":"issue-554","reason":null}
+{"event":"completed","at":"2026-11-18T16:30:13.307Z","iteration":282,"ticket":null,"reason":null}
