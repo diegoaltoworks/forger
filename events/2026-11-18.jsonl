@@ -35,3 +35,4 @@
 {"event":"completed","at":"2026-11-18T11:22:38.309Z","iteration":274,"ticket":null,"reason":null}
 {"event":"picked","at":"2026-11-18T11:55:01.191Z","iteration":275,"ticket":"issue-546","reason":null,"commands":"engine"}
 {"event":"worker_denied","at":"2026-11-18T12:01:26.663Z","iteration":275,"ticket":"issue-546","reason":"other-engine: verify from /home/diego/work/forger/.forger/worktrees/issue-546/plugins/forger"}
+{"event":"merged","at":"2026-11-18T12:12:38.935Z","iteration":275,"ticket":"issue-546","reason":null}
