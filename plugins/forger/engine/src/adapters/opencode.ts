@@ -11,7 +11,7 @@
 import type {Harness} from '../ports';
 import {resolvePluginRoot} from './skill-package';
 import {opencodeHooks} from './opencode-hooks';
-import {opencodeSpentUsd, opencodeText} from './usage';
+import {opencodeError, opencodeSpentUsd, opencodeText} from './usage';
 
 /** A command name OpenCode accepts: the worker command's colon becomes a hyphen. */
 export function opencodeCommandName(name: string): string {
@@ -32,6 +32,7 @@ export const opencodeHarness: Harness = {
   usage: 'cost',
   spentUsd: opencodeSpentUsd,
   plainText: opencodeText,
+  error: opencodeError,
   sessionPlugin: false,
   spawn({prompt, model, workerCommand, sessionId}) {
     return {

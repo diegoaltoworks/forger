@@ -24,6 +24,8 @@ export interface AgentResult extends SupervisedResult {
    * has a text reader, else the output itself. Absent from a runner that does not set it.
    */
   reply?: string;
+  /** The harness's own error read from its output; null or absent when it printed none. */
+  harnessError?: string | null;
 }
 
 export interface AgentRunOptions {

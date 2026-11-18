@@ -59,7 +59,8 @@ export function agentFor(harness: Harness, prices: Record<string, ModelPrice>, s
       // The claim and the stop reason are read from the worker's words, which a JSON stream escapes.
       const text = harness.plainText?.(result.output);
       const reply = harness.plainText ? (text ?? '') : result.output;
-      return text ? {...result, output: `${result.output}\n${text}\n`, reply} : {...result, reply};
+      const harnessError = harness.error?.(result.output) ?? null;
+      return text ? {...result, output: `${result.output}\n${text}\n`, reply, harnessError} : {...result, reply, harnessError};
     },
   };
 }

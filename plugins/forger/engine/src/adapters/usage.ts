@@ -39,6 +39,17 @@ export function opencodeText(output: string): string {
     .join('\n');
 }
 
+/** The message of the last `error` event of an OpenCode `run --format json` stream, or null when there is none. */
+export function opencodeError(output: string): string | null {
+  const errors = events(output).filter(e => e.type === 'error');
+  for (let i = errors.length - 1; i >= 0; i--) {
+    const e = errors[i];
+    const message = [e.message, e.error?.data?.message, e.error?.message, e.part?.message, e.error].find(m => typeof m === 'string' && m.trim() !== '');
+    if (message) return message;
+  }
+  return null;
+}
+
 /**
  * Codex `exec --json`: each `turn.completed` event carries `usage` token counts and no cost, so the
  * spend is the counts at `price`. Null with no price or before the first turn ends. Cached input is

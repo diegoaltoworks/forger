@@ -50,3 +50,15 @@ describe('which runs have a spend limit', () => {
     expect(agentFor(codexHarness, {a: price}, hostSandbox(noGit)).spendLimit!(['a', 'b'])).toBe('partial');
   });
 });
+
+describe('the harness error', () => {
+  const step = JSON.stringify({type: 'step_finish', part: {cost: 0.1}});
+  test('the error of an OpenCode stream is the message of its last error event', () => {
+    const out = [JSON.stringify({type: 'error', message: 'first'}), step, JSON.stringify({type: 'error', error: {data: {message: 'Model not found: p/m'}}})].join('\n');
+    expect(opencodeHarness.error!(out)).toBe('Model not found: p/m');
+  });
+  test('a stream with no error event has no harness error', () => {
+    expect(opencodeHarness.error!(step)).toBeNull();
+    expect(claudeHarness.error).toBeUndefined();
+  });
+});
