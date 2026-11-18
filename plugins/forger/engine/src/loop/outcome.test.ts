@@ -207,6 +207,19 @@ describe('decideOutcome', () => {
     expect(o.error).toBe('Nothing merged or pushed, exit code 2');
   });
 
+  test('a worker that exited non-zero with no claim is recorded with its model and the harness\'s error', () => {
+    const o = decideOutcome({...nothing, exitCode: 1, model: 'openai/gpt-x', harnessError: 'model not found\nsecond line'});
+    expect(o.status).toBe('failed');
+    expect(o.result).toBe('failure');
+    expect(o.error).toBe('Worker started on openai/gpt-x failed, exit code 1: model not found');
+    expect(decideOutcome({...nothing, exitCode: 1, model: 'm', harnessError: 'x'.repeat(500)}).error!.length).toBeLessThan(260);
+  });
+
+  test('a worker that exited non-zero with no harness error is recorded with its model and exit code', () => {
+    const o = decideOutcome({...nothing, exitCode: 1, model: 'openai/gpt-x', harnessError: null});
+    expect(o.error).toBe('Nothing merged or pushed on openai/gpt-x, exit code 1');
+  });
+
   test('an infrastructure error still halts', () => {
     expect(decideOutcome({...nothing, claim: 'stop', stopReason: 'x', infraError: 'Infrastructure error (network)'}).halt).toBe('Infrastructure error (network)');
   });

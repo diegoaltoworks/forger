@@ -30,6 +30,10 @@ export interface RunFacts {
   claim: Claim['claim'];
   stopReason: string | null;
   exitCode: number;
+  /** The model the worker was started with; null or absent when not known. */
+  model?: string | null;
+  /** The harness's own error read from the worker's output; null or absent when it printed none. */
+  harnessError?: string | null;
   signal: string | null;
   timedOut: boolean;
   timeoutMinutes: number;
@@ -101,6 +105,15 @@ export function unverifiedMerge(pr: PrFact | null, verdict: Decision | null, bas
   if (!pr || verdict === 'pass') return null;
   const why = verdict === null ? 'no verdict recorded for its head' : `a ${verdict} verdict for its head`;
   return `PR #${pr.number} merged into ${baseBranch} with ${why}. Nothing independent checked it; review what landed before more work does.`;
+}
+
+const ERROR_LIMIT = 200;
+
+/** The first line of a harness's error, cut to a length a log line can hold; null when it said nothing. */
+function oneLine(text: string | null | undefined): string | null {
+  const line = (text ?? '').split('\n').map(l => l.trim()).find(l => l !== '');
+  if (!line) return null;
+  return line.length > ERROR_LIMIT ? `${line.slice(0, ERROR_LIMIT)}...` : line;
 }
 
 function timeoutText(f: RunFacts): string {
@@ -257,5 +270,10 @@ export function decideOutcome(f: RunFacts): Outcome {
     return failure('failed', `Claimed complete but nothing merged into ${f.baseBranch}`);
   }
   if (pushedNote) return failure('partial', pushedNote);
+  if (f.exitCode !== 0) {
+    const model = f.model ? ` on ${f.model}` : '';
+    const said = oneLine(f.harnessError);
+    return failure('failed', said ? `Worker started${model} failed, exit code ${f.exitCode}: ${said}` : `Nothing merged or pushed${model}, exit code ${f.exitCode}`);
+  }
   return failure('failed', `Nothing merged or pushed, exit code ${f.exitCode}`);
 }

@@ -236,6 +236,8 @@ export async function runIteration(
     claim: claim.claim,
     stopReason: claim.stopReason,
     exitCode: result.exitCode,
+    model,
+    harnessError: result.harnessError ?? null,
     signal: result.signal,
     timedOut: result.timedOut,
     timeoutMinutes,
