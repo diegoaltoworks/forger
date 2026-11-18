@@ -1,6 +1,6 @@
 {
   "iteration": 280,
-  "status": "failed",
+  "status": "halted",
   "last_completed_at": "2026-11-18T15:51:06.690Z",
   "completed_iterations": 253,
   "failed_iterations": 13,
@@ -258,7 +258,7 @@
     "issue-549"
   ],
   "in_flight": [],
-  "last_error": "Nothing merged or pushed, exit code -1",
+  "last_error": "Too many consecutive failures (3)",
   "stall_count": 0,
   "declined_tasks": [
     {
