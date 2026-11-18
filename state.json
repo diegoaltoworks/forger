@@ -1,10 +1,10 @@
 {
   "iteration": 280,
-  "status": "halted",
+  "status": "ready",
   "last_completed_at": "2026-11-18T15:51:06.690Z",
   "completed_iterations": 253,
   "failed_iterations": 13,
-  "consecutive_failures": 3,
+  "consecutive_failures": 0,
   "completed_tasks": [
     "engine_timeout_kills_group",
     "engine_outcome_from_facts",
