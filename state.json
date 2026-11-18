@@ -253,7 +253,10 @@
       "ticket": "issue-533",
       "pid": null,
       "session_id": "32eebb5f-b7f3-497d-b5ae-dd3d779d7083",
-      "snapshot": null,
+      "snapshot": {
+        "baseSha": "",
+        "reflogLength": 1
+      },
       "started_at": "2026-11-18T02:38:01.485Z",
       "plan": {
         "stages": [
