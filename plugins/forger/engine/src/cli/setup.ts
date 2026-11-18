@@ -4,7 +4,7 @@ import {forgerPath, loadConfig, publishesVerifyStatus} from '../config';
 import {flavourRef, loadFlavour} from '../pipeline';
 import {findHarness} from '../adapters';
 import type {Harness} from '../ports';
-import {commandFileFacts, formatUntrackedCommands, runChecks} from '../checks';
+import {commandFileFacts, formatUntrackedCommands, modelsProblems, runChecks} from '../checks';
 import {harnessOfRoot} from './harness-of';
 import {specProvider} from './spec-provider';
 import {ownSessionNote, commandFilePaths, coverageAdvice, formatCoverageAdvice, formatSetup, failingChecksOf, formatUpgrade, formatUpgradeChecks, upgradeChangedFiles, type UpgradeChecks, readRepoFacts, type CoverageAdvice, loadPresets, offerPresets, parsePackList, runSetup, runUpgrade, trackedRuntimeFiles, formatTrackedRuntime, chooseStarter, hasSourceFile, loadStarters, withStarterPacks, type StarterManifest} from '../packs';
@@ -204,13 +204,14 @@ export const setup: Command = {
     const tracked = trackedRuntimeFiles(setupRoot(ctx), c => ctx.run()(c));
     const written = new Set(result.files.filter(f => f.action === 'written').map(f => f.path));
     const commandNotes = commandFileFacts(setupRoot(ctx), harness ? commandFilePaths(pluginRoot, harness) : [], ctx.run()).filter(f => written.has(f.path) && f.state !== 'tracked');
+    const modelNotes = modelsProblems(loadConfig(setupRoot(ctx)), harness ?? findHarness(loadConfig(setupRoot(ctx)).harness), null).map(f => f.detail);
     const labels = createLabels(ctx);
     const jira = jiraSetup(ctx);
     const verifyCheck = requireVerify(ctx);
     const coverage = coverageNextStep(ctx, starter ? withStarterPacks(parsePackList(values.packs), starter) : parsePackList(values.packs));
     const offered = offerPresets(loadPresets(pluginRoot), installedSkills());
     const presets = offered.map(p => p.name);
-    if (values.json) console.log(JSON.stringify({...result, ...(unread.length > 0 ? {unread} : {}), ...(tracked.length > 0 ? {tracked_runtime: tracked} : {}), ...(commandNotes.length > 0 ? {untracked_commands: commandNotes} : {}), presets, labels, ...(jira ? {jira} : {}), ...(box ? {sandbox: box} : {}), ...(credential ? {credential} : {}), ...(verifyCheck ? {verify_check: verifyCheck} : {}), ...(coverage ? {coverage, next_steps: coverage.next_steps} : {})}));
+    if (values.json) console.log(JSON.stringify({...result, ...(unread.length > 0 ? {unread} : {}), ...(tracked.length > 0 ? {tracked_runtime: tracked} : {}), ...(commandNotes.length > 0 ? {untracked_commands: commandNotes} : {}), ...(modelNotes.length > 0 ? {models_problems: modelNotes} : {}), presets, labels, ...(jira ? {jira} : {}), ...(box ? {sandbox: box} : {}), ...(credential ? {credential} : {}), ...(verifyCheck ? {verify_check: verifyCheck} : {}), ...(coverage ? {coverage, next_steps: coverage.next_steps} : {})}));
     else
       console.log(
         [
@@ -218,6 +219,7 @@ export const setup: Command = {
           ...formatUnread(unread),
           ...formatTrackedRuntime(tracked),
           ...formatUntrackedCommands(commandNotes),
+          ...modelNotes.map(n => `! ${n}`),
           ...ownSessionNote(harness, pluginRoot),
           ...(box ? formatSandboxSetup(box) : []),
           ...(credential ? formatCredentialSetup(credential) : []),

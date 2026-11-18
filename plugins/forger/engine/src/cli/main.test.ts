@@ -365,6 +365,7 @@ describe('check', () => {
         {check: 'docs', opinions: ['base.ascii-punctuation', 'base.nothing-personal', 'base.no-hard-coded-skills', 'base.model-agnostic', 'base.merge-through-tool'], status: 'passed', violations: [], waived: [], gaps: []},
         {check: 'hooks', opinions: ['base.worker-hooks'], status: 'passed', violations: [], waived: [], gaps: []},
         {check: 'commands', opinions: ['base.worker-commands'], status: 'passed', violations: [], waived: [], gaps: []},
+        {check: 'models', opinions: ['base.worker-models'], status: 'passed', violations: [], waived: [], gaps: []},
         {check: 'guards', opinions: ['base.guards-hold'], status: 'passed', violations: [], waived: [], gaps: []},
         {check: 'tracker', opinions: ['base.tracker-ready'], status: 'passed', violations: [], waived: [], gaps: []},
       ],
@@ -1835,5 +1836,82 @@ describe('commands gate', () => {
     expect(text).toContain('base branch');
     const ignored = await capture(['setup', '--json', '--harness', 'codex'], gitSays('', ''));
     expect(ignored).not.toContain('untracked_commands');
+  });
+});
+
+describe('models gate', () => {
+  const answers = (listing: string | Error): CommandRunner => cmd => {
+    if (cmd === 'opencode models') {
+      if (listing instanceof Error) throw listing;
+      return listing;
+    }
+    if (cmd.startsWith('git ls-files')) return cmd.split("'").filter(p => p.startsWith('.opencode/')).join('\n');
+    if (cmd.startsWith('git check-ignore')) throw new Error('exit 1');
+    return 'main';
+  };
+
+  async function opencodeRepo(models: Record<string, string>): Promise<string> {
+    const root = realpathSync(mkdtempSync(join(tmpdir(), 'forger-cli-models-')));
+    dirs.push(root);
+    process.chdir(root);
+    await capture(['setup', '--json', '--no-starter', '--gates', 'make test', '--tracker', 'local', '--harness', 'opencode'], answers(''));
+    const file = join(root, '.forger', 'workloop.config.json');
+    const config = JSON.parse(readFileSync(file, 'utf-8'));
+    writeFileSync(file, JSON.stringify({...config, harness: 'opencode', models, model_by_priority: {P0: {model: 'deep', budget: 5}, default: {model: 'standard', budget: 5}}}));
+    return root;
+  }
+
+  async function runErr(run: CommandRunner): Promise<{err: string; log: string}> {
+    const err: string[] = [];
+    const origErr = console.error;
+    console.error = (m: string) => void err.push(String(m));
+    let log = '';
+    try {
+      log = await capture(['run', '--iterations', '0'], run);
+    } finally {
+      console.error = origErr;
+      process.exitCode = 0;
+    }
+    return {err: err.join('\n'), log};
+  }
+
+  test('run does not start on a models problem and prints it', async () => {
+    const root = await opencodeRepo({fast: 'haiku', standard: 'sonnet', deep: 'opus'});
+    const {err} = await runErr(answers('p/s\np/d\n'));
+    expect(err).toContain('Not starting: the models gate fails');
+    expect(err).toContain('"sonnet"');
+    expect(err).toContain('model_by_priority.default.model');
+    expect(existsSync(join(root, '.forger', 'state.json'))).toBe(false);
+  });
+
+  test('run does not start on a model the catalogue lacks', async () => {
+    await opencodeRepo({fast: 'p/f', standard: 'p/s', deep: 'p/d'});
+    const {err} = await runErr(answers('p/s\n'));
+    expect(err).toContain('"p/d"');
+    expect(err).toContain('opencode models');
+  });
+
+  test('run logs a catalogue it cannot read and goes past the models gate', async () => {
+    await opencodeRepo({fast: 'p/f', standard: 'p/s', deep: 'p/d'});
+    const {err, log} = await runErr(answers(new Error('not found')));
+    expect(log).toContain('could not read the models opencode lists');
+    expect(err).not.toContain('models gate');
+  });
+
+  test('check models prints the form problems and reads no catalogue', async () => {
+    await opencodeRepo({fast: 'haiku', standard: 'sonnet', deep: 'opus'});
+    const calls: string[] = [];
+    const out = JSON.parse(await capture(['check', 'models', '--json'], c => (calls.push(c), answers('')(c))));
+    expect(process.exitCode).toBe(1);
+    process.exitCode = 0;
+    expect(out.length).toBeGreaterThan(0);
+    expect(calls).not.toContain('opencode models');
+  });
+
+  test('setup prints the models problems of the config for its harness', async () => {
+    await opencodeRepo({fast: 'haiku', standard: 'sonnet', deep: 'opus'});
+    const text = await capture(['setup', '--no-starter', '--harness', 'opencode'], answers(''));
+    expect(text).toContain('! model_by_priority.default.model resolves to "sonnet"');
+    expect(text).toContain('opencode models');
   });
 });

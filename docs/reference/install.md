@@ -50,6 +50,7 @@ line again: it rewrites the commands that changed and keeps everything else.
 In these harnesses a command is named `forger-<step>`, for example
 `/forger-work` in OpenCode and Copilot and `$forger-work` in Codex.
 The command files hold no path of this machine. A worker the engine starts gets the plugin's folder from the engine; in your own session set `FORGER_ROOT` to the clone's `plugins/forger` folder (`setup` prints it). `setup --upgrade` rewrites files of an earlier form that hold a path.
+For a harness whose model ids carry a provider (see the adapters reference), `setup` keeps the config's models and prints each id that is not in that form; map the roles under `models` to ids from the harness's own listing, which `setup` never chooses for you, and `check models` confirms them.
 A worker runs in a worktree made from the base branch, so these command files must be committed and not ignored by git: `setup` lists the ones git ignores or does not track, `check commands` fails on them, and `run` starts no worker until they are on the base branch.
 
 Already-onboarded repos keep working with their files in `.claude/` (the legacy layout):

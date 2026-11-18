@@ -45,4 +45,5 @@ export const opencodeHarness: Harness = {
     return resolvePluginRoot(stripClaudeFrontmatter(source), 'FORGER_ROOT');
   },
   hooks: opencodeHooks,
+  models: {form: 'provider/model', accepts: id => /^[^/\s]+\/\S+$/.test(id), listing: 'opencode models'},
 };

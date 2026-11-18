@@ -29,6 +29,16 @@ export interface HarnessCredentials {
   howTo: string;
 }
 
+/** What a harness says of the model ids it takes; a harness that says nothing is not checked. */
+export interface HarnessModels {
+  /** The form an id takes, in words, for a problem to quote. */
+  form: string;
+  /** Whether `id` is in that form. */
+  accepts(id: string): boolean;
+  /** The command that prints the catalogue of ids the harness can run, one on a line. */
+  listing: string;
+}
+
 export interface Harness {
   id: string;
   credentials: HarnessCredentials;
@@ -58,6 +68,8 @@ export interface Harness {
   pluginRootVar: string;
   /** The source command text in this harness's format; `name` is the command's file name without extension. */
   packageCommand(source: string, name?: string): string;
+  /** The form of the ids the harness takes and where it lists them; absent when not known. */
+  models?: HarnessModels;
   /** Where the harness reads a project's tool-call hooks, or null when it has none forger can install into. */
   hooks: HarnessHooks | null;
 }

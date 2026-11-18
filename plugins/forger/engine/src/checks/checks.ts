@@ -14,6 +14,7 @@ import {runDocsCheck} from './docs';
 import {runGuardsCheck} from './guards';
 import {runCommandsCheck} from './commands';
 import {runHooksCheck} from './hooks';
+import {runModelsCheck} from './models';
 import {runDeliveryCheck} from './delivery';
 import {runJourneysCheck} from './journeys';
 import type {CommandRunner, Harness, SpecProvider} from '../ports';
@@ -95,6 +96,7 @@ export const CHECKS: Record<string, (ctx: CheckContext) => Finding[] | CheckOutp
   ui: ctx => runUiCheckOutput(ctx.projectRoot, ctx.run),
   hooks: ctx => runHooksCheck(ctx.projectRoot, ctx.harness),
   commands: ctx => (ctx.pluginRoot && ctx.harness ? runCommandsCheck(ctx.projectRoot, commandFilePaths(ctx.pluginRoot, ctx.harness), ctx.run) : []),
+  models: ctx => runModelsCheck(loadConfig(ctx.projectRoot), ctx.harness),
   tracker: ctx => {
     return trackerLines(jiraSettingsOf(loadConfig(ctx.projectRoot)), process.env, capturing(ctx.run))
       .filter(l => !l.ok)

@@ -14,6 +14,7 @@ export * from './testing';
 export * from './ui';
 export * from './spec';
 export * from './commands';
+export * from './models';
 export * from './hooks';
 export * from './structure';
 export * from './record';
