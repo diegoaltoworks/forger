@@ -256,7 +256,10 @@
       "ticket": "issue-540",
       "pid": null,
       "session_id": "613cb022-fff6-4a32-9f0d-a574037c3fbd",
-      "snapshot": null,
+      "snapshot": {
+        "baseSha": "",
+        "reflogLength": 1
+      },
       "started_at": "2026-11-18T06:30:50.635Z",
       "plan": {
         "stages": [
