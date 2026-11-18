@@ -379,7 +379,10 @@
       "ticket": "issue-531",
       "pid": null,
       "session_id": "d6576589-e4af-435b-814b-b995048b9055",
-      "snapshot": null,
+      "snapshot": {
+        "baseSha": "",
+        "reflogLength": 1
+      },
       "started_at": "2026-11-18T02:51:19.665Z",
       "plan": {
         "stages": [
