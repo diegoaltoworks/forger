@@ -48,3 +48,4 @@
 {"event":"worker_denied","at":"2026-11-18T15:53:15.353Z","iteration":279,"ticket":"issue-552","reason":"merge: gh pr merge 553 --squash --delete-branch 2>&1 | tail -3; gh pr view 553 --json state -q .state"}
 {"event":"picked","at":"2026-11-18T15:53:55.859Z","iteration":280,"ticket":"issue-552","reason":null,"commands":"engine"}
 {"event":"runner_gone","at":"2026-11-18T15:58:59.568Z","iteration":280,"ticket":"issue-552","reason":"Nothing merged or pushed, exit code -1"}
+{"event":"too_many_failures","at":"2026-11-18T15:59:17.567Z","iteration":280,"ticket":null,"reason":"Too many consecutive failures (3)"}
