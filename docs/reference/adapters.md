@@ -18,7 +18,7 @@ there is one model mapping and several harnesses, named here and nowhere else in
   commands: OpenCode reads them from `.opencode/commands/`; Codex and Copilot read repository skills, so
   they go to `.agents/skills/` and `.github/skills/`, and the worker is started by naming its skill. The steps exist once, in `commands/`; an adapter repackages them
   (frontmatter, plugin root) and never copies their text per harness. OpenCode takes a model as
-  `provider/model`, so map the roles under `models` to such ids.
+  `provider/model`, so map the roles under `models` to such ids; `opencode models` lists the ones it can run. `check models` fails on an id that is not in that form, and `run` also reads that listing and starts no worker on an id missing from it; a listing that cannot be read is one logged line. A harness whose form and listing are not known here is not checked.
 
   Where a session takes forger's commands from differs by harness. Claude Code loads the engine's own plugin
   directory for the session (`--plugin-dir`), so a worker, a verifier, a critic and an eval run the commands of

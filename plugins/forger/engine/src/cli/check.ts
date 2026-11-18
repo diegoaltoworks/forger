@@ -13,6 +13,7 @@ import {
   runDocsCheck,
   runDocsWarnings,
   runCommandsCheck,
+  runModelsCheck,
   runHooksCheck,
   runBudgetsCheck,
   runDeliveryCheck,
@@ -69,6 +70,7 @@ export const check: Command = {
   check guards [--json]    Fail when the diff loosens a guard, skips or deletes a test and the ticket's Decisions do not name it
   check hooks [--json] Fail when the hook policy is missing or drops a default rule without a waiver, or the harness's settings do not run the hook
   check commands [--json] Fail when a command file the harness reads from the repository is missing, ignored by git or not tracked; a worker runs from the base branch and would not have it
+  check models [--json] Fail when a model the config can pick is not in the form the harness takes (a harness that says nothing is not checked); reads no catalogue (run does)
   check safety [--json] Fail on an added secret or a stored-shape change with no test
   check delivery [--json] Validate .forger/deliver.json (check required, commands non-empty, timeouts positive); runs none of the commands
   check journeys [--json] Start the app, run each journey in .forger/journeys.json and fail on one that exits non-zero; no journey named is a gap, not a pass
@@ -218,8 +220,8 @@ export const check: Command = {
       }
       return;
     }
-    if (!(positionals[1] in SINGLE) && positionals[1] !== 'commands') {
-      console.error('Usage: check [--json | --summary] | check docs|arch|structure|decisions|guards|hooks|commands|safety|delivery|journeys|budgets|tests|coverage|ui|spec|a11y|sandbox [--json] | check coverage --update');
+    if (!(positionals[1] in SINGLE) && positionals[1] !== 'commands' && positionals[1] !== 'models') {
+      console.error('Usage: check [--json | --summary] | check docs|arch|structure|decisions|guards|hooks|commands|models|safety|delivery|journeys|budgets|tests|coverage|ui|spec|a11y|sandbox [--json] | check coverage --update');
       process.exitCode = 1;
       return;
     }
@@ -248,7 +250,7 @@ export const check: Command = {
     let violations;
     try {
       const run = ctx.run();
-      const found = positionals[1] === 'commands' ? runCommandsCheck(projectRoot, commandPathsOf(pluginRoot, harnessOfRoot(projectRoot)), run) : SINGLE[positionals[1] as keyof typeof SINGLE](projectRoot, run);
+      const found = positionals[1] === 'models' ? runModelsCheck(loadConfig(projectRoot), harnessOfRoot(projectRoot)) : positionals[1] === 'commands' ? runCommandsCheck(projectRoot, commandPathsOf(pluginRoot, harnessOfRoot(projectRoot)), run) : SINGLE[positionals[1] as keyof typeof SINGLE](projectRoot, run);
       violations = applyWaivers(found, loadWaivers(projectRoot)).violations;
     } catch (e) {
       console.error((e as Error).message);
