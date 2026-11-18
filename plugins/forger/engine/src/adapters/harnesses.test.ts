@@ -8,6 +8,7 @@ import {claudeHarness} from './claude';
 import {codexHarness} from './codex';
 import {copilotHarness} from './copilot';
 import {hostSandbox} from './host-sandbox';
+import {extractVerdict} from '../loop';
 import {agentFor, findHarness, HARNESSES} from './harnesses';
 import {packageAsSkill} from './skill-package';
 import {opencodeCommandName, opencodeHarness, stripClaudeFrontmatter} from './opencode';
@@ -200,5 +201,52 @@ describe('the run budget', () => {
     const r = await run(false, 0.02);
     expect(r.overSpend ?? null).toBeNull();
     expect(r.timedOut).toBe(true);
+  });
+});
+
+describe('the worker words apart from the stream', () => {
+  const words = (out: string) =>
+    out
+      .split('\n')
+      .flatMap(line => {
+        try {
+          const e = JSON.parse(line) as {type?: string; text?: string};
+          return e.type === 'text' && typeof e.text === 'string' ? [e.text] : [];
+        } catch {
+          return [];
+        }
+      })
+      .join('\n');
+  const streaming = (said: string) => {
+    const events = [{type: 'step_start', part: {id: 'p1'}}, {type: 'tool_use', input: {command: 'bun test'}}, ...(said ? [{type: 'text', text: said}] : [])];
+    return {
+      ...claudeHarness,
+      id: 'stream',
+      usage: 'none' as const,
+      plainText: words,
+      spawn: () => ({command: 'bash', args: ['-c', `cat <<'EOF'\n${events.map(e => JSON.stringify(e)).join('\n')}\nEOF`]}),
+    };
+  };
+  const reply = async (said: string) => (await agentFor(streaming(said), {}, hostSandbox(noGit)).run({...opts, cwd: process.cwd()})).reply ?? '';
+  const verdict = '{"verdict":[{"criterion":"c1","verdict":"met","evidence":[]}]}';
+
+  test('a verdict written as a bare object is read from the reply of a harness that prints an event stream', async () => {
+    expect(extractVerdict(await reply(verdict))?.[0].criterion).toBe('c1');
+  });
+
+  test('a verdict after a sentence and a verdict in a code fence are read from the reply of a harness that prints an event stream', async () => {
+    expect(extractVerdict(await reply(`All criteria checked. ${verdict}`))?.[0].criterion).toBe('c1');
+    expect(extractVerdict(await reply(`Here it is:\n\`\`\`json\n${verdict}\n\`\`\``))?.[0].criterion).toBe('c1');
+  });
+
+  test("the agent result carries the worker's words apart from the stream, and the output itself for a harness with no text reader", async () => {
+    const streamed = await agentFor(streaming('done'), {}, hostSandbox(noGit)).run({...opts, cwd: process.cwd()});
+    expect(streamed.reply).toBe('done');
+    expect(streamed.output).toContain('"type":"step_start"');
+    expect(streamed.output.trimEnd().endsWith('done')).toBe(true);
+    const {plainText: _, ...plain} = {...streaming('done'), spawn: () => ({command: 'bash', args: ['-c', 'echo plain words']})};
+    const said = await agentFor(plain, {}, hostSandbox(noGit)).run({...opts, cwd: process.cwd()});
+    expect(said.reply).toBe(said.output);
+    expect(said.output).toContain('plain words');
   });
 });

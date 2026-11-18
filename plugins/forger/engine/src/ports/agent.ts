@@ -18,7 +18,13 @@ export interface SupervisedResult {
   inputError?: string | null;
 }
 
-export type AgentResult = SupervisedResult;
+export interface AgentResult extends SupervisedResult {
+  /**
+   * The worker's own words apart from the harness's event stream: the harness's plain text when it
+   * has a text reader, else the output itself. Absent from a runner that does not set it.
+   */
+  reply?: string;
+}
 
 export interface AgentRunOptions {
   prompt: string;

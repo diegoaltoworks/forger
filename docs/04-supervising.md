@@ -148,6 +148,12 @@ A ticket whose verification ran out of rounds carries `needs-human`; The report'
 When a verdict is not a pass, or a citation did not check out, `verify` keeps the
 verifier's command log beside the verdict record (the record's `commandLog` names
 it); it stays on the machine and is never posted to the tracker.
+The verdict is read from the verifier's reply, its own words apart from any event
+stream the harness prints. When no verdict can be read from it, `verify` keeps the
+reply beside the record as well (the record's `reply` names it), the problem says
+whether the reply held no JSON verdict or the verifier said nothing, and the
+`forger/verify` status reads `no verdict read`: a failure, like any verdict that
+is not a pass, but one where nobody judged the work.
 
 ## 6. Sync
 

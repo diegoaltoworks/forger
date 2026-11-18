@@ -155,6 +155,11 @@ export function verdictFile(dir: string, pr: number, head: string): string {
   return join(dir, `pr-${pr}-${head}.json`);
 }
 
+/** Where the verifier's reply is kept when no verdict was read from it: beside the verdict record, same name. */
+export function replyFile(dir: string, pr: number, head: string): string {
+  return verdictFile(dir, pr, head).replace(/\.json$/, '.reply.txt');
+}
+
 /** Where a non-pass verdict's command log is kept: beside the verdict record, same name. */
 export function commandLogFile(dir: string, pr: number, head: string): string {
   return verdictFile(dir, pr, head).replace(/\.json$/, '.commands.jsonl');
@@ -341,8 +346,9 @@ export async function verifyPr(run: CommandRunner, agent: AgentRunner, opts: Ver
       const commands = existsSync(log) ? parseCommandLog(readFileSync(log, 'utf-8')) : [];
       const record = copyRecord(dir, commands);
       const holds = (e: Parameters<typeof evidenceHolds>[1]) => evidenceHolds(record, e);
-      const judged = recordVerdict(subject, criteriaAsked, result.output, holds);
-      return {holds, judged: {...judged, entries: noteCutOutput(judged.entries, commands)}};
+      const reply = result.reply ?? result.output;
+      const judged = recordVerdict(subject, criteriaAsked, reply, holds);
+      return {holds, reply, judged: {...judged, entries: noteCutOutput(judged.entries, commands)}};
     };
     const first = await ask(remaining);
     let judged = first.judged;
@@ -356,7 +362,7 @@ export async function verifyPr(run: CommandRunner, agent: AgentRunner, opts: Ver
         judged = {...judged, decision: reduceVerdict(judged.entries)};
       }
     }
-    return writeRecord(opts, setup, log, {...judged, ...mergeEntries(criteria, mechanical, judged.entries), problems: judged.problems});
+    return writeRecord(opts, setup, log, {...judged, ...mergeEntries(criteria, mechanical, judged.entries), problems: judged.problems}, first.reply);
   } catch (e) {
     return outOfSpace(e);
   } finally {
@@ -382,8 +388,15 @@ export function dropCheckout(run: CommandRunner, dir: string): void {
   }
 }
 
-function writeRecord(opts: VerifyOptions, setup: SetupChoice | null, log: string, base: VerdictRecord): VerifyResult {
+function writeRecord(opts: VerifyOptions, setup: SetupChoice | null, log: string, base: VerdictRecord, reply?: string): VerifyResult {
   mkdirSync(opts.verdictsDir, {recursive: true});
+  const replyKept = replyFile(opts.verdictsDir, base.pr, base.head);
+  rmSync(replyKept, {force: true});
+  let keptReply: string | null = null;
+  if (base.noVerdict && reply !== undefined) {
+    writeFileSync(replyKept, reply);
+    keptReply = replyKept;
+  }
   const kept = commandLogFile(opts.verdictsDir, base.pr, base.head);
   const unchecked = base.entries.some(e => e.demoted?.startsWith(EVIDENCE_DEMOTION));
   let commandLog: string | null = null;
@@ -392,8 +405,8 @@ function writeRecord(opts: VerifyOptions, setup: SetupChoice | null, log: string
     renameSync(log, kept);
     commandLog = kept;
   }
-  const record: VerdictRecord = {...base, setup, commandLog};
+  const record: VerdictRecord = {...base, setup, commandLog, ...(base.noVerdict ? {reply: keptReply} : {})};
   writeFileSync(verdictFile(opts.verdictsDir, record.pr, record.head), JSON.stringify(record, null, 2) + '\n');
   if (!opts.publishStatus || !opts.capture) return record;
-  return {...record, status: setVerifyStatus(opts.capture, record.head, record.decision)};
+  return {...record, status: setVerifyStatus(opts.capture, record.head, record.decision, record.noVerdict === true)};
 }
