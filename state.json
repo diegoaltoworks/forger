@@ -262,7 +262,10 @@
       "ticket": "issue-552",
       "pid": null,
       "session_id": "a20bda1e-8040-4a36-b46d-b0f76e8fee14",
-      "snapshot": null,
+      "snapshot": {
+        "baseSha": "",
+        "reflogLength": 1
+      },
       "started_at": "2026-11-18T15:53:50.457Z",
       "plan": {
         "stages": [
