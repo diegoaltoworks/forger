@@ -1,8 +1,8 @@
 {
   "iteration": 278,
   "status": "owner-review",
-  "last_completed_at": "2026-11-18T12:29:27.647Z",
-  "completed_iterations": 252,
+  "last_completed_at": "2026-11-18T15:51:06.690Z",
+  "completed_iterations": 253,
   "failed_iterations": 11,
   "consecutive_failures": 1,
   "completed_tasks": [
@@ -254,7 +254,8 @@
     "issue-541",
     "issue-542",
     "issue-546",
-    "issue-548"
+    "issue-548",
+    "issue-549"
   ],
   "in_flight": [],
   "last_error": "Claimed complete but nothing merged into main",
@@ -287,9 +288,7 @@
     }
   ],
   "consecutive_declines": 0,
-  "owner_review_tasks": [
-    "issue-549"
-  ],
+  "owner_review_tasks": [],
   "set_aside_tasks": [],
   "consecutive_set_asides": 0,
   "last_remaining_count": 12
