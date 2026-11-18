@@ -1,5 +1,5 @@
 import {afterEach, describe, expect, test} from 'bun:test';
-import {existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync} from 'fs';
+import {cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync} from 'fs';
 import {tmpdir} from 'os';
 import {join, resolve} from 'path';
 
@@ -7,7 +7,7 @@ import {claudeHarness, codexHarness, copilotHarness, opencodeHarness} from '../a
 import {EARLIER_HOOK_LINE} from '../hooks';
 import {formatJiraSetupNote, jiraSetupNote} from '../tracker';
 import {sha256} from './packs';
-import {findBaseBranch, formatSetup, gitignoreLines, mergeGitignore, relocatableGates, renderConfig, runSetup, HOOK_COMMAND_LINE, trackedRuntimeFiles, formatTrackedRuntime, withCheck, workerCommandsSource} from './setup';
+import {findBaseBranch, formatSetup, gitignoreLines, mergeGitignore, relocatableGates, renderConfig, runSetup, HOOK_COMMAND_LINE, trackedRuntimeFiles, formatTrackedRuntime, withCheck, workerCommandsSource, ownSessionNote} from './setup';
 
 const PLUGIN_ROOT = resolve(import.meta.dir, '../../..');
 const dirs: string[] = [];
@@ -190,6 +190,48 @@ describe('workerCommandsSource', () => {
   });
 });
 
+describe('command files across machines', () => {
+  const copyOfPlugin = () => {
+    const dir = mkdtempSync(join(tmpdir(), 'plugin-copy-'));
+    cpSync(PLUGIN_ROOT, dir, {recursive: true, filter: src => !/\/(engine|node_modules)(\/|$)/.test(src.slice(PLUGIN_ROOT.length))});
+    return dir;
+  };
+
+  test('the packaging of a command is the same for two different plugin folders', () => {
+    const other = copyOfPlugin();
+    const a = emptyProject();
+    const b = emptyProject();
+    runSetup(a, PLUGIN_ROOT, {harness: codexHarness});
+    runSetup(b, other, {harness: codexHarness});
+    const rel = codexHarness.commandPath('auto-ticket') as string;
+    expect(readFileSync(join(a, rel), 'utf-8')).toBe(readFileSync(join(b, rel), 'utf-8'));
+  });
+
+  test('a committed command file reads as the engine\'s on a machine with another plugin folder', () => {
+    const root = emptyProject();
+    runSetup(root, copyOfPlugin(), {harness: codexHarness});
+    expect(workerCommandsSource(codexHarness, PLUGIN_ROOT, root)).toBe('engine');
+  });
+
+  test('an upgrade rewrites a command file that holds a path', () => {
+    const root = emptyProject();
+    runSetup(root, PLUGIN_ROOT, {harness: codexHarness});
+    const file = join(root, codexHarness.commandPath('auto-ticket') as string);
+    writeFileSync(file, readFileSync(file, 'utf-8').replaceAll('${FORGER_ROOT:?set FORGER_ROOT to the forger plugin folder}', PLUGIN_ROOT));
+    expect(workerCommandsSource(codexHarness, PLUGIN_ROOT, root)).toBe('other');
+    const again = runSetup(root, PLUGIN_ROOT, {harness: codexHarness});
+    expect(again.files.find(f => f.path === codexHarness.commandPath('auto-ticket'))?.action).toBe('written');
+    expect(workerCommandsSource(codexHarness, PLUGIN_ROOT, root)).toBe('engine');
+  });
+
+  test('setup tells a person which variable their own session needs and its value on this machine', () => {
+    const [line] = ownSessionNote(codexHarness, PLUGIN_ROOT);
+    expect(line).toContain(`FORGER_ROOT=${PLUGIN_ROOT}`);
+    expect(ownSessionNote(claudeHarness, PLUGIN_ROOT)).toEqual([]);
+    expect(ownSessionNote(undefined, PLUGIN_ROOT)).toEqual([]);
+  });
+});
+
 describe('runSetup layout and harness', () => {
   test('a fresh setup writes only .forger/ and the gitignore', () => {
     const root = emptyProject();
@@ -217,7 +259,7 @@ describe('runSetup layout and harness', () => {
     const text = readFileSync(command, 'utf-8');
     expect(text).not.toContain('allowed-tools');
     expect(text).not.toContain('CLAUDE_PLUGIN_ROOT');
-    expect(text).toContain(PLUGIN_ROOT);
+    expect(text).not.toContain(PLUGIN_ROOT);
     expect(first.files.find(f => f.path === '.opencode/commands/forger-auto-ticket.md')?.action).toBe('written');
     const second = runSetup(root, PLUGIN_ROOT, {harness: opencodeHarness});
     expect(second.files.every(f => f.action === 'kept')).toBe(true);

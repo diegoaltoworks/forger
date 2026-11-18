@@ -25,6 +25,6 @@ export const copilotHarness: Harness = {
   },
   commandPath: name => `.github/skills/${skillName(name)}/SKILL.md`,
   pluginRootVar: 'FORGER_ROOT',
-  packageCommand: (source, pluginRoot, name) => packageAsSkill(source, pluginRoot, skillName(name ?? 'command')),
+  packageCommand: (source, name) => packageAsSkill(source, skillName(name ?? 'command'), 'FORGER_ROOT'),
   hooks: copilotHooks,
 };

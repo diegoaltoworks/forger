@@ -54,10 +54,10 @@ export interface Harness {
    * or null when the harness installs commands through its own plugin system.
    */
   commandPath(name: string): string | null;
-  /** The variable the source commands use for the plugin root; `packageCommand` resolves it. */
+  /** The variable the source commands use for the plugin root; `packageCommand` names it, so a packaged file holds no path. */
   pluginRootVar: string;
   /** The source command text in this harness's format; `name` is the command's file name without extension. */
-  packageCommand(source: string, pluginRoot: string, name?: string): string;
+  packageCommand(source: string, name?: string): string;
   /** Where the harness reads a project's tool-call hooks, or null when it has none forger can install into. */
   hooks: HarnessHooks | null;
 }

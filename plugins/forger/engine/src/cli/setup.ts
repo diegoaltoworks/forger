@@ -7,7 +7,7 @@ import type {Harness} from '../ports';
 import {commandFileFacts, formatUntrackedCommands, runChecks} from '../checks';
 import {harnessOfRoot} from './harness-of';
 import {specProvider} from './spec-provider';
-import {commandFilePaths, coverageAdvice, formatCoverageAdvice, formatSetup, failingChecksOf, formatUpgrade, formatUpgradeChecks, upgradeChangedFiles, type UpgradeChecks, readRepoFacts, type CoverageAdvice, loadPresets, offerPresets, parsePackList, runSetup, runUpgrade, trackedRuntimeFiles, formatTrackedRuntime, chooseStarter, hasSourceFile, loadStarters, withStarterPacks, type StarterManifest} from '../packs';
+import {ownSessionNote, commandFilePaths, coverageAdvice, formatCoverageAdvice, formatSetup, failingChecksOf, formatUpgrade, formatUpgradeChecks, upgradeChangedFiles, type UpgradeChecks, readRepoFacts, type CoverageAdvice, loadPresets, offerPresets, parsePackList, runSetup, runUpgrade, trackedRuntimeFiles, formatTrackedRuntime, chooseStarter, hasSourceFile, loadStarters, withStarterPacks, type StarterManifest} from '../packs';
 import {existsSync, readFileSync} from 'fs';
 import {join} from 'path';
 import {formatCredentialSetup, formatSandboxSetup, setupCredential, setupSandbox, type CredentialSetup, type SandboxSetup} from './setup-sandbox';
@@ -218,6 +218,7 @@ export const setup: Command = {
           ...formatUnread(unread),
           ...formatTrackedRuntime(tracked),
           ...formatUntrackedCommands(commandNotes),
+          ...ownSessionNote(harness, pluginRoot),
           ...(box ? formatSandboxSetup(box) : []),
           ...(credential ? formatCredentialSetup(credential) : []),
           ...labels.created.map(l => `label   ${l}`),

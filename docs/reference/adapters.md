@@ -24,7 +24,7 @@ there is one model mapping and several harnesses, named here and nowhere else in
   directory for the session (`--plugin-dir`), so a worker, a verifier, a critic and an eval run the commands of
   the engine's root and never change what the harness has installed for the person's own sessions; in a
   `docker` container the directory is the copy in the container. OpenCode, Codex and Copilot have no such
-  option: their sessions read the command files `setup` installed into the project.
+  option: their sessions read the command files `setup` installed into the project. Those files name no path, so they are the same on every machine and are committed; a worker the engine starts has `FORGER_PLUGIN_ROOT`, and a person's own session sets `FORGER_ROOT` to the plugin's folder (`setup` prints the value for this machine).
 
 - **Sandbox.** Where a worker's process runs, and with what limits, sits behind a `Sandbox` seam beside
   `Harness`, with `host` and `docker` backends shipped and a later `remote` backend proposed. See
