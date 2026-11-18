@@ -56,9 +56,9 @@ describe('install paths', () => {
 
 describe('packaging', () => {
   const source = '---\ndescription: d\nallowed-tools: Bash(*)\n---\n\nrun bun "${CLAUDE_PLUGIN_ROOT}/bin/work.ts" and $CLAUDE_PLUGIN_ROOT\n';
-  test('claude keeps the source as it is', () => expect(claudeHarness.packageCommand(source, '/plug')).toBe(source));
+  test('claude keeps the source as it is', () => expect(claudeHarness.packageCommand(source)).toBe(source));
   test('opencode drops the keys it does not read and resolves the plugin root', () => {
-    expect(opencodeHarness.packageCommand(source, '/plug')).toBe('---\ndescription: d\n---\n\nrun bun "/plug/bin/work.ts" and /plug\n');
+    expect(opencodeHarness.packageCommand(source)).toBe('---\ndescription: d\n---\n\nrun bun "${FORGER_ROOT:?set FORGER_ROOT to the forger plugin folder}/bin/work.ts" and ${FORGER_ROOT:?set FORGER_ROOT to the forger plugin folder}\n');
   });
   test('text without frontmatter is unchanged', () => expect(stripClaudeFrontmatter('hello')).toBe('hello'));
 });
@@ -90,11 +90,30 @@ describe('the engine root an engine call names', () => {
       expect(c).toContain('forger hook could not run');
     }
   });
+  const named = 'bun "${FORGER_PLUGIN_ROOT:-${FORGER_ROOT:?set FORGER_ROOT to the forger plugin folder}}/bin/work.ts" status';
   test('opencode packages an engine call that prefers the engine\'s root', () => {
-    expect(opencodeHarness.packageCommand(call, '/plug')).toBe('bun "${FORGER_PLUGIN_ROOT:-/plug}/bin/work.ts" status');
+    expect(opencodeHarness.packageCommand(call)).toBe(named);
   });
   test('a skill harness packages an engine call that prefers the engine\'s root', () => {
-    expect(packageAsSkill(call, '/plug', 'forger-x')).toContain('bun "${FORGER_PLUGIN_ROOT:-/plug}/bin/work.ts" status');
+    expect(packageAsSkill(call, 'forger-x', 'FORGER_ROOT')).toContain(named);
+  });
+  test('a packaged engine call names the engine\'s variable, then the harness\'s variable, and no path', () => {
+    for (const h of [opencodeHarness, codexHarness, copilotHarness]) {
+      const out = h.packageCommand(call, 'x');
+      expect(out).toContain('${FORGER_PLUGIN_ROOT:-${FORGER_ROOT:?set FORGER_ROOT to the forger plugin folder}}/bin/work.ts');
+      expect(out).not.toContain('CLAUDE_PLUGIN_ROOT');
+      expect(out).not.toMatch(/"\//);
+    }
+  });
+  test('no packaged command holds an absolute path', () => {
+    for (const f of readdirSync(commandsDir).filter((n) => n.endsWith('.md'))) {
+      const src = readFileSync(join(commandsDir, f), 'utf8');
+      for (const h of [opencodeHarness, codexHarness, copilotHarness]) {
+        const out = h.packageCommand(src, f.slice(0, -3));
+        expect(out).not.toContain(join(import.meta.dir, '../../..'));
+        expect(out).not.toMatch(/\$\{FORGER_PLUGIN_ROOT:-\//);
+      }
+    }
   });
 });
 
@@ -124,7 +143,7 @@ describe('skill harnesses', () => {
   const source = '---\ndescription: d\nallowed-tools: Bash(*)\n---\n\nrun "${CLAUDE_PLUGIN_ROOT}/bin/work.ts"\n';
   for (const h of [codexHarness, copilotHarness]) {
     test(`${h.id} keeps name and description, drops the rest, resolves the plugin root`, () => {
-      expect(h.packageCommand(source, '/plug', 'auto-ticket')).toBe('---\nname: forger-auto-ticket\ndescription: d\n---\n\nrun "/plug/bin/work.ts"\n');
+      expect(h.packageCommand(source, 'auto-ticket')).toBe('---\nname: forger-auto-ticket\ndescription: d\n---\n\nrun "${FORGER_ROOT:?set FORGER_ROOT to the forger plugin folder}/bin/work.ts"\n');
     });
   }
 });
