@@ -1,6 +1,6 @@
 {
-  "iteration": 280,
-  "status": "ready",
+  "iteration": 281,
+  "status": "running",
   "last_completed_at": "2026-11-18T15:51:06.690Z",
   "completed_iterations": 253,
   "failed_iterations": 13,
@@ -257,7 +257,15 @@
     "issue-548",
     "issue-549"
   ],
-  "in_flight": [],
+  "in_flight": [
+    {
+      "ticket": null,
+      "pid": null,
+      "session_id": "d7e4eb9e-3f75-4491-9d59-f9f97d271926",
+      "snapshot": null,
+      "started_at": "2026-11-18T16:02:43.671Z"
+    }
+  ],
   "last_error": "Too many consecutive failures (3)",
   "stall_count": 0,
   "declined_tasks": [
