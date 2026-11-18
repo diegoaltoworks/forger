@@ -1,6 +1,6 @@
 {
-  "iteration": 271,
-  "status": "partial",
+  "iteration": 272,
+  "status": "running",
   "last_completed_at": "2026-11-18T06:42:11.137Z",
   "completed_iterations": 248,
   "failed_iterations": 9,
@@ -252,7 +252,15 @@
     "issue-531",
     "issue-540"
   ],
-  "in_flight": [],
+  "in_flight": [
+    {
+      "ticket": null,
+      "pid": null,
+      "session_id": "cff1f0bd-990a-4784-8dd9-856afff97735",
+      "snapshot": null,
+      "started_at": "2026-11-18T11:11:15.548Z"
+    }
+  ],
   "last_error": "feat/issue-541 pushed, not merged",
   "stall_count": 0,
   "declined_tasks": [
