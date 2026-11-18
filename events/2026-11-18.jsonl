@@ -49,3 +49,4 @@
 {"event":"picked","at":"2026-11-18T15:53:55.859Z","iteration":280,"ticket":"issue-552","reason":null,"commands":"engine"}
 {"event":"runner_gone","at":"2026-11-18T15:58:59.568Z","iteration":280,"ticket":"issue-552","reason":"Nothing merged or pushed, exit code -1"}
 {"event":"too_many_failures","at":"2026-11-18T15:59:17.567Z","iteration":280,"ticket":null,"reason":"Too many consecutive failures (3)"}
+{"event":"halt_cleared","at":"2026-11-18T16:02:16.094Z","iteration":280,"ticket":null,"reason":"Too many consecutive failures (3)","cause":null,"not_a_defect":"Three counted failures, none in the queued ticket: a session on #549 ended before its PR merged (merged later as PR #551); a worker tried a hand merge of PR #553 and the hook refused; the engine was stopped mid-ticket on the owner's word to withdraw the 1.0.0 release"}
