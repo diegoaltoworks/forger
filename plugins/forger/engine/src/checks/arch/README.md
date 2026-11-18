@@ -14,6 +14,8 @@ The same file may also declare folders. A declared folder needs a README and a p
   outside through the entry file. Pure.
 - `arch-check.ts` - reads the layer map and the tracked sources. Reports a
   SHOULD gap per unread source extension in a layer. Touches the world.
+- `packages.test.ts` - the engine imports only its own files and the runtime.
+  So an installed copy starts with nothing fetched.
 
 ## Entry point
 

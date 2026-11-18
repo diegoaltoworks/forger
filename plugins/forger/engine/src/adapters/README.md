@@ -17,7 +17,6 @@ world, and is tested against real processes.
 - `github-token.ts` - the run's one GitHub token: a variable, or one minted for the repository through an injected `GithubApi`.
 - `redacting-sandbox.ts` - wraps any `Sandbox` so credential values are removed from the output the engine records.
 - `sandboxes.ts` - the sandboxes by id, and `sandboxFor`, which the config's `sandbox` key picks.
-- `svg-raster.ts` - the brand `Rasteriser` over resvg; text is already outlines, so no font is loaded.
 - `static-server.ts` - the `AppServer` port over one folder served in-process, for wireframes
 - `app-server.ts` - the `AppServer` port over a shell command in its own process
   group, ready when the url answers.

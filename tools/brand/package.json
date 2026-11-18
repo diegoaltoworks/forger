@@ -1,0 +1,16 @@
+{
+  "name": "@forger/brand",
+  "version": "0.1.0",
+  "description": "Renders the repository's brand rasters and icon from the SVGs in assets/brand.",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "test": "bun test",
+    "check": "tsc --noEmit && bun test"
+  },
+  "devDependencies": {
+    "@resvg/resvg-js": "^2.6.2",
+    "@types/bun": "latest",
+    "typescript": "^5"
+  }
+}

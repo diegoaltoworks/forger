@@ -5,7 +5,6 @@
 
 import {approval} from './approval';
 import {backlog} from './backlog';
-import {brand} from './brand';
 import {catalogue} from './catalogue';
 import {check} from './check';
 import {contract} from './contract';
@@ -58,7 +57,6 @@ export const COMMANDS: Command[] = [
   intent,
   screenshot,
   ui,
-  brand,
   backlog,
   linkBlockersCommand,
   orient,

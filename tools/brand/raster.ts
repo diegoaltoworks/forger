@@ -1,6 +1,6 @@
 import {Resvg} from '@resvg/resvg-js';
 
-import type {Rasteriser} from '../brand';
+import type {Rasteriser} from './render';
 
 /**
  * The `Rasteriser` over resvg. The SVGs outline their text, so no font is

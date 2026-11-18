@@ -11,7 +11,6 @@ export * from './slcr';
 export * from './slcr-report';
 export * from './static-server';
 export * from './supervise';
-export * from './svg-raster';
 export * from './git-state-store';
 export * from './local-state-store';
 export * from './memory-state-store';
