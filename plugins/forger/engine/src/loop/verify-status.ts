@@ -16,9 +16,13 @@ export interface VerifyStatus {
   description: string;
 }
 
-/** Only a pass is success: an unclear verdict blocks a merge exactly as a failing one does. */
-export function verifyStatusFor(decision: Decision): VerifyStatus {
-  return {state: decision === 'pass' ? 'success' : 'failure', description: `verdict: ${decision}`};
+/**
+ * Only a pass is success: an unclear verdict blocks a merge exactly as a failing one does.
+ * A reply the engine could not read is not the verifier finding the work unclear, so it says so.
+ */
+export function verifyStatusFor(decision: Decision, noVerdict = false): VerifyStatus {
+  const state = decision === 'pass' ? 'success' : 'failure';
+  return {state, description: noVerdict && state === 'failure' ? 'no verdict read' : `verdict: ${decision}`};
 }
 
 /** What setting the status did; `error` is set when GitHub refused it. */
@@ -37,8 +41,8 @@ function failure(r: CommandResult): string {
 }
 
 /** A status is bound to the commit: a push after a pass leaves the new head without one until `verify` runs again. */
-export function setVerifyStatus(run: CapturingRunner, head: string, decision: Decision): VerifyStatusOutcome {
-  const s = verifyStatusFor(decision);
+export function setVerifyStatus(run: CapturingRunner, head: string, decision: Decision, noVerdict = false): VerifyStatusOutcome {
+  const s = verifyStatusFor(decision, noVerdict);
   const r = run(
     `gh api -X POST repos/{owner}/{repo}/statuses/${head} -f state=${s.state} -f context=${q(VERIFY_STATUS_CONTEXT)} -f description=${q(s.description)}`
   );

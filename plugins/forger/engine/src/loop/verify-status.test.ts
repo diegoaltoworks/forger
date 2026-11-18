@@ -33,6 +33,10 @@ describe('verifyStatusFor', () => {
     expect(verifyStatusFor('block')).toEqual({state: 'failure', description: 'verdict: block'});
     expect(verifyStatusFor('unclear')).toEqual({state: 'failure', description: 'verdict: unclear'});
   });
+
+  test('a reply no verdict was read from is described as such, and still fails', () => {
+    expect(verifyStatusFor('unclear', true)).toEqual({state: 'failure', description: 'no verdict read'});
+  });
 });
 
 describe('setVerifyStatus', () => {

@@ -119,9 +119,13 @@ export interface VerdictRecord {
   /** Why the output was rejected; empty when it was valid. */
   problems: string[];
   at: string;
-  /** The setup command that ran in the verifier's copy and where it came from; null when none ran. */
+  /** True when no verdict could be read from the verifier's reply at all. */
+  noVerdict?: boolean;
+  /** The verifier's reply, kept beside this record when no verdict was read from it; null when none was kept. */
+  reply?: string | null;
   /** The copy's command log, kept beside this record when the verdict is not a pass or a citation did not check out; null when none was kept. */
   commandLog?: string | null;
+  /** The setup command that ran in the verifier's copy and where it came from; null when none ran. */
   setup?: {command: string; source: 'configured' | 'gates' | 'lockfile'} | null;
 }
 
@@ -134,22 +138,23 @@ export interface RecordSubject {
 }
 
 /**
- * Valid output is recorded as judged (unresolvable `met` demoted). Output that
+ * A valid reply is recorded as judged (unresolvable `met` demoted). A reply that
  * cannot be read, or breaks the validator's rules, is recorded as `cannot_tell`
  * for every criterion, so it blocks and is never passed on trust.
  */
 export function recordVerdict(
   subject: RecordSubject,
   criteria: Criterion[],
-  output: string,
+  reply: string,
   resolves: (e: Evidence) => boolean,
 ): VerdictRecord {
-  const verdict = extractVerdict(output);
+  const verdict = extractVerdict(reply);
   const checked = verdict ? checkVerdict(criteria, verdict, resolves) : null;
-  const problems = verdict ? checked!.problems : ['the verifier output holds no JSON verdict'];
+  const unread = reply.trim() === '' ? 'the verifier said nothing' : 'the verifier reply holds no JSON verdict';
+  const problems = verdict ? checked!.problems : [unread];
   const entries: CheckedEntry[] =
     checked && problems.length === 0
       ? checked.entries
       : criteria.map(c => ({criterion: c.id, verdict: 'cannot_tell', missing: 'infra', evidence: [], demoted: 'the verifier output was invalid'}));
-  return {...subject, decision: reduceVerdict(entries), entries, problems};
+  return {...subject, decision: reduceVerdict(entries), entries, problems, ...(verdict ? {} : {noVerdict: true})};
 }

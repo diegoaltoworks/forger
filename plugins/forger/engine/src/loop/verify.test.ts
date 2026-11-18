@@ -4,7 +4,7 @@ import {tmpdir} from 'os';
 import {join} from 'path';
 
 import type {AgentRunner, CapturingRunner, CommandRunner} from '../ports';
-import {chooseSetup, commandLogFile, installStep, LOCKFILE_INSTALLS, verdictFile, verifyPr, VerifyInfraError, type VerifyOptions} from './verify';
+import {chooseSetup, commandLogFile, installStep, LOCKFILE_INSTALLS, replyFile, verdictFile, verifyPr, VerifyInfraError, type VerifyOptions} from './verify';
 
 const dirs: string[] = [];
 afterEach(() => {
@@ -610,5 +610,58 @@ describe('the kept command log', () => {
     await verifyPr(f.run, f.agentSaying(verdict(met('bun test'), unsure)), f.opts);
     const onDisk = JSON.parse(readFileSync(verdictFile(f.verdicts, 5, 'deadbeef'), 'utf-8'));
     expect(onDisk.commandLog).toBe(commandLogFile(f.verdicts, 5, 'deadbeef'));
+  });
+});
+
+describe('the kept reply', () => {
+  const stream = '{"type":"step_start"}\n{"type":"tool_use","input":{"command":"bun test"}}\n';
+  const replying = (f: ReturnType<typeof fixture>, reply: string): AgentRunner => ({
+    async run(o) {
+      const r = await f.agentSaying(`${stream}${reply}\n`).run(o);
+      return {...r, reply};
+    },
+  });
+
+  test('a reply with no verdict is kept beside the verdict record and the record names the file', async () => {
+    const f = fixture();
+    const record = await verifyPr(f.run, replying(f, 'I checked everything and it looks right.'), f.opts);
+    const kept = replyFile(f.verdicts, 5, 'deadbeef');
+    expect(readFileSync(kept, 'utf-8')).toBe('I checked everything and it looks right.');
+    expect(record.reply).toBe(kept);
+    expect(JSON.parse(readFileSync(verdictFile(f.verdicts, 5, 'deadbeef'), 'utf-8')).reply).toBe(kept);
+    expect(record.problems).toEqual(['the verifier reply holds no JSON verdict']);
+    expect(record.entries.map(e => e.verdict)).toEqual(['cannot_tell', 'cannot_tell']);
+    expect(record.decision).not.toBe('pass');
+  });
+
+  test('a verifier that said nothing is recorded as having said nothing', async () => {
+    const f = fixture();
+    const record = await verifyPr(f.run, replying(f, ''), f.opts);
+    expect(record.problems).toEqual(['the verifier said nothing']);
+    expect(record.reply).toBe(replyFile(f.verdicts, 5, 'deadbeef'));
+    expect(record.decision).not.toBe('pass');
+  });
+
+  test('a verdict read from the reply is not kept as a reply, and the stream before it does not hide it', async () => {
+    const f = fixture();
+    const verdict = JSON.stringify({verdict: ['c1', 'c2'].map(criterion => ({criterion, verdict: 'met', evidence: [{kind: 'command', ref: 'bun test'}]}))});
+    mkdirSync(f.verdicts, {recursive: true});
+    writeFileSync(replyFile(f.verdicts, 5, 'deadbeef'), 'from an earlier verdict');
+    const record = await verifyPr(f.run, replying(f, verdict), f.opts);
+    expect(record.decision).toBe('pass');
+    expect(record.reply).toBeUndefined();
+    expect(existsSync(replyFile(f.verdicts, 5, 'deadbeef'))).toBe(false);
+  });
+
+  test('the status of a reply that could not be read says no verdict was read', async () => {
+    const f = fixture();
+    const statuses: string[] = [];
+    const capture: CapturingRunner = c => {
+      statuses.push(c);
+      return {stdout: '', stderr: '', exitCode: 0};
+    };
+    const record = await verifyPr(f.run, replying(f, 'looks fine'), {...f.opts, capture});
+    expect(record.status?.state).toBe('failure');
+    expect(statuses).toEqual([expect.stringContaining("-f description='no verdict read'")]);
   });
 });
