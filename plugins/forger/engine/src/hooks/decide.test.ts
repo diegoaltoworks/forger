@@ -246,6 +246,30 @@ describe('leave-worktree', () => {
     expect(editRule('Edit', '/loop/.forger/worktrees/issue-8/a.ts')).toBe('leave-worktree');
   });
 
+  const copy = '/loop/.forger/tmp/verify-5-abc';
+  const vf: WorkerFacts = {...facts, worktree: {path: copy, loopRoot: '/loop', cwd: copy}};
+
+  test('a verifier may cd into its own copy and write there', () => {
+    expect(rule(`cd ${copy}/plugins && echo x > a.ts`, vf)).toBeNull();
+    expect(rule(`echo x > ${copy}/a.ts`, vf)).toBeNull();
+    const d = decideWorker(DEFAULT_POLICY, edit('Write', `${copy}/a.ts`), vf);
+    expect(d.allow).toBe(true);
+  });
+
+  test('a verifier is refused in the loop\'s checkout outside its copy, in a worktree, and in another verify\'s copy', () => {
+    expect(rule('cd /loop', vf)).toBe('leave-worktree');
+    expect(rule('echo x > /loop/a.ts', vf)).toBe('leave-worktree');
+    expect(rule('cd /loop/.forger/worktrees/issue-7', vf)).toBe('leave-worktree');
+    expect(rule('cd /loop/.forger/tmp/verify-6-def', vf)).toBe('leave-worktree');
+    expect(rule('echo x > /loop/.forger/tmp/verify-6-def/a.ts', vf)).toBe('leave-worktree');
+  });
+
+  test('a worker is refused in a verify copy', () => {
+    expect(rule(`cd ${copy}`, wf)).toBe('leave-worktree');
+    expect(rule(`echo x > ${copy}/a.ts`, wf)).toBe('leave-worktree');
+    expect(editRule('Write', `${copy}/a.ts`)).toBe('leave-worktree');
+  });
+
   test('a path inside the worker\'s own worktree is allowed', () => {
     expect(rule('cd /loop/.forger/worktrees/issue-7/plugins && echo x > a.ts', wf)).toBeNull();
     expect(rule('echo x > /loop/.forger/worktrees/issue-7/a.ts', wf)).toBeNull();
