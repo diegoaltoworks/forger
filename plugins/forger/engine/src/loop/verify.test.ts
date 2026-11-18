@@ -85,6 +85,14 @@ describe('verifyPr', () => {
     await verifyPr(f.run, {run: o => (seen.push(o.pluginRoot ?? ''), inner.run(o))}, {...f.opts, pluginRoot: '/engine/plugin'});
     expect(seen).toEqual(['/engine/plugin']);
   });
+
+  test('verify starts the verifier with its copy as the folder the rule allows', async () => {
+    const f = fixture();
+    const envs: (Record<string, string> | undefined)[] = [];
+    const inner = f.agentSaying(JSON.stringify({verdict: []}));
+    await verifyPr(f.run, {run: o => (envs.push(o.env), inner.run(o))}, f.opts);
+    expect(envs).toEqual([{FORGER_WORKTREE: f.cwds[0]}]);
+  });
   test('invalid output is recorded cannot_tell for every criterion', async () => {
     const f = fixture();
     const record = await verifyPr(f.run, f.agentSaying('all good!'), f.opts);

@@ -21,6 +21,7 @@ import {evidenceHolds, failedCitations, noteCutOutput, SCREENSHOTS_DIR, type Com
 import {parseCommandLog} from './run-logged';
 import {EVIDENCE_DEMOTION, parseCriteria, parseUiStates, reduceVerdict, type CheckedEntry, type Criterion} from './verdict';
 import {buildVerifierInput, recordVerdict, type VerdictRecord} from './verify-input';
+import {WORKER_WORKTREE_VAR} from './worker-env';
 import {freeBytes, isOutOfSpace, makeScratch, outOfSpaceMessage, removeScratch} from './scratch';
 import {resolveSubject} from './verify-subject';
 import {setVerifyStatus, withoutVerifyStatus, type VerifyStatusOutcome} from './verify-status';
@@ -330,6 +331,7 @@ export async function verifyPr(run: CommandRunner, agent: AgentRunner, opts: Ver
         model: opts.model,
         workerCommand: opts.verifierCommand,
         cwd: dir,
+        env: {[WORKER_WORKTREE_VAR]: dir},
         readOnly: true,
         ref: `pull/${opts.pr}/head`,
         pluginRoot: opts.pluginRoot,
