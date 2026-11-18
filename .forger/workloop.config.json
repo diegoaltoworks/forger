@@ -14,5 +14,18 @@
     "home": "branch",
     "branch": "forger-state"
   },
-  "parallelism": 2
+  "parallelism": 2,
+  "release": {
+    "files": [
+      {
+        "path": "plugins/forger/.claude-plugin/plugin.json",
+        "key": "version"
+      },
+      {
+        "path": "plugins/forger/engine/package.json",
+        "key": "version"
+      }
+    ],
+    "changelog": "CHANGELOG.md"
+  }
 }

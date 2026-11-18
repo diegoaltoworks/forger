@@ -113,6 +113,7 @@ export const APPROVAL_POLICY = {
   resume_after_known_recovery: 'alone_and_report',
   file_critique_tickets: 'alone_and_report',
   clear_halt: 'owner',
+  file_release_ticket: 'owner',
   reset_counters: 'owner',
   close_issues: 'owner',
   delete_unmerged_branch: 'owner',

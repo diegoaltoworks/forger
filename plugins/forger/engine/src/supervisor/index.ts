@@ -13,3 +13,4 @@ export * from './journey-share';
 export * from './opinions/demotion';
 export * from './opinions/failures';
 export * from './opinions/none-sections';
+export * from './release';
